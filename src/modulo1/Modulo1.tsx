@@ -8,6 +8,7 @@ import {
   perfilParaJSON,
   validarPerfil,
 } from "../core/perfil";
+import { PERFIL_EXEMPLO } from "../core/exemplo";
 import { CHAVE_PERFIL, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
 import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
@@ -17,11 +18,15 @@ import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { RequisitosEditor } from "./RequisitosEditor";
 
+interface Props {
+  /** Entrega o perfil ao Módulo 2 e muda de separador, sem passar por ficheiro. */
+  onEnviarParaLotes: (perfil: PerfilJSON) => void;
+}
+
 function perfilInicial(): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
-    procedimento: "",
     perfil: "",
     nBlocos: 15,
     requisitos: [],
@@ -38,7 +43,7 @@ function nomeBase(perfil: PerfilJSON): string {
   return `Declaracao_Experiencia_${nomeSeguro(perfil.perfil, "Perfil")}`;
 }
 
-export function Modulo1() {
+export function Modulo1({ onEnviarParaLotes }: Props) {
   const [perfil, setPerfil] = useEstadoPersistente<PerfilJSON>(CHAVE_PERFIL, perfilInicial, ehPerfilGuardado);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
@@ -79,6 +84,11 @@ export function Modulo1() {
     }
   }
 
+  function carregarExemplo() {
+    setPerfil(structuredClone(PERFIL_EXEMPLO));
+    setMensagem({ tipo: "sucesso", texto: "Perfil de exemplo carregado." });
+  }
+
   function recomecar() {
     if (!confirm("Apagar o perfil em edição e recomeçar do zero?")) return;
     setPerfil(perfilInicial());
@@ -88,16 +98,22 @@ export function Modulo1() {
   return (
     <div className="modulo">
       <header className="modulo-cabecalho">
-        <div>
+        <div className="modulo-titulo-linha">
           <h2>Módulo 1 · Definição do perfil</h2>
-          <p className="modulo-subtitulo">
-            Define os requisitos mínimos de experiência de um perfil e gera o formulário de declaração a entregar aos
-            concorrentes. O agrupamento em lotes faz-se depois, no Módulo 2.
-          </p>
+          <div className="acoes-linha">
+            <button type="button" className="botao-discreto" onClick={carregarExemplo}>
+              Carregar exemplo
+            </button>
+            <button type="button" className="botao-discreto" onClick={recomecar}>
+              Recomeçar
+            </button>
+          </div>
         </div>
-        <button type="button" className="botao-discreto" onClick={recomecar}>
-          Recomeçar
-        </button>
+        <p className="modulo-subtitulo">
+          Define os requisitos mínimos de experiência de um perfil e gera o formulário de declaração a entregar aos
+          concorrentes. Nem o número do procedimento nem o lote são pedidos aqui: nesta fase ainda não existem, e o
+          agrupamento em lotes faz-se depois, no Módulo 2.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
@@ -117,19 +133,6 @@ export function Modulo1() {
               onChange={(e) => patch({ perfil: e.target.value })}
               aria-invalid={perfil.perfil.trim() === ""}
             />
-          </label>
-
-          <label>
-            <span className="rotulo">
-              Procedimento n.º <span className="etiqueta-opcional">opcional</span>
-            </span>
-            <input
-              type="text"
-              value={perfil.procedimento}
-              placeholder="ainda sem número"
-              onChange={(e) => patch({ procedimento: e.target.value })}
-            />
-            <span className="ajuda">Deixe em branco se o procedimento ainda não tiver número atribuído.</span>
           </label>
 
           <label>
@@ -165,9 +168,6 @@ export function Modulo1() {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Saídas</h3>
-          <p className="painel-nota">
-            Guarde o JSON do perfil: é o ficheiro que carrega no Módulo 2 para o agrupar em lotes.
-          </p>
         </header>
         <div className="acoes">
           <button type="button" className="botao-principal" onClick={gerarExcel} disabled={aGerar || !podeExportar}>
@@ -194,6 +194,26 @@ export function Modulo1() {
         {PERSISTENCIA_DISPONIVEL && (
           <p className="ajuda">O perfil em edição é guardado neste navegador e reaparece na próxima sessão.</p>
         )}
+      </section>
+
+      <section className="painel painel-avancar">
+        <div>
+          <h3>Continuar para o agrupamento em lotes</h3>
+          <p className="painel-nota">
+            Envia este perfil diretamente para o Módulo 2, sem passar por ficheiro. Continua a poder guardar o JSON e
+            importá-lo lá mais tarde — por exemplo, se o agrupamento for feito por outra pessoa.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="botao-principal"
+          disabled={!podeExportar}
+          onClick={() => {
+            onEnviarParaLotes(structuredClone(perfil));
+          }}
+        >
+          Enviar para o Módulo 2 →
+        </button>
       </section>
 
       {textoCaderno !== "" && (

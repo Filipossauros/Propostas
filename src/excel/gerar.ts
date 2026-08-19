@@ -166,12 +166,14 @@ function validarTexto(cell: ExcelJS.Cell): void {
 }
 
 /**
- * Subtítulo do formulário. O procedimento é omitido quando ainda não tem número,
- * e o lote nunca aparece — o agrupamento em lotes só é decidido no Módulo 2.
+ * Subtítulo do formulário: apenas o perfil.
+ *
+ * Nem o procedimento nem o lote aparecem aqui — na fase em que o formulário é
+ * desenhado, nenhum dos dois está decidido. O procedimento existe adiante, como
+ * campo de identificação que o candidato preenche.
  */
 function subtitulo(config: EspecificacaoFormulario): string {
-  const procedimento = config.procedimento.trim();
-  return procedimento === "" ? config.perfil : `Procedimento n.º ${procedimento} · ${config.perfil}`;
+  return config.perfil;
 }
 
 function construirFolhaLeiame(wb: ExcelJS.Workbook, config: EspecificacaoFormulario): void {

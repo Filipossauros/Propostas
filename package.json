@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "exemplos": "tsx scripts/gerar-exemplos.mts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -26,6 +27,7 @@
     "@vitest/ui": "^4.1.11",
     "jsdom": "^30.0.1",
     "oxlint": "^1.75.0",
+    "tsx": "^4.23.12",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "^4.1.11"

@@ -11,6 +11,8 @@ const PREFIXO = "propostas.v2.";
 
 export const CHAVE_PERFIL = `${PREFIXO}perfil`;
 export const CHAVE_LOTES = `${PREFIXO}lotes`;
+/** Perfis já carregados/enviados mas ainda não atribuídos a nenhum lote. */
+export const CHAVE_POR_ATRIBUIR = `${PREFIXO}porAtribuir`;
 
 function armazenamentoDisponivel(): boolean {
   try {

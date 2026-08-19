@@ -17,8 +17,23 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 | **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos nas declarações recebidas | Relatório Excel de 5 folhas, incluindo o traço de apuramento |
 
 Quem define o perfil não sabe ainda o número do procedimento nem como os lotes serão
-agrupados — por isso o Módulo 1 não pede nenhum dos dois, e o formulário gerado não contém
-qualquer campo de lote.
+agrupados — por isso nem o Módulo 1 nem o Módulo 2 os pedem, e o formulário gerado não
+contém qualquer campo de lote. O número do procedimento aparece apenas como campo de
+identificação que o próprio candidato preenche ao entregar a declaração.
+
+No fim do Módulo 1 pode enviar o perfil diretamente para o Módulo 2, sem passar por
+ficheiro. A importação por ficheiro continua disponível no Módulo 2, para quando o
+agrupamento é feito por outra pessoa ou noutro momento.
+
+## Experimentar
+
+Cada módulo tem um botão **Carregar exemplo** que preenche tudo com dados realistas.
+Os mesmos dados estão em `exemplos/` como ficheiros JSON:
+
+- `exemplos/perfil-exemplo.json` — um perfil, para o Módulo 1.
+- `exemplos/lotes-exemplo.json` — dois lotes com quatro perfis, para os Módulos 2 e 3.
+
+São gerados a partir de `src/core/exemplo.ts` (fonte única) com `npm run exemplos`.
 
 ### Preço base
 

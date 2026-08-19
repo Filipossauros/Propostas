@@ -28,14 +28,15 @@ export interface Requisito {
 // --------------------------------------------------------------------------
 
 /**
- * Saída do Módulo 1. Não contém lote (quem define o perfil não sabe como os
- * lotes serão agrupados) e o procedimento é opcional (pode ainda não ter número).
+ * Saída do Módulo 1.
+ *
+ * Não contém procedimento nem lote: nesta fase pré-contratual nenhum dos dois
+ * existe ainda. O número do procedimento aparece apenas no formulário entregue
+ * aos concorrentes, como campo que o próprio candidato preenche.
  */
 export interface PerfilJSON {
   schemaVersion: string;
   tipo: "perfil";
-  /** Número do procedimento, quando já existe. Vazio é válido. */
-  procedimento: string;
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
   perfil: string;
   nBlocos: number;
@@ -44,7 +45,6 @@ export interface PerfilJSON {
 
 /** O que o gerador do formulário Excel precisa de saber. */
 export interface EspecificacaoFormulario {
-  procedimento: string;
   perfil: string;
   nBlocos: number;
   requisitos: Requisito[];
@@ -74,12 +74,10 @@ export interface Lote {
   perfis: PerfilEmLote[];
 }
 
-/** Saída do Módulo 2. */
+/** Saída do Módulo 2. Também não identifica o procedimento — ver PerfilJSON. */
 export interface LotesJSON {
   schemaVersion: string;
   tipo: "lotes";
-  /** Número do procedimento, quando já existe. Vazio é válido. */
-  procedimento: string;
   lotes: Lote[];
 }
 

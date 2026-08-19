@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type { Alerta, ConfiguracaoAvaliacao, Declaracao, LotesJSON, PerfilJSON } from "../core/types";
 import { ErroImportacao, importarPerfilJSON, lerTipoConfiguracao } from "../core/perfil";
 import { importarLotesJSON } from "../core/lotes";
+import { LOTES_EXEMPLO } from "../core/exemplo";
 import { lerDeclaracaoExcel } from "../excel/ler";
 import { proporAgrupamentos, type GrupoConcorrentes } from "../core/reconciliacao";
 import { apurarEAgregar, type ResultadoConcorrente } from "../core/agregacao";
@@ -80,6 +81,16 @@ export function Modulo3() {
     }
   }, [config, grupos, declaracoes, alertasPdf]);
 
+  function aplicarOpcoes(opcoes: PerfilEscolhivel[], textoSucesso: string) {
+    setDisponiveis(opcoes);
+    setChaveEscolhida(opcoes[0].chave);
+    setNMinimoElementos(opcoes[0].nMinimoElementos);
+    setDeclaracoes([]);
+    setGrupos(null);
+    setAlertasPdf(new Map());
+    setMensagem({ tipo: "sucesso", texto: textoSucesso });
+  }
+
   async function carregarConfig(ficheiro: File) {
     setMensagem(null);
     try {
@@ -101,19 +112,18 @@ export function Modulo3() {
         return;
       }
 
-      setDisponiveis(opcoes);
-      setChaveEscolhida(opcoes[0].chave);
-      setNMinimoElementos(opcoes[0].nMinimoElementos);
-      setDeclaracoes([]);
-      setGrupos(null);
-      setAlertasPdf(new Map());
-      setMensagem({ tipo: "sucesso", texto: `Configuração carregada (${opcoes.length} perfil(is)).` });
+      aplicarOpcoes(opcoes, `Configuração carregada (${opcoes.length} perfil(is)).`);
     } catch (erro) {
       setMensagem({
         tipo: "erro",
         texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível carregar a configuração.",
       });
     }
+  }
+
+  function carregarExemplo() {
+    aplicarOpcoes(perfisDeLotes(LOTES_EXEMPLO), "Configuração de exemplo carregada.");
+    setDataLimite("2027-03-31");
   }
 
   function escolherPerfil(chave: string) {
@@ -171,13 +181,18 @@ export function Modulo3() {
   return (
     <div className="modulo">
       <header className="modulo-cabecalho">
-        <div>
+        <div className="modulo-titulo-linha">
           <h2>Módulo 3 · Avaliação de declarações</h2>
-          <p className="modulo-subtitulo">
-            Apura o cumprimento dos requisitos mínimos, de forma binária. Não ordena propostas nem pontua desempenho —
-            sinaliza, e a decisão é do júri.
-          </p>
+          <div className="acoes-linha">
+            <button type="button" className="botao-discreto" onClick={carregarExemplo}>
+              Carregar exemplo
+            </button>
+          </div>
         </div>
+        <p className="modulo-subtitulo">
+          Apura o cumprimento dos requisitos mínimos, de forma binária. Não ordena propostas nem pontua desempenho —
+          sinaliza, e a decisão é do júri. Carregue o ficheiro de lotes do Módulo 2 e as declarações recebidas.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />

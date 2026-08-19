@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2.0",
+  "tipo": "perfil",
+  "perfil": "Programador Sénior — Java",
+  "nBlocos": 15,
+  "requisitos": [
+    {
+      "id": "p1-r1",
+      "designacao": "Desenvolvimento de software (geral)",
+      "mesesMinimos": 120
+    },
+    {
+      "id": "p1-r2",
+      "designacao": "Java (versão 8 ou superior)",
+      "mesesMinimos": 60
+    },
+    {
+      "id": "p1-r3",
+      "designacao": "Desenvolvimento de APIs REST",
+      "mesesMinimos": 36
+    }
+  ]
+}

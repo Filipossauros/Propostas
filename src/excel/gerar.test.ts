@@ -36,15 +36,17 @@ describe("gerarWorkbookDeclaracao", () => {
     }
   });
 
-  it("omite o procedimento do subtítulo quando ainda não tem número", () => {
-    const semNumero = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
-    expect(semNumero.getCell(2, 1).value).toBe("Arquiteto / Programador Sénior — Integração");
+  it("o subtítulo é só o perfil — nem procedimento nem lote existem nesta fase", () => {
+    const sheet = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
+    expect(sheet.getCell(2, 1).value).toBe("Arquiteto / Programador Sénior — Integração");
+  });
 
-    const comNumero = gerarWorkbookDeclaracao(
-      perfil({ ...perfilExemplo(), procedimento: "20270001" }),
-    ).getWorksheet("Experiência")!;
-    expect(String(comNumero.getCell(2, 1).value)).toContain("Procedimento n.º 20270001");
-    expect(String(comNumero.getCell(2, 1).value)).not.toMatch(/lote/i);
+  it("mantém o procedimento como campo que o candidato preenche", () => {
+    const sheet = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
+    const linhaProcedimento = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "procedimento")!;
+
+    expect(sheet.getCell(linhaProcedimento.linha, 1).value).toBe("Procedimento n.º");
+    expect(sheet.getCell(linhaProcedimento.linha, 2).value).toBeFalsy();
   });
 
   it("coloca as faixas de bloco e as designações nas âncoras corretas", () => {

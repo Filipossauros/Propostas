@@ -11,6 +11,7 @@ import {
   lotesParaJSON,
   validarLotes,
 } from "../core/lotes";
+import { LOTES_EXEMPLO } from "../core/exemplo";
 import { CHAVE_LOTES, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
 import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { gerarLotesBlob } from "../excel/exportarLotes";
@@ -21,20 +22,23 @@ import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
 
+interface Props {
+  /** Perfis carregados ou enviados pelo Módulo 1, à espera de serem atribuídos. */
+  porAtribuir: PerfilJSON[];
+  onAlterarPorAtribuir: (atualizar: (atual: PerfilJSON[]) => PerfilJSON[]) => void;
+}
+
 function ehLotesGuardado(valor: unknown): valor is LotesJSON {
   if (typeof valor !== "object" || valor === null) return false;
   const l = valor as Partial<LotesJSON>;
   return l.tipo === "lotes" && l.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(l.lotes);
 }
 
-export function Modulo2() {
+export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
   const [config, setConfig] = useEstadoPersistente<LotesJSON>(CHAVE_LOTES, lotesIniciais, ehLotesGuardado);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const inputPerfisRef = useRef<HTMLInputElement>(null);
   const inputLotesRef = useRef<HTMLInputElement>(null);
-
-  /** Perfis carregados que ainda não foram atribuídos a nenhum lote. */
-  const [porAtribuir, setPorAtribuir] = useState<PerfilJSON[]>([]);
 
   const erros = validarLotes(config);
   const podeExportar = erros.length === 0;
@@ -48,24 +52,19 @@ export function Modulo2() {
   }
 
   function adicionarLote() {
-    setConfig((atual) => ({
-      ...atual,
-      lotes: [...atual.lotes, criarLote(String(atual.lotes.length + 1))],
-    }));
+    setConfig((atual) => ({ ...atual, lotes: [...atual.lotes, criarLote(String(atual.lotes.length + 1))] }));
   }
 
   function removerLote(loteId: string) {
-    setConfig((atual) => {
-      const lote = atual.lotes.find((l) => l.id === loteId);
-      if (lote) setPorAtribuir((p) => [...p, ...lote.perfis.map((e) => e.perfil)]);
-      return { ...atual, lotes: atual.lotes.filter((l) => l.id !== loteId) };
-    });
+    const lote = config.lotes.find((l) => l.id === loteId);
+    if (lote) onAlterarPorAtribuir((p) => [...p, ...lote.perfis.map((e) => e.perfil)]);
+    setConfig((atual) => ({ ...atual, lotes: atual.lotes.filter((l) => l.id !== loteId) }));
   }
 
   function atribuirPerfil(loteId: string, indicePorAtribuir: number) {
     const perfil = porAtribuir[indicePorAtribuir];
     if (!perfil) return;
-    setPorAtribuir((p) => p.filter((_, i) => i !== indicePorAtribuir));
+    onAlterarPorAtribuir((p) => p.filter((_, i) => i !== indicePorAtribuir));
     setConfig((atual) => ({
       ...atual,
       lotes: atual.lotes.map((l) =>
@@ -75,17 +74,14 @@ export function Modulo2() {
   }
 
   function retirarPerfil(loteId: string, perfilEmLoteId: string) {
-    setConfig((atual) => {
-      const lote = atual.lotes.find((l) => l.id === loteId);
-      const entrada = lote?.perfis.find((e) => e.id === perfilEmLoteId);
-      if (entrada) setPorAtribuir((p) => [...p, entrada.perfil]);
-      return {
-        ...atual,
-        lotes: atual.lotes.map((l) =>
-          l.id === loteId ? { ...l, perfis: l.perfis.filter((e) => e.id !== perfilEmLoteId) } : l,
-        ),
-      };
-    });
+    const entrada = config.lotes.find((l) => l.id === loteId)?.perfis.find((e) => e.id === perfilEmLoteId);
+    if (entrada) onAlterarPorAtribuir((p) => [...p, entrada.perfil]);
+    setConfig((atual) => ({
+      ...atual,
+      lotes: atual.lotes.map((l) =>
+        l.id === loteId ? { ...l, perfis: l.perfis.filter((e) => e.id !== perfilEmLoteId) } : l,
+      ),
+    }));
   }
 
   async function carregarPerfis(ficheiros: FileList) {
@@ -100,22 +96,19 @@ export function Modulo2() {
       }
     }
 
-    if (carregados.length > 0) setPorAtribuir((p) => [...p, ...carregados]);
+    if (carregados.length > 0) onAlterarPorAtribuir((p) => [...p, ...carregados]);
 
-    if (falhados.length > 0) {
-      setMensagem({ tipo: "erro", texto: `Não foi possível carregar: ${falhados.join(" · ")}` });
-    } else {
-      setMensagem({
-        tipo: "sucesso",
-        texto: `${carregados.length} perfil(is) carregado(s). Atribua-os aos lotes abaixo.`,
-      });
-    }
+    setMensagem(
+      falhados.length > 0
+        ? { tipo: "erro", texto: `Não foi possível carregar: ${falhados.join(" · ")}` }
+        : { tipo: "sucesso", texto: `${carregados.length} perfil(is) carregado(s). Atribua-os aos lotes abaixo.` },
+    );
   }
 
   async function carregarLotes(ficheiro: File) {
     try {
       setConfig(importarLotesJSON(await ficheiro.text()));
-      setPorAtribuir([]);
+      onAlterarPorAtribuir(() => []);
       setMensagem({ tipo: "sucesso", texto: "Agrupamento de lotes importado." });
     } catch (erro) {
       setMensagem({
@@ -125,68 +118,62 @@ export function Modulo2() {
     }
   }
 
+  function carregarExemplo() {
+    setConfig(structuredClone(LOTES_EXEMPLO));
+    onAlterarPorAtribuir(() => []);
+    setMensagem({ tipo: "sucesso", texto: "Agrupamento de exemplo carregado." });
+  }
+
   function descarregarJSON() {
-    const nome = `Lotes_${nomeSeguro(config.procedimento, "procedimento")}.json`;
-    descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), nome);
+    descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), "Lotes.json");
   }
 
   function descarregarExcel() {
-    descarregarBlob(gerarLotesBlob(config), `Lotes_${nomeSeguro(config.procedimento, "procedimento")}.xlsx`);
+    descarregarBlob(gerarLotesBlob(config), "Lotes.xlsx");
   }
 
   async function descarregarFormulario(perfil: PerfilJSON, numeroLote: string) {
-    const especificacao = { ...perfil, procedimento: config.procedimento };
     const nome = `Declaracao_Lote${nomeSeguro(numeroLote, "X")}_${nomeSeguro(perfil.perfil, "Perfil")}.xlsx`;
-    descarregarBlob(await gerarDeclaracaoExcelBlob(especificacao), nome);
+    descarregarBlob(await gerarDeclaracaoExcelBlob(perfil), nome);
   }
 
   function recomecar() {
     if (!confirm("Apagar o agrupamento em edição e recomeçar do zero?")) return;
     setConfig(lotesIniciais());
-    setPorAtribuir([]);
+    onAlterarPorAtribuir(() => []);
     setMensagem({ tipo: "sucesso", texto: "Agrupamento reposto." });
   }
 
   return (
     <div className="modulo">
       <header className="modulo-cabecalho">
-        <div>
+        <div className="modulo-titulo-linha">
           <h2>Módulo 2 · Agrupamento em lotes</h2>
-          <p className="modulo-subtitulo">
-            Carregue os perfis definidos no Módulo 1, agrupe-os em lotes e atribua a cada um as horas, o preço
-            unitário e o n.º mínimo de elementos. No fim obtém o texto e a tabela para o caderno de encargos.
-          </p>
+          <div className="acoes-linha">
+            <button type="button" className="botao-discreto" onClick={carregarExemplo}>
+              Carregar exemplo
+            </button>
+            <button type="button" className="botao-discreto" onClick={recomecar}>
+              Recomeçar
+            </button>
+          </div>
         </div>
-        <button type="button" className="botao-discreto" onClick={recomecar}>
-          Recomeçar
-        </button>
+        <p className="modulo-subtitulo">
+          Recebe os perfis definidos no Módulo 1 — enviados diretamente ou carregados de ficheiro —, agrupa-os em
+          lotes e atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos. No fim obtém o texto e a
+          tabela para o caderno de encargos, os formulários de declaração e o ficheiro que alimenta a avaliação.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Procedimento</h3>
-        </header>
-        <div className="grelha-campos">
-          <label>
-            <span className="rotulo">
-              Procedimento n.º <span className="etiqueta-opcional">opcional</span>
-            </span>
-            <input
-              type="text"
-              value={config.procedimento}
-              placeholder="ainda sem número"
-              onChange={(e) => setConfig((atual) => ({ ...atual, procedimento: e.target.value }))}
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="painel">
-        <header className="painel-cabecalho">
           <h3>Perfis por atribuir</h3>
-          <p className="painel-nota">Carregue os ficheiros JSON de perfil produzidos no Módulo 1.</p>
+          <p className="painel-nota">
+            Aparecem aqui os perfis enviados pelo Módulo 1. Também pode carregar ficheiros JSON de perfil, se o
+            agrupamento for feito por outra pessoa ou noutro momento.
+          </p>
         </header>
 
         <div className="acoes">

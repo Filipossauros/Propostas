@@ -26,7 +26,6 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
-    procedimento: "",
     perfil: "Perfil Teste",
     nBlocos: 3,
     requisitos: [requisito()],
@@ -85,7 +84,6 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
-    procedimento: "20270001",
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,
       numero: e.numero,

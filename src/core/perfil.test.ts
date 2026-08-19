@@ -27,8 +27,9 @@ describe("validarPerfil", () => {
     expect(validarPerfil(perfil())).toHaveLength(0);
   });
 
-  it("aceita procedimento por preencher — pode ainda não ter número", () => {
-    expect(validarPerfil(perfil({ procedimento: "" }))).toHaveLength(0);
+  it("não exige qualquer identificação de procedimento — nesta fase ainda não existe", () => {
+    expect(Object.keys(perfil())).not.toContain("procedimento");
+    expect(validarPerfil(perfil())).toHaveLength(0);
   });
 
   it("exige a designação do perfil", () => {

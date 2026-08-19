@@ -20,7 +20,7 @@ export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
 }
 
 export function lotesIniciais(): LotesJSON {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", procedimento: "", lotes: [] };
+  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", lotes: [] };
 }
 
 // --------------------------------------------------------------------------
