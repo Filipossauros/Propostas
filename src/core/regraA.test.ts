@@ -9,7 +9,7 @@ function ma(ano: number, mes: number): MesAno {
 }
 
 function requisito(id = "r1", mesesMinimos = 0): Requisito {
-  return { id, designacao: `Requisito ${id}`, versaoMinima: null, mesesMinimos };
+  return { id, designacao: `Requisito ${id}`, mesesMinimos };
 }
 
 function linha(

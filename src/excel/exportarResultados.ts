@@ -3,7 +3,7 @@
 // recursos (estilos, validação, proteção) que aqui obrigaram a exceljs.
 
 import * as XLSX from "xlsx";
-import type { ConfiguracaoJSON, MesAno } from "../core/types";
+import type { ConfiguracaoAvaliacao, MesAno } from "../core/types";
 import type { ResultadoConcorrente, ResultadoElemento } from "../core/agregacao";
 import { requisitosFalhados } from "../core/agregacao";
 
@@ -28,7 +28,7 @@ function folhaResumoConcorrentes(resultados: ResultadoConcorrente[]): XLSX.WorkS
   return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
-function folhaResumoElementos(resultados: ResultadoConcorrente[], config: ConfiguracaoJSON): XLSX.WorkSheet {
+function folhaResumoElementos(resultados: ResultadoConcorrente[], config: ConfiguracaoAvaliacao): XLSX.WorkSheet {
   const cabecalho = ["Elemento", "Ficheiro", "Concorrente", "Cumpre", "Requisitos falhados"];
   const linhas: (string | number)[][] = [];
   for (const concorrente of resultados) {
@@ -45,7 +45,7 @@ function folhaResumoElementos(resultados: ResultadoConcorrente[], config: Config
   return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
-function folhaDetalhe(resultados: ResultadoConcorrente[], config: ConfiguracaoJSON): XLSX.WorkSheet {
+function folhaDetalhe(resultados: ResultadoConcorrente[], config: ConfiguracaoAvaliacao): XLSX.WorkSheet {
   const cabecalho = ["Elemento", "Concorrente", "Requisito", "Meses apurados", "Meses mínimos", "Cumpre"];
   const designacaoPorId = new Map(config.requisitos.map((r) => [r.id, r.designacao]));
   const linhas: (string | number)[][] = [];
@@ -67,7 +67,7 @@ function folhaDetalhe(resultados: ResultadoConcorrente[], config: ConfiguracaoJS
   return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
-function folhaTracoApuramento(resultados: ResultadoConcorrente[], config: ConfiguracaoJSON): XLSX.WorkSheet {
+function folhaTracoApuramento(resultados: ResultadoConcorrente[], config: ConfiguracaoAvaliacao): XLSX.WorkSheet {
   const cabecalho = [
     "Elemento",
     "Concorrente",
@@ -143,7 +143,7 @@ function folhaAlertas(resultados: ResultadoConcorrente[]): XLSX.WorkSheet {
 /** Gera o workbook de resultados com as 5 folhas descritas em 7.3. */
 export function gerarWorkbookResultados(
   resultados: ResultadoConcorrente[],
-  config: ConfiguracaoJSON,
+  config: ConfiguracaoAvaliacao,
 ): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, folhaResumoConcorrentes(resultados), "Resumo por concorrente");
@@ -154,7 +154,7 @@ export function gerarWorkbookResultados(
   return wb;
 }
 
-export function gerarResultadosBlob(resultados: ResultadoConcorrente[], config: ConfiguracaoJSON): Blob {
+export function gerarResultadosBlob(resultados: ResultadoConcorrente[], config: ConfiguracaoAvaliacao): Blob {
   const wb = gerarWorkbookResultados(resultados, config);
   const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   return new Blob([buffer], {

@@ -1,6 +1,7 @@
 import type { Requisito } from "../core/types";
-import { sugereAgrupamento } from "../core/configuracao";
-import { gerarId } from "./id";
+import { sugereAgrupamento } from "../core/perfil";
+import { gerarId } from "../core/id";
+import { CampoNumero } from "../ui/CampoNumero";
 
 interface Props {
   requisitos: Requisito[];
@@ -33,14 +34,21 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
   }
 
   function adicionar() {
-    onChange([...requisitos, { id: gerarId(), designacao: "", versaoMinima: null, mesesMinimos: 1 }]);
+    onChange([...requisitos, { id: gerarId(), designacao: "", mesesMinimos: 12 }]);
   }
 
   return (
-    <fieldset className="painel">
-      <legend>Requisitos mínimos de experiência</legend>
+    <section className="painel">
+      <header className="painel-cabecalho">
+        <h3>Requisitos mínimos de experiência</h3>
+        <p className="painel-nota">
+          A ordem desta lista é a ordem das linhas no formulário entregue aos concorrentes.
+        </p>
+      </header>
 
-      {requisitos.length === 0 && <p className="texto-vazio">Sem requisitos definidos.</p>}
+      {requisitos.length === 0 && (
+        <p className="estado-vazio">Ainda não há requisitos. Adicione o primeiro para começar.</p>
+      )}
 
       <ul className="lista-requisitos">
         {requisitos.map((r, idx) => {
@@ -51,63 +59,71 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
           return (
             <li key={r.id} className="linha-requisito">
               <div className="linha-requisito-campos">
-                <span className="ordem">{idx + 1}.</span>
+                <span className="ordem" aria-hidden="true">
+                  {idx + 1}
+                </span>
 
-                <label className="campo-largo">
-                  Designação
+                <label className="campo-crescente">
+                  <span className="rotulo">Designação do requisito</span>
                   <input
                     type="text"
                     value={r.designacao}
+                    placeholder="ex.: Desenvolvimento de software (geral)"
                     onChange={(e) => atualizar(idx, { designacao: e.target.value })}
                     aria-invalid={vazio || repetido}
                   />
                 </label>
 
-                <label>
-                  Versão mínima
-                  <input
-                    type="text"
-                    value={r.versaoMinima ?? ""}
-                    onChange={(e) => atualizar(idx, { versaoMinima: e.target.value === "" ? null : e.target.value })}
-                    placeholder="opcional"
-                  />
-                </label>
-
-                <label>
-                  Meses mínimos
-                  <input
-                    type="number"
+                <label className="campo-estreito">
+                  <span className="rotulo">Meses mínimos</span>
+                  <CampoNumero
+                    valor={r.mesesMinimos}
                     min={1}
                     step={1}
-                    value={r.mesesMinimos}
-                    onChange={(e) => atualizar(idx, { mesesMinimos: Number(e.target.value) })}
+                    sufixo="meses"
+                    invalido={!Number.isInteger(r.mesesMinimos) || r.mesesMinimos < 1}
+                    onChange={(mesesMinimos) => atualizar(idx, { mesesMinimos })}
                   />
                 </label>
 
                 <div className="acoes-linha">
-                  <button type="button" onClick={() => mover(idx, -1)} disabled={idx === 0} title="Mover para cima">
+                  <button
+                    type="button"
+                    className="botao-icone"
+                    onClick={() => mover(idx, -1)}
+                    disabled={idx === 0}
+                    title="Mover para cima"
+                    aria-label="Mover para cima"
+                  >
                     ↑
                   </button>
                   <button
                     type="button"
+                    className="botao-icone"
                     onClick={() => mover(idx, 1)}
                     disabled={idx === requisitos.length - 1}
                     title="Mover para baixo"
+                    aria-label="Mover para baixo"
                   >
                     ↓
                   </button>
-                  <button type="button" onClick={() => remover(idx)} title="Remover requisito">
+                  <button
+                    type="button"
+                    className="botao-discreto botao-perigo"
+                    onClick={() => remover(idx)}
+                    title="Remover requisito"
+                  >
                     Remover
                   </button>
                 </div>
               </div>
 
-              {vazio && <p className="erro-campo">A designação não pode ficar vazia.</p>}
-              {repetido && <p className="erro-campo">Esta designação está repetida.</p>}
+              {vazio && <p className="aviso aviso-erro">A designação não pode ficar vazia.</p>}
+              {repetido && <p className="aviso aviso-erro">Esta designação está repetida.</p>}
               {agrupado && (
-                <p className="aviso-campo">
-                  Esta designação parece agrupar várias tecnologias — considere se pretende exigir experiência em
-                  todos os elementos ou em qualquer um deles, para evitar ambiguidade (risco de impugnação).
+                <p className="aviso aviso-atencao">
+                  Esta designação parece agrupar várias tecnologias. Um requisito agrupado torna ambíguo se é exigida
+                  experiência em <em>todas</em> ou em <em>alguma</em> delas — um risco de impugnação conhecido.
                 </p>
               )}
             </li>
@@ -115,9 +131,9 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
         })}
       </ul>
 
-      <button type="button" onClick={adicionar}>
-        Adicionar requisito
+      <button type="button" className="botao-secundario" onClick={adicionar}>
+        + Adicionar requisito
       </button>
-    </fieldset>
+    </section>
   );
 }

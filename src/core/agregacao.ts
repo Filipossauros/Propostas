@@ -1,13 +1,13 @@
-// Apuramento e agregação por concorrente — PLANO.md 7.1, passos 5 e 6.
+// Apuramento e agregação por concorrente.
 
-import type { Alerta, ConfiguracaoJSON, Declaracao } from "./types";
-import { apurarElemento, type ApuramentoElemento } from "./regraA";
-import { parseDataLimite, validarDeclaracao } from "./validar";
+import type { Alerta, ConfiguracaoAvaliacao, Declaracao } from "./types";
+import type { ApuramentoElemento } from "./regraA";
+import { validarEApurar } from "./validar";
 import { construirMapaReconciliacao, type GrupoConcorrentes } from "./reconciliacao";
 
 export interface ResultadoElemento {
   declaracao: Declaracao;
-  /** Nome do concorrente após reconciliação (7.1, passo 4). */
+  /** Nome do concorrente após reconciliação. */
   concorrente: string;
   apuramento: ApuramentoElemento;
   alertas: Alerta[];
@@ -24,23 +24,23 @@ export interface ResultadoConcorrente {
   nAlertas: number;
 }
 
-/** Apura cada declaração pela Regra A e agrega por concorrente (passos 5 e 6). */
+const SEM_ENTIDADE = "(entidade concorrente por preencher)";
+
+/** Apura cada declaração pela Regra A e agrega por concorrente. */
 export function apurarEAgregar(
   declaracoes: Declaracao[],
-  config: ConfiguracaoJSON,
+  config: ConfiguracaoAvaliacao,
   grupos: GrupoConcorrentes[],
-  /** Alertas do comparador PDF↔Excel (Fase 4), indexados por nome de ficheiro. */
-  alertasPdfPorFicheiro?: Map<string, Alerta[]>,
+  /** Alertas do comparador PDF↔Excel, indexados pelo id da declaração. */
+  alertasPdfPorDeclaracao?: Map<string, Alerta[]>,
 ): ResultadoConcorrente[] {
-  const dataLimite = parseDataLimite(config.dataLimitePropostas);
   const mapaReconciliacao = construirMapaReconciliacao(grupos);
 
   const resultadosElemento: ResultadoElemento[] = declaracoes.map((declaracaoBruta) => {
-    const declaracao = validarDeclaracao(declaracaoBruta, config);
-    const apuramento = apurarElemento(declaracao.blocos, config.requisitos, dataLimite);
-    const concorrente = mapaReconciliacao.get(declaracao.identificacao.entidadeConcorrente) ??
-      declaracao.identificacao.entidadeConcorrente;
-    const alertasPdf = alertasPdfPorFicheiro?.get(declaracao.ficheiro) ?? [];
+    const { declaracao, apuramento } = validarEApurar(declaracaoBruta, config);
+    const entidade = declaracao.identificacao.entidadeConcorrente.trim();
+    const concorrente = entidade === "" ? SEM_ENTIDADE : mapaReconciliacao.get(entidade) ?? entidade;
+    const alertasPdf = alertasPdfPorDeclaracao?.get(declaracao.id) ?? [];
 
     return { declaracao, concorrente, apuramento, alertas: [...declaracao.alertas, ...alertasPdf] };
   });
@@ -57,7 +57,6 @@ export function apurarEAgregar(
       const nElementos = elementos.length;
       const nElementosSuficiente = nElementos >= config.nMinimoElementos;
       const todosElementosCumprem = elementos.every((e) => e.apuramento.cumpre);
-      const nAlertas = elementos.reduce((soma, e) => soma + e.alertas.length, 0);
 
       return {
         concorrente,
@@ -66,14 +65,14 @@ export function apurarEAgregar(
         nElementosSuficiente,
         todosElementosCumprem,
         cumpre: todosElementosCumprem && nElementosSuficiente,
-        nAlertas,
+        nAlertas: elementos.reduce((soma, e) => soma + e.alertas.length, 0),
       };
     })
     .sort((a, b) => a.concorrente.localeCompare(b.concorrente, "pt"));
 }
 
 /** Designações dos requisitos que um elemento não cumpre, na ordem da configuração. */
-export function requisitosFalhados(apuramento: ApuramentoElemento, config: ConfiguracaoJSON): string[] {
+export function requisitosFalhados(apuramento: ApuramentoElemento, config: ConfiguracaoAvaliacao): string[] {
   const porId = new Map(config.requisitos.map((r) => [r.id, r.designacao]));
   return apuramento.requisitos
     .filter((r) => !r.cumpre)

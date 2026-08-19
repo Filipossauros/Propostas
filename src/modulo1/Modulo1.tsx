@@ -1,70 +1,62 @@
 import { useRef, useState } from "react";
-import type { ConfiguracaoJSON } from "../core/types";
+import type { PerfilJSON } from "../core/types";
 import { SCHEMA_VERSION_ATUAL } from "../core/types";
 import {
-  ErroImportacaoConfig,
-  configuracaoParaJSON,
+  ErroImportacao,
   gerarTextoCadernoEncargos,
-  importarConfiguracaoJSON,
-  validarConfiguracao,
-} from "../core/configuracao";
+  importarPerfilJSON,
+  perfilParaJSON,
+  validarPerfil,
+} from "../core/perfil";
+import { CHAVE_PERFIL, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
+import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { ConfigForm } from "./ConfigForm";
+import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { CampoNumero } from "../ui/CampoNumero";
+import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { RequisitosEditor } from "./RequisitosEditor";
 
-function configuracaoInicial(): ConfiguracaoJSON {
+function perfilInicial(): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
-    templateVersion: "5.0",
+    tipo: "perfil",
     procedimento: "",
-    lote: "",
     perfil: "",
-    nMinimoElementos: 1,
-    dataLimitePropostas: "",
     nBlocos: 15,
     requisitos: [],
   };
 }
 
-function descarregarBlob(blob: Blob, nomeFicheiro: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nomeFicheiro;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+function ehPerfilGuardado(valor: unknown): valor is PerfilJSON {
+  if (typeof valor !== "object" || valor === null) return false;
+  const p = valor as Partial<PerfilJSON>;
+  return p.tipo === "perfil" && p.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(p.requisitos);
 }
 
-function nomeBase(config: ConfiguracaoJSON): string {
-  const partes = [config.procedimento, config.lote].filter((p) => p.trim() !== "");
-  return partes.length > 0 ? `Declaracao_Experiencia_${partes.join("_")}` : "Declaracao_Experiencia";
+function nomeBase(perfil: PerfilJSON): string {
+  return `Declaracao_Experiencia_${nomeSeguro(perfil.perfil, "Perfil")}`;
 }
 
 export function Modulo1() {
-  const [config, setConfig] = useState<ConfiguracaoJSON>(configuracaoInicial());
-  const [mensagem, setMensagem] = useState<{ tipo: "erro" | "sucesso"; texto: string } | null>(null);
+  const [perfil, setPerfil] = useEstadoPersistente<PerfilJSON>(CHAVE_PERFIL, perfilInicial, ehPerfilGuardado);
+  const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
   const inputImportarRef = useRef<HTMLInputElement>(null);
 
-  const erros = validarConfiguracao(config);
-  const textoCaderno = config.requisitos.length > 0 ? gerarTextoCadernoEncargos(config.requisitos) : "";
+  const erros = validarPerfil(perfil);
+  const podeExportar = erros.length === 0;
+  const textoCaderno = perfil.requisitos.length > 0 ? gerarTextoCadernoEncargos(perfil.requisitos) : "";
 
-  function patchConfig(patch: Partial<ConfiguracaoJSON>) {
-    setConfig((atual) => ({ ...atual, ...patch }));
+  function patch(alteracao: Partial<PerfilJSON>) {
+    setPerfil((atual) => ({ ...atual, ...alteracao }));
   }
 
   async function gerarExcel() {
     setMensagem(null);
-    if (erros.length > 0) {
-      setMensagem({ tipo: "erro", texto: "Corrija os erros de validação antes de gerar o ficheiro." });
-      return;
-    }
     setAGerar(true);
     try {
-      const blob = await gerarDeclaracaoExcelBlob(config);
-      descarregarBlob(blob, `${nomeBase(config)}.xlsx`);
+      descarregarBlob(await gerarDeclaracaoExcelBlob(perfil), `${nomeBase(perfil)}.xlsx`);
     } finally {
       setAGerar(false);
     }
@@ -72,68 +64,120 @@ export function Modulo1() {
 
   function descarregarJSON() {
     setMensagem(null);
-    if (erros.length > 0) {
-      setMensagem({ tipo: "erro", texto: "Corrija os erros de validação antes de exportar o JSON." });
-      return;
-    }
-    const blob = new Blob([configuracaoParaJSON(config)], { type: "application/json" });
-    descarregarBlob(blob, `${nomeBase(config)}.json`);
-  }
-
-  async function copiarTextoCaderno() {
-    try {
-      await navigator.clipboard.writeText(textoCaderno);
-      setMensagem({ tipo: "sucesso", texto: "Texto copiado para a área de transferência." });
-    } catch {
-      setMensagem({ tipo: "erro", texto: "Não foi possível copiar automaticamente. Selecione e copie o texto manualmente." });
-    }
+    descarregarBlob(new Blob([perfilParaJSON(perfil)], { type: "application/json" }), `${nomeBase(perfil)}.json`);
   }
 
   async function importarJSON(ficheiro: File) {
     try {
-      const texto = await ficheiro.text();
-      const importado = importarConfiguracaoJSON(texto);
-      setConfig(importado);
-      setMensagem({ tipo: "sucesso", texto: "Configuração importada com sucesso." });
+      setPerfil(importarPerfilJSON(await ficheiro.text()));
+      setMensagem({ tipo: "sucesso", texto: "Perfil importado." });
     } catch (erro) {
-      const texto = erro instanceof ErroImportacaoConfig ? erro.message : "Não foi possível importar o ficheiro.";
-      setMensagem({ tipo: "erro", texto });
+      setMensagem({
+        tipo: "erro",
+        texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível importar o ficheiro.",
+      });
     }
+  }
+
+  function recomecar() {
+    if (!confirm("Apagar o perfil em edição e recomeçar do zero?")) return;
+    setPerfil(perfilInicial());
+    setMensagem({ tipo: "sucesso", texto: "Perfil reposto." });
   }
 
   return (
     <div className="modulo">
-      <h2>Módulo 1 — Definição de requisitos</h2>
+      <header className="modulo-cabecalho">
+        <div>
+          <h2>Módulo 1 · Definição do perfil</h2>
+          <p className="modulo-subtitulo">
+            Define os requisitos mínimos de experiência de um perfil e gera o formulário de declaração a entregar aos
+            concorrentes. O agrupamento em lotes faz-se depois, no Módulo 2.
+          </p>
+        </div>
+        <button type="button" className="botao-discreto" onClick={recomecar}>
+          Recomeçar
+        </button>
+      </header>
 
-      {mensagem && <p className={mensagem.tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"}>{mensagem.texto}</p>}
+      <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
-      <ConfigForm config={config} onChange={patchConfig} />
-      <RequisitosEditor requisitos={config.requisitos} onChange={(requisitos) => patchConfig({ requisitos })} />
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Identificação do perfil</h3>
+        </header>
+
+        <div className="grelha-campos">
+          <label className="campo-largo">
+            <span className="rotulo">Perfil</span>
+            <input
+              type="text"
+              value={perfil.perfil}
+              placeholder="ex.: Arquiteto / Programador Sénior — Integração"
+              onChange={(e) => patch({ perfil: e.target.value })}
+              aria-invalid={perfil.perfil.trim() === ""}
+            />
+          </label>
+
+          <label>
+            <span className="rotulo">
+              Procedimento n.º <span className="etiqueta-opcional">opcional</span>
+            </span>
+            <input
+              type="text"
+              value={perfil.procedimento}
+              placeholder="ainda sem número"
+              onChange={(e) => patch({ procedimento: e.target.value })}
+            />
+            <span className="ajuda">Deixe em branco se o procedimento ainda não tiver número atribuído.</span>
+          </label>
+
+          <label>
+            <span className="rotulo">N.º de blocos de projeto do formulário</span>
+            <CampoNumero
+              valor={perfil.nBlocos}
+              min={1}
+              step={1}
+              sufixo="blocos"
+              invalido={!Number.isInteger(perfil.nBlocos) || perfil.nBlocos < 1}
+              onChange={(nBlocos) => patch({ nBlocos })}
+            />
+            <span className="ajuda">Quantos projetos distintos cada candidato poderá declarar.</span>
+          </label>
+        </div>
+      </section>
+
+      <RequisitosEditor requisitos={perfil.requisitos} onChange={(requisitos) => patch({ requisitos })} />
 
       {erros.length > 0 && (
-        <div className="painel painel-erros">
-          <p>
-            <strong>{erros.length}</strong> erro(s) de validação:
-          </p>
-          <ul>
-            {erros.map((e) => (
-              <li key={e.campo}>{e.mensagem}</li>
+        <section className="painel painel-erros">
+          <h3>
+            {erros.length} {erros.length === 1 ? "questão por resolver" : "questões por resolver"}
+          </h3>
+          <ul className="lista-erros">
+            {erros.map((e, idx) => (
+              <li key={`${e.campo}-${idx}`}>{e.mensagem}</li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
 
-      <fieldset className="painel">
-        <legend>Saídas</legend>
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Saídas</h3>
+          <p className="painel-nota">
+            Guarde o JSON do perfil: é o ficheiro que carrega no Módulo 2 para o agrupar em lotes.
+          </p>
+        </header>
         <div className="acoes">
-          <button type="button" onClick={gerarExcel} disabled={aGerar}>
+          <button type="button" className="botao-principal" onClick={gerarExcel} disabled={aGerar || !podeExportar}>
             {aGerar ? "A gerar…" : "Descarregar formulário Excel"}
           </button>
-          <button type="button" onClick={descarregarJSON}>
-            Descarregar configuração (JSON)
+          <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
+            Descarregar perfil (JSON)
           </button>
-          <button type="button" onClick={() => inputImportarRef.current?.click()}>
-            Importar configuração (JSON)
+          <button type="button" className="botao-secundario" onClick={() => inputImportarRef.current?.click()}>
+            Importar perfil (JSON)
           </button>
           <input
             ref={inputImportarRef}
@@ -147,16 +191,19 @@ export function Modulo1() {
             }}
           />
         </div>
-      </fieldset>
+        {PERSISTENCIA_DISPONIVEL && (
+          <p className="ajuda">O perfil em edição é guardado neste navegador e reaparece na próxima sessão.</p>
+        )}
+      </section>
 
       {textoCaderno !== "" && (
-        <fieldset className="painel">
-          <legend>Texto para o caderno de encargos</legend>
-          <pre className="texto-caderno">{textoCaderno}</pre>
-          <button type="button" onClick={copiarTextoCaderno}>
-            Copiar para a área de transferência
-          </button>
-        </fieldset>
+        <section className="painel">
+          <header className="painel-cabecalho">
+            <h3>Texto para o caderno de encargos</h3>
+            <p className="painel-nota">Só os requisitos deste perfil. O texto completo, por lote, sai do Módulo 2.</p>
+          </header>
+          <BlocoCopiavel texto={textoCaderno} onMensagem={setMensagem} />
+        </section>
       )}
     </div>
   );

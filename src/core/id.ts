@@ -1,3 +1,4 @@
+/** Identificadores locais, apenas para distinguir itens dentro da sessão. */
 export function gerarId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();

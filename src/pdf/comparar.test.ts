@@ -28,13 +28,13 @@ function bloco(opts: Partial<Bloco> = {}): Bloco {
 
 function declaracao(opts: Partial<Declaracao> = {}): Declaracao {
   return {
+    id: "decl-1",
     ficheiro: "teste.xlsx",
     identificacao: {
       nome: "João Silva",
       documento: "123",
       entidadeConcorrente: "ABC, Lda.",
       procedimento: "20270001",
-      lote: "1",
       perfil: "Perfil",
     },
     blocos: [bloco()],

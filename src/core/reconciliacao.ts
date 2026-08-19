@@ -44,7 +44,9 @@ export function normalizarNomeEntidade(nome: string): string {
 }
 
 export interface GrupoConcorrentes {
-  /** Nome canónico proposto (o mais frequente/longo entre os nomes originais do grupo). */
+  /** Identificador estável do grupo, para uso como chave na interface. */
+  id: string;
+  /** Nome canónico proposto (o mais longo entre os nomes originais do grupo). */
   nomeCanonico: string;
   /** Nomes originais (tal como aparecem nas declarações) agrupados. */
   nomesOriginais: string[];
@@ -61,14 +63,18 @@ export function proporAgrupamentos(nomes: string[]): GrupoConcorrentes[] {
     porChave.set(chave, lista);
   }
 
-  return [...porChave.entries()].map(([, nomesOriginais]) => ({
+  return [...porChave.entries()].map(([chave, nomesOriginais]) => ({
+    id: chave,
     nomeCanonico: escolherNomeCanonico(nomesOriginais),
     nomesOriginais,
   }));
 }
 
+/** O nome mais completo do grupo; em caso de empate, o primeiro por ordem alfabética. */
 function escolherNomeCanonico(nomes: string[]): string {
-  return nomes.slice().sort((a, b) => b.length - a.length)[0];
+  return nomes
+    .slice()
+    .sort((a, b) => b.length - a.length || a.localeCompare(b, "pt"))[0];
 }
 
 /** Mapa nome-original -> nome-canónico, para aplicar a decisão confirmada pelo utilizador. */

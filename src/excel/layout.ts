@@ -11,28 +11,32 @@ export const LINHA_SUBTITULO = 2;
 
 export const LINHA_FAIXA_IDENTIFICACAO = 4;
 
-/** Linhas 5–10: rótulo em A, campo fundido B:H — nesta ordem exata. */
+/**
+ * Linhas 5–9: rótulo em A, campo fundido B:H — nesta ordem exata.
+ *
+ * Não existe campo "Lote": quem define o perfil não sabe como os lotes serão
+ * agrupados, e o agrupamento é feito depois, no Módulo 2.
+ */
 export const CAMPOS_IDENTIFICACAO = [
   { linha: 5, rotulo: "Nome completo", campo: "nome" as const },
   { linha: 6, rotulo: "N.º de documento de identificação", campo: "documento" as const },
   { linha: 7, rotulo: "Entidade concorrente", campo: "entidadeConcorrente" as const },
   { linha: 8, rotulo: "Procedimento n.º", campo: "procedimento" as const },
-  { linha: 9, rotulo: "Lote", campo: "lote" as const },
-  { linha: 10, rotulo: "Perfil a que se candidata", campo: "perfil" as const },
+  { linha: 9, rotulo: "Perfil a que se candidata", campo: "perfil" as const },
 ];
 
-export const LINHA_DECLARACAO_VERACIDADE = 11;
+export const LINHA_DECLARACAO_VERACIDADE = 10;
 export const TEXTO_DECLARACAO_VERACIDADE =
   "Declaro, sob compromisso de honra, que as informações prestadas neste documento são " +
   "verdadeiras e correspondem à experiência profissional efetivamente exercida, estando ciente " +
   "de que a prestação de falsas declarações constitui contraordenação e/ou crime, nos termos da lei.";
 
-export const LINHA_ASSINATURA = 12;
+export const LINHA_ASSINATURA = 11;
 export const ROTULO_ASSINATURA = "Assinatura digital qualificada do candidato";
 
-export const LINHA_BRANCO_APOS_IDENTIFICACAO = 13;
+export const LINHA_BRANCO_APOS_IDENTIFICACAO = 12;
 
-export const PRIMEIRA_LINHA_BLOCO = 14;
+export const PRIMEIRA_LINHA_BLOCO = 13;
 
 /** Altura total (em linhas) de um bloco de projeto, dado o n.º de requisitos. */
 export function alturaBloco(nRequisitos: number): number {

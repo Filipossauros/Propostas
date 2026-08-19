@@ -4,7 +4,7 @@
 // do exceljs — no SheetJS ("xlsx") esses recursos são exclusivos da versão Pro.
 
 import ExcelJS from "exceljs";
-import type { ConfiguracaoJSON } from "../core/types";
+import type { EspecificacaoFormulario } from "../core/types";
 import {
   CAMPOS_IDENTIFICACAO,
   LINHA_ASSINATURA,
@@ -165,14 +165,23 @@ function validarTexto(cell: ExcelJS.Cell): void {
   };
 }
 
-function construirFolhaLeiame(wb: ExcelJS.Workbook, config: ConfiguracaoJSON): void {
+/**
+ * Subtítulo do formulário. O procedimento é omitido quando ainda não tem número,
+ * e o lote nunca aparece — o agrupamento em lotes só é decidido no Módulo 2.
+ */
+function subtitulo(config: EspecificacaoFormulario): string {
+  const procedimento = config.procedimento.trim();
+  return procedimento === "" ? config.perfil : `Procedimento n.º ${procedimento} · ${config.perfil}`;
+}
+
+function construirFolhaLeiame(wb: ExcelJS.Workbook, config: EspecificacaoFormulario): void {
   const sheet = wb.addWorksheet(NOME_FOLHA_LEIAME);
   sheet.getColumn(1).width = 110;
 
   const linhas: Array<{ texto: string; titulo?: boolean }> = [
     { texto: "DECLARAÇÃO DE EXPERIÊNCIA PROFISSIONAL — INSTRUÇÕES DE PREENCHIMENTO", titulo: true },
     { texto: "" },
-    { texto: `Procedimento n.º ${config.procedimento} · Lote ${config.lote} · ${config.perfil}` },
+    { texto: subtitulo(config) },
     { texto: "" },
     {
       texto:
@@ -223,7 +232,7 @@ function construirFolhaListas(wb: ExcelJS.Workbook): void {
   }
 }
 
-function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: ConfiguracaoJSON): void {
+function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFormulario): void {
   const sheet = wb.addWorksheet(NOME_FOLHA_EXPERIENCIA);
   COLUNAS.forEach((c, idx) => {
     sheet.getColumn(idx + 1).width = c.largura;
@@ -237,7 +246,7 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: ConfiguracaoJSO
 
   sheet.mergeCells(LINHA_SUBTITULO, 1, LINHA_SUBTITULO, 8);
   const subtituloCell = sheet.getCell(LINHA_SUBTITULO, 1);
-  subtituloCell.value = `Procedimento n.º ${config.procedimento} · Lote ${config.lote} · ${config.perfil}`;
+  subtituloCell.value = subtitulo(config);
   subtituloCell.font = { italic: true, size: 11 };
   subtituloCell.alignment = { horizontal: "center" };
 
@@ -332,7 +341,6 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: ConfiguracaoJSO
       aplicarCampoEditavel(declaraCell);
       validarDeclara(declaraCell);
 
-      sheet.mergeCells(linhaReq, 5, linhaReq, 5);
       const inicioReqMes = sheet.getCell(linhaReq, 5);
       aplicarCampoEditavel(inicioReqMes);
       validarMes(inicioReqMes);
@@ -381,7 +389,7 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: ConfiguracaoJSO
 }
 
 /** Gera o workbook completo (3 folhas) a partir da configuração — PLANO.md secção 5. */
-export function gerarWorkbookDeclaracao(config: ConfiguracaoJSON): ExcelJS.Workbook {
+export function gerarWorkbookDeclaracao(config: EspecificacaoFormulario): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Propostas";
   wb.created = new Date();
@@ -393,7 +401,7 @@ export function gerarWorkbookDeclaracao(config: ConfiguracaoJSON): ExcelJS.Workb
   return wb;
 }
 
-export async function gerarDeclaracaoExcelBlob(config: ConfiguracaoJSON): Promise<Blob> {
+export async function gerarDeclaracaoExcelBlob(config: EspecificacaoFormulario): Promise<Blob> {
   const wb = gerarWorkbookDeclaracao(config);
   const buffer = await wb.xlsx.writeBuffer();
   return new Blob([buffer], {
