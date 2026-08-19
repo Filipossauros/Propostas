@@ -19,7 +19,10 @@ describe("dados de exemplo", () => {
 
   it("o agrupamento de exemplo é válido e exportável", () => {
     expect(validarLotes(LOTES_EXEMPLO)).toHaveLength(0);
-    expect(totalProcedimento(LOTES_EXEMPLO)).toBeGreaterThan(0);
+    expect(totalProcedimento(LOTES_EXEMPLO).semIva).toBeGreaterThan(0);
+    expect(totalProcedimento(LOTES_EXEMPLO).comIva).toBeGreaterThan(
+      totalProcedimento(LOTES_EXEMPLO).semIva,
+    );
   });
 
   it("os ficheiros de exemplo são reimportáveis pela própria aplicação", () => {

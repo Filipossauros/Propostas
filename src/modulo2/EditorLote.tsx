@@ -83,7 +83,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, onDesc
                 </label>
 
                 <label className="campo-estreito">
-                  <span className="rotulo">Preço/hora</span>
+                  <span className="rotulo">Preço/hora (s/ IVA)</span>
                   <CampoNumero
                     valor={entrada.valorHora}
                     min={0}
@@ -95,7 +95,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, onDesc
                 </label>
 
                 <div className="valor-calculado">
-                  <span className="rotulo">Preço base</span>
+                  <span className="rotulo">Preço base (s/ IVA)</span>
                   <strong>{formatarMoeda(entrada.horas * entrada.valorHora)}</strong>
                 </div>
               </div>
@@ -122,8 +122,8 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, onDesc
       )}
 
       <footer className="cartao-lote-rodape">
-        <span>Preço base do lote</span>
-        <strong>{formatarMoeda(totalLote(lote))}</strong>
+        <span>Preço base do lote (sem IVA)</span>
+        <strong>{formatarMoeda(totalLote(lote, 0).semIva)}</strong>
       </footer>
     </article>
   );

@@ -1,16 +1,11 @@
 // Validação, (des)serialização e texto de caderno de encargos de um PERFIL — Módulo 1.
 
 import type { PerfilJSON, Requisito } from "./types";
-import { SCHEMA_VERSION_ATUAL } from "./types";
+import { MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
 
 export interface ErroValidacao {
   campo: string;
   mensagem: string;
-}
-
-/** Indica se a designação de um requisito sugere agrupamento de tecnologias. */
-export function sugereAgrupamento(designacao: string): boolean {
-  return designacao.includes(",") || / ou /i.test(designacao);
 }
 
 export function validarRequisitos(requisitos: Requisito[]): ErroValidacao[] {
@@ -19,6 +14,8 @@ export function validarRequisitos(requisitos: Requisito[]): ErroValidacao[] {
 
   requisitos.forEach((r, idx) => {
     const designacao = r.designacao.trim();
+    const nome = designacao || `Requisito ${idx + 1}`;
+
     if (designacao === "") {
       erros.push({ campo: `requisitos[${idx}].designacao`, mensagem: "A designação do requisito não pode ser vazia." });
     } else if (designacoesVistas.has(designacao)) {
@@ -27,10 +24,16 @@ export function validarRequisitos(requisitos: Requisito[]): ErroValidacao[] {
       designacoesVistas.add(designacao);
     }
 
-    if (!Number.isInteger(r.mesesMinimos) || r.mesesMinimos < 1) {
+    // A exigência é declarada em anos completos; guardamos o equivalente em
+    // meses, porque é em meses de calendário que a Regra A apura.
+    if (
+      !Number.isInteger(r.mesesMinimos) ||
+      r.mesesMinimos < MESES_POR_ANO ||
+      r.mesesMinimos % MESES_POR_ANO !== 0
+    ) {
       erros.push({
         campo: `requisitos[${idx}].mesesMinimos`,
-        mensagem: `"${designacao || `Requisito ${idx + 1}`}": os meses mínimos devem ser um inteiro ≥ 1.`,
+        mensagem: `"${nome}": a experiência mínima deve ser um número inteiro de anos, igual ou superior a 1.`,
       });
     }
   });
@@ -110,11 +113,14 @@ export function lerTipoConfiguracao(texto: string): string {
   return String(bruto.tipo ?? "");
 }
 
-/**
- * Texto para o caderno de encargos, agrupado por n.º de meses mínimos,
- * do requisito mais exigente para o menos exigente.
- */
-export function gerarTextoCadernoEncargos(requisitos: Requisito[]): string {
+export interface GrupoDeExigencia {
+  mesesMinimos: number;
+  anosMinimos: number;
+  designacoes: string[];
+}
+
+/** Agrupa os requisitos por exigência, do mais exigente para o menos exigente. */
+export function agruparPorExigencia(requisitos: Requisito[]): GrupoDeExigencia[] {
   const grupos = new Map<number, string[]>();
   for (const r of requisitos) {
     const lista = grupos.get(r.mesesMinimos) ?? [];
@@ -124,9 +130,23 @@ export function gerarTextoCadernoEncargos(requisitos: Requisito[]): string {
 
   return [...grupos.keys()]
     .sort((a, b) => b - a)
-    .map((meses) => {
-      const designacoes = grupos.get(meses)!.map((d) => `  - ${d}`).join("\n");
-      return `Experiência mínima de ${meses} meses em:\n${designacoes}`;
+    .map((mesesMinimos) => ({
+      mesesMinimos,
+      anosMinimos: anosDeMeses(mesesMinimos),
+      designacoes: grupos.get(mesesMinimos)!,
+    }));
+}
+
+export function exigenciaPorExtenso(anos: number, meses: number): string {
+  return `${anos} ${anos === 1 ? "ano" : "anos"} (${meses} meses)`;
+}
+
+/** Texto simples para o caderno de encargos, agrupado por exigência. */
+export function gerarTextoCadernoEncargos(requisitos: Requisito[]): string {
+  return agruparPorExigencia(requisitos)
+    .map((g) => {
+      const designacoes = g.designacoes.map((d) => `  - ${d}`).join("\n");
+      return `Experiência mínima de ${exigenciaPorExtenso(g.anosMinimos, g.mesesMinimos)} em:\n${designacoes}`;
     })
     .join("\n\n");
 }

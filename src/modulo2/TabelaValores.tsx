@@ -1,5 +1,12 @@
 import type { LotesJSON } from "../core/types";
-import { formatarMoeda, formatarNumero, linhasTabelaValores, totalProcedimento } from "../core/lotes";
+import {
+  formatarMoeda,
+  formatarNumero,
+  linhasTabelaValores,
+  taxaIva,
+  totalLote,
+  totalProcedimento,
+} from "../core/lotes";
 
 interface Props {
   config: LotesJSON;
@@ -7,6 +14,8 @@ interface Props {
 
 export function TabelaValores({ config }: Props) {
   const linhas = linhasTabelaValores(config);
+  const taxa = taxaIva(config);
+  const total = totalProcedimento(config);
 
   if (linhas.length === 0) {
     return <p className="estado-vazio">Atribua perfis aos lotes para ver a tabela.</p>;
@@ -26,10 +35,16 @@ export function TabelaValores({ config }: Props) {
               Horas
             </th>
             <th scope="col" className="numerico">
-              Preço/hora
+              Preço/hora <span className="cabecalho-nota">sem IVA</span>
             </th>
             <th scope="col" className="numerico">
-              Preço base
+              Preço base <span className="cabecalho-nota">sem IVA</span>
+            </th>
+            <th scope="col" className="numerico">
+              IVA <span className="cabecalho-nota">{formatarNumero(taxa)}%</span>
+            </th>
+            <th scope="col" className="numerico">
+              Preço base <span className="cabecalho-nota">com IVA</span>
             </th>
           </tr>
         </thead>
@@ -44,9 +59,26 @@ export function TabelaValores({ config }: Props) {
               <td className="numerico">{l.nMinimoElementos}</td>
               <td className="numerico">{formatarNumero(l.horas)}</td>
               <td className="numerico">{formatarMoeda(l.valorHora)}</td>
-              <td className="numerico">{formatarMoeda(l.valor)}</td>
+              <td className="numerico">{formatarMoeda(l.valores.semIva)}</td>
+              <td className="numerico">{formatarMoeda(l.valores.iva)}</td>
+              <td className="numerico">{formatarMoeda(l.valores.comIva)}</td>
             </tr>
           ))}
+
+          {config.lotes.length > 1 &&
+            config.lotes.map((lote) => {
+              const subtotal = totalLote(lote, taxa);
+              return (
+                <tr key={`subtotal-${lote.id}`} className="linha-subtotal">
+                  <th scope="row" colSpan={5}>
+                    Subtotal do lote {lote.numero}
+                  </th>
+                  <td className="numerico">{formatarMoeda(subtotal.semIva)}</td>
+                  <td className="numerico">{formatarMoeda(subtotal.iva)}</td>
+                  <td className="numerico">{formatarMoeda(subtotal.comIva)}</td>
+                </tr>
+              );
+            })}
         </tbody>
         <tfoot>
           <tr>
@@ -54,7 +86,11 @@ export function TabelaValores({ config }: Props) {
               Preço base total do procedimento
             </th>
             <td className="numerico">
-              <strong>{formatarMoeda(totalProcedimento(config))}</strong>
+              <strong>{formatarMoeda(total.semIva)}</strong>
+            </td>
+            <td className="numerico">{formatarMoeda(total.iva)}</td>
+            <td className="numerico">
+              <strong>{formatarMoeda(total.comIva)}</strong>
             </td>
           </tr>
         </tfoot>

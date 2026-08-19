@@ -1,7 +1,7 @@
 import type { Requisito } from "../core/types";
-import { sugereAgrupamento } from "../core/perfil";
+import { mesesDeAnos } from "../core/types";
 import { gerarId } from "../core/id";
-import { CampoNumero } from "../ui/CampoNumero";
+import { CampoAnos } from "../ui/CampoAnos";
 
 interface Props {
   requisitos: Requisito[];
@@ -34,7 +34,7 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
   }
 
   function adicionar() {
-    onChange([...requisitos, { id: gerarId(), designacao: "", mesesMinimos: 12 }]);
+    onChange([...requisitos, { id: gerarId(), designacao: "", mesesMinimos: mesesDeAnos(1) }]);
   }
 
   return (
@@ -54,7 +54,6 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
         {requisitos.map((r, idx) => {
           const vazio = r.designacao.trim() === "";
           const repetido = !vazio && contarOcorrencias(requisitos, r.designacao) > 1;
-          const agrupado = !vazio && sugereAgrupamento(r.designacao);
 
           return (
             <li key={r.id} className="linha-requisito">
@@ -74,17 +73,10 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
                   />
                 </label>
 
-                <label className="campo-estreito">
-                  <span className="rotulo">Meses mínimos</span>
-                  <CampoNumero
-                    valor={r.mesesMinimos}
-                    min={1}
-                    step={1}
-                    sufixo="meses"
-                    invalido={!Number.isInteger(r.mesesMinimos) || r.mesesMinimos < 1}
-                    onChange={(mesesMinimos) => atualizar(idx, { mesesMinimos })}
-                  />
-                </label>
+                <CampoAnos
+                  mesesMinimos={r.mesesMinimos}
+                  onChange={(mesesMinimos) => atualizar(idx, { mesesMinimos })}
+                />
 
                 <div className="acoes-linha">
                   <button
@@ -120,12 +112,6 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
 
               {vazio && <p className="aviso aviso-erro">A designação não pode ficar vazia.</p>}
               {repetido && <p className="aviso aviso-erro">Esta designação está repetida.</p>}
-              {agrupado && (
-                <p className="aviso aviso-atencao">
-                  Esta designação parece agrupar várias tecnologias. Um requisito agrupado torna ambíguo se é exigida
-                  experiência em <em>todas</em> ou em <em>alguma</em> delas — um risco de impugnação conhecido.
-                </p>
-              )}
             </li>
           );
         })}

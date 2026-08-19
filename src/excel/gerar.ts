@@ -33,9 +33,13 @@ import {
   TEXTO_ROTULO_FUNCAO,
   TEXTO_ROTULO_INICIO_PROJETO,
   TEXTO_ROTULO_PROJETO,
+  TEXTO_PISTA_ANO,
+  TEXTO_PISTA_MES,
   TEXTO_SUBCABECALHO_DECLARA,
-  TEXTO_SUBCABECALHO_FIM,
-  TEXTO_SUBCABECALHO_INICIO,
+  TEXTO_SUBCABECALHO_FIM_ANO,
+  TEXTO_SUBCABECALHO_FIM_MES,
+  TEXTO_SUBCABECALHO_INICIO_ANO,
+  TEXTO_SUBCABECALHO_INICIO_MES,
   TEXTO_SUBCABECALHO_REQUISITO,
   linhaInicialBloco,
   offsetBrancoBloco,
@@ -50,6 +54,7 @@ const COR_SUBCABECALHO = "FF2E75B6";
 const COR_ROTULO_BG = "FFF2F2F2";
 const COR_CAMPO_BG = "FFFAF0DC";
 const COR_CAMPO_TEXTO = "FF1F4E78";
+const COR_CAMPO_BORDA = "FFB99C5E";
 const COR_NOTA_BG = "FFFDF3E3";
 const COR_BRANCO = "FFFFFFFF";
 
@@ -87,12 +92,32 @@ function aplicarRotulo(cell: ExcelJS.Cell, texto: string): void {
   cell.protection = { locked: true };
 }
 
-function aplicarCampoEditavel(cell: ExcelJS.Cell): void {
+/**
+ * Campo preenchível pelo candidato.
+ *
+ * A caixa fechada (bordas nos quatro lados) é deliberada: com um simples
+ * sublinhado, as colunas de mês e de ano liam-se como um campo único e não era
+ * claro qual delas correspondia a que rótulo.
+ */
+function aplicarCampoEditavel(cell: ExcelJS.Cell, alinhamento: "left" | "center" = "left"): void {
+  const lado = { style: "thin" as const, color: { argb: COR_CAMPO_BORDA } };
   cell.fill = fillSolido(COR_CAMPO_BG);
   cell.font = { color: { argb: COR_CAMPO_TEXTO }, size: 10 };
-  cell.alignment = { vertical: "middle", horizontal: "left" };
-  cell.border = { bottom: { style: "thin", color: { argb: COR_CAMPO_TEXTO } } };
+  cell.alignment = { vertical: "middle", horizontal: alinhamento };
+  cell.border = { top: lado, bottom: lado, left: lado, right: lado };
   cell.protection = { locked: false };
+}
+
+/**
+ * Nota flutuante sobre uma célula de data, a dizer se recebe o mês ou o ano.
+ * Fica no comentário da célula para não interferir com o valor preenchido nem
+ * com a leitura automática do ficheiro.
+ */
+function aplicarPista(sheet: ExcelJS.Worksheet, linha: number, coluna: number, pista: string): void {
+  sheet.getCell(linha, coluna).note = {
+    texts: [{ font: { size: 9, bold: true }, text: pista }],
+    margins: { insetmode: "auto" },
+  };
 }
 
 function aplicarSubcabecalho(cell: ExcelJS.Cell, texto: string): void {
@@ -100,6 +125,12 @@ function aplicarSubcabecalho(cell: ExcelJS.Cell, texto: string): void {
   cell.fill = fillSolido(COR_SUBCABECALHO);
   cell.font = { bold: true, color: { argb: COR_BRANCO }, size: 10 };
   cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  cell.border = {
+    top: { style: "thin", color: { argb: COR_BRANCO } },
+    bottom: { style: "thin", color: { argb: COR_BRANCO } },
+    left: { style: "thin", color: { argb: COR_BRANCO } },
+    right: { style: "thin", color: { argb: COR_BRANCO } },
+  };
   cell.protection = { locked: true };
 }
 
@@ -305,33 +336,38 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
     aplicarRotulo(sheet.getCell(linhaDatas, 1), TEXTO_ROTULO_INICIO_PROJETO);
     const inicioMes = sheet.getCell(linhaDatas, 2);
-    aplicarCampoEditavel(inicioMes);
+    aplicarCampoEditavel(inicioMes, "center");
+    aplicarPista(sheet, linhaDatas, 2, TEXTO_PISTA_MES);
     validarMes(inicioMes);
     const inicioAno = sheet.getCell(linhaDatas, 3);
-    aplicarCampoEditavel(inicioAno);
+    aplicarCampoEditavel(inicioAno, "center");
+    aplicarPista(sheet, linhaDatas, 3, TEXTO_PISTA_ANO);
     validarAno(inicioAno);
 
     aplicarRotulo(sheet.getCell(linhaDatas, 4), TEXTO_ROTULO_FIM_PROJETO);
     const fimMes = sheet.getCell(linhaDatas, 5);
-    aplicarCampoEditavel(fimMes);
+    aplicarCampoEditavel(fimMes, "center");
+    aplicarPista(sheet, linhaDatas, 5, TEXTO_PISTA_MES);
     validarMes(fimMes);
     const fimAno = sheet.getCell(linhaDatas, 6);
-    aplicarCampoEditavel(fimAno);
+    aplicarCampoEditavel(fimAno, "center");
+    aplicarPista(sheet, linhaDatas, 6, TEXTO_PISTA_ANO);
     validarAno(fimAno);
 
     aplicarRotulo(sheet.getCell(linhaDatas, 7), TEXTO_ROTULO_EM_CURSO);
     const emCurso = sheet.getCell(linhaDatas, 8);
-    aplicarCampoEditavel(emCurso);
+    aplicarCampoEditavel(emCurso, "center");
     validarEmCurso(emCurso);
 
     const linhaSub = linhaInicial + OFFSET_SUBCABECALHO;
     sheet.mergeCells(linhaSub, 1, linhaSub, 3);
     aplicarSubcabecalho(sheet.getCell(linhaSub, 1), TEXTO_SUBCABECALHO_REQUISITO);
     aplicarSubcabecalho(sheet.getCell(linhaSub, 4), TEXTO_SUBCABECALHO_DECLARA);
-    sheet.mergeCells(linhaSub, 5, linhaSub, 6);
-    aplicarSubcabecalho(sheet.getCell(linhaSub, 5), TEXTO_SUBCABECALHO_INICIO);
-    sheet.mergeCells(linhaSub, 7, linhaSub, 8);
-    aplicarSubcabecalho(sheet.getCell(linhaSub, 7), TEXTO_SUBCABECALHO_FIM);
+    aplicarSubcabecalho(sheet.getCell(linhaSub, 5), TEXTO_SUBCABECALHO_INICIO_MES);
+    aplicarSubcabecalho(sheet.getCell(linhaSub, 6), TEXTO_SUBCABECALHO_INICIO_ANO);
+    aplicarSubcabecalho(sheet.getCell(linhaSub, 7), TEXTO_SUBCABECALHO_FIM_MES);
+    aplicarSubcabecalho(sheet.getCell(linhaSub, 8), TEXTO_SUBCABECALHO_FIM_ANO);
+    sheet.getRow(linhaSub).height = 32;
 
     config.requisitos.forEach((requisito, idxReq) => {
       const linhaReq = linhaInicial + OFFSET_PRIMEIRA_LINHA_REQUISITO + idxReq;
@@ -340,21 +376,21 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
       sheet.getCell(linhaReq, 1).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
 
       const declaraCell = sheet.getCell(linhaReq, 4);
-      aplicarCampoEditavel(declaraCell);
+      aplicarCampoEditavel(declaraCell, "center");
       validarDeclara(declaraCell);
 
       const inicioReqMes = sheet.getCell(linhaReq, 5);
-      aplicarCampoEditavel(inicioReqMes);
+      aplicarCampoEditavel(inicioReqMes, "center");
       validarMes(inicioReqMes);
       const inicioReqAno = sheet.getCell(linhaReq, 6);
-      aplicarCampoEditavel(inicioReqAno);
+      aplicarCampoEditavel(inicioReqAno, "center");
       validarAno(inicioReqAno);
 
       const fimReqMes = sheet.getCell(linhaReq, 7);
-      aplicarCampoEditavel(fimReqMes);
+      aplicarCampoEditavel(fimReqMes, "center");
       validarMes(fimReqMes);
       const fimReqAno = sheet.getCell(linhaReq, 8);
-      aplicarCampoEditavel(fimReqAno);
+      aplicarCampoEditavel(fimReqAno, "center");
       validarAno(fimReqAno);
     });
 

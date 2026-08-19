@@ -6,9 +6,8 @@
 // tem de apresentar), não uma quantidade contratada.
 
 import type { Lote, LotesJSON, PerfilEmLote, PerfilJSON } from "./types";
-import { SCHEMA_VERSION_ATUAL } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
 import { ErroImportacao, type ErroValidacao } from "./perfil";
-import { gerarTextoCadernoEncargos } from "./perfil";
 import { gerarId } from "./id";
 
 export function criarLote(numero: string): Lote {
@@ -20,7 +19,7 @@ export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
 }
 
 export function lotesIniciais(): LotesJSON {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", lotes: [] };
+  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", taxaIva: TAXA_IVA_PADRAO, lotes: [] };
 }
 
 // --------------------------------------------------------------------------
@@ -115,12 +114,27 @@ export function importarLotesJSON(texto: string): LotesJSON {
     throw new ErroImportacao("O ficheiro não contém uma lista de lotes.");
   }
 
-  return bruto as unknown as LotesJSON;
+  // A taxa de IVA foi acrescentada depois: ficheiros anteriores não a têm.
+  const config = bruto as unknown as LotesJSON;
+  return Number.isFinite(config.taxaIva) ? config : { ...config, taxaIva: TAXA_IVA_PADRAO };
 }
+
 
 // --------------------------------------------------------------------------
 // Preço base
 // --------------------------------------------------------------------------
+
+export interface Valores {
+  /** Base tributável: horas × preço unitário/hora, sem IVA. */
+  semIva: number;
+  iva: number;
+  comIva: number;
+}
+
+export function aplicarIva(semIva: number, taxaIva: number): Valores {
+  const iva = semIva * (taxaIva / 100);
+  return { semIva, iva, comIva: semIva + iva };
+}
 
 export interface LinhaTabelaValores {
   loteId: string;
@@ -130,9 +144,9 @@ export interface LinhaTabelaValores {
   perfil: string;
   nMinimoElementos: number;
   horas: number;
+  /** Preço unitário por hora, sem IVA. */
   valorHora: number;
-  /** horas × valor/hora. */
-  valor: number;
+  valores: Valores;
 }
 
 export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
@@ -146,17 +160,28 @@ export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
       nMinimoElementos: entrada.nMinimoElementos,
       horas: entrada.horas,
       valorHora: entrada.valorHora,
-      valor: entrada.horas * entrada.valorHora,
+      valores: aplicarIva(entrada.horas * entrada.valorHora, taxaIva(config)),
     })),
   );
 }
 
-export function totalLote(lote: Lote): number {
-  return lote.perfis.reduce((soma, e) => soma + e.horas * e.valorHora, 0);
+/** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */
+export function taxaIva(config: LotesJSON): number {
+  return Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO;
 }
 
-export function totalProcedimento(config: LotesJSON): number {
-  return config.lotes.reduce((soma, lote) => soma + totalLote(lote), 0);
+export function totalLote(lote: Lote, taxa: number): Valores {
+  return aplicarIva(
+    lote.perfis.reduce((soma, e) => soma + e.horas * e.valorHora, 0),
+    taxa,
+  );
+}
+
+export function totalProcedimento(config: LotesJSON): Valores {
+  return aplicarIva(
+    config.lotes.reduce((soma, lote) => soma + totalLote(lote, 0).semIva, 0),
+    taxaIva(config),
+  );
 }
 
 const formatadorMoeda = new Intl.NumberFormat("pt-PT", {
@@ -174,45 +199,4 @@ const formatadorNumero = new Intl.NumberFormat("pt-PT", { maximumFractionDigits:
 
 export function formatarNumero(valor: number): string {
   return Number.isFinite(valor) ? formatadorNumero.format(valor) : "—";
-}
-
-// --------------------------------------------------------------------------
-// Texto para o caderno de encargos
-// --------------------------------------------------------------------------
-
-/** Texto completo do caderno de encargos, por lote e perfil. */
-export function gerarTextoCadernoEncargosLotes(config: LotesJSON): string {
-  if (config.lotes.length === 0) return "";
-
-  const blocos = config.lotes.map((lote) => {
-    const cabecalhoLote = lote.designacao.trim() === ""
-      ? `LOTE ${lote.numero}`
-      : `LOTE ${lote.numero} — ${lote.designacao}`;
-
-    const perfis = lote.perfis.map((entrada) => {
-      const linhas = [
-        `Perfil: ${entrada.perfil.perfil}`,
-        `Número mínimo de elementos a apresentar: ${entrada.nMinimoElementos}`,
-        `Horas estimadas: ${formatarNumero(entrada.horas)}`,
-        `Preço unitário máximo por hora: ${formatarMoeda(entrada.valorHora)}`,
-        `Preço base do perfil: ${formatarMoeda(entrada.horas * entrada.valorHora)}`,
-        "",
-        "Requisitos mínimos de experiência profissional:",
-        gerarTextoCadernoEncargos(entrada.perfil.requisitos),
-      ];
-      return linhas.join("\n");
-    });
-
-    return [
-      cabecalhoLote,
-      "=".repeat(cabecalhoLote.length),
-      "",
-      perfis.join("\n\n"),
-      "",
-      `Preço base do lote ${lote.numero}: ${formatarMoeda(totalLote(lote))}`,
-    ].join("\n");
-  });
-
-  const total = `Preço base total do procedimento: ${formatarMoeda(totalProcedimento(config))}`;
-  return [...blocos, total].join("\n\n\n");
 }

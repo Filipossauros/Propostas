@@ -17,10 +17,27 @@ export const SCHEMA_VERSION_ATUAL = "2.0";
 export const ANO_MINIMO = 1910;
 export const ANO_MAXIMO = 2035;
 
+/** Meses num ano — só se admitem anos completos como exigência mínima. */
+export const MESES_POR_ANO = 12;
+
 export interface Requisito {
   id: string;
   designacao: string;
+  /**
+   * Exigência mínima em meses. Declarada em anos completos na interface e no
+   * caderno de encargos, mas guardada e apurada em meses: a Regra A conta meses
+   * de calendário, e as normas exprimem mínimos e apurados em meses inteiros.
+   * É sempre múltiplo de MESES_POR_ANO.
+   */
   mesesMinimos: number;
+}
+
+export function anosDeMeses(meses: number): number {
+  return meses / MESES_POR_ANO;
+}
+
+export function mesesDeAnos(anos: number): number {
+  return anos * MESES_POR_ANO;
 }
 
 // --------------------------------------------------------------------------
@@ -78,8 +95,12 @@ export interface Lote {
 export interface LotesJSON {
   schemaVersion: string;
   tipo: "lotes";
+  /** Taxa de IVA em percentagem, aplicada aos preços base. */
+  taxaIva: number;
   lotes: Lote[];
 }
+
+export const TAXA_IVA_PADRAO = 23;
 
 // --------------------------------------------------------------------------
 // Módulo 3 — avaliação

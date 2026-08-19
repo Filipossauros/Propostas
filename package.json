@@ -13,6 +13,7 @@
     "exemplos": "tsx scripts/gerar-exemplos.mts"
   },
   "dependencies": {
+    "docx": "^9.7.1",
     "exceljs": "^4.4.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",

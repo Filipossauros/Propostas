@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  gerarTextoCadernoEncargosLotes,
   importarLotesJSON,
   linhasTabelaValores,
   lotesIniciais,
@@ -10,7 +9,8 @@ import {
   validarLotes,
 } from "./lotes";
 import { ErroImportacao } from "./perfil";
-import { lotesComPerfis, perfil, requisito } from "./fixtures";
+import { TAXA_IVA_PADRAO } from "./types";
+import { lotesComPerfis, perfil } from "./fixtures";
 import type { LotesJSON } from "./types";
 
 function lotesExemplo(): LotesJSON {
@@ -56,19 +56,19 @@ describe("preço base", () => {
   it("calcula o valor de cada perfil como horas × valor/hora", () => {
     const linhas = linhasTabelaValores(lotesExemplo());
     expect(linhas).toHaveLength(2);
-    expect(linhas[0].valor).toBe(100 * 50);
+    expect(linhas[0].valores.semIva).toBe(100 * 50);
   });
 
   it("o n.º mínimo de elementos não multiplica o preço — é admissibilidade, não quantidade", () => {
     const config = lotesExemplo();
     config.lotes[0].perfis[0].nMinimoElementos = 7;
-    expect(linhasTabelaValores(config)[0].valor).toBe(100 * 50);
+    expect(linhasTabelaValores(config)[0].valores.semIva).toBe(100 * 50);
   });
 
   it("soma por lote e por procedimento", () => {
     const config = lotesExemplo();
-    expect(totalLote(config.lotes[0])).toBe(5000);
-    expect(totalProcedimento(config)).toBe(10000);
+    expect(totalLote(config.lotes[0], 23).semIva).toBe(5000);
+    expect(totalProcedimento(config).semIva).toBe(10000);
   });
 });
 
@@ -88,25 +88,28 @@ describe("importação/exportação de lotes", () => {
   });
 });
 
-describe("gerarTextoCadernoEncargosLotes", () => {
-  it("inclui, por lote, o perfil, os parâmetros económicos e os requisitos", () => {
-    const config = lotesComPerfis([
-      {
-        numero: "1",
-        perfis: [perfil({ perfil: "Programador Sénior", requisitos: [requisito("r1", 60, "Java")] })],
-      },
-    ]);
+describe("IVA", () => {
+  it("aplica a taxa configurada sobre a base tributável", () => {
+    const config = lotesExemplo();
+    config.taxaIva = 23;
 
-    const texto = gerarTextoCadernoEncargosLotes(config);
-    expect(texto).toContain("LOTE 1");
-    expect(texto).toContain("Perfil: Programador Sénior");
-    expect(texto).toContain("Número mínimo de elementos a apresentar: 2");
-    expect(texto).toContain("Experiência mínima de 60 meses em:");
-    expect(texto).toContain("  - Java");
-    expect(texto).toContain("Preço base total do procedimento");
+    const linha = linhasTabelaValores(config)[0];
+    expect(linha.valores.semIva).toBe(5000);
+    expect(linha.valores.iva).toBeCloseTo(1150, 6);
+    expect(linha.valores.comIva).toBeCloseTo(6150, 6);
   });
 
-  it("devolve texto vazio quando não há lotes", () => {
-    expect(gerarTextoCadernoEncargosLotes(lotesIniciais())).toBe("");
+  it("uma taxa de zero deixa o valor com IVA igual ao valor sem IVA", () => {
+    const config = lotesExemplo();
+    config.taxaIva = 0;
+    expect(totalProcedimento(config).comIva).toBe(totalProcedimento(config).semIva);
+  });
+
+  it("assume a taxa por omissão em ficheiros anteriores, que não a tinham", () => {
+    const semTaxa = { ...lotesExemplo() } as Record<string, unknown>;
+    delete semTaxa.taxaIva;
+
+    const importado = importarLotesJSON(JSON.stringify(semTaxa));
+    expect(importado.taxaIva).toBe(TAXA_IVA_PADRAO);
   });
 });

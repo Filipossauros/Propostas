@@ -71,14 +71,25 @@ export const TEXTO_NOTA_BLOCO =
 export const TEXTO_SUBCABECALHO_REQUISITO =
   "Requisito — indicar, para cada um, se declara experiência neste projeto";
 export const TEXTO_SUBCABECALHO_DECLARA = "Declara experiência?";
-export const TEXTO_SUBCABECALHO_INICIO = "Início da experiência (mês / ano)";
-export const TEXTO_SUBCABECALHO_FIM = "Fim da experiência (mês / ano)";
+
+/**
+ * Cada coluna de data tem rótulo próprio, em vez de um cabeçalho "(mês / ano)"
+ * fundido sobre duas colunas: assim não há dúvida sobre qual célula recebe o
+ * mês e qual recebe o ano.
+ */
+export const TEXTO_SUBCABECALHO_INICIO_MES = "Início da experiência — Mês";
+export const TEXTO_SUBCABECALHO_INICIO_ANO = "Início da experiência — Ano";
+export const TEXTO_SUBCABECALHO_FIM_MES = "Fim da experiência — Mês";
+export const TEXTO_SUBCABECALHO_FIM_ANO = "Fim da experiência — Ano";
 
 export const TEXTO_ROTULO_CLIENTE = "Cliente / Entidade";
 export const TEXTO_ROTULO_PROJETO = "Projeto";
 export const TEXTO_ROTULO_FUNCAO = "Função desempenhada";
-export const TEXTO_ROTULO_INICIO_PROJETO = "Início do projeto (mês / ano)";
-export const TEXTO_ROTULO_FIM_PROJETO = "Fim do projeto (mês / ano)";
+export const TEXTO_ROTULO_INICIO_PROJETO = "Início do projeto";
+export const TEXTO_ROTULO_FIM_PROJETO = "Fim do projeto";
+/** Rótulos curtos escritos dentro da própria célula, como marca de água. */
+export const TEXTO_PISTA_MES = "Mês";
+export const TEXTO_PISTA_ANO = "Ano";
 export const TEXTO_ROTULO_EM_CURSO = "Em curso?";
 
 export function tituloFaixaBloco(numeroBloco: number): string {

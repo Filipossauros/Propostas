@@ -5,18 +5,22 @@ import { ErroImportacao, importarPerfilJSON } from "../core/perfil";
 import {
   criarLote,
   criarPerfilEmLote,
-  gerarTextoCadernoEncargosLotes,
   importarLotesJSON,
   lotesIniciais,
   lotesParaJSON,
+  taxaIva,
   validarLotes,
 } from "../core/lotes";
+import { documentoCadernoEncargos, documentoProgramaConcurso } from "../core/cadernoEncargos";
+import { documentoParaTexto } from "../core/documento";
+import { gerarDocxBlob } from "../word/gerarDocx";
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { CHAVE_LOTES, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
 import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { gerarLotesBlob } from "../excel/exportarLotes";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { EditorLote } from "./EditorLote";
@@ -42,7 +46,9 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
 
   const erros = validarLotes(config);
   const podeExportar = erros.length === 0;
-  const textoCaderno = gerarTextoCadernoEncargosLotes(config);
+  const temLotes = config.lotes.length > 0;
+  const textoCaderno = temLotes ? documentoParaTexto(documentoCadernoEncargos(config)) : "";
+  const textoPrograma = temLotes ? documentoParaTexto(documentoProgramaConcurso(config)) : "";
 
   function atualizarLote(loteId: string, alteracao: Partial<Lote>) {
     setConfig((atual) => ({
@@ -128,8 +134,13 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
     descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), "Lotes.json");
   }
 
-  function descarregarExcel() {
-    descarregarBlob(gerarLotesBlob(config), "Lotes.xlsx");
+  async function descarregarExcel() {
+    descarregarBlob(await gerarLotesBlob(config), "Lotes.xlsx");
+  }
+
+  async function descarregarWord() {
+    const blob = await gerarDocxBlob([documentoCadernoEncargos(config), documentoProgramaConcurso(config)]);
+    descarregarBlob(blob, "Requisitos_e_regras.docx");
   }
 
   async function descarregarFormulario(perfil: PerfilJSON, numeroLote: string) {
@@ -166,6 +177,26 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Parâmetros do procedimento</h3>
+        </header>
+        <div className="grelha-campos">
+          <label className="campo-estreito">
+            <span className="rotulo">Taxa de IVA</span>
+            <CampoNumero
+              valor={taxaIva(config)}
+              min={0}
+              step={1}
+              sufixo="%"
+              invalido={!(taxaIva(config) >= 0)}
+              onChange={(valor) => setConfig((atual) => ({ ...atual, taxaIva: valor }))}
+            />
+            <span className="ajuda">Todos os preços unitários são introduzidos sem IVA.</span>
+          </label>
+        </div>
+      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
@@ -298,13 +329,22 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
           <h3>Saídas</h3>
         </header>
         <div className="acoes">
-          <button type="button" className="botao-principal" onClick={descarregarExcel} disabled={!podeExportar}>
-            Descarregar Excel (tabela + requisitos + texto)
+          <button type="button" className="botao-principal" onClick={descarregarWord} disabled={!podeExportar}>
+            Descarregar documento Word
+          </button>
+          <button type="button" className="botao-secundario" onClick={descarregarExcel} disabled={!podeExportar}>
+            Descarregar Excel
           </button>
           <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
             Descarregar agrupamento (JSON)
           </button>
         </div>
+        <p className="ajuda">
+          O documento Word reúne, com tabelas formatadas, os requisitos e o preço base para o caderno de encargos e as
+          regras de comprovação e apuramento para o programa do concurso — pronto a colar num pedido de informação
+          interno. As regras vão em secções, e não em artigos: a numeração e a inserção sistemática ficam para a
+          redação das peças.
+        </p>
         <p className="ajuda">
           Os formulários de declaração descarregam-se por perfil, dentro de cada lote. O JSON do agrupamento é o
           ficheiro que carrega no Módulo 3 para avaliar as propostas.
@@ -317,9 +357,24 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
       {textoCaderno !== "" && (
         <section className="painel">
           <header className="painel-cabecalho">
-            <h3>Texto para o caderno de encargos</h3>
+            <h3>Caderno de encargos</h3>
+            <p className="painel-nota">
+              Pré-visualização em texto. Para tabelas formatadas, use o documento Word.
+            </p>
           </header>
           <BlocoCopiavel texto={textoCaderno} onMensagem={setMensagem} />
+        </section>
+      )}
+
+      {textoPrograma !== "" && (
+        <section className="painel">
+          <header className="painel-cabecalho">
+            <h3>Regras para o programa do concurso</h3>
+            <p className="painel-nota">
+              Comprovação, exclusão e regra de apuramento, em secções. A validar juridicamente.
+            </p>
+          </header>
+          <BlocoCopiavel texto={textoPrograma} onMensagem={setMensagem} />
         </section>
       )}
     </div>

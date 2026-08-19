@@ -1,6 +1,7 @@
 {
   "schemaVersion": "2.0",
   "tipo": "lotes",
+  "taxaIva": 23,
   "lotes": [
     {
       "id": "lote-1",

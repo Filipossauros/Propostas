@@ -832,6 +832,34 @@ button:disabled {
   color: var(--vermelho);
 }
 
+/* Qualificador do cabeçalho de coluna, ex.: "sem IVA" sob "Preço/hora". */
+.cabecalho-nota {
+  display: block;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.8;
+}
+
+.linha-subtotal th,
+.linha-subtotal td {
+  background: var(--superficie-alt);
+  font-weight: 600;
+}
+
+.campo-anos {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.equivalente-meses {
+  padding-bottom: 9px;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------- Texto copiável */
 
 .bloco-copiavel {
@@ -851,9 +879,13 @@ button:disabled {
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  /* Sem quebra automática: as tabelas são desenhadas com carateres e uma quebra
+     a meio da linha destruiria o alinhamento das colunas. */
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 4;
 }
 
 @media (max-width: 640px) {

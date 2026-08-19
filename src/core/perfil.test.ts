@@ -5,22 +5,10 @@ import {
   importarPerfilJSON,
   lerTipoConfiguracao,
   perfilParaJSON,
-  sugereAgrupamento,
   validarPerfil,
 } from "./perfil";
 import { lotesParaJSON } from "./lotes";
 import { lotesComPerfis, perfil, requisito } from "./fixtures";
-
-describe("sugereAgrupamento", () => {
-  it("deteta vírgulas e a conjunção «ou»", () => {
-    expect(sugereAgrupamento("Java, C# ou Python")).toBe(true);
-    expect(sugereAgrupamento("Java ou C#")).toBe(true);
-  });
-
-  it("não assinala designações simples", () => {
-    expect(sugereAgrupamento("Desenvolvimento de APIs")).toBe(false);
-  });
-});
 
 describe("validarPerfil", () => {
   it("aceita um perfil válido", () => {
@@ -81,7 +69,7 @@ describe("lerTipoConfiguracao", () => {
 });
 
 describe("gerarTextoCadernoEncargos", () => {
-  it("agrupa por meses mínimos, do mais exigente para o menos exigente", () => {
+  it("agrupa por exigência, em anos com o equivalente em meses", () => {
     const requisitos = [
       requisito("r1", 120, "Desenvolvimento de software (geral)"),
       requisito("r2", 60, "Java (versão 8 ou superior)"),
@@ -89,9 +77,9 @@ describe("gerarTextoCadernoEncargos", () => {
     ];
 
     expect(gerarTextoCadernoEncargos(requisitos)).toBe(
-      "Experiência mínima de 120 meses em:\n" +
+      "Experiência mínima de 10 anos (120 meses) em:\n" +
         "  - Desenvolvimento de software (geral)\n\n" +
-        "Experiência mínima de 60 meses em:\n" +
+        "Experiência mínima de 5 anos (60 meses) em:\n" +
         "  - Java (versão 8 ou superior)\n" +
         "  - Desenvolvimento de APIs",
     );

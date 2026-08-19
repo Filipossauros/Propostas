@@ -5,7 +5,7 @@
 // leem esta constante diretamente — sem qualquer pedido de rede.
 
 import type { LotesJSON, PerfilJSON, Requisito } from "./types";
-import { SCHEMA_VERSION_ATUAL } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
 
 function req(id: string, designacao: string, mesesMinimos: number): Requisito {
   return { id, designacao, mesesMinimos };
@@ -47,6 +47,7 @@ const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
 export const LOTES_EXEMPLO: LotesJSON = {
   schemaVersion: SCHEMA_VERSION_ATUAL,
   tipo: "lotes",
+  taxaIva: TAXA_IVA_PADRAO,
   lotes: [
     {
       id: "lote-1",

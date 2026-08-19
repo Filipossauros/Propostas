@@ -11,7 +11,7 @@ import type {
   PerfilJSON,
   Requisito,
 } from "./types";
-import { SCHEMA_VERSION_ATUAL } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
 import { criarPerfilEmLote } from "./lotes";
 
 export function ma(ano: number, mes: number): MesAno {
@@ -84,6 +84,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
+    taxaIva: TAXA_IVA_PADRAO,
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,
       numero: e.numero,
