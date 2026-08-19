@@ -22,6 +22,10 @@ export interface ConfiguracaoJSON {
 
 export const SCHEMA_VERSION_ATUAL = "1.0";
 
+/** Intervalo de anos admitido em qualquer campo de data (configuração e formulário). */
+export const ANO_MINIMO = 1910;
+export const ANO_MAXIMO = 2035;
+
 export interface MesAno {
   mes: number; // 1-12
   ano: number;

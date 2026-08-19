@@ -187,3 +187,108 @@ button:disabled {
 .texto-vazio {
   opacity: 0.6;
 }
+
+.abas {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+
+.abas button {
+  background: white;
+  color: var(--azul);
+}
+
+.abas button:disabled {
+  background: var(--azul);
+  color: white;
+  opacity: 1;
+}
+
+.seletor-vista {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.seletor-vista button {
+  background: white;
+  color: var(--azul);
+}
+
+.seletor-vista button:disabled {
+  background: var(--azul);
+  color: white;
+  opacity: 1;
+}
+
+.tabela-resultados {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.tabela-resultados th,
+.tabela-resultados td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.tabela-resultados thead {
+  background: var(--cinza);
+}
+
+.veredicto-cumpre {
+  color: #1e7d32;
+  font-weight: bold;
+}
+
+.veredicto-nao-cumpre {
+  color: var(--erro);
+  font-weight: bold;
+}
+
+.etiqueta-alerta {
+  color: #7a5b00;
+  font-size: 0.85em;
+}
+
+.painel-alertas {
+  margin-top: 16px;
+}
+
+.painel-alertas summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--azul);
+}
+
+.lista-grupos {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grupo-concorrente {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.lista-nomes-originais {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lista-nomes-originais li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

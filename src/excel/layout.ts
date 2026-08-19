@@ -86,5 +86,4 @@ export const LISTAS_SIM_NAO = { col: "B", primeiraLinha: 2, ultimaLinha: 3 } as 
 export const LISTAS_SIM_NAO_MAIUSC = { col: "C", primeiraLinha: 2, ultimaLinha: 3 } as const; // SIM/NÃO
 export const LISTAS_MESES = { col: "D", primeiraLinha: 2, ultimaLinha: 13 } as const; // 1..12
 
-export const ANO_MINIMO = 1910;
-export const ANO_MAXIMO = 2035;
+export { ANO_MAXIMO, ANO_MINIMO } from "../core/types";
