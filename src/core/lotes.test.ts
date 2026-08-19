@@ -53,22 +53,22 @@ describe("validarLotes", () => {
 });
 
 describe("preço base", () => {
-  it("calcula o valor de cada perfil como horas × valor/hora", () => {
+  it("calcula o valor de cada perfil como n.º mínimo de elementos × horas × valor/hora", () => {
     const linhas = linhasTabelaValores(lotesExemplo());
     expect(linhas).toHaveLength(2);
-    expect(linhas[0].valores.semIva).toBe(100 * 50);
+    expect(linhas[0].valores.semIva).toBe(2 * 100 * 50);
   });
 
-  it("o n.º mínimo de elementos não multiplica o preço — é admissibilidade, não quantidade", () => {
+  it("o n.º mínimo de elementos multiplica o preço base", () => {
     const config = lotesExemplo();
     config.lotes[0].perfis[0].nMinimoElementos = 7;
-    expect(linhasTabelaValores(config)[0].valores.semIva).toBe(100 * 50);
+    expect(linhasTabelaValores(config)[0].valores.semIva).toBe(7 * 100 * 50);
   });
 
   it("soma por lote e por procedimento", () => {
     const config = lotesExemplo();
-    expect(totalLote(config.lotes[0], 23).semIva).toBe(5000);
-    expect(totalProcedimento(config).semIva).toBe(10000);
+    expect(totalLote(config.lotes[0], 23).semIva).toBe(10000);
+    expect(totalProcedimento(config).semIva).toBe(20000);
   });
 });
 
@@ -94,9 +94,9 @@ describe("IVA", () => {
     config.taxaIva = 23;
 
     const linha = linhasTabelaValores(config)[0];
-    expect(linha.valores.semIva).toBe(5000);
-    expect(linha.valores.iva).toBeCloseTo(1150, 6);
-    expect(linha.valores.comIva).toBeCloseTo(6150, 6);
+    expect(linha.valores.semIva).toBe(10000);
+    expect(linha.valores.iva).toBeCloseTo(2300, 6);
+    expect(linha.valores.comIva).toBeCloseTo(12300, 6);
   });
 
   it("uma taxa de zero deixa o valor com IVA igual ao valor sem IVA", () => {

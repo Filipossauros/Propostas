@@ -8,6 +8,22 @@ export interface ErroValidacao {
   mensagem: string;
 }
 
+export function perfilInicial(): PerfilJSON {
+  return {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "perfil",
+    perfil: "",
+    nBlocos: 15,
+    requisitos: [],
+  };
+}
+
+export function ehPerfilGuardado(valor: unknown): valor is PerfilJSON {
+  if (typeof valor !== "object" || valor === null) return false;
+  const p = valor as Partial<PerfilJSON>;
+  return p.tipo === "perfil" && p.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(p.requisitos);
+}
+
 export function validarRequisitos(requisitos: Requisito[]): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   const designacoesVistas = new Set<string>();

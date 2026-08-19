@@ -65,6 +65,13 @@ export interface EspecificacaoFormulario {
   perfil: string;
   nBlocos: number;
   requisitos: Requisito[];
+  /**
+   * Número do lote, quando já se conhece (formulário descarregado a partir do
+   * Módulo 2, dentro de um lote). Pré-preenche e bloqueia o campo "Lote" no
+   * formulário. Ausente quando o formulário é gerado a partir do Módulo 1,
+   * antes de o perfil ser agrupado em qualquer lote.
+   */
+  lote?: string;
 }
 
 // --------------------------------------------------------------------------
@@ -95,6 +102,11 @@ export interface Lote {
 export interface LotesJSON {
   schemaVersion: string;
   tipo: "lotes";
+  /**
+   * Nome do procedimento, apenas para registo. Só o nome — o número ainda não
+   * é conhecido nesta fase (à semelhança do perfil e do próprio agrupamento).
+   */
+  nomeProcedimento: string;
   /** Taxa de IVA em percentagem, aplicada aos preços base. */
   taxaIva: number;
   lotes: Lote[];
@@ -129,13 +141,20 @@ export interface MesAno {
 }
 
 export type DeclaraExperiencia = "SIM" | "NÃO";
-export type SimNao = "Sim" | "Não";
 
 export interface LinhaRequisito {
   requisitoId: string;
   declara: DeclaraExperiencia | null;
   inicio: MesAno | null;
   fim: MesAno | null;
+  /**
+   * Início parcialmente preenchido (só mês ou só ano, não os dois). Distinto de
+   * `inicio === null`, que também cobre "totalmente em branco" — caso em que a
+   * experiência herda o período do projeto. Um preenchimento parcial não pode
+   * ser confundido com essa herança: a Regra A anula a experiência da linha.
+   */
+  inicioIncompleto: boolean;
+  fimIncompleto: boolean;
 }
 
 export interface Bloco {
@@ -145,15 +164,14 @@ export interface Bloco {
   funcao: string;
   projInicio: MesAno | null;
   projFim: MesAno | null;
-  emCurso: SimNao | null;
   linhas: LinhaRequisito[];
 }
 
 export interface Identificacao {
   nome: string;
-  documento: string;
   entidadeConcorrente: string;
   procedimento: string;
+  lote: string;
   perfil: string;
 }
 
@@ -162,8 +180,10 @@ export type AlertaTipo =
   | "requisitosDivergentes"
   | "campoObrigatorioBranco"
   | "periodoForaDoProjeto"
+  | "periodoPosDataLimite"
   | "datasIncoerentes"
   | "identificacaoIncompleta"
+  | "blocoIncompleto"
   | "divergenciaPdf";
 
 export interface Alerta {

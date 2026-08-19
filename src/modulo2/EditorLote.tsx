@@ -1,5 +1,5 @@
 import type { Lote, PerfilEmLote, PerfilJSON } from "../core/types";
-import { formatarMoeda, totalLote } from "../core/lotes";
+import { formatarMoeda, precoBaseEntrada, totalLote } from "../core/lotes";
 import { CampoNumero } from "../ui/CampoNumero";
 
 interface Props {
@@ -96,7 +96,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, onDesc
 
                 <div className="valor-calculado">
                   <span className="rotulo">Preço base (s/ IVA)</span>
-                  <strong>{formatarMoeda(entrada.horas * entrada.valorHora)}</strong>
+                  <strong>{formatarMoeda(precoBaseEntrada(entrada))}</strong>
                 </div>
               </div>
 

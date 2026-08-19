@@ -24,6 +24,13 @@ import {
   linhaInicialBloco,
 } from "./layout";
 
+/** Resultado da leitura combinada de uma célula de mês e uma de ano. */
+interface MesAnoLido {
+  valor: MesAno | null;
+  /** true quando exatamente uma das duas células (mês/ano) está preenchida. */
+  incompleto: boolean;
+}
+
 function lerTexto(sheet: XLSX.WorkSheet, ref: string): string {
   const cell = sheet[ref];
   if (!cell || cell.v === undefined || cell.v === null) return "";
@@ -37,16 +44,18 @@ function lerInteiro(sheet: XLSX.WorkSheet, ref: string): number | null {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function lerMesAno(sheet: XLSX.WorkSheet, refMes: string, refAno: string): MesAno | null {
+/**
+ * Combina uma célula de mês e uma de ano. Distingue três casos: ambas em
+ * branco (a data é omitida — herda o período do projeto, ou fica por
+ * preencher, consoante o contexto), ambas preenchidas (data válida), e só
+ * uma preenchida (preenchimento incompleto — a Regra A anula essa experiência).
+ */
+function lerMesAno(sheet: XLSX.WorkSheet, refMes: string, refAno: string): MesAnoLido {
   const mes = lerInteiro(sheet, refMes);
   const ano = lerInteiro(sheet, refAno);
-  if (mes === null || ano === null) return null;
-  return { mes, ano };
-}
-
-function lerSimNao(sheet: XLSX.WorkSheet, ref: string): "Sim" | "Não" | null {
-  const texto = lerTexto(sheet, ref);
-  return texto === "Sim" || texto === "Não" ? texto : null;
+  if (mes === null && ano === null) return { valor: null, incompleto: false };
+  if (mes === null || ano === null) return { valor: null, incompleto: true };
+  return { valor: { mes, ano }, incompleto: false };
 }
 
 function lerDeclara(sheet: XLSX.WorkSheet, ref: string): "SIM" | "NÃO" | null {
@@ -55,7 +64,7 @@ function lerDeclara(sheet: XLSX.WorkSheet, ref: string): "SIM" | "NÃO" | null {
 }
 
 function identificacaoVazia(): Identificacao {
-  return { nome: "", documento: "", entidadeConcorrente: "", procedimento: "", perfil: "" };
+  return { nome: "", entidadeConcorrente: "", procedimento: "", lote: "", perfil: "" };
 }
 
 export interface ResultadoLeitura {
@@ -108,11 +117,15 @@ export function lerDeclaracaoExcel(
 
     const linhasRequisito: LinhaRequisito[] = config.requisitos.map((requisito, r) => {
       const linhaReq = linhaInicial + OFFSET_PRIMEIRA_LINHA_REQUISITO + r;
+      const inicio = lerMesAno(sheet, `E${linhaReq}`, `F${linhaReq}`);
+      const fim = lerMesAno(sheet, `G${linhaReq}`, `H${linhaReq}`);
       return {
         requisitoId: requisito.id,
         declara: lerDeclara(sheet, `D${linhaReq}`),
-        inicio: lerMesAno(sheet, `E${linhaReq}`, `F${linhaReq}`),
-        fim: lerMesAno(sheet, `G${linhaReq}`, `H${linhaReq}`),
+        inicio: inicio.valor,
+        fim: fim.valor,
+        inicioIncompleto: inicio.incompleto,
+        fimIncompleto: fim.incompleto,
       };
     });
 
@@ -121,9 +134,8 @@ export function lerDeclaracaoExcel(
       cliente: lerTexto(sheet, `B${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
       projeto: lerTexto(sheet, `E${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
       funcao: lerTexto(sheet, `B${linhaInicial + OFFSET_FUNCAO}`),
-      projInicio: lerMesAno(sheet, `B${linhaDatas}`, `C${linhaDatas}`),
-      projFim: lerMesAno(sheet, `E${linhaDatas}`, `F${linhaDatas}`),
-      emCurso: lerSimNao(sheet, `H${linhaDatas}`),
+      projInicio: lerMesAno(sheet, `B${linhaDatas}`, `C${linhaDatas}`).valor,
+      projFim: lerMesAno(sheet, `E${linhaDatas}`, `F${linhaDatas}`).valor,
       linhas: linhasRequisito,
     });
   }

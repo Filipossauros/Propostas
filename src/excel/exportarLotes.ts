@@ -96,7 +96,7 @@ function folhaPrecoBase(wb: ExcelJS.Workbook, config: LotesJSON): void {
   const nota = sheet.getCell(2, 1);
   nota.value =
     `Todos os preços unitários por hora são apresentados SEM IVA. A taxa de IVA aplicada é de ${formatarNumero(taxa)}%. ` +
-    "O n.º mínimo de elementos é condição de admissibilidade e não multiplica o preço base.";
+    "O preço base de cada perfil é o n.º mínimo de elementos × horas × preço/hora.";
   nota.font = { italic: true, size: 9 };
   nota.alignment = { wrapText: true, vertical: "middle" };
   sheet.getRow(2).height = 28;

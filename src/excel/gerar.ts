@@ -14,11 +14,11 @@ import {
   LINHA_SUBTITULO,
   LINHA_TITULO,
   LISTAS_MESES,
-  LISTAS_SIM_NAO,
   LISTAS_SIM_NAO_MAIUSC,
   NOME_FOLHA_EXPERIENCIA,
   NOME_FOLHA_LEIAME,
   NOME_FOLHA_LISTAS,
+  OFFSET_CABECALHO_DATAS_PROJETO,
   OFFSET_CLIENTE_PROJETO,
   OFFSET_DATAS_PROJETO,
   OFFSET_FUNCAO,
@@ -26,15 +26,15 @@ import {
   OFFSET_SUBCABECALHO,
   ROTULO_ASSINATURA,
   TEXTO_DECLARACAO_VERACIDADE,
+  TEXTO_DISCLAIMER_PROJETO_EM_CURSO,
   TEXTO_NOTA_BLOCO,
   TEXTO_ROTULO_CLIENTE,
-  TEXTO_ROTULO_EM_CURSO,
   TEXTO_ROTULO_FIM_PROJETO,
   TEXTO_ROTULO_FUNCAO,
   TEXTO_ROTULO_INICIO_PROJETO,
   TEXTO_ROTULO_PROJETO,
-  TEXTO_PISTA_ANO,
-  TEXTO_PISTA_MES,
+  TEXTO_CABECALHO_ANO,
+  TEXTO_CABECALHO_MES,
   TEXTO_SUBCABECALHO_DECLARA,
   TEXTO_SUBCABECALHO_FIM_ANO,
   TEXTO_SUBCABECALHO_FIM_MES,
@@ -55,7 +55,9 @@ const COR_ROTULO_BG = "FFF2F2F2";
 const COR_CAMPO_BG = "FFFAF0DC";
 const COR_CAMPO_TEXTO = "FF1F4E78";
 const COR_CAMPO_BORDA = "FFB99C5E";
-const COR_NOTA_BG = "FFFDF3E3";
+const COR_CAMPO_BLOQUEADO_BG = "FFE9ECF1";
+const COR_CAMPO_BLOQUEADO_TEXTO = "FF3B4A5A";
+const COR_NOTA_BG = "FFEFF3F6";
 const COR_BRANCO = "FFFFFFFF";
 
 const COLUNAS: Array<{ largura: number }> = [
@@ -108,16 +110,18 @@ function aplicarCampoEditavel(cell: ExcelJS.Cell, alinhamento: "left" | "center"
   cell.protection = { locked: false };
 }
 
-/**
- * Nota flutuante sobre uma célula de data, a dizer se recebe o mês ou o ano.
- * Fica no comentário da célula para não interferir com o valor preenchido nem
- * com a leitura automática do ficheiro.
- */
-function aplicarPista(sheet: ExcelJS.Worksheet, linha: number, coluna: number, pista: string): void {
-  sheet.getCell(linha, coluna).note = {
-    texts: [{ font: { size: 9, bold: true }, text: pista }],
-    margins: { insetmode: "auto" },
-  };
+/** Campo pré-preenchido e bloqueado: o candidato não o edita — vem definido pela entidade emitente. */
+function aplicarCampoBloqueado(cell: ExcelJS.Cell, valor: string, alinhamento: "left" | "center" = "left"): void {
+  cell.value = valor;
+  cell.fill = fillSolido(COR_CAMPO_BLOQUEADO_BG);
+  cell.font = { color: { argb: COR_CAMPO_BLOQUEADO_TEXTO }, size: 10, italic: true };
+  cell.alignment = { vertical: "middle", horizontal: alinhamento };
+  cell.protection = { locked: true };
+}
+
+/** Cabeçalho pequeno ("Mês"/"Ano") por cima de uma célula de data — mesmo tratamento do subcabeçalho dos requisitos. */
+function aplicarCabecalhoData(cell: ExcelJS.Cell, texto: string): void {
+  aplicarSubcabecalho(cell, texto);
 }
 
 function aplicarSubcabecalho(cell: ExcelJS.Cell, texto: string): void {
@@ -156,18 +160,6 @@ function validarAno(cell: ExcelJS.Cell): void {
     errorStyle: "error",
     errorTitle: "Ano inválido",
     error: `Indique um ano entre ${ANO_MINIMO} e ${ANO_MAXIMO}, ou deixe em branco.`,
-  };
-}
-
-function validarEmCurso(cell: ExcelJS.Cell): void {
-  cell.dataValidation = {
-    type: "list",
-    allowBlank: true,
-    formulae: [`${NOME_FOLHA_LISTAS}!$${LISTAS_SIM_NAO.col}$${LISTAS_SIM_NAO.primeiraLinha}:$${LISTAS_SIM_NAO.col}$${LISTAS_SIM_NAO.ultimaLinha}`],
-    showErrorMessage: true,
-    errorStyle: "error",
-    errorTitle: "Valor inválido",
-    error: 'Selecione "Sim" ou "Não", ou deixe em branco.',
   };
 }
 
@@ -222,7 +214,7 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, config: EspecificacaoFormula
     },
     {
       texto:
-        "2. Cada bloco \"PROJETO n\" corresponde a um projeto ou contrato distinto. Preencha o cliente/entidade, o projeto, a função desempenhada e o período de execução (mês e ano de início e de fim). Se o projeto ainda estiver em curso, assinale \"Sim\" em \"Em curso?\" e deixe o fim em branco.",
+        "2. Cada bloco \"PROJETO n\" corresponde a um projeto distinto. Preencha o cliente/entidade, o projeto, a função desempenhada e o período de execução (mês e ano de início e de fim).",
     },
     {
       texto:
@@ -235,10 +227,6 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, config: EspecificacaoFormula
     {
       texto:
         "5. Após concluir o preenchimento, assine digitalmente o documento com assinatura digital qualificada e submeta o PDF resultante nos termos do procedimento.",
-    },
-    {
-      texto:
-        "6. Este ficheiro não contém metadados de configuração do procedimento. A avaliação do cumprimento dos requisitos mínimos é feita pela entidade adjudicante com base na configuração por si definida.",
     },
   ];
 
@@ -285,12 +273,19 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
 
   aplicarFaixa(sheet, LINHA_FAIXA_IDENTIFICACAO, "IDENTIFICAÇÃO DO CANDIDATO");
 
-  for (const { linha, rotulo } of CAMPOS_IDENTIFICACAO) {
+  for (const { linha, rotulo, campo: nomeCampo } of CAMPOS_IDENTIFICACAO) {
     aplicarRotulo(sheet.getCell(linha, 1), rotulo);
     sheet.mergeCells(linha, 2, linha, 8);
     const campo = sheet.getCell(linha, 2);
-    aplicarCampoEditavel(campo);
-    validarTexto(campo);
+
+    if (nomeCampo === "perfil") {
+      aplicarCampoBloqueado(campo, config.perfil);
+    } else if (nomeCampo === "lote" && config.lote) {
+      aplicarCampoBloqueado(campo, config.lote);
+    } else {
+      aplicarCampoEditavel(campo);
+      validarTexto(campo);
+    }
   }
 
   sheet.mergeCells(LINHA_DECLARACAO_VERACIDADE, 1, LINHA_DECLARACAO_VERACIDADE, 8);
@@ -333,31 +328,37 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     aplicarCampoEditavel(campoFuncao);
     validarTexto(campoFuncao);
 
+    const linhaCabecalhoDatas = linhaInicial + OFFSET_CABECALHO_DATAS_PROJETO;
+    aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 2), TEXTO_CABECALHO_MES);
+    aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 3), TEXTO_CABECALHO_ANO);
+    aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 5), TEXTO_CABECALHO_MES);
+    aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 6), TEXTO_CABECALHO_ANO);
+    sheet.mergeCells(linhaCabecalhoDatas, 7, linhaCabecalhoDatas, 8);
+
     const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
     aplicarRotulo(sheet.getCell(linhaDatas, 1), TEXTO_ROTULO_INICIO_PROJETO);
     const inicioMes = sheet.getCell(linhaDatas, 2);
     aplicarCampoEditavel(inicioMes, "center");
-    aplicarPista(sheet, linhaDatas, 2, TEXTO_PISTA_MES);
     validarMes(inicioMes);
     const inicioAno = sheet.getCell(linhaDatas, 3);
     aplicarCampoEditavel(inicioAno, "center");
-    aplicarPista(sheet, linhaDatas, 3, TEXTO_PISTA_ANO);
     validarAno(inicioAno);
 
     aplicarRotulo(sheet.getCell(linhaDatas, 4), TEXTO_ROTULO_FIM_PROJETO);
     const fimMes = sheet.getCell(linhaDatas, 5);
     aplicarCampoEditavel(fimMes, "center");
-    aplicarPista(sheet, linhaDatas, 5, TEXTO_PISTA_MES);
     validarMes(fimMes);
     const fimAno = sheet.getCell(linhaDatas, 6);
     aplicarCampoEditavel(fimAno, "center");
-    aplicarPista(sheet, linhaDatas, 6, TEXTO_PISTA_ANO);
     validarAno(fimAno);
 
-    aplicarRotulo(sheet.getCell(linhaDatas, 7), TEXTO_ROTULO_EM_CURSO);
-    const emCurso = sheet.getCell(linhaDatas, 8);
-    aplicarCampoEditavel(emCurso, "center");
-    validarEmCurso(emCurso);
+    sheet.mergeCells(linhaDatas, 7, linhaDatas, 8);
+    const disclaimerEmCurso = sheet.getCell(linhaDatas, 7);
+    disclaimerEmCurso.value = TEXTO_DISCLAIMER_PROJETO_EM_CURSO;
+    disclaimerEmCurso.font = { italic: true, size: 8 };
+    disclaimerEmCurso.alignment = { wrapText: true, vertical: "middle" };
+    disclaimerEmCurso.protection = { locked: true };
+    sheet.getRow(linhaDatas).height = 42;
 
     const linhaSub = linhaInicial + OFFSET_SUBCABECALHO;
     sheet.mergeCells(linhaSub, 1, linhaSub, 3);

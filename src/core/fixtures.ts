@@ -45,7 +45,15 @@ export function configAvaliacao(parcial: Partial<ConfiguracaoAvaliacao> = {}): C
 }
 
 export function linha(parcial: Partial<LinhaRequisito> = {}): LinhaRequisito {
-  return { requisitoId: "r1", declara: "SIM", inicio: null, fim: null, ...parcial };
+  return {
+    requisitoId: "r1",
+    declara: "SIM",
+    inicio: null,
+    fim: null,
+    inicioIncompleto: false,
+    fimIncompleto: false,
+    ...parcial,
+  };
 }
 
 export function bloco(parcial: Partial<Bloco> = {}): Bloco {
@@ -56,7 +64,6 @@ export function bloco(parcial: Partial<Bloco> = {}): Bloco {
     funcao: "Arquiteto de software",
     projInicio: ma(2020, 1),
     projFim: ma(2020, 12),
-    emCurso: null,
     linhas: [linha()],
     ...parcial,
   };
@@ -65,9 +72,9 @@ export function bloco(parcial: Partial<Bloco> = {}): Bloco {
 export function declaracao(parcial: Partial<Declaracao> = {}): Declaracao {
   const identificacao = {
     nome: "Ana Ferreira",
-    documento: "111",
     entidadeConcorrente: "ABC, Lda.",
     procedimento: "20270001",
+    lote: "1",
     perfil: "Perfil Teste",
     ...parcial.identificacao,
   };
@@ -84,6 +91,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
+    nomeProcedimento: "Procedimento Teste",
     taxaIva: TAXA_IVA_PADRAO,
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,

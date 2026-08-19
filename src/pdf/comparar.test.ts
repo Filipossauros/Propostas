@@ -9,7 +9,15 @@ function ma(ano: number, mes: number): MesAno {
 }
 
 function linha(opts: Partial<LinhaRequisito> = {}): LinhaRequisito {
-  return { requisitoId: "r1", declara: "SIM", inicio: null, fim: null, ...opts };
+  return {
+    requisitoId: "r1",
+    declara: "SIM",
+    inicio: null,
+    fim: null,
+    inicioIncompleto: false,
+    fimIncompleto: false,
+    ...opts,
+  };
 }
 
 function bloco(opts: Partial<Bloco> = {}): Bloco {
@@ -20,7 +28,6 @@ function bloco(opts: Partial<Bloco> = {}): Bloco {
     funcao: "Arquiteto de software",
     projInicio: ma(2020, 3),
     projFim: ma(2022, 12),
-    emCurso: null,
     linhas: [linha()],
     ...opts,
   };
@@ -32,9 +39,9 @@ function declaracao(opts: Partial<Declaracao> = {}): Declaracao {
     ficheiro: "teste.xlsx",
     identificacao: {
       nome: "João Silva",
-      documento: "123",
       entidadeConcorrente: "ABC, Lda.",
       procedimento: "20270001",
+      lote: "1",
       perfil: "Perfil",
     },
     blocos: [bloco()],

@@ -1,9 +1,7 @@
 // Agrupamento de perfis em lotes e preço base — Módulo 2.
 //
 // Nota de método sobre o preço base: o valor de cada perfil dentro de um lote é
-// `horas × valor/hora`. O n.º mínimo de elementos NÃO multiplica esse valor — é
-// uma condição de admissibilidade da proposta (quantos currículos o concorrente
-// tem de apresentar), não uma quantidade contratada.
+// `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
 
 import type { Lote, LotesJSON, PerfilEmLote, PerfilJSON } from "./types";
 import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
@@ -19,7 +17,13 @@ export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
 }
 
 export function lotesIniciais(): LotesJSON {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", taxaIva: TAXA_IVA_PADRAO, lotes: [] };
+  return {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "lotes",
+    nomeProcedimento: "",
+    taxaIva: TAXA_IVA_PADRAO,
+    lotes: [],
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -114,9 +118,14 @@ export function importarLotesJSON(texto: string): LotesJSON {
     throw new ErroImportacao("O ficheiro não contém uma lista de lotes.");
   }
 
-  // A taxa de IVA foi acrescentada depois: ficheiros anteriores não a têm.
+  // A taxa de IVA e o nome do procedimento foram acrescentados depois:
+  // ficheiros anteriores não os têm.
   const config = bruto as unknown as LotesJSON;
-  return Number.isFinite(config.taxaIva) ? config : { ...config, taxaIva: TAXA_IVA_PADRAO };
+  return {
+    ...config,
+    taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
+    nomeProcedimento: config.nomeProcedimento ?? "",
+  };
 }
 
 
@@ -149,6 +158,11 @@ export interface LinhaTabelaValores {
   valores: Valores;
 }
 
+/** Preço base de um perfil dentro de um lote, sem IVA: n.º mínimo de elementos × horas × preço/hora. */
+export function precoBaseEntrada(entrada: PerfilEmLote): number {
+  return entrada.nMinimoElementos * entrada.horas * entrada.valorHora;
+}
+
 export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
   return config.lotes.flatMap((lote) =>
     lote.perfis.map((entrada) => ({
@@ -160,7 +174,7 @@ export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
       nMinimoElementos: entrada.nMinimoElementos,
       horas: entrada.horas,
       valorHora: entrada.valorHora,
-      valores: aplicarIva(entrada.horas * entrada.valorHora, taxaIva(config)),
+      valores: aplicarIva(precoBaseEntrada(entrada), taxaIva(config)),
     })),
   );
 }
@@ -172,7 +186,7 @@ export function taxaIva(config: LotesJSON): number {
 
 export function totalLote(lote: Lote, taxa: number): Valores {
   return aplicarIva(
-    lote.perfis.reduce((soma, e) => soma + e.horas * e.valorHora, 0),
+    lote.perfis.reduce((soma, e) => soma + precoBaseEntrada(e), 0),
     taxa,
   );
 }

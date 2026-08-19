@@ -42,18 +42,26 @@ export type ResultadoPeriodoLinha =
   | { admitido: false; descartado: PeriodoDescartado };
 
 /**
- * Determina o período do projeto (com fim efetivo já resolvido para "em curso").
- * Devolve null quando não há dados suficientes para determinar o fim.
+ * O bloco de projeto está incompleto quando falta qualquer um dos campos
+ * essenciais à sua identificação e delimitação temporal. Um bloco incompleto
+ * anula toda a experiência nele declarada — não apenas a que dependeria do
+ * campo em falta — porque não há como confirmar a que projeto, período ou
+ * função a experiência respeita.
  */
-function projFimEfetivo(bloco: Bloco, dataLimitePropostas: MesAno): MesAno | null {
-  if (bloco.projFim !== null) return bloco.projFim;
-  if (bloco.emCurso === "Sim") return dataLimitePropostas;
-  return null;
+export function blocoIncompleto(bloco: Bloco): boolean {
+  return (
+    bloco.cliente.trim() === "" ||
+    bloco.projeto.trim() === "" ||
+    bloco.funcao.trim() === "" ||
+    bloco.projInicio === null ||
+    bloco.projFim === null
+  );
 }
 
 /**
- * Determina o período de uma linha de requisito (6.1), aplicando as 4 regras:
- * datas próprias > herança do projeto > "em curso" > contenção no período do projeto.
+ * Determina o período de uma linha de requisito (6.1): datas próprias da
+ * linha > herança do período do projeto > contenção no período do projeto >
+ * teto da data limite para apresentação de propostas.
  */
 export function determinarPeriodoLinha(
   bloco: Bloco,
@@ -65,26 +73,23 @@ export function determinarPeriodoLinha(
     descartado: { blocoIndice: bloco.indice, requisitoId: linha.requisitoId, motivo },
   });
 
-  const fimProjeto = projFimEfetivo(bloco, dataLimitePropostas);
+  if (blocoIncompleto(bloco)) {
+    return descartar(
+      "Bloco de projeto incompleto (cliente/entidade, projeto, função ou datas do projeto por preencher) — experiência não considerada",
+    );
+  }
+
+  if (linha.inicioIncompleto || linha.fimIncompleto) {
+    return descartar(
+      "Preenchimento incompleto das datas de início/fim da experiência (mês sem ano, ou ano sem mês) — experiência não considerada",
+    );
+  }
+
+  // A partir daqui bloco.projInicio e bloco.projFim são garantidamente não nulos.
   const temDatasProprias = linha.inicio !== null || linha.fim !== null;
-
-  let origem: OrigemPeriodo;
-  let efInicio: MesAno | null;
-  let efFim: MesAno | null;
-
-  if (!temDatasProprias) {
-    origem = "projeto";
-    efInicio = bloco.projInicio;
-    efFim = fimProjeto;
-  } else {
-    origem = "linha";
-    efInicio = linha.inicio ?? bloco.projInicio;
-    efFim = linha.fim ?? fimProjeto;
-  }
-
-  if (efInicio === null || efFim === null) {
-    return descartar("Data de início ou de fim indeterminável (projeto sem datas suficientes)");
-  }
+  const origem: OrigemPeriodo = temDatasProprias ? "linha" : "projeto";
+  const efInicio = linha.inicio ?? bloco.projInicio!;
+  const efFim = linha.fim ?? bloco.projFim!;
 
   const inicioInt = paraMesInt(efInicio);
   const fimInt = paraMesInt(efFim);
@@ -93,12 +98,14 @@ export function determinarPeriodoLinha(
     return descartar("Início posterior ao fim");
   }
 
-  if (bloco.projInicio !== null && fimProjeto !== null) {
-    const projInicioInt = paraMesInt(bloco.projInicio);
-    const projFimInt = paraMesInt(fimProjeto);
-    if (inicioInt < projInicioInt || fimInt > projFimInt) {
-      return descartar("Período fora do período do projeto");
-    }
+  const projInicioInt = paraMesInt(bloco.projInicio!);
+  const projFimInt = paraMesInt(bloco.projFim!);
+  if (inicioInt < projInicioInt || fimInt > projFimInt) {
+    return descartar("Período fora do período do projeto");
+  }
+
+  if (fimInt > paraMesInt(dataLimitePropostas)) {
+    return descartar("Data de fim posterior à data limite para apresentação de propostas");
   }
 
   return {

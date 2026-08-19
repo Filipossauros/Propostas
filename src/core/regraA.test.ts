@@ -14,33 +14,42 @@ function requisito(id = "r1", mesesMinimos = 0): Requisito {
 
 function linha(
   requisitoId: string,
-  opts: { declara?: LinhaRequisito["declara"]; inicio?: MesAno | null; fim?: MesAno | null } = {},
+  opts: {
+    declara?: LinhaRequisito["declara"];
+    inicio?: MesAno | null;
+    fim?: MesAno | null;
+    inicioIncompleto?: boolean;
+    fimIncompleto?: boolean;
+  } = {},
 ): LinhaRequisito {
   return {
     requisitoId,
-    declara: opts.declara ?? "SIM",
+    declara: "declara" in opts ? opts.declara! : "SIM",
     inicio: opts.inicio ?? null,
     fim: opts.fim ?? null,
+    inicioIncompleto: opts.inicioIncompleto ?? false,
+    fimIncompleto: opts.fimIncompleto ?? false,
   };
 }
 
 function bloco(
   indice: number,
   opts: {
+    cliente?: string;
+    projeto?: string;
+    funcao?: string;
     projInicio?: MesAno | null;
     projFim?: MesAno | null;
-    emCurso?: Bloco["emCurso"];
     linhas: LinhaRequisito[];
   },
 ): Bloco {
   return {
     indice,
-    cliente: "Cliente Teste",
-    projeto: "Projeto Teste",
-    funcao: "Função Teste",
+    cliente: opts.cliente ?? "Cliente Teste",
+    projeto: opts.projeto ?? "Projeto Teste",
+    funcao: opts.funcao ?? "Função Teste",
     projInicio: opts.projInicio ?? null,
     projFim: opts.projFim ?? null,
-    emCurso: opts.emCurso ?? null,
     linhas: opts.linhas,
   };
 }
@@ -51,7 +60,7 @@ describe("contarMesesInclusive", () => {
   });
 });
 
-describe("Regra A — casos de teste obrigatórios (PLANO.md 6.3)", () => {
+describe("Regra A — casos de teste obrigatórios", () => {
   it("1. 03/2021–09/2023 = 31 meses", () => {
     const b = bloco(1, {
       projInicio: ma(2021, 3),
@@ -125,12 +134,13 @@ describe("Regra A — casos de teste obrigatórios (PLANO.md 6.3)", () => {
     expect(resultado.periodosDescartados[0].motivo).toMatch(/fora do período/i);
   });
 
-  it("8. projeto em curso desde 01/2026, data limite 31/03/2027 = 15 meses", () => {
+  it("8. projeto \"em curso\" declarado com o mês/ano do preenchimento como fim (01/2026–03/2027, data limite 31/03/2027) = 15 meses", () => {
+    // Não existe campo "em curso": o disclaimer do formulário instrui a
+    // colocar o mês/ano de preenchimento como fim do projeto.
     const dataLimite = ma(2027, 3);
     const b = bloco(1, {
       projInicio: ma(2026, 1),
-      projFim: null,
-      emCurso: "Sim",
+      projFim: ma(2027, 3),
       linhas: [linha("r1")],
     });
     const resultado = apurarRequisito([b], requisito("r1", 0), dataLimite);
@@ -170,9 +180,87 @@ describe("Regra A — comportamentos adicionais", () => {
     expect(resultado.periodosAdmitidos).toHaveLength(0);
   });
 
+  it("linhas com declara em branco são ignoradas no cálculo (mas geram alerta noutro nível)", () => {
+    const b = bloco(1, {
+      projInicio: ma(2020, 1),
+      projFim: ma(2020, 12),
+      linhas: [linha("r1", { declara: null })],
+    });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+  });
+
   it("cumpre compara mesesApurados >= mesesMinimos", () => {
     const b = bloco(1, { projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r1")] });
     expect(apurarRequisito([b], requisito("r1", 12), dataLimitePadrao).cumpre).toBe(true);
     expect(apurarRequisito([b], requisito("r1", 13), dataLimitePadrao).cumpre).toBe(false);
+  });
+});
+
+describe("Regra A — bloco de projeto incompleto anula a experiência declarada", () => {
+  it("cliente/entidade em falta descarta a linha, mesmo com datas coerentes", () => {
+    const b = bloco(1, { cliente: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r1")] });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/incompleto/i);
+  });
+
+  it("projeto ou função em falta descarta a linha", () => {
+    const semProjeto = bloco(1, { projeto: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r1")] });
+    const semFuncao = bloco(2, { funcao: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r2")] });
+    expect(apurarRequisito([semProjeto], requisito("r1", 0), dataLimitePadrao).mesesApurados).toBe(0);
+    expect(apurarRequisito([semFuncao], requisito("r2", 0), dataLimitePadrao).mesesApurados).toBe(0);
+  });
+
+  it("datas do projeto em falta descartam a linha, ainda que a linha tenha datas próprias", () => {
+    const b = bloco(1, {
+      projInicio: null,
+      projFim: null,
+      linhas: [linha("r1", { inicio: ma(2020, 1), fim: ma(2020, 12) })],
+    });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/incompleto/i);
+  });
+});
+
+describe("Regra A — datas de experiência parcialmente preenchidas anulam a linha", () => {
+  it("início com mês sem ano (inicioIncompleto) descarta a linha, em vez de herdar o projeto", () => {
+    const b = bloco(1, {
+      projInicio: ma(2020, 1),
+      projFim: ma(2020, 12),
+      linhas: [linha("r1", { inicioIncompleto: true })],
+    });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/incompleto/i);
+  });
+
+  it("fim com ano sem mês (fimIncompleto) descarta a linha", () => {
+    const b = bloco(1, {
+      projInicio: ma(2020, 1),
+      projFim: ma(2020, 12),
+      linhas: [linha("r1", { inicio: ma(2020, 3), fimIncompleto: true })],
+    });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+  });
+});
+
+describe("Regra A — nenhuma experiência pode ir além da data limite para apresentação de propostas", () => {
+  it("fim exatamente na data limite é admitido (fronteira)", () => {
+    const dataLimite = ma(2027, 3);
+    const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 3), linhas: [linha("r1")] });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimite);
+    expect(resultado.mesesApurados).toBe(15);
+    expect(resultado.periodosDescartados).toHaveLength(0);
+  });
+
+  it("fim posterior à data limite é descartado, mesmo estando dentro do período do projeto", () => {
+    const dataLimite = ma(2027, 3);
+    const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 6), linhas: [linha("r1")] });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimite);
+    expect(resultado.mesesApurados).toBe(0);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/data limite/i);
   });
 });

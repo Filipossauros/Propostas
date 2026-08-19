@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import type { Lote, LotesJSON, PerfilJSON } from "../core/types";
+import JSZip from "jszip";
+import type { EspecificacaoFormulario, Lote, LotesJSON, PerfilEmLote, PerfilJSON } from "../core/types";
 import { SCHEMA_VERSION_ATUAL } from "../core/types";
 import { ErroImportacao, importarPerfilJSON } from "../core/perfil";
 import {
@@ -12,7 +13,6 @@ import {
   validarLotes,
 } from "../core/lotes";
 import { documentoCadernoEncargos, documentoProgramaConcurso } from "../core/cadernoEncargos";
-import { documentoParaTexto } from "../core/documento";
 import { gerarDocxBlob } from "../word/gerarDocx";
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { CHAVE_LOTES, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
@@ -22,7 +22,6 @@ import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
 
@@ -30,6 +29,16 @@ interface Props {
   /** Perfis carregados ou enviados pelo Módulo 1, à espera de serem atribuídos. */
   porAtribuir: PerfilJSON[];
   onAlterarPorAtribuir: (atualizar: (atual: PerfilJSON[]) => PerfilJSON[]) => void;
+  /** Devolve um perfil ao Módulo 1 para edição, e muda de separador. */
+  onImportarParaEdicao: (perfil: PerfilJSON) => void;
+}
+
+function todasAsEntradas(config: LotesJSON): Array<{ lote: Lote; entrada: PerfilEmLote }> {
+  return config.lotes.flatMap((lote) => lote.perfis.map((entrada) => ({ lote, entrada })));
+}
+
+function nomeFormulario(numeroLote: string, perfil: PerfilJSON, extensao: string): string {
+  return `Declaracao_Lote${nomeSeguro(numeroLote, "X")}_${nomeSeguro(perfil.perfil, "Perfil")}.${extensao}`;
 }
 
 function ehLotesGuardado(valor: unknown): valor is LotesJSON {
@@ -38,17 +47,17 @@ function ehLotesGuardado(valor: unknown): valor is LotesJSON {
   return l.tipo === "lotes" && l.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(l.lotes);
 }
 
-export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
+export function Modulo2({ porAtribuir, onAlterarPorAtribuir, onImportarParaEdicao }: Props) {
   const [config, setConfig] = useEstadoPersistente<LotesJSON>(CHAVE_LOTES, lotesIniciais, ehLotesGuardado);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  const [aZipar, setAZipar] = useState(false);
   const inputPerfisRef = useRef<HTMLInputElement>(null);
   const inputLotesRef = useRef<HTMLInputElement>(null);
+  const inputEditarPerfilRef = useRef<HTMLInputElement>(null);
 
   const erros = validarLotes(config);
   const podeExportar = erros.length === 0;
-  const temLotes = config.lotes.length > 0;
-  const textoCaderno = temLotes ? documentoParaTexto(documentoCadernoEncargos(config)) : "";
-  const textoPrograma = temLotes ? documentoParaTexto(documentoProgramaConcurso(config)) : "";
+  const temFormularios = todasAsEntradas(config).length > 0;
 
   function atualizarLote(loteId: string, alteracao: Partial<Lote>) {
     setConfig((atual) => ({
@@ -130,6 +139,17 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
     setMensagem({ tipo: "sucesso", texto: "Agrupamento de exemplo carregado." });
   }
 
+  async function importarParaEdicao(ficheiro: File) {
+    try {
+      onImportarParaEdicao(importarPerfilJSON(await ficheiro.text()));
+    } catch (erro) {
+      setMensagem({
+        tipo: "erro",
+        texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível importar o ficheiro.",
+      });
+    }
+  }
+
   function descarregarJSON() {
     descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), "Lotes.json");
   }
@@ -144,8 +164,41 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
   }
 
   async function descarregarFormulario(perfil: PerfilJSON, numeroLote: string) {
-    const nome = `Declaracao_Lote${nomeSeguro(numeroLote, "X")}_${nomeSeguro(perfil.perfil, "Perfil")}.xlsx`;
-    descarregarBlob(await gerarDeclaracaoExcelBlob(perfil), nome);
+    const especificacao: EspecificacaoFormulario = { ...perfil, lote: numeroLote };
+    descarregarBlob(await gerarDeclaracaoExcelBlob(especificacao), nomeFormulario(numeroLote, perfil, "xlsx"));
+  }
+
+  async function descarregarTodosFormulariosExcel() {
+    setAZipar(true);
+    try {
+      const zip = new JSZip();
+      for (const { lote, entrada } of todasAsEntradas(config)) {
+        const especificacao: EspecificacaoFormulario = { ...entrada.perfil, lote: lote.numero };
+        zip.file(nomeFormulario(lote.numero, entrada.perfil, "xlsx"), await gerarDeclaracaoExcelBlob(especificacao));
+      }
+      descarregarBlob(await zip.generateAsync({ type: "blob" }), "Formularios_Declaracao_Excel.zip");
+    } finally {
+      setAZipar(false);
+    }
+  }
+
+  async function descarregarTodosFormulariosJSON() {
+    setAZipar(true);
+    try {
+      const zip = new JSZip();
+      for (const { lote, entrada } of todasAsEntradas(config)) {
+        const especificacao: EspecificacaoFormulario = {
+          perfil: entrada.perfil.perfil,
+          nBlocos: entrada.perfil.nBlocos,
+          requisitos: entrada.perfil.requisitos,
+          lote: lote.numero,
+        };
+        zip.file(nomeFormulario(lote.numero, entrada.perfil, "json"), JSON.stringify(especificacao, null, 2));
+      }
+      descarregarBlob(await zip.generateAsync({ type: "blob" }), "Formularios_Declaracao_JSON.zip");
+    } finally {
+      setAZipar(false);
+    }
   }
 
   function recomecar() {
@@ -171,8 +224,7 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
         </div>
         <p className="modulo-subtitulo">
           Recebe os perfis definidos no Módulo 1 — enviados diretamente ou carregados de ficheiro —, agrupa-os em
-          lotes e atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos. No fim obtém o texto e a
-          tabela para o caderno de encargos, os formulários de declaração e o ficheiro que alimenta a avaliação.
+          lotes e atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos.
         </p>
       </header>
 
@@ -180,9 +232,44 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
 
       <section className="painel">
         <header className="painel-cabecalho">
+          <h3>Importar perfil para edição</h3>
+          <p className="painel-nota">
+            Carregue um ficheiro JSON de perfil para o corrigir no Módulo 1. A aplicação muda automaticamente de
+            separador.
+          </p>
+        </header>
+        <div className="acoes">
+          <button type="button" className="botao-secundario" onClick={() => inputEditarPerfilRef.current?.click()}>
+            Importar perfil (JSON) para edição
+          </button>
+          <input
+            ref={inputEditarPerfilRef}
+            type="file"
+            accept="application/json,.json"
+            className="input-ficheiro-oculto"
+            onChange={(e) => {
+              const ficheiro = e.target.files?.[0];
+              if (ficheiro) void importarParaEdicao(ficheiro);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
           <h3>Parâmetros do procedimento</h3>
         </header>
         <div className="grelha-campos">
+          <label>
+            <span className="rotulo">Nome do procedimento</span>
+            <input
+              type="text"
+              value={config.nomeProcedimento}
+              onChange={(e) => setConfig((atual) => ({ ...atual, nomeProcedimento: e.target.value }))}
+            />
+          </label>
+
           <label className="campo-estreito">
             <span className="rotulo">Taxa de IVA</span>
             <CampoNumero
@@ -193,9 +280,9 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
               invalido={!(taxaIva(config) >= 0)}
               onChange={(valor) => setConfig((atual) => ({ ...atual, taxaIva: valor }))}
             />
-            <span className="ajuda">Todos os preços unitários são introduzidos sem IVA.</span>
           </label>
         </div>
+        <p className="ajuda">Todos os preços unitários são introduzidos sem IVA.</p>
       </section>
 
       <section className="painel">
@@ -314,11 +401,7 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
       {config.lotes.length > 0 && (
         <section className="painel">
           <header className="painel-cabecalho">
-            <h3>Tabela para o caderno de encargos</h3>
-            <p className="painel-nota">
-              O preço base de cada perfil é <strong>horas × preço unitário/hora</strong>. O n.º mínimo de elementos
-              não multiplica o valor — é uma condição de admissibilidade da proposta.
-            </p>
+            <h3>Resumo do procedimento</h3>
           </header>
           <TabelaValores config={config} />
         </section>
@@ -341,42 +424,44 @@ export function Modulo2({ porAtribuir, onAlterarPorAtribuir }: Props) {
         </div>
         <p className="ajuda">
           O documento Word reúne, com tabelas formatadas, os requisitos e o preço base para o caderno de encargos e as
-          regras de comprovação e apuramento para o programa do concurso — pronto a colar num pedido de informação
-          interno. As regras vão em secções, e não em artigos: a numeração e a inserção sistemática ficam para a
-          redação das peças.
+          regras de comprovação e apuramento para o programa do concurso.
         </p>
         <p className="ajuda">
-          Os formulários de declaração descarregam-se por perfil, dentro de cada lote. O JSON do agrupamento é o
-          ficheiro que carrega no Módulo 3 para avaliar as propostas.
+          Os formulários de declaração descarregam-se por perfil, dentro de cada lote, ou todos de uma vez na secção
+          seguinte. O JSON do agrupamento é o ficheiro que carrega no Módulo 3 para avaliar as propostas.
         </p>
         {PERSISTENCIA_DISPONIVEL && (
           <p className="ajuda">O agrupamento em edição é guardado neste navegador e reaparece na próxima sessão.</p>
         )}
       </section>
 
-      {textoCaderno !== "" && (
-        <section className="painel">
-          <header className="painel-cabecalho">
-            <h3>Caderno de encargos</h3>
-            <p className="painel-nota">
-              Pré-visualização em texto. Para tabelas formatadas, use o documento Word.
-            </p>
-          </header>
-          <BlocoCopiavel texto={textoCaderno} onMensagem={setMensagem} />
-        </section>
-      )}
-
-      {textoPrograma !== "" && (
-        <section className="painel">
-          <header className="painel-cabecalho">
-            <h3>Regras para o programa do concurso</h3>
-            <p className="painel-nota">
-              Comprovação, exclusão e regra de apuramento, em secções. A validar juridicamente.
-            </p>
-          </header>
-          <BlocoCopiavel texto={textoPrograma} onMensagem={setMensagem} />
-        </section>
-      )}
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Formulários de Declaração</h3>
+          <p className="painel-nota">
+            Descarregue de uma vez os formulários de todos os perfis atribuídos a lotes, num ficheiro zip.
+          </p>
+        </header>
+        <div className="acoes">
+          <button
+            type="button"
+            className="botao-secundario"
+            onClick={descarregarTodosFormulariosExcel}
+            disabled={aZipar || !temFormularios}
+          >
+            {aZipar ? "A gerar…" : "Descarregar todos (Excel, .zip)"}
+          </button>
+          <button
+            type="button"
+            className="botao-secundario"
+            onClick={descarregarTodosFormulariosJSON}
+            disabled={aZipar || !temFormularios}
+          >
+            {aZipar ? "A gerar…" : "Descarregar todos (JSON, .zip)"}
+          </button>
+        </div>
+        {!temFormularios && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
+      </section>
     </div>
   );
 }

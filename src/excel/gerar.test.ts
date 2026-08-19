@@ -5,8 +5,8 @@ import { CAMPOS_IDENTIFICACAO, alturaBloco, linhaInicialBloco } from "./layout";
 import { gerarWorkbookDeclaracao } from "./gerar";
 import { lerDeclaracaoExcel } from "./ler";
 
-function perfilExemplo() {
-  return perfil({
+function perfilExemplo(overrides: { lote?: string } = {}) {
+  const p = perfil({
     perfil: "Arquiteto / Programador Sénior — Integração",
     nBlocos: 3,
     requisitos: [
@@ -15,6 +15,7 @@ function perfilExemplo() {
       requisito("r3", 60, "Desenvolvimento de APIs"),
     ],
   });
+  return { ...p, ...overrides };
 }
 
 describe("gerarWorkbookDeclaracao", () => {
@@ -26,14 +27,33 @@ describe("gerarWorkbookDeclaracao", () => {
     expect(wb.getWorksheet("Experiência")!.state).not.toBe("hidden");
   });
 
-  it("não inclui qualquer campo de lote na identificação", () => {
+  it("mostra os rótulos de identificação nas âncoras certas", () => {
     const sheet = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
 
-    expect(CAMPOS_IDENTIFICACAO.map((c) => c.campo)).not.toContain("lote");
     for (const { linha, rotulo } of CAMPOS_IDENTIFICACAO) {
       expect(sheet.getCell(linha, 1).value).toBe(rotulo);
-      expect(String(sheet.getCell(linha, 1).value)).not.toMatch(/lote/i);
     }
+  });
+
+  it("pré-preenche e bloqueia o campo Perfil, sempre — o candidato não o edita", () => {
+    const sheet = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
+    const linhaPerfil = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "perfil")!;
+
+    expect(sheet.getCell(linhaPerfil.linha, 2).value).toBe("Arquiteto / Programador Sénior — Integração");
+  });
+
+  it("deixa o campo Lote em branco e editável quando o formulário vem do Módulo 1", () => {
+    const sheet = gerarWorkbookDeclaracao(perfilExemplo()).getWorksheet("Experiência")!;
+    const linhaLote = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!;
+
+    expect(sheet.getCell(linhaLote.linha, 2).value).toBeFalsy();
+  });
+
+  it("pré-preenche e bloqueia o campo Lote quando o formulário vem de um lote do Módulo 2", () => {
+    const sheet = gerarWorkbookDeclaracao(perfilExemplo({ lote: "3" })).getWorksheet("Experiência")!;
+    const linhaLote = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!;
+
+    expect(sheet.getCell(linhaLote.linha, 2).value).toBe("3");
   });
 
   it("o subtítulo é só o perfil — nem procedimento nem lote existem nesta fase", () => {
@@ -58,11 +78,11 @@ describe("gerarWorkbookDeclaracao", () => {
       const linhaInicial = linhaInicialBloco(i, nReq);
       expect(sheet.getCell(linhaInicial, 1).value).toBe(`PROJETO ${i}`);
       p.requisitos.forEach((req, idx) => {
-        expect(sheet.getCell(linhaInicial + 5 + idx, 1).value).toBe(req.designacao);
+        expect(sheet.getCell(linhaInicial + 6 + idx, 1).value).toBe(req.designacao);
       });
     }
 
-    expect(alturaBloco(nReq)).toBe(7 + nReq);
+    expect(alturaBloco(nReq)).toBe(8 + nReq);
   });
 
   it("não gera qualquer folha de metadados", () => {

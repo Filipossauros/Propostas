@@ -1,6 +1,7 @@
 {
   "schemaVersion": "2.0",
   "tipo": "lotes",
+  "nomeProcedimento": "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   "taxaIva": 23,
   "lotes": [
     {

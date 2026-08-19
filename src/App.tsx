@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import { CHAVE_POR_ATRIBUIR } from "./core/persistencia";
+import { CHAVE_PERFIL, CHAVE_POR_ATRIBUIR } from "./core/persistencia";
+import { ehPerfilGuardado, perfilInicial } from "./core/perfil";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
@@ -37,9 +38,20 @@ function App() {
     ehListaDePerfis,
   );
 
-  function enviarParaLotes(perfil: PerfilJSON) {
-    setPorAtribuir((atual) => [...atual, perfil]);
+  // Vive aqui, e não dentro do Módulo 1, para que o Módulo 2 possa devolver um
+  // perfil ao Módulo 1 para edição (ex.: carregado de ficheiro por engano, ou a
+  // corrigir antes de reatribuir a um lote).
+  const [perfil, setPerfil] = useEstadoPersistente<PerfilJSON>(CHAVE_PERFIL, perfilInicial, ehPerfilGuardado);
+
+  function enviarParaLotes(perfilEnviado: PerfilJSON) {
+    setPorAtribuir((atual) => [...atual, perfilEnviado]);
     setAba("modulo2");
+    window.scrollTo({ top: 0 });
+  }
+
+  function importarParaEdicao(perfilImportado: PerfilJSON) {
+    setPerfil(perfilImportado);
+    setAba("modulo1");
     window.scrollTo({ top: 0 });
   }
 
@@ -71,8 +83,14 @@ function App() {
       </header>
 
       <main>
-        {aba === "modulo1" && <Modulo1 onEnviarParaLotes={enviarParaLotes} />}
-        {aba === "modulo2" && <Modulo2 porAtribuir={porAtribuir} onAlterarPorAtribuir={setPorAtribuir} />}
+        {aba === "modulo1" && <Modulo1 perfil={perfil} setPerfil={setPerfil} onEnviarParaLotes={enviarParaLotes} />}
+        {aba === "modulo2" && (
+          <Modulo2
+            porAtribuir={porAtribuir}
+            onAlterarPorAtribuir={setPorAtribuir}
+            onImportarParaEdicao={importarParaEdicao}
+          />
+        )}
         {aba === "modulo3" && <Modulo3 />}
       </main>
 

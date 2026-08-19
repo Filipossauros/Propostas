@@ -66,9 +66,12 @@ describe("documentoProgramaConcurso", () => {
     expect(gerado).toContain("número de blocos de projeto nele previsto");
   });
 
-  it("inclui os exemplos de apuramento das normas", () => {
-    expect(texto).toContain("31 meses");
-    expect(texto).toContain("contados uma única vez");
+  it("não repete meses sobrepostos entre projetos declarados para o mesmo requisito", () => {
+    expect(texto).toContain("contabilizados apenas uma vez");
+  });
+
+  it("não admite experiência para além da data limite de apresentação de propostas", () => {
+    expect(texto).toContain("data limite fixada para a apresentação das propostas");
   });
 });
 

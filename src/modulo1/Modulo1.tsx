@@ -1,57 +1,31 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type { PerfilJSON } from "../core/types";
-import { SCHEMA_VERSION_ATUAL } from "../core/types";
-import {
-  ErroImportacao,
-  gerarTextoCadernoEncargos,
-  importarPerfilJSON,
-  perfilParaJSON,
-  validarPerfil,
-} from "../core/perfil";
+import { ErroImportacao, importarPerfilJSON, perfilInicial, perfilParaJSON, validarPerfil } from "../core/perfil";
 import { PERFIL_EXEMPLO } from "../core/exemplo";
-import { CHAVE_PERFIL, PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
-import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { BlocoCopiavel } from "../ui/BlocoCopiavel";
 import { RequisitosEditor } from "./RequisitosEditor";
 
 interface Props {
+  perfil: PerfilJSON;
+  setPerfil: Dispatch<SetStateAction<PerfilJSON>>;
   /** Entrega o perfil ao Módulo 2 e muda de separador, sem passar por ficheiro. */
   onEnviarParaLotes: (perfil: PerfilJSON) => void;
-}
-
-function perfilInicial(): PerfilJSON {
-  return {
-    schemaVersion: SCHEMA_VERSION_ATUAL,
-    tipo: "perfil",
-    perfil: "",
-    nBlocos: 15,
-    requisitos: [],
-  };
-}
-
-function ehPerfilGuardado(valor: unknown): valor is PerfilJSON {
-  if (typeof valor !== "object" || valor === null) return false;
-  const p = valor as Partial<PerfilJSON>;
-  return p.tipo === "perfil" && p.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(p.requisitos);
 }
 
 function nomeBase(perfil: PerfilJSON): string {
   return `Declaracao_Experiencia_${nomeSeguro(perfil.perfil, "Perfil")}`;
 }
 
-export function Modulo1({ onEnviarParaLotes }: Props) {
-  const [perfil, setPerfil] = useEstadoPersistente<PerfilJSON>(CHAVE_PERFIL, perfilInicial, ehPerfilGuardado);
+export function Modulo1({ perfil, setPerfil, onEnviarParaLotes }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
   const inputImportarRef = useRef<HTMLInputElement>(null);
 
   const erros = validarPerfil(perfil);
   const podeExportar = erros.length === 0;
-  const textoCaderno = perfil.requisitos.length > 0 ? gerarTextoCadernoEncargos(perfil.requisitos) : "";
 
   function patch(alteracao: Partial<PerfilJSON>) {
     setPerfil((atual) => ({ ...atual, ...alteracao }));
@@ -109,11 +83,7 @@ export function Modulo1({ onEnviarParaLotes }: Props) {
             </button>
           </div>
         </div>
-        <p className="modulo-subtitulo">
-          Define os requisitos mínimos de experiência de um perfil e gera o formulário de declaração a entregar aos
-          concorrentes. Nem o número do procedimento nem o lote são pedidos aqui: nesta fase ainda não existem, e o
-          agrupamento em lotes faz-se depois, no Módulo 2.
-        </p>
+        <p className="modulo-subtitulo">Define os requisitos mínimos de experiência de um perfil.</p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
@@ -191,18 +161,12 @@ export function Modulo1({ onEnviarParaLotes }: Props) {
             }}
           />
         </div>
-        {PERSISTENCIA_DISPONIVEL && (
-          <p className="ajuda">O perfil em edição é guardado neste navegador e reaparece na próxima sessão.</p>
-        )}
       </section>
 
       <section className="painel painel-avancar">
         <div>
           <h3>Continuar para o agrupamento em lotes</h3>
-          <p className="painel-nota">
-            Envia este perfil diretamente para o Módulo 2, sem passar por ficheiro. Continua a poder guardar o JSON e
-            importá-lo lá mais tarde — por exemplo, se o agrupamento for feito por outra pessoa.
-          </p>
+          <p className="painel-nota">Envia este perfil diretamente para o Módulo 2, sem passar por ficheiro.</p>
         </div>
         <button
           type="button"
@@ -215,16 +179,6 @@ export function Modulo1({ onEnviarParaLotes }: Props) {
           Enviar para o Módulo 2 →
         </button>
       </section>
-
-      {textoCaderno !== "" && (
-        <section className="painel">
-          <header className="painel-cabecalho">
-            <h3>Texto para o caderno de encargos</h3>
-            <p className="painel-nota">Só os requisitos deste perfil. O texto completo, por lote, sai do Módulo 2.</p>
-          </header>
-          <BlocoCopiavel texto={textoCaderno} onMensagem={setMensagem} />
-        </section>
-      )}
     </div>
   );
 }

@@ -4,8 +4,8 @@
 // sinaliza, nunca exclui (princípio 4).
 
 import { ANO_MAXIMO, ANO_MINIMO } from "./types";
-import type { Alerta, Bloco, ConfiguracaoAvaliacao, Declaracao, MesAno } from "./types";
-import { apurarElemento, paraMesInt } from "./regraA";
+import type { Alerta, AlertaTipo, Bloco, ConfiguracaoAvaliacao, Declaracao, MesAno } from "./types";
+import { apurarElemento, blocoIncompleto, paraMesInt } from "./regraA";
 import type { ApuramentoElemento } from "./regraA";
 
 /** Bloco preenchido (7.1): consta qualquer elemento identificativo do cliente, projeto ou período. */
@@ -15,8 +15,7 @@ export function blocoPreenchido(bloco: Bloco): boolean {
     bloco.projeto.trim() !== "" ||
     bloco.funcao.trim() !== "" ||
     bloco.projInicio !== null ||
-    bloco.projFim !== null ||
-    bloco.emCurso !== null
+    bloco.projFim !== null
   );
 }
 
@@ -36,8 +35,36 @@ function validarCamposObrigatorios(bloco: Bloco): Alerta[] {
         requisitoId: linha.requisitoId,
       });
     }
+    if (linha.declara === "SIM" && (linha.inicioIncompleto || linha.fimIncompleto)) {
+      alertas.push({
+        tipo: "datasIncoerentes",
+        mensagem:
+          `Bloco ${bloco.indice}: datas da experiência parcialmente preenchidas (mês sem ano, ou ano sem mês) ` +
+          `— esta experiência não é considerada.`,
+        blocoIndice: bloco.indice,
+        requisitoId: linha.requisitoId,
+      });
+    }
   }
   return alertas;
+}
+
+/**
+ * Bloco preenchido mas incompleto (cliente/entidade, projeto, função ou datas
+ * do projeto em falta): toda a experiência nele declarada é nula, não apenas a
+ * que dependeria do campo em falta.
+ */
+function validarBlocoIncompleto(bloco: Bloco): Alerta[] {
+  if (!blocoPreenchido(bloco) || !blocoIncompleto(bloco)) return [];
+  return [
+    {
+      tipo: "blocoIncompleto",
+      mensagem:
+        `Bloco ${bloco.indice}: campo obrigatório por preencher (cliente/entidade, projeto, função ou datas ` +
+        `do projeto) — nenhuma experiência declarada neste bloco é considerada.`,
+      blocoIndice: bloco.indice,
+    },
+  ];
 }
 
 function validarDatasBloco(bloco: Bloco): Alerta[] {
@@ -96,15 +123,21 @@ function validarIdentificacao(declaracao: Declaracao): Alerta[] {
   return alertas;
 }
 
+function tipoDoDescarte(motivo: string): AlertaTipo {
+  if (motivo.includes("fora do período")) return "periodoForaDoProjeto";
+  if (motivo.includes("posterior à data limite")) return "periodoPosDataLimite";
+  if (motivo.includes("Bloco de projeto incompleto")) return "blocoIncompleto";
+  return "datasIncoerentes";
+}
+
 /** Alertas derivados dos períodos descartados pela Regra A (6.1.4). */
 function alertasDoApuramento(apuramento: ApuramentoElemento, requisitosPorId: Map<string, string>): Alerta[] {
   const alertas: Alerta[] = [];
   for (const resultado of apuramento.requisitos) {
     const designacao = requisitosPorId.get(resultado.requisitoId) ?? resultado.requisitoId;
     for (const descarte of resultado.periodosDescartados) {
-      const tipo = descarte.motivo.includes("fora do período") ? "periodoForaDoProjeto" : "datasIncoerentes";
       alertas.push({
-        tipo,
+        tipo: tipoDoDescarte(descarte.motivo),
         mensagem: `Bloco ${descarte.blocoIndice}, requisito "${designacao}": ${descarte.motivo.toLowerCase()}.`,
         blocoIndice: descarte.blocoIndice,
         requisitoId: descarte.requisitoId,
@@ -132,6 +165,7 @@ export function validarEApurar(declaracao: Declaracao, config: ConfiguracaoAvali
   const alertasSemanticos: Alerta[] = [
     ...validarIdentificacao(declaracao),
     ...declaracao.blocos.flatMap(validarCamposObrigatorios),
+    ...declaracao.blocos.flatMap(validarBlocoIncompleto),
     ...declaracao.blocos.flatMap(validarDatasBloco),
     ...alertasDoApuramento(apuramento, requisitosPorId),
   ];
@@ -152,8 +186,9 @@ export class ErroDataLimite extends Error {}
 /**
  * Converte a data limite ISO em mês/ano.
  *
- * Falha ruidosamente quando a data é inválida ou está em falta: sem ela, os
- * projetos "em curso" não têm fim determinável e a contagem de meses seria
+ * Falha ruidosamente quando a data é inválida ou está em falta: sem ela não há
+ * teto contra o qual verificar se alguma experiência foi declarada com data
+ * posterior à apresentação de propostas, e a contagem de meses seria
  * silenciosamente zero — um erro de apuramento indetetável no relatório.
  */
 export function parseDataLimite(dataLimitePropostas: string): MesAno {
