@@ -1,11 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import type { ConfiguracaoJSON, Declaracao } from "../core/types";
+import type { Alerta, ConfiguracaoJSON, Declaracao } from "../core/types";
 import { ErroImportacaoConfig, importarConfiguracaoJSON } from "../core/configuracao";
 import { lerDeclaracaoExcel } from "../excel/ler";
 import { proporAgrupamentos, type GrupoConcorrentes } from "../core/reconciliacao";
 import { apurarEAgregar, type ResultadoConcorrente } from "../core/agregacao";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
+import { extrairTextoPdfNormalizado } from "../pdf/extrairTextoPdf";
+import { extrairValoresDeclarados } from "../pdf/extrairValores";
+import { compararComPdf } from "../pdf/comparar";
 import { ReconciliacaoConcorrentes } from "./ReconciliacaoConcorrentes";
 import { ResultadosTabelas } from "./ResultadosTabelas";
 
@@ -26,6 +29,8 @@ export function Modulo2() {
   const [declaracoes, setDeclaracoes] = useState<Declaracao[]>([]);
   const [grupos, setGrupos] = useState<GrupoConcorrentes[] | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
+  const [alertasPdf, setAlertasPdf] = useState<Map<string, Alerta[]>>(new Map());
+  const [aCompararPdf, setACompararPdf] = useState<string | null>(null);
 
   const inputConfigRef = useRef<HTMLInputElement>(null);
   const inputDeclaracoesRef = useRef<HTMLInputElement>(null);
@@ -37,8 +42,8 @@ export function Modulo2() {
 
   const resultados: ResultadoConcorrente[] | null = useMemo(() => {
     if (!config || grupos === null || declaracoes.length === 0) return null;
-    return apurarEAgregar(declaracoes, config, grupos);
-  }, [config, grupos, declaracoes]);
+    return apurarEAgregar(declaracoes, config, grupos, alertasPdf);
+  }, [config, grupos, declaracoes, alertasPdf]);
 
   async function carregarConfig(ficheiro: File) {
     setErroConfig(null);
@@ -72,6 +77,20 @@ export function Modulo2() {
 
   function avancarParaReconciliacao() {
     setGrupos(proporAgrupamentos(nomesEntidade));
+  }
+
+  async function compararComPdfAssinado(declaracao: Declaracao, ficheiroPdf: File) {
+    if (!config) return;
+    setACompararPdf(declaracao.ficheiro);
+    try {
+      const textoPdf = await extrairTextoPdfNormalizado(ficheiroPdf);
+      const valores = extrairValoresDeclarados(declaracao);
+      const requisitosPorId = new Map(config.requisitos.map((r) => [r.id, r.designacao]));
+      const alertas = compararComPdf(valores, textoPdf, requisitosPorId);
+      setAlertasPdf((atual) => new Map(atual).set(declaracao.ficheiro, alertas));
+    } finally {
+      setACompararPdf(null);
+    }
   }
 
   function exportar() {
@@ -136,15 +155,44 @@ export function Modulo2() {
           {declaracoes.length > 0 && (
             <>
               <p>{declaracoes.length} ficheiro(s) carregado(s).</p>
-              <ul>
-                {declaracoes.map((d) => (
-                  <li key={d.ficheiro}>
-                    {d.ficheiro} — {d.identificacao.nome || "(nome por preencher)"} —{" "}
-                    {d.identificacao.entidadeConcorrente || "(entidade por preencher)"}
-                    {d.alertas.length > 0 && ` — ${d.alertas.length} alerta(s) estrutural(is)`}
-                  </li>
-                ))}
+              <ul className="lista-declaracoes">
+                {declaracoes.map((d) => {
+                  const alertasPdfDoFicheiro = alertasPdf.get(d.ficheiro);
+                  return (
+                    <li key={d.ficheiro}>
+                      <span>
+                        {d.ficheiro} — {d.identificacao.nome || "(nome por preencher)"} —{" "}
+                        {d.identificacao.entidadeConcorrente || "(entidade por preencher)"}
+                        {d.alertas.length > 0 && ` — ${d.alertas.length} alerta(s) estrutural(is)`}
+                      </span>
+                      <label className="anexar-pdf">
+                        {aCompararPdf === d.ficheiro
+                          ? "A comparar…"
+                          : alertasPdfDoFicheiro
+                            ? alertasPdfDoFicheiro.length === 0
+                              ? "PDF confirma o Excel"
+                              : `${alertasPdfDoFicheiro.length} divergência(s) com o PDF`
+                            : "Anexar PDF assinado (opcional)"}
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="input-ficheiro-oculto"
+                          onChange={(e) => {
+                            const ficheiroPdf = e.target.files?.[0];
+                            if (ficheiroPdf) void compararComPdfAssinado(d, ficheiroPdf);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    </li>
+                  );
+                })}
               </ul>
+              <p className="nota-pdf">
+                O comparador PDF ↔ Excel deteta divergências de texto entre os dois documentos; não reconstrói a
+                grelha célula a célula nem valida a assinatura digital. Em caso de divergência, o PDF assinado
+                prevalece juridicamente — a aplicação apenas sinaliza, a decisão cabe ao júri.
+              </p>
               {grupos === null && (
                 <button type="button" onClick={avancarParaReconciliacao}>
                   Prosseguir para a reconciliação de concorrentes

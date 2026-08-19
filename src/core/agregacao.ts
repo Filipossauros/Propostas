@@ -29,6 +29,8 @@ export function apurarEAgregar(
   declaracoes: Declaracao[],
   config: ConfiguracaoJSON,
   grupos: GrupoConcorrentes[],
+  /** Alertas do comparador PDF↔Excel (Fase 4), indexados por nome de ficheiro. */
+  alertasPdfPorFicheiro?: Map<string, Alerta[]>,
 ): ResultadoConcorrente[] {
   const dataLimite = parseDataLimite(config.dataLimitePropostas);
   const mapaReconciliacao = construirMapaReconciliacao(grupos);
@@ -38,8 +40,9 @@ export function apurarEAgregar(
     const apuramento = apurarElemento(declaracao.blocos, config.requisitos, dataLimite);
     const concorrente = mapaReconciliacao.get(declaracao.identificacao.entidadeConcorrente) ??
       declaracao.identificacao.entidadeConcorrente;
+    const alertasPdf = alertasPdfPorFicheiro?.get(declaracao.ficheiro) ?? [];
 
-    return { declaracao, concorrente, apuramento, alertas: declaracao.alertas };
+    return { declaracao, concorrente, apuramento, alertas: [...declaracao.alertas, ...alertasPdf] };
   });
 
   const porConcorrente = new Map<string, ResultadoElemento[]>();

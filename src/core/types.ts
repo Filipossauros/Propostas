@@ -67,7 +67,8 @@ export type AlertaTipo =
   | "campoObrigatorioBranco"
   | "periodoForaDoProjeto"
   | "datasIncoerentes"
-  | "identificacaoIncompleta";
+  | "identificacaoIncompleta"
+  | "divergenciaPdf";
 
 export interface Alerta {
   tipo: AlertaTipo;

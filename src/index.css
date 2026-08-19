@@ -292,3 +292,40 @@ button:disabled {
   align-items: center;
   gap: 10px;
 }
+
+.lista-declaracoes {
+  padding-left: 0;
+  list-style: none;
+}
+
+.lista-declaracoes li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.anexar-pdf {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: var(--azul);
+  border: 1px solid var(--azul);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nota-pdf {
+  font-size: 0.85em;
+  opacity: 0.8;
+  background: var(--nota);
+  padding: 8px 10px;
+  border-radius: 4px;
+}
