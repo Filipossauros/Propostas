@@ -15,6 +15,7 @@ import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { RequisitosEditor } from "./RequisitosEditor";
+import { CertificacoesEditor } from "./CertificacoesEditor";
 
 interface Props {
   perfis: PerfilJSON[];
@@ -295,25 +296,10 @@ export function Modulo1({
             onChange={(requisitos) => alterarEmEdicao({ requisitos })}
           />
 
-          <section className="painel">
-            <header className="painel-cabecalho">
-              <h3>Certificações</h3>
-              <p className="painel-nota">
-                Opcional. Certificações exigidas ao elemento, separadas por ponto e vírgula. Saem no documento Word,
-                em tabela própria; não aparecem em nenhum formulário Excel, porque a certificação é verificada fora
-                desta ferramenta, contra as peças da proposta.
-              </p>
-            </header>
-            <label>
-              <span className="rotulo-oculto">Certificações exigidas</span>
-              <textarea
-                rows={2}
-                value={emEdicao.certificacoes}
-                placeholder="ex.: Oracle Certified Professional, Java SE Programmer; TOGAF Enterprise Architecture Foundation"
-                onChange={(e) => alterarEmEdicao({ certificacoes: e.target.value })}
-              />
-            </label>
-          </section>
+          <CertificacoesEditor
+            certificacoes={emEdicao.certificacoes}
+            onChange={(certificacoes) => alterarEmEdicao({ certificacoes })}
+          />
 
           <section className="painel">
             <header className="painel-cabecalho">

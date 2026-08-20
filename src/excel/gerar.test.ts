@@ -191,7 +191,7 @@ describe("matéria que não chega ao formulário", () => {
   }
 
   it("não leva as certificações exigidas, que se verificam fora desta ferramenta", () => {
-    const comCertificacao = PERFIS_EXEMPLO.filter((p) => p.certificacoes.trim() !== "");
+    const comCertificacao = PERFIS_EXEMPLO.filter((p) => p.certificacoes.length > 0);
     expect(comCertificacao.length).toBeGreaterThan(0);
 
     const wb = gerarWorkbookDeclaracao(
@@ -200,8 +200,8 @@ describe("matéria que não chega ao formulário", () => {
     const texto = textoDoLivro(wb);
 
     for (const p of comCertificacao) {
-      for (const certificacao of p.certificacoes.split(";")) {
-        expect(texto).not.toContain(certificacao.trim());
+      for (const certificacao of p.certificacoes) {
+        expect(texto).not.toContain(certificacao.designacao);
       }
     }
   });

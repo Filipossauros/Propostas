@@ -6,6 +6,21 @@
 import ExcelJS from "exceljs";
 import type { EspecificacaoFormulario } from "../core/types";
 import {
+  COR_BRANCO,
+  COR_CAMPO_BG,
+  COR_CAMPO_BLOQUEADO_BG,
+  COR_CAMPO_BLOQUEADO_TEXTO,
+  COR_CAMPO_BORDA,
+  COR_CAMPO_TEXTO,
+  COR_FAIXA,
+  COR_NOTA_BG,
+  COR_NOTA_TEXTO,
+  COR_ROTULO_BG,
+  COR_ROTULO_TEXTO,
+  COR_SUBCABECALHO,
+  fillSolido,
+} from "./estilo";
+import {
   CAMPOS_IDENTIFICACAO,
   LINHA_ASSINATURA,
   LINHA_BRANCO_APOS_IDENTIFICACAO,
@@ -47,26 +62,6 @@ import {
   ANO_MINIMO,
 } from "./layout";
 
-// Paleta: duas famílias e uma só exceção.
-//
-// Tudo o que é estrutura (faixas, subcabeçalhos, rótulos) vive na família azul,
-// do mais escuro para o mais claro conforme desce na hierarquia. Tudo o que é
-// leitura passiva (notas, campos bloqueados) fica em cinzento-azulado. O amarelo
-// é a única exceção, e é deliberada: marca exclusivamente o que o candidato tem
-// de preencher — nenhum outro elemento do formulário o usa.
-const COR_FAIXA = "FF1F4E78";
-const COR_SUBCABECALHO = "FF2E75B6";
-const COR_ROTULO_BG = "FFEDF1F5";
-const COR_ROTULO_TEXTO = "FF1F3B54";
-const COR_CAMPO_BG = "FFFFF8E1";
-const COR_CAMPO_TEXTO = "FF1F2933";
-const COR_CAMPO_BORDA = "FFE0C67A";
-const COR_CAMPO_BLOQUEADO_BG = "FFE9ECF1";
-const COR_CAMPO_BLOQUEADO_TEXTO = "FF4A5A6A";
-const COR_NOTA_BG = "FFEFF3F6";
-const COR_NOTA_TEXTO = "FF4A5A6A";
-const COR_BRANCO = "FFFFFFFF";
-
 /** Alturas de linha, para o formulário respirar em vez de se colar todo. */
 const ALTURA_TITULO = 26;
 const ALTURA_SUBTITULO = 20;
@@ -88,10 +83,6 @@ const COLUNAS: Array<{ largura: number }> = [
   { largura: 16 }, // G
   { largura: 16 }, // H
 ];
-
-function fillSolido(argb: string): ExcelJS.Fill {
-  return { type: "pattern", pattern: "solid", fgColor: { argb } };
-}
 
 function aplicarFaixa(sheet: ExcelJS.Worksheet, linha: number, texto: string): void {
   sheet.mergeCells(linha, 1, linha, 8);

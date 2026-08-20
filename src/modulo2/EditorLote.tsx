@@ -1,5 +1,6 @@
 import type { Lote, PerfilEmLote } from "../core/types";
 import { formatarMoeda, precoBaseEntrada, totalLote } from "../core/lotes";
+import { certificacoesDoPerfil } from "../core/perfil";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { moverItem, useReordenavel } from "../ui/useReordenavel";
@@ -89,7 +90,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
 
                   <div className="perfil-em-lote-titulo">
                     <strong>{entrada.perfil.perfil || "(perfil sem designação)"}</strong>
-                    <DicaRequisitos requisitos={entrada.perfil.requisitos} certificacoes={entrada.perfil.certificacoes} />
+                    <DicaRequisitos requisitos={entrada.perfil.requisitos} certificacoes={certificacoesDoPerfil(entrada.perfil)} />
                   </div>
 
                   <CampoNumero

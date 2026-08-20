@@ -3,6 +3,7 @@
 
 import type {
   Bloco,
+  Certificacao,
   ConfiguracaoAvaliacao,
   Declaracao,
   LinhaRequisito,
@@ -22,6 +23,11 @@ export function requisito(id = "r1", mesesMinimos = 12, designacao = `Requisito 
   return { id, designacao, mesesMinimos };
 }
 
+/** Certificações a partir das designações, com ids derivados da posição. */
+export function certificacoes(...designacoes: string[]): Certificacao[] {
+  return designacoes.map((designacao, i) => ({ id: `cert-${i + 1}`, designacao }));
+}
+
 let proximoIdPerfil = 1;
 
 export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
@@ -32,7 +38,7 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
     perfil: "Perfil Teste",
     nBlocos: 3,
     conteudoFuncional: "Atividade A; Atividade B",
-    certificacoes: "",
+    certificacoes: [],
     requisitos: [requisito()],
     ...parcial,
   };

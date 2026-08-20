@@ -122,7 +122,6 @@ function App() {
             onAdotarNomeProjeto={adotarNomeProjeto}
             onAcrescentarPerfis={acrescentarPerfis}
             onSubstituirPerfis={aplicarPerfis}
-            onIrParaPerfis={() => irPara("modulo1")}
           />
         )}
         {aba === "modulo3" && <Modulo3 />}

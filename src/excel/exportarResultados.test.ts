@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import * as XLSX from "xlsx";
+import type ExcelJS from "exceljs";
 import { construirWorkbookResultados } from "./exportarResultados";
 import { avaliarProcedimento } from "../core/avaliacaoProcedimento";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
@@ -11,51 +11,112 @@ function resultadoDoExemplo() {
   return avaliarProcedimento(LOTES_EXEMPLO, declaracoes, grupos);
 }
 
-function linhas(wb: XLSX.WorkBook, folha: string): unknown[][] {
-  return XLSX.utils.sheet_to_json(wb.Sheets[folha], { header: 1 }) as unknown[][];
+/** O cabeçalho de uma folha de dados está sempre na linha 4 — ver `estilo.ts`. */
+const LINHA_CABECALHO = 4;
+
+function folha(wb: ExcelJS.Workbook, nome: string): ExcelJS.Worksheet {
+  const encontrada = wb.getWorksheet(nome);
+  if (encontrada === undefined) throw new Error(`Folha "${nome}" inexistente.`);
+  return encontrada;
+}
+
+function cabecalho(wb: ExcelJS.Workbook, nome: string): string[] {
+  const valores = folha(wb, nome).getRow(LINHA_CABECALHO).values as unknown[];
+  return valores.slice(1).map((v) => String(v ?? ""));
+}
+
+function corpo(wb: ExcelJS.Workbook, nome: string): unknown[][] {
+  const sheet = folha(wb, nome);
+  const linhas: unknown[][] = [];
+  for (let i = LINHA_CABECALHO + 1; i <= sheet.rowCount; i++) {
+    linhas.push((sheet.getRow(i).values as unknown[]).slice(1));
+  }
+  return linhas;
 }
 
 describe("construirWorkbookResultados", () => {
   const wb = construirWorkbookResultados(resultadoDoExemplo(), LOTES_EXEMPLO);
+  const nomes = wb.worksheets.map((s) => s.name);
 
-  it("traz as folhas agregadas, as desagregadas e uma folha de perfis por concorrente", () => {
-    expect(wb.SheetNames).toEqual([
+  it("traz as folhas agregadas, as desagregadas e uma folha por concorrente", () => {
+    expect(nomes).toEqual([
       "Procedimento",
       "Resumo por lote",
       "Elementos",
       "Requisitos",
       "Alertas",
+      "Traço de apuramento",
       "Alfa Sistemas, S.A.",
       "Beta Consultores, Lda.",
     ]);
   });
 
   it("resume uma linha por lote e concorrente", () => {
-    const [cabecalho, ...corpo] = linhas(wb, "Resumo por lote");
-    expect(cabecalho).toContain("Situação");
+    expect(cabecalho(wb, "Resumo por lote")).toContain("Situação");
     // Dois lotes, dois concorrentes em cada.
-    expect(corpo).toHaveLength(4);
+    expect(corpo(wb, "Resumo por lote")).toHaveLength(4);
   });
 
   it("desagrega os meses apurados por requisito de cada elemento", () => {
-    const [cabecalho, ...corpo] = linhas(wb, "Requisitos");
-    expect(cabecalho).toContain("Meses apurados");
-    expect(corpo.length).toBeGreaterThan(0);
-    expect(corpo.every((l) => typeof l[5] === "number")).toBe(true);
+    expect(cabecalho(wb, "Requisitos")).toContain("Meses apurados");
+    const linhas = corpo(wb, "Requisitos");
+    expect(linhas.length).toBeGreaterThan(0);
+    expect(linhas.every((l) => typeof l[5] === "number")).toBe(true);
+  });
+
+  it("deixa o traço de apuramento reconstituível, com períodos admitidos", () => {
+    expect(corpo(wb, "Traço de apuramento").some((l) => l[6] === "Admitido")).toBe(true);
   });
 
   it("dá a cada concorrente uma folha só com os perfis da sua proposta", () => {
-    const [identificacao, , cabecalho, ...corpo] = linhas(wb, "Alfa Sistemas, S.A.");
+    const sheet = folha(wb, "Alfa Sistemas, S.A.");
 
-    expect(identificacao).toEqual(["Concorrente", "Alfa Sistemas, S.A."]);
-    expect(cabecalho).toContain("N.º mínimo exigido");
+    expect(sheet.getCell(2, 1).value).toBe("Alfa Sistemas, S.A.");
+    expect(cabecalho(wb, "Alfa Sistemas, S.A.")).toContain("N.º mínimo exigido");
     // Os quatro perfis dos dois lotes a que a Alfa se apresentou.
-    expect(corpo).toHaveLength(4);
-    expect(corpo.every((l) => l[2] !== "")).toBe(true);
+    expect(corpo(wb, "Alfa Sistemas, S.A.")).toHaveLength(4);
   });
 
   it("regista na capa se a limitação de um lote por concorrente está ativa", () => {
-    const capa = linhas(wb, "Procedimento");
-    expect(capa.find((l) => l[0] === "Um lote por concorrente")?.[1]).toBe("Sim");
+    const capa = folha(wb, "Procedimento");
+    const linha = [1, 2, 3, 4, 5, 6, 7, 8].find((i) => capa.getCell(i, 1).value === "Um lote por concorrente");
+
+    expect(linha).toBeDefined();
+    expect(capa.getCell(linha!, 2).value).toBe("Sim");
+  });
+});
+
+describe("formatação do relatório", () => {
+  const wb = construirWorkbookResultados(resultadoDoExemplo(), LOTES_EXEMPLO);
+
+  it("cada folha de dados tem título, cabeçalho fixo e filtro", () => {
+    const sheet = folha(wb, "Resumo por lote");
+
+    expect(String(sheet.getCell(1, 1).value)).toBe("RESUMO POR LOTE E CONCORRENTE");
+    expect(sheet.views[0]).toMatchObject({ state: "frozen", ySplit: LINHA_CABECALHO });
+    expect(sheet.autoFilter).toBeDefined();
+  });
+
+  it("o cabeçalho vem no azul do formulário, a branco e a negrito", () => {
+    const cell = folha(wb, "Resumo por lote").getCell(LINHA_CABECALHO, 1);
+
+    expect(cell.font).toMatchObject({ bold: true, color: { argb: "FFFFFFFF" } });
+    expect(cell.fill).toMatchObject({ fgColor: { argb: "FF2E75B6" } });
+  });
+
+  it("as colunas têm largura definida, para nada sair cortado", () => {
+    const sheet = folha(wb, "Requisitos");
+    for (let i = 1; i <= 9; i++) expect(sheet.getColumn(i).width).toBeGreaterThan(0);
+  });
+
+  it("quem não cumpre fica marcado a vermelho, e quem cumpre a verde", () => {
+    const sheet = folha(wb, "Resumo por lote");
+    const situacoes = corpo(wb, "Resumo por lote").map((l, idx) => ({
+      texto: String(l[3]),
+      cor: (sheet.getCell(LINHA_CABECALHO + 1 + idx, 4).font ?? {}).color?.argb,
+    }));
+
+    expect(situacoes.find((s) => s.texto === "Sim")?.cor).toBe("FF1B6E3C");
+    expect(situacoes.find((s) => s.texto === "Não")?.cor).toBe("FFB3261E");
   });
 });

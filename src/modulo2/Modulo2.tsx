@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { EspecificacaoFormulario, Lote, LotesJSON, PerfilJSON } from "../core/types";
-import { ErroImportacao, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
+import { ErroImportacao, certificacoesDoPerfil, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
 import {
   criarLote,
   criarPerfilEmLote,
@@ -37,7 +37,6 @@ interface Props {
   onAcrescentarPerfis: (perfis: PerfilJSON[]) => void;
   /** Substitui o catálogo inteiro (usado ao carregar o exemplo). */
   onSubstituirPerfis: (perfis: PerfilJSON[]) => void;
-  onIrParaPerfis: () => void;
 }
 
 /** Especificação do formulário de um perfil dentro de um lote. */
@@ -60,13 +59,11 @@ export function Modulo2({
   onAdotarNomeProjeto,
   onAcrescentarPerfis,
   onSubstituirPerfis,
-  onIrParaPerfis,
 }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
   const inputPerfisRef = useRef<HTMLInputElement>(null);
   const inputLotesRef = useRef<HTMLInputElement>(null);
-  const inputEditarPerfilRef = useRef<HTMLInputElement>(null);
 
   // O nome do projeto é definido no Módulo 1 e vive numa só variável na
   // aplicação; aqui só é carimbado nos ficheiros no momento de os gerar, para
@@ -147,16 +144,6 @@ export function Modulo2({
             texto: `${carregados.length} perfil(is) carregado(s). Ficam também disponíveis no Módulo 1.`,
           },
     );
-  }
-
-  async function importarParaEdicao(ficheiros: FileList) {
-    const { perfis: carregados, falhados } = await lerPerfisDeFicheiros(ficheiros);
-    if (falhados.length > 0) {
-      setMensagem({ tipo: "erro", texto: `Não foi possível carregar: ${falhados.join(" · ")}` });
-      return;
-    }
-    onAcrescentarPerfis(carregados);
-    onIrParaPerfis();
   }
 
   async function carregarLotes(ficheiro: File) {
@@ -253,32 +240,6 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Importar perfil para edição</h3>
-          <p className="painel-nota">
-            Carrega os perfis do ficheiro e abre o Módulo 1 para os corrigir. As alterações que aí fizer refletem-se
-            nos lotes onde o perfil já esteja atribuído.
-          </p>
-        </header>
-        <div className="acoes">
-          <button type="button" className="botao-secundario" onClick={() => inputEditarPerfilRef.current?.click()}>
-            Importar perfil (JSON)
-          </button>
-          <input
-            ref={inputEditarPerfilRef}
-            type="file"
-            multiple
-            accept="application/json,.json"
-            className="input-ficheiro-oculto"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) void importarParaEdicao(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </div>
-      </section>
-
-      <section className="painel">
-        <header className="painel-cabecalho">
           <h3>Parâmetros do procedimento</h3>
         </header>
         <div className="grelha-campos">
@@ -369,7 +330,7 @@ export function Modulo2({
               <li key={perfil.id}>
                 <div>
                   <strong>{perfil.perfil || "(perfil sem designação)"}</strong>
-                  <DicaRequisitos requisitos={perfil.requisitos} certificacoes={perfil.certificacoes} />
+                  <DicaRequisitos requisitos={perfil.requisitos} certificacoes={certificacoesDoPerfil(perfil)} />
                 </div>
                 {config.lotes.length === 0 ? (
                   <span className="meta">crie um lote para poder atribuir</span>

@@ -5,8 +5,8 @@
 // secções e não em artigos: a inserção sistemática e a numeração dos artigos
 // são feitas depois, na redação do procedimento.
 
-import type { LotesJSON } from "./types";
-import { agruparPorExigencia, itensSeparados } from "./perfil";
+import type { LotesJSON, PerfilJSON } from "./types";
+import { agruparPorExigencia, certificacoesDoPerfil, itensSeparados } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
 import { celula, type BlocoDocumento, type Documento } from "./documento";
 
@@ -96,8 +96,8 @@ function tabelaConteudoFuncional(conteudoFuncional: string): BlocoDocumento[] {
  * da proposta. Por isso vive só aqui e no programa do concurso, e não chega a
  * nenhum formulário Excel.
  */
-function tabelaCertificacoes(certificacoes: string): BlocoDocumento[] {
-  const exigidas = itensSeparados(certificacoes);
+function tabelaCertificacoes(perfil: PerfilJSON): BlocoDocumento[] {
+  const exigidas = certificacoesDoPerfil(perfil);
   if (exigidas.length === 0) return [];
 
   return [
@@ -142,7 +142,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
           ]),
         ),
       },
-      ...tabelaCertificacoes(entrada.perfil.certificacoes),
+      ...tabelaCertificacoes(entrada.perfil),
       ...tabelaConteudoFuncional(entrada.perfil.conteudoFuncional),
     ]);
 

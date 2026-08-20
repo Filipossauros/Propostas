@@ -4,7 +4,7 @@ import { ErroImportacao } from "../core/perfil";
 import { AVISO_CERTIFICACAO, importarLotesJSON, perfisComCertificacao } from "../core/lotes";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
 import { lerDeclaracoesDoWorkbook, lerWorkbookDeFicheiro } from "../excel/ler";
-import { proporAgrupamentos, type GrupoConcorrentes } from "../core/reconciliacao";
+import { agruparAtribuicoes, proporAtribuicoes, type AtribuicaoConcorrente } from "../core/reconciliacao";
 import { avaliarProcedimento, type DeclaracaoAtribuida } from "../core/avaliacaoProcedimento";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { extrairTextoPdfNormalizado } from "../pdf/extrairTextoPdf";
@@ -29,11 +29,12 @@ function requisitosPorId(config: LotesJSON): Map<string, string> {
 export function Modulo3() {
   const [config, setConfig] = useState<LotesJSON | null>(null);
   const [atribuidas, setAtribuidas] = useState<DeclaracaoAtribuida[]>([]);
-  const [grupos, setGrupos] = useState<GrupoConcorrentes[] | null>(null);
+  const [atribuicoes, setAtribuicoes] = useState<AtribuicaoConcorrente[] | null>(null);
   const [concorrentesConfirmados, setConcorrentesConfirmados] = useState(false);
   const [alertasPdf, setAlertasPdf] = useState<Map<string, Alerta[]>>(new Map());
   const [aCompararPdf, setACompararPdf] = useState<string | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
+  const [aExportar, setAExportar] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
 
   const inputConfigRef = useRef<HTMLInputElement>(null);
@@ -58,15 +59,15 @@ export function Modulo3() {
   const comCertificacao = useMemo(() => (config === null ? [] : perfisComCertificacao(config)), [config]);
 
   const resultado = useMemo(() => {
-    if (config === null || grupos === null || !concorrentesConfirmados || atribuidas.length === 0) return null;
-    return avaliarProcedimento(config, atribuidas, grupos, alertasPdf);
-  }, [config, atribuidas, grupos, concorrentesConfirmados, alertasPdf]);
+    if (config === null || atribuicoes === null || !concorrentesConfirmados || atribuidas.length === 0) return null;
+    return avaliarProcedimento(config, atribuidas, agruparAtribuicoes(atribuicoes), alertasPdf);
+  }, [config, atribuidas, atribuicoes, concorrentesConfirmados, alertasPdf]);
 
   const nPerfis = config?.lotes.reduce((soma, l) => soma + l.perfis.length, 0) ?? 0;
 
   function limparAvaliacao() {
     setAtribuidas([]);
-    setGrupos(null);
+    setAtribuicoes(null);
     setConcorrentesConfirmados(false);
     setAlertasPdf(new Map());
   }
@@ -98,7 +99,7 @@ export function Modulo3() {
     setConfig(exemplo);
     const declaracoes = declaracoesExemplo(exemplo);
     setAtribuidas(declaracoes);
-    setGrupos(proporAgrupamentos(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente)));
+    setAtribuicoes(proporAtribuicoes(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente)));
     setConcorrentesConfirmados(true);
     setAlertasPdf(new Map());
     setMensagem({
@@ -117,7 +118,7 @@ export function Modulo3() {
   async function carregarDeclaracoes(ficheiros: FileList) {
     if (config === null) return;
     setAProcessar(true);
-    setGrupos(null);
+    setAtribuicoes(null);
     setConcorrentesConfirmados(false);
     setAlertasPdf(new Map());
     try {
@@ -161,12 +162,17 @@ export function Modulo3() {
     }
   }
 
-  function exportar() {
+  async function exportar() {
     if (config === null || resultado === null) return;
-    descarregarBlob(
-      gerarResultadosBlob(resultado, config),
-      nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.xlsx"),
-    );
+    setAExportar(true);
+    try {
+      descarregarBlob(
+        await gerarResultadosBlob(resultado, config),
+        nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.xlsx"),
+      );
+    } finally {
+      setAExportar(false);
+    }
   }
 
   return (
@@ -327,11 +333,11 @@ export function Modulo3() {
                 prevalece juridicamente — a aplicação apenas sinaliza.
               </p>
 
-              {grupos === null && (
+              {atribuicoes === null && (
                 <button
                   type="button"
                   className="botao-principal"
-                  onClick={() => setGrupos(proporAgrupamentos(nomesEntidade))}
+                  onClick={() => setAtribuicoes(proporAtribuicoes(nomesEntidade))}
                 >
                   Prosseguir para a reconciliação de concorrentes
                 </button>
@@ -341,19 +347,23 @@ export function Modulo3() {
         </section>
       )}
 
-      {config !== null && grupos !== null && (
+      {config !== null && atribuicoes !== null && (
         <section className="painel">
           <header className="painel-cabecalho">
             <h3>Passo 3 · Quem é cada concorrente</h3>
             <p className="painel-nota">
               O concorrente de cada declaração é o nome que o próprio elemento escreveu no formulário. Quando a mesma
               empresa vem escrita de maneiras diferentes — «ABC» e «ABC, S.A.» —, contaria como duas propostas
-              distintas, e nenhuma delas teria elementos suficientes. Confirme abaixo quem é quem: cada cartão é um
-              concorrente.
+              distintas, e nenhuma delas teria elementos suficientes. Linhas com o mesmo nome à direita são o mesmo
+              concorrente: é assim que se juntam, e é dando-lhes nomes diferentes que se separam.
             </p>
           </header>
 
-          <ReconciliacaoConcorrentes grupos={grupos} contagemPorNome={contagemPorNome} onChange={setGrupos} />
+          <ReconciliacaoConcorrentes
+            atribuicoes={atribuicoes}
+            contagemPorNome={contagemPorNome}
+            onChange={setAtribuicoes}
+          />
 
           {concorrentesConfirmados ? (
             <p className="ajuda">
@@ -384,8 +394,8 @@ export function Modulo3() {
                 concorrente.
               </p>
             </header>
-            <button type="button" className="botao-principal" onClick={exportar}>
-              Descarregar relatório Excel
+            <button type="button" className="botao-principal" onClick={() => void exportar()} disabled={aExportar}>
+              {aExportar ? "A gerar…" : "Descarregar relatório Excel"}
             </button>
           </section>
         </>

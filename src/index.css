@@ -634,6 +634,13 @@ button:disabled {
   gap: 10px;
 }
 
+.grelha-certificacao {
+  display: grid;
+  grid-template-columns: 26px minmax(180px, 1fr) 102px;
+  align-items: center;
+  gap: 10px;
+}
+
 .grelha-perfil-lote {
   display: grid;
   grid-template-columns: 26px minmax(160px, 1fr) 78px 96px 104px 132px 102px;
@@ -922,62 +929,31 @@ button:disabled {
   border-color: var(--azul-500);
 }
 
+/* O que a coluna da direita dá: uma frase que confirma, sem contas, quantos
+   concorrentes ficaram e como se chamam. */
 .resumo-reconciliacao {
   margin: 12px 0 0;
   font-size: 0.9rem;
   color: var(--texto-suave);
 }
 
-.lista-grupos {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 14px 0;
+/* A coluna editável ocupa o que sobra; a do meio é uma contagem estreita. */
+.tabela-reconciliacao td:first-child {
+  font-weight: 500;
 }
 
-.cartao-grupo {
-  border: 1px solid var(--borda);
-  border-radius: var(--raio-pequeno);
-  padding: 12px;
+.tabela-reconciliacao th:nth-child(2),
+.tabela-reconciliacao td:nth-child(2) {
+  width: 110px;
 }
 
-/* O nome canónico em destaque no topo do cartão: é ele que responde à pergunta
-   do passo — "quem é este concorrente?" — antes de se olhar para as variantes. */
-.cartao-grupo-cabecalho {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+.tabela-reconciliacao th:last-child,
+.tabela-reconciliacao td:last-child {
+  width: 40%;
 }
 
-.cartao-grupo-cabecalho h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
-}
-
-.lista-nomes-originais {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.lista-nomes-originais li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.88rem;
-  flex-wrap: wrap;
-}
-
-.lista-nomes-originais select {
-  width: auto;
+.tabela-reconciliacao input {
+  width: 100%;
 }
 
 .seletor-vista {

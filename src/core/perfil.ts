@@ -1,6 +1,6 @@
 // Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
-import type { PerfilJSON, PerfisJSON, Requisito } from "./types";
+import type { Certificacao, PerfilJSON, PerfisJSON, Requisito } from "./types";
 import { MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
 import { gerarId } from "./id";
 
@@ -17,7 +17,7 @@ export function perfilInicial(): PerfilJSON {
     perfil: "",
     nBlocos: 15,
     conteudoFuncional: "",
-    certificacoes: "",
+    certificacoes: [],
     requisitos: [],
   };
 }
@@ -33,6 +33,7 @@ export function duplicarPerfil(perfil: PerfilJSON): PerfilJSON {
     id: gerarId(),
     perfil: `${perfil.perfil} (cópia)`,
     requisitos: perfil.requisitos.map((r) => ({ ...r, id: gerarId() })),
+    certificacoes: perfil.certificacoes.map((c) => ({ ...c, id: gerarId() })),
   };
 }
 
@@ -105,7 +106,7 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
     erros.push({ campo: "requisitos", mensagem: "Defina pelo menos um requisito." });
   }
 
-  return [...erros, ...validarRequisitos(perfil.requisitos)];
+  return [...erros, ...validarRequisitos(perfil.requisitos), ...validarCertificacoes(perfil.certificacoes)];
 }
 
 /**
@@ -183,6 +184,31 @@ function verificarSchemaVersion(bruto: Record<string, unknown>): void {
 }
 
 /**
+ * Certificações vindas de ficheiro.
+ *
+ * Ficheiros gerados antes de as certificações serem uma lista trazem-nas como
+ * uma frase separada por ponto e vírgula: converte-se, para que continuem a
+ * abrir. Também se aceita a lista, com id novo quando o ficheiro não o traz.
+ */
+function normalizarCertificacoes(bruto: unknown): Certificacao[] {
+  if (typeof bruto === "string") {
+    return itensSeparados(bruto).map((designacao) => ({ id: gerarId(), designacao }));
+  }
+  if (!Array.isArray(bruto)) return [];
+
+  return bruto
+    .map((c) => {
+      if (typeof c === "string") return { id: gerarId(), designacao: c };
+      const certificacao = c as Partial<Certificacao>;
+      return {
+        id: typeof certificacao.id === "string" && certificacao.id !== "" ? certificacao.id : gerarId(),
+        designacao: typeof certificacao.designacao === "string" ? certificacao.designacao : "",
+      };
+    })
+    .filter((c) => c.designacao.trim() !== "");
+}
+
+/**
  * Normaliza um perfil vindo de ficheiro. Ficheiros gerados antes de o perfil
  * ter identidade própria não trazem `id`: damos-lhe um, para que passe a
  * participar na propagação de alterações como qualquer outro.
@@ -197,7 +223,7 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
     tipo: "perfil",
     id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
     conteudoFuncional: typeof perfil.conteudoFuncional === "string" ? perfil.conteudoFuncional : "",
-    certificacoes: typeof perfil.certificacoes === "string" ? perfil.certificacoes : "",
+    certificacoes: normalizarCertificacoes((bruto as { certificacoes?: unknown }).certificacoes),
   };
 }
 
@@ -262,11 +288,41 @@ export function itensSeparados(texto: string): string[] {
 }
 
 /**
- * Certificações exigidas pelo perfil. Lista vazia quando o campo — que é
- * opcional — está por preencher, que é o caso da maioria dos perfis.
+ * Designações das certificações exigidas pelo perfil, sem as entradas em
+ * branco. Lista vazia quando o perfil não exige nenhuma, que é o caso da
+ * maioria.
  */
 export function certificacoesDoPerfil(perfil: PerfilJSON): string[] {
-  return itensSeparados(perfil.certificacoes ?? "");
+  return (perfil.certificacoes ?? []).map((c) => c.designacao.trim()).filter((d) => d !== "");
+}
+
+/**
+ * Valida as certificações de um perfil. O campo é opcional — nenhuma
+ * certificação é situação normal —, mas uma linha criada e deixada em branco,
+ * ou repetida, é engano de preenchimento.
+ */
+export function validarCertificacoes(certificacoes: Certificacao[]): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+  const vistas = new Set<string>();
+
+  certificacoes.forEach((c, idx) => {
+    const designacao = c.designacao.trim();
+    if (designacao === "") {
+      erros.push({
+        campo: `certificacoes[${idx}].designacao`,
+        mensagem: "A designação da certificação não pode ficar vazia. Remova a linha se não for exigida.",
+      });
+    } else if (vistas.has(designacao)) {
+      erros.push({
+        campo: `certificacoes[${idx}].designacao`,
+        mensagem: `Certificação repetida: "${designacao}".`,
+      });
+    } else {
+      vistas.add(designacao);
+    }
+  });
+
+  return erros;
 }
 
 export interface GrupoDeExigencia {

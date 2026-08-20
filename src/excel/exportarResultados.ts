@@ -1,9 +1,12 @@
-// Exportação Excel dos resultados de avaliação — todos os lotes de uma vez.
-// Usa SheetJS (xlsx): são folhas de dados tabulares, sem necessidade dos
-// recursos (estilos, validação, proteção) que aqui obrigaram a exceljs.
+// Relatório Excel dos resultados de avaliação — todos os lotes de uma vez.
+//
+// Usa exceljs, e não SheetJS, pela mesma razão que o formulário: é preciso
+// formatar. Um relatório que sai do júri para outras mãos tem de se ler sem
+// ninguém ter de alargar colunas ou adivinhar onde acaba um lote — e partilha
+// com o formulário o mesmo vocabulário visual, que vive em `estilo.ts`.
 
-import * as XLSX from "xlsx";
-import type { LotesJSON } from "../core/types";
+import ExcelJS from "exceljs";
+import type { LotesJSON, MesAno } from "../core/types";
 import type {
   ResultadoConcorrenteLote,
   ResultadoLote,
@@ -11,17 +14,179 @@ import type {
 } from "../core/avaliacaoProcedimento";
 import { requisitosFalhados } from "../core/avaliacaoProcedimento";
 import { anosDeMeses } from "../core/types";
+import {
+  COR_AVISO_BG,
+  COR_AVISO_TEXTO,
+  COR_BRANCO,
+  COR_CAMPO_BLOQUEADO_BG,
+  COR_CAMPO_BLOQUEADO_TEXTO,
+  COR_CUMPRE_BG,
+  COR_CUMPRE_TEXTO,
+  COR_FAIXA,
+  COR_FALHA_BG,
+  COR_FALHA_TEXTO,
+  COR_GRELHA,
+  COR_LINHA_ALTERNADA,
+  COR_NOTA_BG,
+  COR_NOTA_TEXTO,
+  COR_ROTULO_BG,
+  COR_ROTULO_TEXTO,
+  COR_SUBCABECALHO,
+  contorno,
+  fillSolido,
+} from "./estilo";
 
-type Linha = (string | number)[];
+// --------------------------------------------------------------------------
+// Construção de folhas tabulares
+// --------------------------------------------------------------------------
 
-function sim(valor: boolean): string {
-  return valor ? "Sim" : "Não";
+type Valor = string | number;
+
+/** Como uma célula se destaca. Só o resultado se pinta; o resto é texto. */
+type Realce = "cumpre" | "falha" | "aviso";
+
+interface Celula {
+  valor: Valor;
+  realce?: Realce;
+}
+
+type Linha = (Valor | Celula)[];
+
+function cel(valor: Valor, realce?: Realce): Celula {
+  return { valor, realce };
+}
+
+/** "Sim"/"Não" com o realce que lhes corresponde — é o que o olho procura. */
+function sim(valor: boolean): Celula {
+  return cel(valor ? "Sim" : "Não", valor ? "cumpre" : "falha");
+}
+
+interface Coluna {
+  titulo: string;
+  largura: number;
+  /** Números e contagens alinham à direita; o resto fica à esquerda. */
+  numerico?: boolean;
+  /** Colunas de texto longo (mensagens, listas de requisitos) quebram linha. */
+  quebra?: boolean;
+}
+
+const REALCES: Record<Realce, { fundo: string; texto: string }> = {
+  cumpre: { fundo: COR_CUMPRE_BG, texto: COR_CUMPRE_TEXTO },
+  falha: { fundo: COR_FALHA_BG, texto: COR_FALHA_TEXTO },
+  aviso: { fundo: COR_AVISO_BG, texto: COR_AVISO_TEXTO },
+};
+
+const LINHA_TITULO = 1;
+const LINHA_SUBTITULO = 2;
+const LINHA_CABECALHO = 4;
+
+function normalizar(entrada: Valor | Celula): Celula {
+  return typeof entrada === "object" ? entrada : { valor: entrada };
+}
+
+/**
+ * Uma folha de dados: título, subtítulo, cabeçalho fixo e corpo em zebra.
+ *
+ * O cabeçalho fica congelado e com filtro: um relatório de avaliação lê-se a
+ * procurar ("mostra-me quem não cumpre"), e não de fio a pavio.
+ */
+function adicionarFolhaTabela(
+  wb: ExcelJS.Workbook,
+  opcoes: { nome: string; titulo: string; subtitulo: string; colunas: Coluna[]; linhas: Linha[]; vazio?: string },
+): ExcelJS.Worksheet {
+  const { nome, titulo, subtitulo, colunas, linhas } = opcoes;
+  const sheet = wb.addWorksheet(nome);
+  const nColunas = colunas.length;
+
+  colunas.forEach((c, idx) => {
+    sheet.getColumn(idx + 1).width = c.largura;
+  });
+
+  sheet.mergeCells(LINHA_TITULO, 1, LINHA_TITULO, nColunas);
+  const celulaTitulo = sheet.getCell(LINHA_TITULO, 1);
+  celulaTitulo.value = titulo.toUpperCase();
+  celulaTitulo.font = { bold: true, size: 13, color: { argb: COR_FAIXA } };
+  celulaTitulo.alignment = { horizontal: "left", vertical: "middle" };
+  sheet.getRow(LINHA_TITULO).height = 24;
+
+  sheet.mergeCells(LINHA_SUBTITULO, 1, LINHA_SUBTITULO, nColunas);
+  const celulaSubtitulo = sheet.getCell(LINHA_SUBTITULO, 1);
+  celulaSubtitulo.value = subtitulo;
+  celulaSubtitulo.font = { italic: true, size: 10, color: { argb: COR_ROTULO_TEXTO } };
+  celulaSubtitulo.alignment = { horizontal: "left", vertical: "middle" };
+  sheet.getRow(LINHA_SUBTITULO).height = 18;
+
+  const cabecalho = sheet.getRow(LINHA_CABECALHO);
+  colunas.forEach((coluna, idx) => {
+    const cell = cabecalho.getCell(idx + 1);
+    cell.value = coluna.titulo;
+    cell.fill = fillSolido(COR_SUBCABECALHO);
+    cell.font = { bold: true, size: 10, color: { argb: COR_BRANCO } };
+    cell.alignment = {
+      horizontal: coluna.numerico ? "right" : "left",
+      vertical: "middle",
+      wrapText: true,
+    };
+    cell.border = contorno(COR_BRANCO);
+  });
+  cabecalho.height = 28;
+
+  linhas.forEach((linha, idxLinha) => {
+    const row = sheet.getRow(LINHA_CABECALHO + 1 + idxLinha);
+    const alternada = idxLinha % 2 === 1;
+
+    colunas.forEach((coluna, idxColuna) => {
+      const { valor, realce } = normalizar(linha[idxColuna] ?? "");
+      const cell = row.getCell(idxColuna + 1);
+      cell.value = valor;
+      cell.font = realce
+        ? { size: 10, bold: true, color: { argb: REALCES[realce].texto } }
+        : { size: 10, color: { argb: COR_CAMPO_BLOQUEADO_TEXTO } };
+      cell.fill = fillSolido(
+        realce ? REALCES[realce].fundo : alternada ? COR_LINHA_ALTERNADA : COR_BRANCO,
+      );
+      cell.alignment = {
+        horizontal: coluna.numerico ? "right" : "left",
+        vertical: "middle",
+        wrapText: coluna.quebra === true,
+      };
+      cell.border = contorno(COR_GRELHA);
+    });
+  });
+
+  if (linhas.length === 0) {
+    sheet.mergeCells(LINHA_CABECALHO + 1, 1, LINHA_CABECALHO + 1, nColunas);
+    const cell = sheet.getCell(LINHA_CABECALHO + 1, 1);
+    cell.value = opcoes.vazio ?? "Sem registos.";
+    cell.fill = fillSolido(COR_NOTA_BG);
+    cell.font = { italic: true, size: 10, color: { argb: COR_NOTA_TEXTO } };
+    cell.alignment = { horizontal: "left", vertical: "middle" };
+    cell.border = contorno(COR_GRELHA);
+  }
+
+  sheet.views = [{ state: "frozen", ySplit: LINHA_CABECALHO }];
+  sheet.autoFilter = {
+    from: { row: LINHA_CABECALHO, column: 1 },
+    to: { row: LINHA_CABECALHO + Math.max(linhas.length, 1), column: nColunas },
+  };
+
+  return sheet;
+}
+
+// --------------------------------------------------------------------------
+// Conteúdo das folhas
+// --------------------------------------------------------------------------
+
+function formatarMesAno(data: MesAno | null): string {
+  return data === null ? "" : `${String(data.mes).padStart(2, "0")}/${data.ano}`;
 }
 
 /** Situação final do concorrente no lote, já com a limitação de um lote aplicada. */
-function situacao(c: ResultadoConcorrenteLote): string {
-  if (c.impedidoPeloLote !== null) return `Impedido — já ficou com o lote ${c.impedidoPeloLote}`;
-  return c.cumpreRequisitos ? "Cumpre" : "Não cumpre";
+function situacao(c: ResultadoConcorrenteLote): Celula {
+  if (c.impedidoPeloLote !== null) {
+    return cel(`Impedido — já ficou com o lote ${c.impedidoPeloLote}`, "aviso");
+  }
+  return c.cumpreRequisitos ? cel("Cumpre", "cumpre") : cel("Não cumpre", "falha");
 }
 
 function porLoteEConcorrente<T>(
@@ -29,22 +194,6 @@ function porLoteEConcorrente<T>(
   fn: (lote: ResultadoLote, concorrente: ResultadoConcorrenteLote) => T[],
 ): T[] {
   return lotes.flatMap((lote) => lote.concorrentes.flatMap((c) => fn(lote, c)));
-}
-
-/** Uma linha por lote e concorrente: a leitura de topo do procedimento. */
-function folhaResumo(resultado: ResultadoProcedimento): XLSX.WorkSheet {
-  const cabecalho = [
-    "Lote",
-    "Designação do lote",
-    "Concorrente",
-    "Cumpre os requisitos",
-    "Situação",
-    "N.º de alertas",
-  ];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) => [
-    [lote.numero, lote.designacao, c.concorrente, sim(c.cumpreRequisitos), situacao(c), c.nAlertas],
-  ]);
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
 /** Todos os concorrentes do procedimento, por ordem alfabética e sem repetições. */
@@ -75,152 +224,320 @@ function nomeDeFolha(concorrente: string, jaUsados: Set<string>): string {
   return nome;
 }
 
+/** A capa: o que este relatório é e sobre que procedimento incide. */
+function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, config: LotesJSON): void {
+  const sheet = wb.addWorksheet("Procedimento");
+  sheet.getColumn(1).width = 34;
+  sheet.getColumn(2).width = 62;
+
+  sheet.mergeCells(1, 1, 1, 2);
+  const titulo = sheet.getCell(1, 1);
+  titulo.value = "RELATÓRIO DE AVALIAÇÃO DA EXPERIÊNCIA PROFISSIONAL";
+  titulo.font = { bold: true, size: 14, color: { argb: COR_FAIXA } };
+  titulo.alignment = { horizontal: "center", vertical: "middle" };
+  sheet.getRow(1).height = 26;
+
+  const campos: Array<[string, string | number]> = [
+    ["Projeto", config.nomeProjeto],
+    ["Procedimento", config.nomeProcedimento],
+    ["Lotes avaliados", resultado.lotes.length],
+    ["Concorrentes", concorrentesDoProcedimento(resultado).length],
+    ["Um lote por concorrente", resultado.umLotePorConcorrente ? "Sim" : "Não"],
+    ["Declarações por atribuir", resultado.naoAtribuidas.length],
+  ];
+
+  campos.forEach(([rotulo, valor], idx) => {
+    const linha = 3 + idx;
+    const celulaRotulo = sheet.getCell(linha, 1);
+    celulaRotulo.value = rotulo;
+    celulaRotulo.fill = fillSolido(COR_ROTULO_BG);
+    celulaRotulo.font = { bold: true, size: 10, color: { argb: COR_ROTULO_TEXTO } };
+    celulaRotulo.alignment = { horizontal: "left", vertical: "middle" };
+    celulaRotulo.border = contorno(COR_GRELHA);
+
+    const celulaValor = sheet.getCell(linha, 2);
+    celulaValor.value = valor;
+    celulaValor.fill = fillSolido(COR_CAMPO_BLOQUEADO_BG);
+    celulaValor.font = { size: 10, color: { argb: COR_CAMPO_BLOQUEADO_TEXTO } };
+    celulaValor.alignment = { horizontal: "left", vertical: "middle" };
+    celulaValor.border = contorno(COR_GRELHA);
+    sheet.getRow(linha).height = 20;
+  });
+
+  const linhaNota = 3 + campos.length + 1;
+  sheet.mergeCells(linhaNota, 1, linhaNota, 2);
+  const nota = sheet.getCell(linhaNota, 1);
+  nota.value =
+    "Este relatório sinaliza o cumprimento dos requisitos mínimos de experiência. A decisão é do júri. " +
+    "As certificações eventualmente exigidas não são aqui apuradas: verificam-se nas peças da proposta.";
+  nota.fill = fillSolido(COR_NOTA_BG);
+  nota.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
+  nota.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+  nota.border = contorno(COR_GRELHA);
+  sheet.getRow(linhaNota).height = 44;
+}
+
+function adicionarResumo(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
+  adicionarFolhaTabela(wb, {
+    nome: "Resumo por lote",
+    titulo: "Resumo por lote e concorrente",
+    subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Designação do lote", largura: 30 },
+      { titulo: "Concorrente", largura: 32 },
+      { titulo: "Cumpre os requisitos", largura: 20 },
+      { titulo: "Situação", largura: 34, quebra: true },
+      { titulo: "N.º de alertas", largura: 14, numerico: true },
+    ],
+    linhas: porLoteEConcorrente(resultado.lotes, (lote, c) => [
+      [lote.numero, lote.designacao, c.concorrente, sim(c.cumpreRequisitos), situacao(c), c.nAlertas],
+    ]),
+    vazio: "Nenhum concorrente se apresentou a qualquer lote.",
+  });
+}
+
 /**
  * Os perfis de um concorrente, em folha própria.
  *
  * Uma folha por concorrente, e não uma folha com todos: é assim que se imprime
  * ou se envia a apreciação de uma proposta sem levar atrás as das concorrentes.
- * O nome vai na primeira linha porque o nome da folha pode ter sido cortado.
  */
-function folhaPerfisDoConcorrente(resultado: ResultadoProcedimento, concorrente: string): XLSX.WorkSheet {
-  const cabecalho = [
-    "Lote",
-    "Designação do lote",
-    "Perfil",
-    "N.º de elementos",
-    "N.º mínimo exigido",
-    "N.º suficiente",
-    "Todos os elementos cumprem",
-    "Cumpre",
-  ];
-
-  const linhas: Linha[] = resultado.lotes.flatMap((lote) => {
-    const c = lote.concorrentes.find((x) => x.concorrente === concorrente);
-    if (c === undefined) return [];
-    return c.perfis.map((p) => [
-      lote.numero,
-      lote.designacao,
-      p.perfil,
-      p.nElementos,
-      p.nMinimoElementos,
-      sim(p.nElementosSuficiente),
-      sim(p.todosElementosCumprem),
-      sim(p.cumpre),
-    ]);
-  });
-
-  return XLSX.utils.aoa_to_sheet([["Concorrente", concorrente], [], cabecalho, ...linhas]);
-}
-
-function folhaElementos(resultado: ResultadoProcedimento): XLSX.WorkSheet {
-  const cabecalho = ["Lote", "Concorrente", "Perfil", "Elemento", "Ficheiro", "Cumpre", "Requisitos falhados"];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) =>
-    c.perfis.flatMap((p) =>
-      p.elementos.map((e) => [
+function adicionarFolhaDoConcorrente(
+  wb: ExcelJS.Workbook,
+  resultado: ResultadoProcedimento,
+  concorrente: string,
+  nome: string,
+): void {
+  adicionarFolhaTabela(wb, {
+    nome,
+    titulo: "Apreciação por perfil",
+    subtitulo: concorrente,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Designação do lote", largura: 28 },
+      { titulo: "Perfil", largura: 34 },
+      { titulo: "N.º de elementos", largura: 15, numerico: true },
+      { titulo: "N.º mínimo exigido", largura: 15, numerico: true },
+      { titulo: "N.º suficiente", largura: 13 },
+      { titulo: "Todos os elementos cumprem", largura: 20 },
+      { titulo: "Cumpre", largura: 11 },
+    ],
+    linhas: resultado.lotes.flatMap((lote) => {
+      const c = lote.concorrentes.find((x) => x.concorrente === concorrente);
+      if (c === undefined) return [];
+      return c.perfis.map((p): Linha => [
         lote.numero,
-        c.concorrente,
+        lote.designacao,
         p.perfil,
-        e.declaracao.identificacao.nome,
-        e.declaracao.ficheiro,
-        sim(e.apuramento.cumpre),
-        requisitosFalhados(e.apuramento, p.requisitos).join("; "),
-      ]),
-    ),
-  );
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
-}
-
-/** O desagregado: uma linha por requisito de cada elemento, com os meses apurados. */
-function folhaRequisitos(resultado: ResultadoProcedimento): XLSX.WorkSheet {
-  const cabecalho = [
-    "Lote",
-    "Concorrente",
-    "Perfil",
-    "Elemento",
-    "Requisito",
-    "Meses apurados",
-    "Meses mínimos",
-    "Anos mínimos",
-    "Cumpre",
-  ];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) =>
-    c.perfis.flatMap((p) => {
-      const porId = new Map(p.requisitos.map((r) => [r.id, r.designacao]));
-      return p.elementos.flatMap((e) =>
-        e.apuramento.requisitos.map((r) => [
-          lote.numero,
-          c.concorrente,
-          p.perfil,
-          e.declaracao.identificacao.nome,
-          porId.get(r.requisitoId) ?? r.requisitoId,
-          r.mesesApurados,
-          r.mesesMinimos,
-          anosDeMeses(r.mesesMinimos),
-          sim(r.cumpre),
-        ]),
-      );
+        p.nElementos,
+        p.nMinimoElementos,
+        sim(p.nElementosSuficiente),
+        sim(p.todosElementosCumprem),
+        sim(p.cumpre),
+      ]);
     }),
-  );
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+    vazio: "Este concorrente não se apresentou a nenhum lote.",
+  });
 }
 
-function folhaAlertas(resultado: ResultadoProcedimento): XLSX.WorkSheet {
-  const cabecalho = ["Lote", "Concorrente", "Perfil", "Elemento", "Tipo", "Alerta"];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) =>
-    c.perfis.flatMap((p) =>
-      p.elementos.flatMap((e) =>
-        e.alertas.map((a) => [
+function adicionarElementos(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
+  adicionarFolhaTabela(wb, {
+    nome: "Elementos",
+    titulo: "Elementos propostos",
+    subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Concorrente", largura: 30 },
+      { titulo: "Perfil", largura: 32 },
+      { titulo: "Elemento", largura: 30 },
+      { titulo: "Ficheiro", largura: 30 },
+      { titulo: "Cumpre", largura: 11 },
+      { titulo: "Requisitos falhados", largura: 44, quebra: true },
+    ],
+    linhas: porLoteEConcorrente(resultado.lotes, (lote, c) =>
+      c.perfis.flatMap((p) =>
+        p.elementos.map((e): Linha => [
           lote.numero,
           c.concorrente,
           p.perfil,
           e.declaracao.identificacao.nome,
-          a.tipo,
-          a.mensagem,
+          e.declaracao.ficheiro,
+          sim(e.apuramento.cumpre),
+          requisitosFalhados(e.apuramento, p.requisitos).join("; "),
         ]),
       ),
     ),
-  );
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+    vazio: "Nenhum elemento foi apresentado.",
+  });
 }
+
+/** O desagregado: uma linha por requisito de cada elemento, com os meses apurados. */
+function adicionarRequisitos(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
+  adicionarFolhaTabela(wb, {
+    nome: "Requisitos",
+    titulo: "Apuramento requisito a requisito",
+    subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Concorrente", largura: 28 },
+      { titulo: "Perfil", largura: 30 },
+      { titulo: "Elemento", largura: 28 },
+      { titulo: "Requisito", largura: 40, quebra: true },
+      { titulo: "Meses apurados", largura: 14, numerico: true },
+      { titulo: "Meses mínimos", largura: 14, numerico: true },
+      { titulo: "Anos mínimos", largura: 13, numerico: true },
+      { titulo: "Cumpre", largura: 11 },
+    ],
+    linhas: porLoteEConcorrente(resultado.lotes, (lote, c) =>
+      c.perfis.flatMap((p) => {
+        const porId = new Map(p.requisitos.map((r) => [r.id, r.designacao]));
+        return p.elementos.flatMap((e) =>
+          e.apuramento.requisitos.map((r): Linha => [
+            lote.numero,
+            c.concorrente,
+            p.perfil,
+            e.declaracao.identificacao.nome,
+            porId.get(r.requisitoId) ?? r.requisitoId,
+            cel(r.mesesApurados, r.cumpre ? "cumpre" : "falha"),
+            r.mesesMinimos,
+            anosDeMeses(r.mesesMinimos),
+            sim(r.cumpre),
+          ]),
+        );
+      }),
+    ),
+    vazio: "Nenhum requisito foi apurado.",
+  });
+}
+
+function adicionarAlertas(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
+  adicionarFolhaTabela(wb, {
+    nome: "Alertas",
+    titulo: "Alertas de leitura e de coerência",
+    subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Concorrente", largura: 28 },
+      { titulo: "Perfil", largura: 28 },
+      { titulo: "Elemento", largura: 28 },
+      { titulo: "Tipo", largura: 24 },
+      { titulo: "Alerta", largura: 70, quebra: true },
+    ],
+    linhas: porLoteEConcorrente(resultado.lotes, (lote, c) =>
+      c.perfis.flatMap((p) =>
+        p.elementos.flatMap((e) =>
+          e.alertas.map((a): Linha => [
+            lote.numero,
+            c.concorrente,
+            p.perfil,
+            e.declaracao.identificacao.nome,
+            a.tipo,
+            cel(a.mensagem, "aviso"),
+          ]),
+        ),
+      ),
+    ),
+    vazio: "Nenhum alerta. Todas as declarações foram lidas sem reservas.",
+  });
+}
+
+/**
+ * Traço do apuramento: os períodos que entraram e os que foram descartados.
+ * É o que permite a um terceiro reconstituir a contagem à mão.
+ */
+function adicionarTraco(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
+  adicionarFolhaTabela(wb, {
+    nome: "Traço de apuramento",
+    titulo: "Traço do apuramento, período a período",
+    subtitulo: `${subtitulo} · permite reconstituir a contagem à mão`,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Concorrente", largura: 26 },
+      { titulo: "Perfil", largura: 26 },
+      { titulo: "Elemento", largura: 26 },
+      { titulo: "Requisito", largura: 34, quebra: true },
+      { titulo: "Bloco", largura: 8, numerico: true },
+      { titulo: "Situação", largura: 13 },
+      { titulo: "Início", largura: 11, numerico: true },
+      { titulo: "Fim", largura: 11, numerico: true },
+      { titulo: "Origem / motivo", largura: 40, quebra: true },
+    ],
+    linhas: porLoteEConcorrente(resultado.lotes, (lote, c) =>
+      c.perfis.flatMap((p) => {
+        const porId = new Map(p.requisitos.map((r) => [r.id, r.designacao]));
+        return p.elementos.flatMap((e) =>
+          e.apuramento.requisitos.flatMap((r) => {
+            const designacao = porId.get(r.requisitoId) ?? r.requisitoId;
+            const nome = e.declaracao.identificacao.nome;
+            return [
+              ...r.periodosAdmitidos.map((periodo): Linha => [
+                lote.numero,
+                c.concorrente,
+                p.perfil,
+                nome,
+                designacao,
+                periodo.blocoIndice,
+                cel("Admitido", "cumpre"),
+                formatarMesAno(periodo.inicio),
+                formatarMesAno(periodo.fim),
+                periodo.origem === "linha" ? "Datas da linha" : "Período do projeto",
+              ]),
+              ...r.periodosDescartados.map((descarte): Linha => [
+                lote.numero,
+                c.concorrente,
+                p.perfil,
+                nome,
+                designacao,
+                descarte.blocoIndice,
+                cel("Descartado", "falha"),
+                "",
+                "",
+                cel(descarte.motivo, "aviso"),
+              ]),
+            ];
+          }),
+        );
+      }),
+    ),
+    vazio: "Nenhum período foi apurado.",
+  });
+}
+
+// --------------------------------------------------------------------------
+// Livro
+// --------------------------------------------------------------------------
 
 export function construirWorkbookResultados(
   resultado: ResultadoProcedimento,
   config: LotesJSON,
-): XLSX.WorkBook {
-  const wb = XLSX.utils.book_new();
+): ExcelJS.Workbook {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Propostas";
+  wb.created = new Date();
 
-  const capa = XLSX.utils.aoa_to_sheet([
-    ["Projeto", config.nomeProjeto],
-    ["Procedimento", config.nomeProcedimento],
-    ["Um lote por concorrente", sim(resultado.umLotePorConcorrente)],
-    ["Lotes avaliados", resultado.lotes.length],
-    [],
-    ["Este relatório sinaliza o cumprimento dos requisitos mínimos. A decisão é do júri."],
-  ]);
+  const subtitulo = [config.nomeProjeto, config.nomeProcedimento].filter((t) => t.trim() !== "").join(" · ");
 
-  XLSX.utils.book_append_sheet(wb, capa, "Procedimento");
-  XLSX.utils.book_append_sheet(wb, folhaResumo(resultado), "Resumo por lote");
-  XLSX.utils.book_append_sheet(wb, folhaElementos(resultado), "Elementos");
-  XLSX.utils.book_append_sheet(wb, folhaRequisitos(resultado), "Requisitos");
-  XLSX.utils.book_append_sheet(wb, folhaAlertas(resultado), "Alertas");
+  construirCapa(wb, resultado, config);
+  adicionarResumo(wb, resultado, subtitulo);
+  adicionarElementos(wb, resultado, subtitulo);
+  adicionarRequisitos(wb, resultado, subtitulo);
+  adicionarAlertas(wb, resultado, subtitulo);
+  adicionarTraco(wb, resultado, subtitulo);
 
   const usados = new Set<string>();
   for (const concorrente of concorrentesDoProcedimento(resultado)) {
-    XLSX.utils.book_append_sheet(
-      wb,
-      folhaPerfisDoConcorrente(resultado, concorrente),
-      nomeDeFolha(concorrente, usados),
-    );
+    adicionarFolhaDoConcorrente(wb, resultado, concorrente, nomeDeFolha(concorrente, usados));
   }
 
   return wb;
 }
 
-export function gerarResultadosBlob(resultado: ResultadoProcedimento, config: LotesJSON): Blob {
-  const buffer = XLSX.write(construirWorkbookResultados(resultado, config), {
-    bookType: "xlsx",
-    type: "array",
-  }) as ArrayBuffer;
+export async function gerarResultadosBlob(
+  resultado: ResultadoProcedimento,
+  config: LotesJSON,
+): Promise<Blob> {
+  const buffer = await construirWorkbookResultados(resultado, config).xlsx.writeBuffer();
   return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });

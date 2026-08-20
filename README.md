@@ -14,7 +14,7 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 |---|---|---|---|
 | **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
 | **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
-| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito e uma folha por concorrente |
+| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
 agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
@@ -61,7 +61,9 @@ no documento Word com título próprio e é aplicada na avaliação.
 ### O que não passa pelo Excel
 
 O **conteúdo funcional** e as **certificações** de um perfil saem apenas no
-documento Word, cada um em tabela própria por baixo dos requisitos. Nenhum dos
+documento Word, cada um em tabela própria por baixo dos requisitos — as
+certificações uma por linha, como os requisitos, porque cada uma é exigência
+autónoma e vírgulas fazem parte do nome ("Oracle Certified Professional, Java SE"). Nenhum dos
 dois é matéria que o candidato declare no formulário: o primeiro descreve o
 trabalho a contratar, e a certificação verifica-se contra as peças da proposta,
 fora desta ferramenta. Pedi-los em Excel só produziria respostas que ninguém
@@ -102,7 +104,9 @@ npm run build    # build de produção (pasta dist/)
 ### Estrutura
 
 - `src/core/` — núcleo de cálculo puro (Regra A), perfis, lotes, validação e agregação.
-- `src/excel/` — geração (exceljs) e leitura (SheetJS) de ficheiros Excel.
+- `src/excel/` — geração do formulário e do relatório (exceljs) e leitura de declarações (SheetJS).
+  O vocabulário visual dos dois ficheiros gerados vive em `src/excel/estilo.ts`: é a partilha
+  que os faz parecer da mesma casa.
 - `src/pdf/` — comparador PDF ↔ Excel (pdf.js).
 - `src/modulo1/`, `src/modulo2/`, `src/modulo3/` — interface de cada módulo.
 - `src/ui/` — componentes partilhados.

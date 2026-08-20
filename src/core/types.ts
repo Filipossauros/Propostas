@@ -31,6 +31,12 @@ export interface Requisito {
   mesesMinimos: number;
 }
 
+/** Uma certificação exigida a cada elemento proposto para o perfil. */
+export interface Certificacao {
+  id: string;
+  designacao: string;
+}
+
 export function anosDeMeses(meses: number): number {
   return meses / MESES_POR_ANO;
 }
@@ -70,8 +76,13 @@ export interface PerfilJSON {
    */
   conteudoFuncional: string;
   /**
-   * Certificações exigidas ao elemento, separadas por ponto e vírgula. Campo
-   * opcional: a maioria dos perfis não exige nenhuma.
+   * Certificações exigidas ao elemento, uma por entrada. Campo opcional: a
+   * maioria dos perfis não exige nenhuma.
+   *
+   * É uma lista, e não texto corrido, pela mesma razão dos requisitos: cada
+   * certificação é uma exigência autónoma, com nome próprio — vírgulas e
+   * pontos e vírgulas fazem parte dos nomes ("Oracle Certified Professional,
+   * Java SE") e não podem servir de separador.
    *
    * Tal como o conteúdo funcional, só entra no documento Word — e por uma razão
    * mais forte: a certificação é verificada fora desta ferramenta, contra as
@@ -79,7 +90,7 @@ export interface PerfilJSON {
    * no formulário. Pedi-la em Excel só produziria uma resposta que ninguém
    * apuraria.
    */
-  certificacoes: string;
+  certificacoes: Certificacao[];
   requisitos: Requisito[];
 }
 

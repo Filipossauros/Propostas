@@ -87,3 +87,54 @@ export function construirMapaReconciliacao(grupos: GrupoConcorrentes[]): Map<str
   }
   return mapa;
 }
+
+// --------------------------------------------------------------------------
+// Atribuição nome-a-nome — a forma que o passo 3 do Módulo 3 apresenta
+// --------------------------------------------------------------------------
+
+/**
+ * Uma linha do passo 3: o nome que veio escrito na declaração e o nome com que
+ * há de aparecer no relatório.
+ *
+ * É a mesma decisão que os grupos exprimem, dita de outra maneira: dois nomes
+ * originais a que se dê o mesmo nome de relatório são o mesmo concorrente.
+ * Juntar dois concorrentes é escrever-lhes o mesmo nome; separá-los é
+ * escrever-lhes nomes diferentes. Não há mais nada a manobrar.
+ */
+export interface AtribuicaoConcorrente {
+  /** Tal como está na declaração. Não se altera: é o que lá está escrito. */
+  nomeOriginal: string;
+  /** Nome a usar no relatório, proposto por semelhança e corrigível à mão. */
+  nomeCanonico: string;
+}
+
+/** Propõe, para cada nome distinto encontrado, o nome a usar no relatório. */
+export function proporAtribuicoes(nomes: string[]): AtribuicaoConcorrente[] {
+  return proporAgrupamentos(nomes)
+    .flatMap((grupo) =>
+      grupo.nomesOriginais.map((nomeOriginal) => ({ nomeOriginal, nomeCanonico: grupo.nomeCanonico })),
+    )
+    .sort((a, b) => a.nomeOriginal.localeCompare(b.nomeOriginal, "pt"));
+}
+
+/**
+ * Junta num só concorrente as declarações a que foi dado o mesmo nome de
+ * relatório. Um nome de relatório deixado em branco vale pelo original — de
+ * outro modo, dois campos apagados fundiriam concorrentes sem ninguém o pedir.
+ */
+export function agruparAtribuicoes(atribuicoes: AtribuicaoConcorrente[]): GrupoConcorrentes[] {
+  const porCanonico = new Map<string, string[]>();
+
+  for (const { nomeOriginal, nomeCanonico } of atribuicoes) {
+    const chave = nomeCanonico.trim() === "" ? nomeOriginal : nomeCanonico.trim();
+    const lista = porCanonico.get(chave) ?? [];
+    lista.push(nomeOriginal);
+    porCanonico.set(chave, lista);
+  }
+
+  return [...porCanonico.entries()].map(([nomeCanonico, nomesOriginais]) => ({
+    id: nomeCanonico,
+    nomeCanonico,
+    nomesOriginais,
+  }));
+}

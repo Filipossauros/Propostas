@@ -1,12 +1,11 @@
 import { useId } from "react";
 import type { Requisito } from "../core/types";
 import { anosDeMeses } from "../core/types";
-import { itensSeparados } from "../core/perfil";
 
 interface Props {
   requisitos: Requisito[];
-  /** Campo opcional do perfil; vazio na maioria dos casos. */
-  certificacoes?: string;
+  /** Designações das certificações exigidas; vazio na maioria dos perfis. */
+  certificacoes?: string[];
 }
 
 /**
@@ -16,9 +15,9 @@ interface Props {
  * passar o rato: assim um leitor de ecrã encontra-o por `aria-describedby`,
  * que é o que torna a dica utilizável sem rato.
  */
-export function DicaRequisitos({ requisitos, certificacoes = "" }: Props) {
+export function DicaRequisitos({ requisitos, certificacoes = [] }: Props) {
   const id = useId();
-  const exigidas = itensSeparados(certificacoes);
+  const exigidas = certificacoes;
 
   return (
     <span className="dica">

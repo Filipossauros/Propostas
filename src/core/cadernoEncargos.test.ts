@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
-import { lotesComPerfis, perfil, requisito } from "./fixtures";
+import { certificacoes, lotesComPerfis, perfil, requisito } from "./fixtures";
 import { mesesDeAnos } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
@@ -130,15 +130,17 @@ describe("conteúdo funcional do perfil", () => {
 });
 
 describe("certificações do perfil", () => {
-  function tabelaDeCertificacoes(certificacoes: string) {
-    const config = lotesComPerfis([{ numero: "1", perfis: [perfil({ certificacoes })] }]);
+  function tabelaDeCertificacoes(...designacoes: string[]) {
+    const config = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ certificacoes: certificacoes(...designacoes) })] },
+    ]);
     return documentoRegrasEPrecoBase(config).blocos.find(
       (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Certificações",
     );
   }
 
   it("saem numa tabela própria, uma certificação por linha", () => {
-    const tabela = tabelaDeCertificacoes("Certificação A; Certificação B");
+    const tabela = tabelaDeCertificacoes("Certificação A", "Certificação B");
 
     expect(tabela).toBeDefined();
     expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toEqual([
@@ -148,11 +150,13 @@ describe("certificações do perfil", () => {
   });
 
   it("o campo é opcional: sem certificações não há tabela", () => {
-    expect(tabelaDeCertificacoes("")).toBeUndefined();
+    expect(tabelaDeCertificacoes()).toBeUndefined();
   });
 
   it("a tabela fica abaixo da dos requisitos mínimos", () => {
-    const config = lotesComPerfis([{ numero: "1", perfis: [perfil({ certificacoes: "Certificação A" })] }]);
+    const config = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ certificacoes: certificacoes("Certificação A") })] },
+    ]);
     const blocos = documentoRegrasEPrecoBase(config).blocos;
     const indice = (titulo: string) =>
       blocos.findIndex((b) => b.tipo === "tabela" && b.colunas[0].titulo === titulo);

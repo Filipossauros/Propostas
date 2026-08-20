@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  agruparAtribuicoes,
   construirMapaReconciliacao,
   escolherNomeCanonico,
   normalizarNomeEntidade,
   proporAgrupamentos,
+  proporAtribuicoes,
 } from "./reconciliacao";
 
 describe("normalizarNomeEntidade", () => {
@@ -46,5 +48,40 @@ describe("escolherNomeCanonico", () => {
 
   it("desempata pela ordem alfabética", () => {
     expect(escolherNomeCanonico(["Beta", "Alfa"])).toBe("Alfa");
+  });
+});
+
+describe("atribuição nome a nome", () => {
+  const NOMES = ["ABC, S.A.", "ABC SA", "Delta, Lda."];
+
+  it("propõe uma linha por nome escrito, com o nome de relatório sugerido", () => {
+    expect(proporAtribuicoes(NOMES)).toEqual([
+      { nomeOriginal: "ABC SA", nomeCanonico: "ABC, S.A." },
+      { nomeOriginal: "ABC, S.A.", nomeCanonico: "ABC, S.A." },
+      { nomeOriginal: "Delta, Lda.", nomeCanonico: "Delta, Lda." },
+    ]);
+  });
+
+  it("nomes de relatório iguais são o mesmo concorrente", () => {
+    const grupos = agruparAtribuicoes(proporAtribuicoes(NOMES));
+
+    expect(grupos).toHaveLength(2);
+    expect(grupos.find((g) => g.nomeCanonico === "ABC, S.A.")!.nomesOriginais).toEqual(["ABC SA", "ABC, S.A."]);
+  });
+
+  it("separar é dar nomes diferentes", () => {
+    const atribuicoes = proporAtribuicoes(NOMES).map((a) =>
+      a.nomeOriginal === "ABC SA" ? { ...a, nomeCanonico: "ABC Segunda, S.A." } : a,
+    );
+
+    expect(agruparAtribuicoes(atribuicoes)).toHaveLength(3);
+  });
+
+  it("um nome de relatório em branco vale pelo original, sem fundir ninguém", () => {
+    const atribuicoes = proporAtribuicoes(NOMES).map((a) => ({ ...a, nomeCanonico: "" }));
+    const grupos = agruparAtribuicoes(atribuicoes);
+
+    expect(grupos).toHaveLength(3);
+    expect(grupos.map((g) => g.nomeCanonico).sort()).toEqual(["ABC SA", "ABC, S.A.", "Delta, Lda."]);
   });
 });

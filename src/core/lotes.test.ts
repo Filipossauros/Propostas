@@ -11,7 +11,7 @@ import {
 } from "./lotes";
 import { ErroImportacao } from "./perfil";
 import { TAXA_IVA_PADRAO } from "./types";
-import { lotesComPerfis, perfil } from "./fixtures";
+import { certificacoes, lotesComPerfis, perfil } from "./fixtures";
 import type { LotesJSON } from "./types";
 
 function lotesExemplo(): LotesJSON {
@@ -124,7 +124,7 @@ describe("IVA", () => {
 describe("perfisComCertificacao", () => {
   it("assinala só os perfis que exigem certificação, com o lote onde estão", () => {
     const config = lotesComPerfis([
-      { numero: "1", perfis: [perfil({ perfil: "Programador", certificacoes: "Certificação A; Certificação B" })] },
+      { numero: "1", perfis: [perfil({ perfil: "Programador", certificacoes: certificacoes("Certificação A", "Certificação B") })] },
       { numero: "2", perfis: [perfil({ perfil: "Analista" })] },
     ]);
 
@@ -140,7 +140,7 @@ describe("perfisComCertificacao", () => {
 
   it("o agrupamento exportado leva as certificações, para o Módulo 3 poder avisar", () => {
     const config = lotesComPerfis([
-      { numero: "1", perfis: [perfil({ certificacoes: "Certificação A" })] },
+      { numero: "1", perfis: [perfil({ certificacoes: certificacoes("Certificação A") })] },
     ]);
 
     expect(perfisComCertificacao(importarLotesJSON(lotesParaJSON(config)))).toHaveLength(1);
