@@ -1,45 +1,56 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { apurarEAgregar } from "../core/agregacao";
-import { configAvaliacao, declaracao } from "../core/fixtures";
-import { gerarWorkbookResultados } from "./exportarResultados";
+import { construirWorkbookResultados } from "./exportarResultados";
+import { avaliarProcedimento } from "../core/avaliacaoProcedimento";
+import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
+import { proporAgrupamentos } from "../core/reconciliacao";
 
-function resultados() {
-  return apurarEAgregar([declaracao({ identificacao: { nome: "Ana" } as never })], configAvaliacao(), []);
+function resultadoDoExemplo() {
+  const declaracoes = declaracoesExemplo(LOTES_EXEMPLO);
+  const grupos = proporAgrupamentos(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente));
+  return avaliarProcedimento(LOTES_EXEMPLO, declaracoes, grupos);
 }
 
-describe("gerarWorkbookResultados", () => {
-  it("gera as 5 folhas com os nomes esperados", () => {
-    const wb = gerarWorkbookResultados(resultados(), configAvaliacao());
+function linhas(wb: XLSX.WorkBook, folha: string): unknown[][] {
+  return XLSX.utils.sheet_to_json(wb.Sheets[folha], { header: 1 }) as unknown[][];
+}
 
+describe("construirWorkbookResultados", () => {
+  const wb = construirWorkbookResultados(resultadoDoExemplo(), LOTES_EXEMPLO);
+
+  it("traz as folhas agregadas e as desagregadas", () => {
     expect(wb.SheetNames).toEqual([
-      "Resumo por concorrente",
-      "Resumo por elemento",
-      "Detalhe elemento x requisito",
-      "Traço de apuramento",
+      "Procedimento",
+      "Resumo por lote",
+      "Perfis",
+      "Elementos",
+      "Requisitos",
       "Alertas",
+      "Traço de apuramento",
     ]);
   });
 
-  it("a folha de resumo por concorrente reflete o apuramento", () => {
-    const wb = gerarWorkbookResultados(resultados(), configAvaliacao());
-    const linhas = XLSX.utils.sheet_to_json(wb.Sheets["Resumo por concorrente"], { header: 1 }) as unknown[][];
-
-    expect(linhas[0]).toEqual([
-      "Concorrente",
-      "N.º de elementos",
-      "N.º mínimo suficiente?",
-      "Cumpre",
-      "N.º de alertas",
-    ]);
-    expect(linhas[1]).toEqual(["ABC, Lda.", 1, "Sim", "Cumpre", 0]);
+  it("resume uma linha por lote e concorrente", () => {
+    const [cabecalho, ...corpo] = linhas(wb, "Resumo por lote");
+    expect(cabecalho).toContain("Situação");
+    // Dois lotes, dois concorrentes em cada.
+    expect(corpo).toHaveLength(4);
   });
 
-  it("a folha de traço de apuramento lista os períodos considerados", () => {
-    const wb = gerarWorkbookResultados(resultados(), configAvaliacao());
-    const linhas = XLSX.utils.sheet_to_json(wb.Sheets["Traço de apuramento"], { header: 1 }) as unknown[][];
+  it("desagrega os meses apurados por requisito de cada elemento", () => {
+    const [cabecalho, ...corpo] = linhas(wb, "Requisitos");
+    expect(cabecalho).toContain("Meses apurados");
+    expect(corpo.length).toBeGreaterThan(0);
+    expect(corpo.every((l) => typeof l[5] === "number")).toBe(true);
+  });
 
-    expect(linhas).toHaveLength(2); // cabeçalho + 1 período admitido
-    expect(linhas[1][4]).toBe("Considerado");
+  it("deixa o traço de apuramento reconstituível, com períodos admitidos", () => {
+    const [, ...corpo] = linhas(wb, "Traço de apuramento");
+    expect(corpo.some((l) => l[6] === "Admitido")).toBe(true);
+  });
+
+  it("regista na capa se a limitação de um lote por concorrente está ativa", () => {
+    const capa = linhas(wb, "Procedimento");
+    expect(capa.find((l) => l[0] === "Um lote por concorrente")?.[1]).toBe("Sim");
   });
 });

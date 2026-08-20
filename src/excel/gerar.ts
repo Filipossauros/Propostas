@@ -13,7 +13,6 @@ import {
   LINHA_FAIXA_IDENTIFICACAO,
   LINHA_SUBTITULO,
   LINHA_TITULO,
-  LISTAS_MESES,
   LISTAS_SIM_NAO_MAIUSC,
   NOME_FOLHA_LEIAME,
   NOME_FOLHA_LISTAS,
@@ -46,7 +45,6 @@ import {
   offsetNotaBloco,
   tituloFaixaBloco,
   ANO_MINIMO,
-  ANO_MAXIMO,
 } from "./layout";
 
 // Paleta: duas famílias e uma só exceção.
@@ -169,28 +167,48 @@ function aplicarSubcabecalho(cell: ExcelJS.Cell, texto: string): void {
   cell.protection = { locked: true };
 }
 
-function validarMes(cell: ExcelJS.Cell): void {
+/** Endereço A1 de uma célula, para compor fórmulas de validação. */
+function endereco(linha: number, coluna: number): string {
+  return `${String.fromCharCode(64 + coluna)}${linha}`;
+}
+
+/**
+ * Mês, com o teto do mês corrente.
+ *
+ * A fórmula usa TODAY() em vez de uma data fixa para o teto acompanhar o
+ * momento do preenchimento — o formulário é distribuído uma vez e preenchido
+ * ao longo de semanas. A validação do Excel é um guarda de conveniência: o
+ * apuramento do Módulo 3 volta a impor a mesma regra, e é esse que decide.
+ */
+function validarMes(sheet: ExcelJS.Worksheet, linha: number, coluna: number, colunaAno: number): void {
+  const cell = sheet.getCell(linha, coluna);
+  const mes = endereco(linha, coluna);
+  const ano = endereco(linha, colunaAno);
   cell.dataValidation = {
-    type: "list",
+    type: "custom",
     allowBlank: true,
-    formulae: [`${NOME_FOLHA_LISTAS}!$${LISTAS_MESES.col}$${LISTAS_MESES.primeiraLinha}:$${LISTAS_MESES.col}$${LISTAS_MESES.ultimaLinha}`],
+    formulae: [
+      `AND(${mes}>=1,${mes}<=12,OR(${ano}="",${ano}<YEAR(TODAY()),${mes}<=MONTH(TODAY())))`,
+    ],
     showErrorMessage: true,
     errorStyle: "error",
     errorTitle: "Mês inválido",
-    error: "Selecione um mês da lista (1 a 12) ou deixe em branco.",
+    error: "Indique um mês de 1 a 12. Nenhuma data pode ser posterior ao mês e ano atuais.",
   };
 }
 
-function validarAno(cell: ExcelJS.Cell): void {
+/** Ano, com o teto do ano corrente — ver `validarMes`. */
+function validarAno(sheet: ExcelJS.Worksheet, linha: number, coluna: number): void {
+  const cell = sheet.getCell(linha, coluna);
+  const ref = endereco(linha, coluna);
   cell.dataValidation = {
-    type: "whole",
-    operator: "between",
+    type: "custom",
     allowBlank: true,
-    formulae: [ANO_MINIMO, ANO_MAXIMO],
+    formulae: [`AND(${ref}>=${ANO_MINIMO},${ref}<=YEAR(TODAY()))`],
     showErrorMessage: true,
     errorStyle: "error",
     errorTitle: "Ano inválido",
-    error: `Indique um ano entre ${ANO_MINIMO} e ${ANO_MAXIMO}, ou deixe em branco.`,
+    error: `Indique um ano entre ${ANO_MINIMO} e o ano atual. Nenhuma data pode ser posterior ao mês e ano atuais.`,
   };
 }
 
@@ -262,11 +280,15 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string
     },
     {
       texto:
-        "4. Não é permitido inserir nem eliminar linhas ou colunas. Utilize apenas os blocos disponibilizados no ficheiro.",
+        "4. Nenhuma data pode ser posterior ao mês e ano em que o formulário é preenchido: experiência ainda por acontecer não é considerada.",
     },
     {
       texto:
-        "5. Após concluir o preenchimento, assine digitalmente o documento com assinatura digital qualificada e submeta o PDF resultante nos termos do procedimento.",
+        "5. Não é permitido inserir nem eliminar linhas ou colunas. Utilize apenas os blocos disponibilizados no ficheiro.",
+    },
+    {
+      texto:
+        "6. Após concluir o preenchimento, assine digitalmente o documento com assinatura digital qualificada e submeta o PDF resultante nos termos do procedimento.",
     },
   ];
 
@@ -393,20 +415,16 @@ function construirFolhaExperiencia(
 
     const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
     aplicarRotulo(sheet.getCell(linhaDatas, 1), TEXTO_ROTULO_INICIO_PROJETO);
-    const inicioMes = sheet.getCell(linhaDatas, 2);
-    aplicarCampoEditavel(inicioMes, "center");
-    validarMes(inicioMes);
-    const inicioAno = sheet.getCell(linhaDatas, 3);
-    aplicarCampoEditavel(inicioAno, "center");
-    validarAno(inicioAno);
+    aplicarCampoEditavel(sheet.getCell(linhaDatas, 2), "center");
+    validarMes(sheet, linhaDatas, 2, 3);
+    aplicarCampoEditavel(sheet.getCell(linhaDatas, 3), "center");
+    validarAno(sheet, linhaDatas, 3);
 
     aplicarRotulo(sheet.getCell(linhaDatas, 4), TEXTO_ROTULO_FIM_PROJETO);
-    const fimMes = sheet.getCell(linhaDatas, 5);
-    aplicarCampoEditavel(fimMes, "center");
-    validarMes(fimMes);
-    const fimAno = sheet.getCell(linhaDatas, 6);
-    aplicarCampoEditavel(fimAno, "center");
-    validarAno(fimAno);
+    aplicarCampoEditavel(sheet.getCell(linhaDatas, 5), "center");
+    validarMes(sheet, linhaDatas, 5, 6);
+    aplicarCampoEditavel(sheet.getCell(linhaDatas, 6), "center");
+    validarAno(sheet, linhaDatas, 6);
 
     sheet.mergeCells(linhaDatas, 7, linhaDatas, 8);
     const disclaimerEmCurso = sheet.getCell(linhaDatas, 7);
@@ -438,19 +456,15 @@ function construirFolhaExperiencia(
       aplicarCampoEditavel(declaraCell, "center");
       validarDeclara(declaraCell);
 
-      const inicioReqMes = sheet.getCell(linhaReq, 5);
-      aplicarCampoEditavel(inicioReqMes, "center");
-      validarMes(inicioReqMes);
-      const inicioReqAno = sheet.getCell(linhaReq, 6);
-      aplicarCampoEditavel(inicioReqAno, "center");
-      validarAno(inicioReqAno);
-
-      const fimReqMes = sheet.getCell(linhaReq, 7);
-      aplicarCampoEditavel(fimReqMes, "center");
-      validarMes(fimReqMes);
-      const fimReqAno = sheet.getCell(linhaReq, 8);
-      aplicarCampoEditavel(fimReqAno, "center");
-      validarAno(fimReqAno);
+      for (const [colMes, colAno] of [
+        [5, 6],
+        [7, 8],
+      ] as const) {
+        aplicarCampoEditavel(sheet.getCell(linhaReq, colMes), "center");
+        validarMes(sheet, linhaReq, colMes, colAno);
+        aplicarCampoEditavel(sheet.getCell(linhaReq, colAno), "center");
+        validarAno(sheet, linhaReq, colAno);
+      }
     });
 
     const linhaNota = linhaInicial + offsetNotaBloco(nRequisitos);

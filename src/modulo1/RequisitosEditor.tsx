@@ -40,9 +40,7 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
     <section className="painel">
       <header className="painel-cabecalho">
         <h3>Requisitos mínimos de experiência</h3>
-        <p className="painel-nota">
-          A ordem desta lista é a ordem das linhas no formulário. Arraste pela pega, ou use as setas.
-        </p>
+        <p className="painel-nota">A ordem desta lista é a ordem das linhas que constará no formulário.</p>
       </header>
 
       {requisitos.length === 0 ? (

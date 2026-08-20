@@ -23,6 +23,7 @@ export function lotesIniciais(): LotesJSON {
     nomeProjeto: "",
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
+    umLotePorConcorrente: false,
     lotes: [],
   };
 }
@@ -136,6 +137,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
     nomeProjeto: config.nomeProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
+    umLotePorConcorrente: config.umLotePorConcorrente === true,
     lotes: config.lotes.map((lote) => ({
       ...lote,
       perfis: lote.perfis.map((entrada) => ({

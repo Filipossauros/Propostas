@@ -8,8 +8,7 @@
 //  2. O responsável do procedimento agrupa perfis em LOTES, atribuindo a cada
 //     perfil dentro do lote as horas, o valor/hora e o n.º de elementos exigido.
 //  3. O júri avalia declarações contra uma CONFIGURAÇÃO DE AVALIAÇÃO, derivada
-//     de um perfil mais os parâmetros que só existem já em fase de avaliação
-//     (data limite para apresentação de propostas).
+//     de um perfil dentro de um lote (requisitos e n.º mínimo de elementos).
 
 export const SCHEMA_VERSION_ATUAL = "2.0";
 
@@ -63,6 +62,13 @@ export interface PerfilJSON {
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
   perfil: string;
   nBlocos: number;
+  /**
+   * Atividades que se espera que o perfil desempenhe, separadas por ponto e
+   * vírgula. Só entra no documento Word: descreve o trabalho a contratar, e
+   * não é matéria que o candidato declare no formulário — daí não aparecer em
+   * nenhum Excel.
+   */
+  conteudoFuncional: string;
   requisitos: Requisito[];
 }
 
@@ -138,6 +144,12 @@ export interface LotesJSON {
   nomeProcedimento: string;
   /** Taxa de IVA em percentagem, aplicada aos preços base. */
   taxaIva: number;
+  /**
+   * Quando verdadeiro, a mesma entidade não pode ficar com mais do que um
+   * lote. Os lotes são percorridos por ordem do respetivo número, e quem já
+   * tenha ficado com um fica impedido nos seguintes.
+   */
+  umLotePorConcorrente: boolean;
   lotes: Lote[];
 }
 
@@ -156,8 +168,17 @@ export interface ConfiguracaoAvaliacao {
   nBlocos: number;
   requisitos: Requisito[];
   nMinimoElementos: number;
-  /** Data limite para apresentação de propostas, formato ISO "AAAA-MM-DD". */
-  dataLimitePropostas: string;
+}
+
+/**
+ * Mês corrente, teto de qualquer data declarada.
+ *
+ * Substituiu a data limite para apresentação de propostas: experiência ainda
+ * por acontecer não é experiência, e o mês corrente é um teto que não precisa
+ * de ser configurado nem pode ser mal preenchido.
+ */
+export function mesAtual(agora: Date = new Date()): MesAno {
+  return { ano: agora.getFullYear(), mes: agora.getMonth() + 1 };
 }
 
 // --------------------------------------------------------------------------
@@ -210,7 +231,7 @@ export type AlertaTipo =
   | "requisitosDivergentes"
   | "campoObrigatorioBranco"
   | "periodoForaDoProjeto"
-  | "periodoPosDataLimite"
+  | "periodoNoFuturo"
   | "datasIncoerentes"
   | "identificacaoIncompleta"
   | "blocoIncompleto"

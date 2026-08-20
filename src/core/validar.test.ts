@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErroDataLimite, blocoPreenchido, parseDataLimite, validarDeclaracao } from "./validar";
+import { blocoPreenchido, validarDeclaracao } from "./validar";
 import { bloco, configAvaliacao, declaracao, linha, ma } from "./fixtures";
 
 describe("blocoPreenchido", () => {
@@ -11,17 +11,6 @@ describe("blocoPreenchido", () => {
   it("qualquer elemento identificativo torna o bloco preenchido", () => {
     const soCliente = bloco({ cliente: "ACME", projeto: "", funcao: "", projInicio: null, projFim: null });
     expect(blocoPreenchido(soCliente)).toBe(true);
-  });
-});
-
-describe("parseDataLimite", () => {
-  it("converte uma data ISO em mês/ano", () => {
-    expect(parseDataLimite("2027-03-31")).toEqual({ ano: 2027, mes: 3 });
-  });
-
-  it("falha ruidosamente com data em falta — sem ela os projetos em curso não são apuráveis", () => {
-    expect(() => parseDataLimite("")).toThrow(ErroDataLimite);
-    expect(() => parseDataLimite("não é data")).toThrow(ErroDataLimite);
   });
 });
 

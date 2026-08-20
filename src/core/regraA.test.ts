@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { apurarRequisito, contarMesesInclusive, paraMesInt } from "./regraA";
 import type { Bloco, LinhaRequisito, MesAno, Requisito } from "./types";
 
+/** Teto usado na maioria dos testes: distante, para não interferir com o que se está a medir. */
 const dataLimitePadrao: MesAno = { ano: 2099, mes: 12 };
 
 function ma(ano: number, mes: number): MesAno {
@@ -247,7 +248,7 @@ describe("Regra A — datas de experiência parcialmente preenchidas anulam a li
   });
 });
 
-describe("Regra A — nenhuma experiência pode ir além da data limite para apresentação de propostas", () => {
+describe("Regra A — nenhuma experiência pode ir além do mês corrente", () => {
   it("fim exatamente na data limite é admitido (fronteira)", () => {
     const dataLimite = ma(2027, 3);
     const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 3), linhas: [linha("r1")] });
@@ -256,11 +257,11 @@ describe("Regra A — nenhuma experiência pode ir além da data limite para apr
     expect(resultado.periodosDescartados).toHaveLength(0);
   });
 
-  it("fim posterior à data limite é descartado, mesmo estando dentro do período do projeto", () => {
+  it("fim posterior ao mês corrente é descartado, mesmo estando dentro do período do projeto", () => {
     const dataLimite = ma(2027, 3);
     const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 6), linhas: [linha("r1")] });
     const resultado = apurarRequisito([b], requisito("r1", 0), dataLimite);
     expect(resultado.mesesApurados).toBe(0);
-    expect(resultado.periodosDescartados[0].motivo).toMatch(/data limite/i);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/mês corrente/i);
   });
 });

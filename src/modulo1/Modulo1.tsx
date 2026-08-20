@@ -294,6 +294,26 @@ export function Modulo1({
             requisitos={emEdicao.requisitos}
             onChange={(requisitos) => alterarEmEdicao({ requisitos })}
           />
+
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Conteúdo Funcional do Perfil</h3>
+              <p className="painel-nota">
+                Atividades que se espera que o perfil desempenhe, separadas por ponto e vírgula. Sai no documento
+                Word, em tabela própria por baixo dos requisitos; não aparece em nenhum formulário Excel.
+              </p>
+            </header>
+            <label>
+              <span className="rotulo-oculto">Conteúdo funcional do perfil</span>
+              <textarea
+                rows={4}
+                value={emEdicao.conteudoFuncional}
+                placeholder="ex.: Análise e levantamento de requisitos funcionais, não funcionais e de negócio; Caracterização de fluxos de informação e processos; Elaboração de casos de uso e documentação funcional de projeto; Realização de formações na ótica do utilizador."
+                onChange={(e) => alterarEmEdicao({ conteudoFuncional: e.target.value })}
+                aria-invalid={emEdicao.conteudoFuncional.trim() === ""}
+              />
+            </label>
+          </section>
         </>
       )}
 

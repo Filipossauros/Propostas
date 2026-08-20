@@ -12,9 +12,9 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
-| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
+| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência e o conteúdo funcional de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
 | **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
-| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos nas declarações recebidas | Relatório Excel de 5 folhas, incluindo o traço de apuramento |
+| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito e o traço de apuramento |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
 agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
@@ -44,6 +44,19 @@ São gerados a partir de `src/core/exemplo.ts` (fonte única) com `npm run exemp
 
 O preço base de cada perfil dentro de um lote é
 `n.º mínimo de elementos × horas × preço unitário/hora`, sem IVA.
+
+### Duas regras que atravessam a aplicação
+
+**Nenhuma data pode ser posterior ao mês corrente.** Experiência ainda por
+decorrer não é experiência adquirida. O formulário Excel trava-a na validação
+(com `TODAY()`, para o teto acompanhar o preenchimento) e o Módulo 3 volta a
+impô-la no apuramento — é este último que decide, porque a validação do Excel
+pode sempre ser contornada.
+
+**Um lote por concorrente**, quando ativada no Módulo 2. Os lotes são
+apreciados por ordem crescente do número: quem fica com o lote 1 é marcado
+como impedido nos seguintes, mesmo cumprindo todos os requisitos. A regra sai
+no documento Word com título próprio e é aplicada na avaliação.
 
 ## Princípios
 

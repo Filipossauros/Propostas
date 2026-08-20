@@ -11,8 +11,10 @@ import type {
   Declaracao,
   Identificacao,
   LinhaRequisito,
+  LotesJSON,
   MesAno,
 } from "../core/types";
+import type { DeclaracaoAtribuida } from "../core/avaliacaoProcedimento";
 import { gerarId } from "../core/id";
 import {
   CAMPOS_IDENTIFICACAO,
@@ -191,4 +193,77 @@ export function lerDeclaracaoExcel(
 export async function lerWorkbookDeFicheiro(ficheiro: File): Promise<XLSX.WorkBook> {
   const buffer = await ficheiro.arrayBuffer();
   return XLSX.read(buffer, { type: "array", cellDates: false });
+}
+
+/**
+ * Uma folha só conta como declaração entregue se tiver alguma coisa escrita.
+ *
+ * O ficheiro de um lote traz uma folha por perfil, e o candidato preenche
+ * apenas a sua: as restantes vêm em branco e não devem contar como propostas
+ * por avaliar.
+ */
+function temConteudo(declaracao: Declaracao): boolean {
+  const { nome, entidadeConcorrente, procedimento } = declaracao.identificacao;
+  if (nome.trim() !== "" || entidadeConcorrente.trim() !== "" || procedimento.trim() !== "") return true;
+
+  return declaracao.blocos.some(
+    (b) =>
+      b.cliente.trim() !== "" ||
+      b.projeto.trim() !== "" ||
+      b.funcao.trim() !== "" ||
+      b.projInicio !== null ||
+      b.projFim !== null ||
+      b.linhas.some((l) => l.declara !== null || l.inicio !== null || l.fim !== null),
+  );
+}
+
+/**
+ * Lê todas as folhas preenchidas de um workbook e encaminha cada uma para o
+ * par (lote, perfil) a que respeita.
+ *
+ * O encaminhamento faz-se pela designação do perfil, que está no subtítulo da
+ * folha, e pelo número do lote, que vem pré-preenchido na identificação. Sem
+ * isto, o júri teria de dizer à mão a que lote e perfil pertence cada um dos
+ * ficheiros recebidos.
+ */
+export function lerDeclaracoesDoWorkbook(
+  nomeFicheiro: string,
+  workbook: XLSX.WorkBook,
+  config: LotesJSON,
+): DeclaracaoAtribuida[] {
+  const atribuidas: DeclaracaoAtribuida[] = [];
+
+  for (const nomeFolha of workbook.SheetNames) {
+    if (nomeFolha === NOME_FOLHA_LEIAME || nomeFolha === NOME_FOLHA_LISTAS) continue;
+
+    const sheet = workbook.Sheets[nomeFolha];
+    if (!sheet) continue;
+
+    const perfilDaFolha = lerTexto(sheet, `A${LINHA_SUBTITULO}`);
+    const numeroLote = lerTexto(sheet, `B${CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!.linha}`);
+
+    const candidatos = config.lotes.flatMap((lote) =>
+      lote.perfis
+        .filter((entrada) => entrada.perfil.perfil.trim() === perfilDaFolha)
+        .map((entrada) => ({ lote, entrada })),
+    );
+    // Com o mesmo perfil em vários lotes, o número do lote desempata.
+    const escolhido =
+      candidatos.find(({ lote }) => lote.numero.trim() === numeroLote) ??
+      (candidatos.length === 1 ? candidatos[0] : undefined);
+
+    if (escolhido === undefined) continue;
+
+    const { declaracao } = lerDeclaracaoExcel(nomeFicheiro, workbook, {
+      perfil: escolhido.entrada.perfil.perfil,
+      nBlocos: escolhido.entrada.perfil.nBlocos,
+      requisitos: escolhido.entrada.perfil.requisitos,
+      nMinimoElementos: escolhido.entrada.nMinimoElementos,
+    });
+
+    if (!temConteudo(declaracao)) continue;
+    atribuidas.push({ declaracao, loteId: escolhido.lote.id, perfilEmLoteId: escolhido.entrada.id });
+  }
+
+  return atribuidas;
 }

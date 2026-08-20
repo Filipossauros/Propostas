@@ -64,6 +64,31 @@ function tabelaPrecoBase(config: LotesJSON): BlocoDocumento {
   };
 }
 
+/**
+ * Conteúdo funcional do perfil, uma atividade por linha.
+ *
+ * O texto é registado como uma frase com atividades separadas por ponto e
+ * vírgula; aqui separa-se em linhas, que é como se lê num anexo técnico. Fica
+ * logo abaixo da tabela de requisitos do mesmo perfil, e nunca sai em Excel:
+ * descreve o trabalho a contratar, não algo que o candidato declare.
+ */
+function tabelaConteudoFuncional(conteudoFuncional: string): BlocoDocumento[] {
+  const atividades = conteudoFuncional
+    .split(/[;\n]/)
+    .map((a) => a.trim().replace(/\.$/, ""))
+    .filter((a) => a !== "");
+
+  if (atividades.length === 0) return [];
+
+  return [
+    {
+      tipo: "tabela",
+      colunas: [{ titulo: "Conteúdo Funcional do Perfil", peso: 100 }],
+      linhas: atividades.map((atividade) => [celula(atividade)]),
+    },
+  ];
+}
+
 function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
   return config.lotes.flatMap((lote) => {
     const cabecalho: BlocoDocumento = {
@@ -97,6 +122,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
           ]),
         ),
       },
+      ...tabelaConteudoFuncional(entrada.perfil.conteudoFuncional),
     ]);
 
     return [cabecalho, ...perfis];
@@ -131,6 +157,30 @@ function descricaoBlocos(config: LotesJSON): string {
 }
 
 /**
+ * Limitação de adjudicação a um lote por concorrente.
+ *
+ * Tem título próprio, e não é mais um número na lista das regras de apuramento:
+ * altera o resultado do procedimento para lá do apuramento da experiência, e
+ * quem prepara as peças tem de dar por ela.
+ */
+function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
+  if (!config.umLotePorConcorrente) return [];
+
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Limitação de adjudicação a um lote por concorrente" },
+    {
+      tipo: "lista",
+      numerada: true,
+      itens: [
+        "A cada concorrente não pode ser adjudicado mais do que um lote do presente procedimento.",
+        "Para efeitos do número anterior, as propostas são apreciadas pela ordem crescente do número do lote.",
+        "O concorrente a quem tenha sido adjudicado um lote fica impedido de o ser em qualquer lote subsequente, ainda que a sua proposta a esse lote satisfaça todos os requisitos.",
+      ],
+    },
+  ];
+}
+
+/**
  * Documento único do procedimento: preço base, requisitos e regras.
  *
  * Um só título — o das regras — e todo o resto em secções debaixo dele. As
@@ -142,6 +192,8 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
     titulo: "Regras de comprovação e apuramento da experiência profissional",
     blocos: [
       ...blocosPrecoBaseERequisitos(config),
+
+      ...blocosUmLotePorConcorrente(config),
 
       { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
       {
@@ -169,7 +221,7 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
           "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
           "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
           "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo bloco. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
-          "Não é admitida experiência cujo período se prolongue para além da data limite fixada para a apresentação das propostas.",
+          "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o formulário é preenchido: experiência ainda por decorrer não é experiência adquirida.",
           "Quando o bloco de projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada, nesse bloco, a experiência em todos os requisitos.",
           "Os requisitos mínimos exprimem-se em meses inteiros, não havendo lugar a arredondamento.",
         ],

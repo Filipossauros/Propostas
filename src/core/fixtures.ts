@@ -31,6 +31,7 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
     id: `perfil-${proximoIdPerfil++}`,
     perfil: "Perfil Teste",
     nBlocos: 3,
+    conteudoFuncional: "Atividade A; Atividade B",
     requisitos: [requisito()],
     ...parcial,
   };
@@ -42,7 +43,6 @@ export function configAvaliacao(parcial: Partial<ConfiguracaoAvaliacao> = {}): C
     nBlocos: 1,
     requisitos: [requisito()],
     nMinimoElementos: 1,
-    dataLimitePropostas: "2027-03-31",
     ...parcial,
   };
 }
@@ -98,6 +98,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     nomeProjeto: "Projeto Teste",
     nomeProcedimento: "Procedimento Teste",
     taxaIva: TAXA_IVA_PADRAO,
+    umLotePorConcorrente: false,
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,
       numero: e.numero,

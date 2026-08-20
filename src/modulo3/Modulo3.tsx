@@ -1,48 +1,34 @@
 import { useMemo, useRef, useState } from "react";
-import * as XLSX from "xlsx";
-import type { Alerta, ConfiguracaoAvaliacao, Declaracao, LotesJSON, PerfilJSON } from "../core/types";
-import { ErroImportacao, importarPerfisJSON, lerTipoConfiguracao } from "../core/perfil";
+import type { Alerta, Declaracao, LotesJSON } from "../core/types";
+import { ErroImportacao } from "../core/perfil";
 import { importarLotesJSON } from "../core/lotes";
-import { LOTES_EXEMPLO } from "../core/exemplo";
-import { lerDeclaracaoExcel } from "../excel/ler";
+import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
+import { lerDeclaracoesDoWorkbook, lerWorkbookDeFicheiro } from "../excel/ler";
 import { proporAgrupamentos, type GrupoConcorrentes } from "../core/reconciliacao";
-import { apurarEAgregar, type ResultadoConcorrente } from "../core/agregacao";
+import { avaliarProcedimento, type DeclaracaoAtribuida } from "../core/avaliacaoProcedimento";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { extrairTextoPdfNormalizado } from "../pdf/extrairTextoPdf";
 import { extrairValoresDeclarados } from "../pdf/extrairValores";
 import { compararComPdf } from "../pdf/comparar";
-import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { CampoNumero } from "../ui/CampoNumero";
 import { ReconciliacaoConcorrentes } from "./ReconciliacaoConcorrentes";
 import { ResultadosTabelas } from "./ResultadosTabelas";
 
-/** Um perfil escolhido para avaliação, com o contexto de lote quando existe. */
-interface PerfilEscolhivel {
-  chave: string;
-  etiqueta: string;
-  perfil: PerfilJSON;
-  nMinimoElementos: number;
-}
-
-function perfisDeLotes(lotes: LotesJSON): PerfilEscolhivel[] {
-  return lotes.lotes.flatMap((lote) =>
-    lote.perfis.map((entrada) => ({
-      chave: entrada.id,
-      etiqueta: `Lote ${lote.numero} · ${entrada.perfil.perfil}`,
-      perfil: entrada.perfil,
-      nMinimoElementos: entrada.nMinimoElementos,
-    })),
-  );
+/** Requisitos de todos os perfis do agrupamento, para o comparador PDF. */
+function requisitosPorId(config: LotesJSON): Map<string, string> {
+  const mapa = new Map<string, string>();
+  for (const lote of config.lotes) {
+    for (const entrada of lote.perfis) {
+      for (const r of entrada.perfil.requisitos) mapa.set(r.id, r.designacao);
+    }
+  }
+  return mapa;
 }
 
 export function Modulo3() {
-  const [disponiveis, setDisponiveis] = useState<PerfilEscolhivel[]>([]);
-  const [chaveEscolhida, setChaveEscolhida] = useState<string>("");
-  const [dataLimite, setDataLimite] = useState<string>("");
-  const [nMinimoElementos, setNMinimoElementos] = useState<number>(1);
-
-  const [declaracoes, setDeclaracoes] = useState<Declaracao[]>([]);
+  const [config, setConfig] = useState<LotesJSON | null>(null);
+  const [atribuidas, setAtribuidas] = useState<DeclaracaoAtribuida[]>([]);
   const [grupos, setGrupos] = useState<GrupoConcorrentes[] | null>(null);
   const [alertasPdf, setAlertasPdf] = useState<Map<string, Alerta[]>>(new Map());
   const [aCompararPdf, setACompararPdf] = useState<string | null>(null);
@@ -52,95 +38,67 @@ export function Modulo3() {
   const inputConfigRef = useRef<HTMLInputElement>(null);
   const inputDeclaracoesRef = useRef<HTMLInputElement>(null);
 
-  const escolhido = disponiveis.find((p) => p.chave === chaveEscolhida) ?? null;
-
-  const config: ConfiguracaoAvaliacao | null = useMemo(() => {
-    if (escolhido === null || dataLimite === "") return null;
-    return {
-      perfil: escolhido.perfil.perfil,
-      nBlocos: escolhido.perfil.nBlocos,
-      requisitos: escolhido.perfil.requisitos,
-      nMinimoElementos,
-      dataLimitePropostas: dataLimite,
-    };
-  }, [escolhido, dataLimite, nMinimoElementos]);
-
   const nomesEntidade = useMemo(
-    () => declaracoes.map((d) => d.identificacao.entidadeConcorrente).filter((n) => n.trim() !== ""),
-    [declaracoes],
+    () =>
+      atribuidas
+        .map((a) => a.declaracao.identificacao.entidadeConcorrente)
+        .filter((n) => n.trim() !== ""),
+    [atribuidas],
   );
 
-  const resultados: ResultadoConcorrente[] | null = useMemo(() => {
-    if (config === null || grupos === null || declaracoes.length === 0) return null;
-    try {
-      return apurarEAgregar(declaracoes, config, grupos, alertasPdf);
-    } catch {
-      // A data limite é validada antes de chegar aqui; se ainda assim falhar,
-      // preferimos não apresentar resultados a apresentar resultados errados.
-      return null;
-    }
-  }, [config, grupos, declaracoes, alertasPdf]);
+  const resultado = useMemo(() => {
+    if (config === null || grupos === null || atribuidas.length === 0) return null;
+    return avaliarProcedimento(config, atribuidas, grupos, alertasPdf);
+  }, [config, atribuidas, grupos, alertasPdf]);
 
-  function aplicarOpcoes(opcoes: PerfilEscolhivel[], textoSucesso: string) {
-    setDisponiveis(opcoes);
-    setChaveEscolhida(opcoes[0].chave);
-    setNMinimoElementos(opcoes[0].nMinimoElementos);
-    setDeclaracoes([]);
+  const nPerfis = config?.lotes.reduce((soma, l) => soma + l.perfis.length, 0) ?? 0;
+
+  function limparAvaliacao() {
+    setAtribuidas([]);
     setGrupos(null);
     setAlertasPdf(new Map());
-    setMensagem({ tipo: "sucesso", texto: textoSucesso });
   }
 
   async function carregarConfig(ficheiro: File) {
     setMensagem(null);
     try {
-      const texto = await ficheiro.text();
-      const tipo = lerTipoConfiguracao(texto);
-
-      let opcoes: PerfilEscolhivel[];
-      if (tipo === "lotes") {
-        opcoes = perfisDeLotes(importarLotesJSON(texto));
-        if (opcoes.length === 0) {
-          setMensagem({ tipo: "erro", texto: "Este agrupamento não tem perfis atribuídos a lotes." });
-          return;
-        }
-      } else if (tipo === "perfil" || tipo === "perfis") {
-        opcoes = importarPerfisJSON(texto).perfis.map((perfil) => ({
-          chave: perfil.id,
-          etiqueta: perfil.perfil,
-          perfil,
-          nMinimoElementos: 1,
-        }));
-        if (opcoes.length === 0) {
-          setMensagem({ tipo: "erro", texto: "Este ficheiro não contém perfis." });
-          return;
-        }
-      } else {
-        setMensagem({ tipo: "erro", texto: `Tipo de ficheiro não reconhecido: "${tipo}".` });
+      const importado = importarLotesJSON(await ficheiro.text());
+      if (importado.lotes.length === 0) {
+        setMensagem({ tipo: "erro", texto: "Este agrupamento não tem lotes." });
         return;
       }
-
-      aplicarOpcoes(opcoes, `Configuração carregada (${opcoes.length} perfil(is)).`);
+      setConfig(importado);
+      limparAvaliacao();
+      setMensagem({
+        tipo: "sucesso",
+        texto: `Agrupamento carregado: ${importado.lotes.length} lote(s).`,
+      });
     } catch (erro) {
       setMensagem({
         tipo: "erro",
-        texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível carregar a configuração.",
+        texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível carregar o agrupamento.",
       });
     }
   }
 
   function carregarExemplo() {
-    aplicarOpcoes(perfisDeLotes(LOTES_EXEMPLO), "Configuração de exemplo carregada.");
-    setDataLimite("2027-03-31");
+    const exemplo = structuredClone(LOTES_EXEMPLO);
+    setConfig(exemplo);
+    const declaracoes = declaracoesExemplo(exemplo);
+    setAtribuidas(declaracoes);
+    setGrupos(proporAgrupamentos(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente)));
+    setAlertasPdf(new Map());
+    setMensagem({
+      tipo: "sucesso",
+      texto: `Exemplo carregado: ${declaracoes.length} declarações de 2 concorrentes, nos ${exemplo.lotes.length} lotes.`,
+    });
   }
 
-  function escolherPerfil(chave: string) {
-    setChaveEscolhida(chave);
-    const opcao = disponiveis.find((p) => p.chave === chave);
-    if (opcao) setNMinimoElementos(opcao.nMinimoElementos);
-    setDeclaracoes([]);
-    setGrupos(null);
-    setAlertasPdf(new Map());
+  function recomecar() {
+    if (!confirm("Apagar a avaliação em curso e recomeçar do zero?")) return;
+    setConfig(null);
+    limparAvaliacao();
+    setMensagem({ tipo: "sucesso", texto: "Avaliação reposta." });
   }
 
   async function carregarDeclaracoes(ficheiros: FileList) {
@@ -149,13 +107,27 @@ export function Modulo3() {
     setGrupos(null);
     setAlertasPdf(new Map());
     try {
-      const lidas: Declaracao[] = [];
+      const lidas: DeclaracaoAtribuida[] = [];
+      const semCorrespondencia: string[] = [];
+
       for (const ficheiro of Array.from(ficheiros)) {
-        const buffer = await ficheiro.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
-        lidas.push(lerDeclaracaoExcel(ficheiro.name, workbook, config).declaracao);
+        const workbook = await lerWorkbookDeFicheiro(ficheiro);
+        const doFicheiro = lerDeclaracoesDoWorkbook(ficheiro.name, workbook, config);
+        if (doFicheiro.length === 0) semCorrespondencia.push(ficheiro.name);
+        lidas.push(...doFicheiro);
       }
-      setDeclaracoes(lidas);
+
+      setAtribuidas(lidas);
+      setMensagem(
+        semCorrespondencia.length > 0
+          ? {
+              tipo: "erro",
+              texto:
+                `${lidas.length} declaração(ões) lida(s). Sem folhas preenchidas que correspondam a um perfil ` +
+                `deste agrupamento: ${semCorrespondencia.join(" · ")}`,
+            }
+          : { tipo: "sucesso", texto: `${lidas.length} declaração(ões) lida(s) e associada(s) aos respetivos lotes.` },
+      );
     } finally {
       setAProcessar(false);
     }
@@ -166,8 +138,7 @@ export function Modulo3() {
     setACompararPdf(declaracao.id);
     try {
       const textoPdf = await extrairTextoPdfNormalizado(ficheiroPdf);
-      const requisitosPorId = new Map(config.requisitos.map((r) => [r.id, r.designacao]));
-      const alertas = compararComPdf(extrairValoresDeclarados(declaracao), textoPdf, requisitosPorId);
+      const alertas = compararComPdf(extrairValoresDeclarados(declaracao), textoPdf, requisitosPorId(config));
       setAlertasPdf((atual) => new Map(atual).set(declaracao.id, alertas));
     } catch {
       setMensagem({ tipo: "erro", texto: `Não foi possível ler o PDF de "${declaracao.ficheiro}".` });
@@ -177,14 +148,12 @@ export function Modulo3() {
   }
 
   function exportar() {
-    if (config === null || resultados === null) return;
+    if (config === null || resultado === null) return;
     descarregarBlob(
-      gerarResultadosBlob(resultados, config),
-      `Resultados_${nomeSeguro(config.perfil, "avaliacao")}.xlsx`,
+      gerarResultadosBlob(resultado, config),
+      nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.xlsx"),
     );
   }
-
-  const prontoParaDeclaracoes = config !== null;
 
   return (
     <div className="modulo">
@@ -195,27 +164,28 @@ export function Modulo3() {
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo
             </button>
+            <button type="button" className="botao-discreto" onClick={recomecar}>
+              Recomeçar
+            </button>
           </div>
         </div>
-        <p className="modulo-subtitulo">
-          Apura o cumprimento dos requisitos mínimos, de forma binária. Não ordena propostas nem pontua desempenho —
-          sinaliza, e a decisão é do júri. Carregue o ficheiro de lotes do Módulo 2 e as declarações recebidas.
-        </p>
+        <p className="modulo-subtitulo">Apura o cumprimento dos requisitos mínimos das propostas.</p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Passo 1 · Configuração</h3>
+          <h3>Passo 1 · Agrupamento do procedimento</h3>
           <p className="painel-nota">
-            Carregue o JSON do agrupamento de lotes (Módulo 2) ou dos perfis (Módulo 1).
+            Carregue o JSON do agrupamento (Módulo 2). Traz os lotes, os perfis, os requisitos e o n.º mínimo de
+            elementos — não há mais nada a configurar aqui.
           </p>
         </header>
 
         <div className="acoes">
           <button type="button" className="botao-secundario" onClick={() => inputConfigRef.current?.click()}>
-            {disponiveis.length === 0 ? "Carregar configuração (JSON)" : "Trocar configuração"}
+            {config === null ? "Carregar agrupamento (JSON)" : "Trocar agrupamento"}
           </button>
           <input
             ref={inputConfigRef}
@@ -230,49 +200,27 @@ export function Modulo3() {
           />
         </div>
 
-        {disponiveis.length > 0 && (
-          <div className="grelha-campos">
-            <label className="campo-largo">
-              <span className="rotulo">Perfil a avaliar</span>
-              <select value={chaveEscolhida} onChange={(e) => escolherPerfil(e.target.value)}>
-                {disponiveis.map((p) => (
-                  <option key={p.chave} value={p.chave}>
-                    {p.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="rotulo">Data limite para apresentação de propostas</span>
-              <input type="date" value={dataLimite} onChange={(e) => setDataLimite(e.target.value)} aria-invalid={dataLimite === ""} />
-              <span className="ajuda">Nenhuma experiência é admitida com data posterior a esta.</span>
-            </label>
-
-            <label>
-              <span className="rotulo">N.º mínimo de elementos exigido</span>
-              <CampoNumero
-                valor={nMinimoElementos}
-                min={1}
-                step={1}
-                invalido={!Number.isInteger(nMinimoElementos) || nMinimoElementos < 1}
-                onChange={setNMinimoElementos}
-              />
-            </label>
-          </div>
-        )}
-
-        {disponiveis.length > 0 && dataLimite === "" && (
-          <p className="aviso aviso-atencao">
-            Indique a data limite para apresentação de propostas antes de carregar declarações.
-          </p>
+        {config !== null && (
+          <ul className="lista-erros lista-sem-erro">
+            <li>
+              {config.nomeProjeto || "(projeto sem nome)"} · {config.lotes.length} lote(s), {nPerfis} perfil(is)
+            </li>
+            <li>
+              Limitação de um lote por concorrente: <strong>{config.umLotePorConcorrente ? "sim" : "não"}</strong>
+            </li>
+            <li>Nenhuma experiência é admitida com data posterior ao mês corrente.</li>
+          </ul>
         )}
       </section>
 
-      {prontoParaDeclaracoes && (
+      {config !== null && (
         <section className="painel">
           <header className="painel-cabecalho">
-            <h3>Passo 2 · Declarações a avaliar</h3>
+            <h3>Passo 2 · Declarações recebidas</h3>
+            <p className="painel-nota">
+              Carregue de uma vez todos os formulários entregues. Cada folha preenchida é associada ao lote e ao
+              perfil que identifica, e todos os lotes são avaliados em conjunto.
+            </p>
           </header>
 
           <div className="acoes">
@@ -282,7 +230,7 @@ export function Modulo3() {
               onClick={() => inputDeclaracoesRef.current?.click()}
               disabled={aProcessar}
             >
-              {aProcessar ? "A carregar…" : "Carregar declarações (Excel, uma por elemento)"}
+              {aProcessar ? "A carregar…" : "Carregar declarações (Excel)"}
             </button>
             <input
               ref={inputDeclaracoesRef}
@@ -297,17 +245,18 @@ export function Modulo3() {
             />
           </div>
 
-          {declaracoes.length > 0 && (
+          {atribuidas.length > 0 && (
             <>
               <ul className="lista-declaracoes">
-                {declaracoes.map((d) => {
+                {atribuidas.map(({ declaracao: d }) => {
                   const alertasDoFicheiro = alertasPdf.get(d.id);
                   return (
                     <li key={d.id}>
                       <div className="declaracao-identificacao">
                         <strong>{d.identificacao.nome || "(nome por preencher)"}</strong>
                         <span className="meta">
-                          {d.ficheiro} · {d.identificacao.entidadeConcorrente || "(entidade por preencher)"}
+                          Lote {d.identificacao.lote || "?"} · {d.identificacao.perfil} ·{" "}
+                          {d.identificacao.entidadeConcorrente || "(entidade por preencher)"}
                           {d.alertas.length > 0 && ` · ${d.alertas.length} alerta(s)`}
                         </span>
                       </div>
@@ -355,7 +304,7 @@ export function Modulo3() {
         </section>
       )}
 
-      {config && grupos !== null && (
+      {config !== null && grupos !== null && (
         <section className="painel">
           <header className="painel-cabecalho">
             <h3>Passo 3 · Reconciliação de concorrentes</h3>
@@ -364,13 +313,13 @@ export function Modulo3() {
         </section>
       )}
 
-      {resultados && config && (
+      {resultado !== null && config !== null && (
         <>
           <section className="painel">
             <header className="painel-cabecalho">
               <h3>Resultados</h3>
             </header>
-            <ResultadosTabelas resultados={resultados} config={config} />
+            <ResultadosTabelas resultado={resultado} />
           </section>
 
           <section className="painel">
@@ -382,7 +331,7 @@ export function Modulo3() {
               </p>
             </header>
             <button type="button" className="botao-principal" onClick={exportar}>
-              Descarregar relatório Excel (5 folhas)
+              Descarregar relatório Excel
             </button>
           </section>
         </>

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apurarEAgregar, requisitosFalhados } from "./agregacao";
 import { proporAgrupamentos } from "./reconciliacao";
-import { ErroDataLimite } from "./validar";
 import { bloco, configAvaliacao, declaracao, linha } from "./fixtures";
 import type { Declaracao } from "./types";
 
@@ -74,11 +73,6 @@ describe("apurarEAgregar", () => {
     expect(elementos.find((e) => e.declaracao.id === "b")!.alertas).toHaveLength(0);
   });
 
-  it("recusa apurar sem data limite, em vez de contar zero meses em silêncio", () => {
-    expect(() =>
-      apurarEAgregar([elemento("Ana", "ABC")], configAvaliacao({ dataLimitePropostas: "" }), []),
-    ).toThrow(ErroDataLimite);
-  });
 });
 
 describe("requisitosFalhados", () => {

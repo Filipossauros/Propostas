@@ -330,6 +330,7 @@ label {
 input[type="text"],
 input[type="number"],
 input[type="date"],
+textarea,
 select {
   width: 100%;
   min-width: 0;
@@ -357,6 +358,45 @@ summary:focus-visible {
 
 input[aria-invalid="true"] {
   border-color: var(--vermelho);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.5;
+}
+
+/* Rótulo só para leitores de ecrã: o cabeçalho do painel já o diz aos olhos. */
+.rotulo-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Opção com explicação por baixo: a caixa alinha com a primeira linha. */
+.campo-opcao {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.campo-opcao input[type="checkbox"] {
+  margin-top: 3px;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.campo-opcao > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
 }
 
 .campo-numero {
@@ -983,6 +1023,41 @@ button:disabled {
   background: var(--superficie-alt);
   border-bottom: none;
   border-top: 2px solid var(--borda-forte);
+}
+
+/* Estados de cumprimento, nas tabelas de resultados do Módulo 3. */
+.estado-cumpre {
+  color: var(--verde);
+  font-weight: 600;
+}
+
+.estado-falha {
+  color: var(--vermelho);
+  font-weight: 600;
+}
+
+.estado-impedido {
+  color: var(--ambar);
+  font-weight: 600;
+}
+
+/* As tabelas de resultados são muitas e seguidas: separam-se por respiro e
+   por um título de nível próprio, para se lerem como secções distintas. */
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.resultados h4 {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+/* Reaproveita a lista de erros para um resumo neutro, sem a cor de erro. */
+.lista-sem-erro {
+  color: var(--texto-suave);
 }
 
 .tabela .numerico {

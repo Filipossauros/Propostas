@@ -61,12 +61,12 @@ export function blocoIncompleto(bloco: Bloco): boolean {
 /**
  * Determina o período de uma linha de requisito (6.1): datas próprias da
  * linha > herança do período do projeto > contenção no período do projeto >
- * teto da data limite para apresentação de propostas.
+ * teto do mês corrente.
  */
 export function determinarPeriodoLinha(
   bloco: Bloco,
   linha: LinhaRequisito,
-  dataLimitePropostas: MesAno,
+  teto: MesAno,
 ): ResultadoPeriodoLinha {
   const descartar = (motivo: string): ResultadoPeriodoLinha => ({
     admitido: false,
@@ -104,8 +104,8 @@ export function determinarPeriodoLinha(
     return descartar("Período fora do período do projeto");
   }
 
-  if (fimInt > paraMesInt(dataLimitePropostas)) {
-    return descartar("Data de fim posterior à data limite para apresentação de propostas");
+  if (fimInt > paraMesInt(teto)) {
+    return descartar("Data de fim posterior ao mês corrente");
   }
 
   return {
@@ -132,11 +132,7 @@ export interface ApuramentoRequisito {
 }
 
 /** Apura um único requisito ao longo de todos os blocos de uma declaração (6.2). */
-export function apurarRequisito(
-  blocos: Bloco[],
-  requisito: Requisito,
-  dataLimitePropostas: MesAno,
-): ApuramentoRequisito {
+export function apurarRequisito(blocos: Bloco[], requisito: Requisito, teto: MesAno): ApuramentoRequisito {
   const periodosAdmitidos: PeriodoAdmitido[] = [];
   const periodosDescartados: PeriodoDescartado[] = [];
 
@@ -145,7 +141,7 @@ export function apurarRequisito(
       if (linha.requisitoId !== requisito.id) continue;
       if (linha.declara !== "SIM") continue;
 
-      const resultado = determinarPeriodoLinha(bloco, linha, dataLimitePropostas);
+      const resultado = determinarPeriodoLinha(bloco, linha, teto);
       if (resultado.admitido) {
         periodosAdmitidos.push(resultado.periodo);
       } else {
@@ -179,12 +175,8 @@ export interface ApuramentoElemento {
 }
 
 /** Apura todos os requisitos de uma declaração/elemento. */
-export function apurarElemento(
-  blocos: Bloco[],
-  requisitos: Requisito[],
-  dataLimitePropostas: MesAno,
-): ApuramentoElemento {
-  const resultados = requisitos.map((r) => apurarRequisito(blocos, r, dataLimitePropostas));
+export function apurarElemento(blocos: Bloco[], requisitos: Requisito[], teto: MesAno): ApuramentoElemento {
+  const resultados = requisitos.map((r) => apurarRequisito(blocos, r, teto));
   return {
     requisitos: resultados,
     cumpre: resultados.every((r) => r.cumpre),

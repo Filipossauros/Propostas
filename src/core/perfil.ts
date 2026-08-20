@@ -16,6 +16,7 @@ export function perfilInicial(): PerfilJSON {
     id: gerarId(),
     perfil: "",
     nBlocos: 15,
+    conteudoFuncional: "",
     requisitos: [],
   };
 }
@@ -95,6 +96,9 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
   }
   if (!Number.isInteger(perfil.nBlocos) || perfil.nBlocos < 1) {
     erros.push({ campo: "nBlocos", mensagem: "O n.º de blocos deve ser um inteiro ≥ 1." });
+  }
+  if (perfil.conteudoFuncional.trim() === "") {
+    erros.push({ campo: "conteudoFuncional", mensagem: "Descreva o conteúdo funcional do perfil." });
   }
   if (perfil.requisitos.length === 0) {
     erros.push({ campo: "requisitos", mensagem: "Defina pelo menos um requisito." });
@@ -187,7 +191,12 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
     throw new ErroImportacao("O ficheiro de perfil não contém uma lista de requisitos.");
   }
   const perfil = bruto as unknown as PerfilJSON;
-  return { ...perfil, tipo: "perfil", id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId() };
+  return {
+    ...perfil,
+    tipo: "perfil",
+    id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
+    conteudoFuncional: typeof perfil.conteudoFuncional === "string" ? perfil.conteudoFuncional : "",
+  };
 }
 
 export interface PerfisImportados {

@@ -1,6 +1,7 @@
 // Apuramento e agregação por concorrente.
 
-import type { Alerta, ConfiguracaoAvaliacao, Declaracao } from "./types";
+import type { Alerta, ConfiguracaoAvaliacao, Declaracao, MesAno } from "./types";
+import { mesAtual } from "./types";
 import type { ApuramentoElemento } from "./regraA";
 import { validarEApurar } from "./validar";
 import { construirMapaReconciliacao, type GrupoConcorrentes } from "./reconciliacao";
@@ -33,11 +34,12 @@ export function apurarEAgregar(
   grupos: GrupoConcorrentes[],
   /** Alertas do comparador PDF↔Excel, indexados pelo id da declaração. */
   alertasPdfPorDeclaracao?: Map<string, Alerta[]>,
+  teto: MesAno = mesAtual(),
 ): ResultadoConcorrente[] {
   const mapaReconciliacao = construirMapaReconciliacao(grupos);
 
   const resultadosElemento: ResultadoElemento[] = declaracoes.map((declaracaoBruta) => {
-    const { declaracao, apuramento } = validarEApurar(declaracaoBruta, config);
+    const { declaracao, apuramento } = validarEApurar(declaracaoBruta, config, teto);
     const entidade = declaracao.identificacao.entidadeConcorrente.trim();
     const concorrente = entidade === "" ? SEM_ENTIDADE : mapaReconciliacao.get(entidade) ?? entidade;
     const alertasPdf = alertasPdfPorDeclaracao?.get(declaracao.id) ?? [];

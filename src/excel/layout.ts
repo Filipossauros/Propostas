@@ -104,6 +104,9 @@ export const TEXTO_NOTA_BLOCO =
   "inferior ao período do projeto. Caso não sejam preenchidos, considera-se que a experiência no requisito " +
   "corresponde ao período integral do projeto.";
 
+export const TEXTO_TETO_MES_ATUAL =
+  "Nenhuma data pode ser posterior ao mês e ano em que este formulário é preenchido.";
+
 export const TEXTO_DISCLAIMER_PROJETO_EM_CURSO =
   "Se o projeto ainda estiver em curso à data de preenchimento deste formulário, indique como \"Fim do " +
   "projeto\" o mês e o ano em que este formulário está a ser preenchido.";
@@ -141,6 +144,5 @@ export function tituloFaixaBloco(numeroBloco: number): string {
 
 /** Folha "Listas" (oculta) — fontes das listas de validação. */
 export const LISTAS_SIM_NAO_MAIUSC = { col: "C", primeiraLinha: 2, ultimaLinha: 3 } as const; // SIM/NÃO
-export const LISTAS_MESES = { col: "D", primeiraLinha: 2, ultimaLinha: 13 } as const; // 1..12
 
 export { ANO_MAXIMO, ANO_MINIMO } from "../core/types";

@@ -53,11 +53,12 @@ describe("documentoRegrasEPrecoBase", () => {
     }
   });
 
-  it("as regras vão numa única lista numerada, em sequência", () => {
-    const listas = doc.blocos.filter((b) => b.tipo === "lista");
+  it("as regras de apuramento vão numa única lista numerada, em sequência", () => {
+    const idx = doc.blocos.findIndex((b) => b.tipo === "titulo" && b.texto === "Regras de apuramento da experiência");
+    const aSeguir = doc.blocos.slice(idx + 1);
 
-    expect(listas).toHaveLength(1);
-    expect(listas[0].tipo === "lista" && listas[0].numerada).toBe(true);
+    expect(aSeguir.filter((b) => b.tipo === "lista")).toHaveLength(1);
+    expect(aSeguir[0].tipo === "lista" && aSeguir[0].numerada).toBe(true);
   });
 
   it("mantém o preço base e os requisitos como secções próprias", () => {
@@ -94,6 +95,40 @@ describe("documentoRegrasEPrecoBase", () => {
   });
 });
 
+describe("limitação de um lote por concorrente", () => {
+  it("só aparece quando a opção está ativa, e com título próprio", () => {
+    const semLimite = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
+    const titulo = "Limitação de adjudicação a um lote por concorrente";
+
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO))).toContain(titulo);
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(semLimite))).not.toContain(titulo);
+  });
+
+  it("fixa a ordem de apreciação, que é o que decide quem fica com o quê", () => {
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO))).toContain(
+      "ordem crescente do número do lote",
+    );
+  });
+});
+
+describe("conteúdo funcional do perfil", () => {
+  it("sai numa tabela própria, uma atividade por linha", () => {
+    const config = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ conteudoFuncional: "Primeira atividade; Segunda atividade" })] },
+    ]);
+    const doc = documentoRegrasEPrecoBase(config);
+    const tabela = doc.blocos.find(
+      (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Conteúdo Funcional do Perfil",
+    );
+
+    expect(tabela).toBeDefined();
+    expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toEqual([
+      "Primeira atividade",
+      "Segunda atividade",
+    ]);
+  });
+});
+
 describe("normas de nulidade da experiência", () => {
   const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
 
@@ -101,8 +136,8 @@ describe("normas de nulidade da experiência", () => {
     expect(texto).toContain("contabilizados apenas uma vez");
   });
 
-  it("não admite experiência para além da data limite de apresentação de propostas", () => {
-    expect(texto).toContain("data limite fixada para a apresentação das propostas");
+  it("não admite experiência para além do mês do preenchimento", () => {
+    expect(texto).toContain("para além do mês e ano em que o formulário é preenchido");
   });
 
   it("anula a experiência do bloco de projeto incompleto", () => {

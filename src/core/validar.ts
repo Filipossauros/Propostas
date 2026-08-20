@@ -3,7 +3,7 @@
 // cálculo (Regra A) para produzir a lista completa de alertas. A aplicação
 // sinaliza, nunca exclui (princípio 4).
 
-import { ANO_MAXIMO, ANO_MINIMO } from "./types";
+import { ANO_MAXIMO, ANO_MINIMO, mesAtual } from "./types";
 import type { Alerta, AlertaTipo, Bloco, ConfiguracaoAvaliacao, Declaracao, MesAno } from "./types";
 import { apurarElemento, blocoIncompleto, paraMesInt } from "./regraA";
 import type { ApuramentoElemento } from "./regraA";
@@ -125,7 +125,7 @@ function validarIdentificacao(declaracao: Declaracao): Alerta[] {
 
 function tipoDoDescarte(motivo: string): AlertaTipo {
   if (motivo.includes("fora do período")) return "periodoForaDoProjeto";
-  if (motivo.includes("posterior à data limite")) return "periodoPosDataLimite";
+  if (motivo.includes("posterior ao mês corrente")) return "periodoNoFuturo";
   if (motivo.includes("Bloco de projeto incompleto")) return "blocoIncompleto";
   return "datasIncoerentes";
 }
@@ -157,9 +157,13 @@ export interface DeclaracaoApurada {
  * (estruturais + semânticos), sem nunca excluir dados. O apuramento é devolvido
  * junto para não ter de ser recalculado por quem agrega.
  */
-export function validarEApurar(declaracao: Declaracao, config: ConfiguracaoAvaliacao): DeclaracaoApurada {
-  const dataLimite = parseDataLimite(config.dataLimitePropostas);
-  const apuramento = apurarElemento(declaracao.blocos, config.requisitos, dataLimite);
+export function validarEApurar(
+  declaracao: Declaracao,
+  config: ConfiguracaoAvaliacao,
+  /** Teto das datas declaradas. Recebido, e não lido do relógio, para o apuramento continuar determinístico. */
+  teto: MesAno = mesAtual(),
+): DeclaracaoApurada {
+  const apuramento = apurarElemento(declaracao.blocos, config.requisitos, teto);
   const requisitosPorId = new Map(config.requisitos.map((r) => [r.id, r.designacao]));
 
   const alertasSemanticos: Alerta[] = [
@@ -177,28 +181,10 @@ export function validarEApurar(declaracao: Declaracao, config: ConfiguracaoAvali
 }
 
 /** Conveniência para quem só quer os alertas. */
-export function validarDeclaracao(declaracao: Declaracao, config: ConfiguracaoAvaliacao): Declaracao {
-  return validarEApurar(declaracao, config).declaracao;
-}
-
-export class ErroDataLimite extends Error {}
-
-/**
- * Converte a data limite ISO em mês/ano.
- *
- * Falha ruidosamente quando a data é inválida ou está em falta: sem ela não há
- * teto contra o qual verificar se alguma experiência foi declarada com data
- * posterior à apresentação de propostas, e a contagem de meses seria
- * silenciosamente zero — um erro de apuramento indetetável no relatório.
- */
-export function parseDataLimite(dataLimitePropostas: string): MesAno {
-  const marca = Date.parse(dataLimitePropostas);
-  if (Number.isNaN(marca)) {
-    throw new ErroDataLimite(
-      "Data limite para apresentação de propostas em falta ou inválida. " +
-        "É indispensável para apurar os projetos declarados como em curso.",
-    );
-  }
-  const data = new Date(marca);
-  return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1 };
+export function validarDeclaracao(
+  declaracao: Declaracao,
+  config: ConfiguracaoAvaliacao,
+  teto: MesAno = mesAtual(),
+): Declaracao {
+  return validarEApurar(declaracao, config, teto).declaracao;
 }
