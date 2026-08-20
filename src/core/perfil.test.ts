@@ -6,6 +6,7 @@ import {
   importarPerfisJSON,
   lerTipoConfiguracao,
   perfisParaJSON,
+  validarNomeProjeto,
   validarPerfil,
   validarPerfis,
 } from "./perfil";
@@ -62,6 +63,16 @@ describe("validarPerfis", () => {
   });
 });
 
+describe("validarNomeProjeto", () => {
+  it("aceita um nome preenchido", () => {
+    expect(validarNomeProjeto("Modernização")).toHaveLength(0);
+  });
+
+  it("exige o nome do projeto, que dá nome a todos os ficheiros", () => {
+    expect(validarNomeProjeto("   ").some((e) => e.campo === "nomeProjeto")).toBe(true);
+  });
+});
+
 describe("duplicarPerfil", () => {
   it("dá identidade nova ao perfil e aos seus requisitos", () => {
     const original = perfil({ requisitos: [requisito("r1", 12, "Java")] });
@@ -78,21 +89,27 @@ describe("duplicarPerfil", () => {
 });
 
 describe("importação/exportação de perfis", () => {
-  it("repõe o estado completo (ida e volta), com vários perfis", () => {
+  it("repõe o estado completo (ida e volta), com vários perfis e o nome do projeto", () => {
     const originais = [perfil({ perfil: "A" }), perfil({ perfil: "B" })];
-    expect(importarPerfisJSON(perfisParaJSON(originais))).toEqual(originais);
+    const importado = importarPerfisJSON(perfisParaJSON(originais, "Projeto X"));
+
+    expect(importado.perfis).toEqual(originais);
+    expect(importado.nomeProjeto).toBe("Projeto X");
   });
 
   it("aceita um ficheiro de perfil isolado, das versões anteriores", () => {
     const isolado = JSON.stringify(perfil({ perfil: "Antigo" }));
-    expect(importarPerfisJSON(isolado).map((p) => p.perfil)).toEqual(["Antigo"]);
+    const importado = importarPerfisJSON(isolado);
+
+    expect(importado.perfis.map((p) => p.perfil)).toEqual(["Antigo"]);
+    expect(importado.nomeProjeto).toBe("");
   });
 
   it("dá identidade a um perfil de ficheiro anterior, que não a tinha", () => {
     const semId = { ...perfil({ perfil: "Sem id" }) } as Record<string, unknown>;
     delete semId.id;
 
-    const [importado] = importarPerfisJSON(JSON.stringify(semId));
+    const [importado] = importarPerfisJSON(JSON.stringify(semId)).perfis;
     expect(typeof importado.id).toBe("string");
     expect(importado.id).not.toBe("");
   });
@@ -114,7 +131,7 @@ describe("importação/exportação de perfis", () => {
 
 describe("lerTipoConfiguracao", () => {
   it("distingue perfis de lotes", () => {
-    expect(lerTipoConfiguracao(perfisParaJSON([perfil()]))).toBe("perfis");
+    expect(lerTipoConfiguracao(perfisParaJSON([perfil()], "Projeto X"))).toBe("perfis");
     expect(lerTipoConfiguracao(lotesParaJSON(lotesComPerfis([{ numero: "1", perfis: [perfil()] }])))).toBe("lotes");
   });
 });

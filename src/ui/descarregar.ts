@@ -10,6 +10,15 @@ export function descarregarBlob(blob: Blob, nomeFicheiro: string): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Nome de ficheiro prefixado pelo projeto: todos os documentos que saem da
+ * aplicação seguem para pastas partilhadas, e o prefixo é o que os mantém
+ * agrupados e distinguíveis entre procedimentos.
+ */
+export function nomeComProjeto(nomeProjeto: string, resto: string): string {
+  return `${nomeSeguro(nomeProjeto, "Projeto")}_${resto}`;
+}
+
 /** Torna um texto seguro para nome de ficheiro, sem acentos nem pontuação problemática. */
 export function nomeSeguro(texto: string, alternativa: string): string {
   const limpo = texto

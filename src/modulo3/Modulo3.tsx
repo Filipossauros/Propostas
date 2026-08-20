@@ -105,7 +105,7 @@ export function Modulo3() {
           return;
         }
       } else if (tipo === "perfil" || tipo === "perfis") {
-        opcoes = importarPerfisJSON(texto).map((perfil) => ({
+        opcoes = importarPerfisJSON(texto).perfis.map((perfil) => ({
           chave: perfil.id,
           etiqueta: perfil.perfil,
           perfil,

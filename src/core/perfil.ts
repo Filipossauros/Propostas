@@ -138,9 +138,19 @@ export function validarPerfis(perfis: PerfilJSON[]): ErroValidacao[] {
 }
 
 /** Serializa todos os perfis num ficheiro único. */
-export function perfisParaJSON(perfis: PerfilJSON[]): string {
-  const ficheiro: PerfisJSON = { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "perfis", perfis };
+export function perfisParaJSON(perfis: PerfilJSON[], nomeProjeto: string): string {
+  const ficheiro: PerfisJSON = { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "perfis", nomeProjeto, perfis };
   return JSON.stringify(ficheiro, null, 2);
+}
+
+/**
+ * O nome do projeto é obrigatório: identifica os ficheiros entregues e dá nome
+ * a todos os descarregamentos, nos dois módulos.
+ */
+export function validarNomeProjeto(nomeProjeto: string): ErroValidacao[] {
+  return nomeProjeto.trim() === ""
+    ? [{ campo: "nomeProjeto", mensagem: "Indique o nome do projeto." }]
+    : [];
 }
 
 export class ErroImportacao extends Error {}
@@ -180,12 +190,18 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
   return { ...perfil, tipo: "perfil", id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId() };
 }
 
+export interface PerfisImportados {
+  perfis: PerfilJSON[];
+  /** Vazio nos ficheiros de perfil isolado, que ainda não o traziam. */
+  nomeProjeto: string;
+}
+
 /**
  * Reconstrói os perfis de um ficheiro exportado. Aceita tanto o ficheiro único
  * com vários perfis (`tipo: "perfis"`) como o ficheiro de perfil isolado
  * (`tipo: "perfil"`) das versões anteriores.
  */
-export function importarPerfisJSON(texto: string): PerfilJSON[] {
+export function importarPerfisJSON(texto: string): PerfisImportados {
   const bruto = analisarJSON(texto);
   verificarSchemaVersion(bruto);
 
@@ -193,16 +209,19 @@ export function importarPerfisJSON(texto: string): PerfilJSON[] {
     if (!Array.isArray(bruto.perfis)) {
       throw new ErroImportacao("O ficheiro de perfis não contém uma lista de perfis.");
     }
-    return bruto.perfis.map((p) => {
-      if (typeof p !== "object" || p === null || Array.isArray(p)) {
-        throw new ErroImportacao("O ficheiro de perfis contém uma entrada que não é um perfil.");
-      }
-      return normalizarPerfil(p as Record<string, unknown>);
-    });
+    return {
+      nomeProjeto: typeof bruto.nomeProjeto === "string" ? bruto.nomeProjeto : "",
+      perfis: bruto.perfis.map((p) => {
+        if (typeof p !== "object" || p === null || Array.isArray(p)) {
+          throw new ErroImportacao("O ficheiro de perfis contém uma entrada que não é um perfil.");
+        }
+        return normalizarPerfil(p as Record<string, unknown>);
+      }),
+    };
   }
 
   if (bruto.tipo === "perfil") {
-    return [normalizarPerfil(bruto)];
+    return { nomeProjeto: "", perfis: [normalizarPerfil(bruto)] };
   }
 
   throw new ErroImportacao(

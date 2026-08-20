@@ -75,6 +75,8 @@ export interface PerfilJSON {
 export interface PerfisJSON {
   schemaVersion: string;
   tipo: "perfis";
+  /** Nome do projeto a que os perfis pertencem — ver `LotesJSON.nomeProjeto`. */
+  nomeProjeto: string;
   perfis: PerfilJSON[];
 }
 
@@ -121,6 +123,14 @@ export interface Lote {
 export interface LotesJSON {
   schemaVersion: string;
   tipo: "lotes";
+  /**
+   * Nome do projeto, definido no Módulo 1 e comum a toda a aplicação. Vai em
+   * cada ficheiro exportado, e não só no estado da sessão, porque os ficheiros
+   * seguem para pessoas diferentes: quem recebe um agrupamento tem de saber a
+   * que projeto pertence sem ter de perguntar. Dá também nome aos ficheiros
+   * descarregados.
+   */
+  nomeProjeto: string;
   /**
    * Nome do procedimento, apenas para registo. Só o nome — o número ainda não
    * é conhecido nesta fase (à semelhança do perfil e do próprio agrupamento).

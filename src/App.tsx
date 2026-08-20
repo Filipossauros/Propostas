@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import { CHAVE_LOTES, CHAVE_PERFIS } from "./core/persistencia";
+import { CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistencia";
 import { ehListaDePerfisGuardada } from "./core/perfil";
 import { lotePorPerfilId, lotesIniciais, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
@@ -33,6 +33,11 @@ function App() {
   // no outro — ver `aplicarPerfis`.
   const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(CHAVE_PERFIS, () => [], ehListaDePerfisGuardada);
   const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(CHAVE_LOTES, lotesIniciais, ehLotesGuardado);
+  const [nomeProjeto, setNomeProjeto] = useEstadoPersistente<string>(
+    CHAVE_NOME_PROJETO,
+    () => "",
+    (v): v is string => typeof v === "string",
+  );
 
   /**
    * Ponto único de alteração do catálogo.
@@ -51,6 +56,16 @@ function App() {
     const porId = new Map(perfis.map((p) => [p.id, p]));
     for (const p of novos) porId.set(p.id, p);
     aplicarPerfis([...porId.values()]);
+  }
+
+  /**
+   * O nome do projeto vive numa só variável, mas é gravado em cada ficheiro
+   * exportado. Ao importar, um nome vindo do ficheiro só se aplica se ainda
+   * não houver nenhum definido — para uma importação não apagar em silêncio o
+   * nome que a pessoa acabou de escrever.
+   */
+  function adotarNomeProjeto(doFicheiro: string) {
+    if (doFicheiro.trim() !== "" && nomeProjeto.trim() === "") setNomeProjeto(doFicheiro);
   }
 
   function irPara(destino: Aba) {
@@ -90,6 +105,9 @@ function App() {
           <Modulo1
             perfis={perfis}
             onAlterarPerfis={aplicarPerfis}
+            nomeProjeto={nomeProjeto}
+            onAlterarNomeProjeto={setNomeProjeto}
+            onAdotarNomeProjeto={adotarNomeProjeto}
             lotePorPerfilId={lotePorPerfilId(lotes)}
             onIrParaLotes={() => irPara("modulo2")}
           />
@@ -99,6 +117,9 @@ function App() {
             perfis={perfis}
             config={lotes}
             onAlterarConfig={setLotes}
+            nomeProjeto={nomeProjeto}
+            onDefinirNomeProjeto={setNomeProjeto}
+            onAdotarNomeProjeto={adotarNomeProjeto}
             onAcrescentarPerfis={acrescentarPerfis}
             onSubstituirPerfis={aplicarPerfis}
             onIrParaPerfis={() => irPara("modulo1")}

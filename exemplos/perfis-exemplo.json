@@ -1,6 +1,7 @@
 {
   "schemaVersion": "2.0",
   "tipo": "perfis",
+  "nomeProjeto": "Modernização dos Sistemas de Informação",
   "perfis": [
     {
       "schemaVersion": "2.0",

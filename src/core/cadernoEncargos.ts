@@ -166,7 +166,7 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
           "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
           "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
           "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo bloco.",
-          "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos — apenas o mês ou apenas o ano, de início ou de fim —, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
+          "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
           "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
           "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo bloco. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
           "Não é admitida experiência cujo período se prolongue para além da data limite fixada para a apresentação das propostas.",

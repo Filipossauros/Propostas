@@ -12,6 +12,8 @@ const PREFIXO = "propostas.v2.";
 /** Catálogo de perfis do Módulo 1, partilhado com o Módulo 2. */
 export const CHAVE_PERFIS = `${PREFIXO}perfis`;
 export const CHAVE_LOTES = `${PREFIXO}lotes`;
+/** Nome do projeto, comum aos dois módulos e a todos os ficheiros gerados. */
+export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
 
 function armazenamentoDisponivel(): boolean {
   try {

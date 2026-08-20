@@ -95,6 +95,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
+    nomeProjeto: "Projeto Teste",
     nomeProcedimento: "Procedimento Teste",
     taxaIva: TAXA_IVA_PADRAO,
     lotes: entradas.map((e, idx) => ({

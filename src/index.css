@@ -526,11 +526,21 @@ button:disabled {
 /* Requisitos (M1) e perfis dentro de um lote (M2) partilham esta estrutura:
    cabeçalho com os rótulos uma única vez, e depois uma linha densa por item. */
 
+/* Sem `overflow: hidden`: recortava a dica de requisitos, que sai da linha por
+   baixo. Os cantos são arredondados nos próprios extremos — cabeçalho em cima,
+   última linha em baixo — que é o que o recorte fazia por eles. */
 .tabela-edicao {
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
-  overflow: hidden;
   margin-bottom: 12px;
+}
+
+.tabela-edicao > .tabela-edicao-cabecalho {
+  border-radius: calc(var(--raio-pequeno) - 1px) calc(var(--raio-pequeno) - 1px) 0 0;
+}
+
+.tabela-edicao > ul > .linha-edicao:last-child {
+  border-radius: 0 0 calc(var(--raio-pequeno) - 1px) calc(var(--raio-pequeno) - 1px);
 }
 
 .tabela-edicao-cabecalho {
@@ -586,7 +596,7 @@ button:disabled {
 
 .grelha-perfil-lote {
   display: grid;
-  grid-template-columns: 26px minmax(160px, 1fr) 78px 96px 104px 116px 102px;
+  grid-template-columns: 26px minmax(160px, 1fr) 78px 96px 104px 132px 102px;
   align-items: center;
   gap: 10px;
 }
@@ -786,10 +796,10 @@ button:disabled {
   margin-bottom: 14px;
 }
 
+/* Também sem recorte, pela mesma razão da tabela de edição. */
 .cartao-lote {
   border: 1px solid var(--borda-forte);
   border-radius: var(--raio);
-  overflow: hidden;
 }
 
 .cartao-lote-cabecalho {
@@ -799,6 +809,7 @@ button:disabled {
   padding: 10px 12px;
   background: var(--superficie-alt);
   border-bottom: 1px solid var(--borda);
+  border-radius: calc(var(--raio) - 1px) calc(var(--raio) - 1px) 0 0;
   flex-wrap: wrap;
 }
 
@@ -829,6 +840,7 @@ button:disabled {
   padding: 10px 12px;
   background: var(--azul-100);
   border-top: 1px solid var(--borda);
+  border-radius: 0 0 calc(var(--raio) - 1px) calc(var(--raio) - 1px);
   font-size: 0.9rem;
 }
 

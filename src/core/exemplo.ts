@@ -45,9 +45,12 @@ const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
   req("r2", "Processos de extração, transformação e carregamento (ETL)", 36),
 ]);
 
+export const NOME_PROJETO_EXEMPLO = "Modernização dos Sistemas de Informação";
+
 export const LOTES_EXEMPLO: LotesJSON = {
   schemaVersion: SCHEMA_VERSION_ATUAL,
   tipo: "lotes",
+  nomeProjeto: NOME_PROJETO_EXEMPLO,
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
   lotes: [

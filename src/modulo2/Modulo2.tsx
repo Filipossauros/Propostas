@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { EspecificacaoFormulario, Lote, LotesJSON, PerfilJSON } from "../core/types";
-import { ErroImportacao, importarPerfisJSON } from "../core/perfil";
+import { ErroImportacao, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
 import {
   criarLote,
   criarPerfilEmLote,
@@ -14,9 +14,9 @@ import {
 } from "../core/lotes";
 import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { gerarDocxBlob } from "../word/gerarDocx";
-import { LOTES_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import { LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
@@ -28,6 +28,11 @@ interface Props {
   perfis: PerfilJSON[];
   config: LotesJSON;
   onAlterarConfig: (atualizar: (atual: LotesJSON) => LotesJSON) => void;
+  nomeProjeto: string;
+  /** Define o nome do projeto (usado ao carregar o exemplo). */
+  onDefinirNomeProjeto: (nome: string) => void;
+  /** Aceita o nome vindo de um ficheiro importado, se ainda não houver um definido. */
+  onAdotarNomeProjeto: (nome: string) => void;
   /** Junta perfis ao catálogo do Módulo 1, substituindo os que já existam. */
   onAcrescentarPerfis: (perfis: PerfilJSON[]) => void;
   /** Substitui o catálogo inteiro (usado ao carregar o exemplo). */
@@ -50,6 +55,9 @@ export function Modulo2({
   perfis,
   config,
   onAlterarConfig,
+  nomeProjeto,
+  onDefinirNomeProjeto,
+  onAdotarNomeProjeto,
   onAcrescentarPerfis,
   onSubstituirPerfis,
   onIrParaPerfis,
@@ -60,7 +68,12 @@ export function Modulo2({
   const inputLotesRef = useRef<HTMLInputElement>(null);
   const inputEditarPerfilRef = useRef<HTMLInputElement>(null);
 
-  const erros = validarLotes(config);
+  // O nome do projeto é definido no Módulo 1 e vive numa só variável na
+  // aplicação; aqui só é carimbado nos ficheiros no momento de os gerar, para
+  // não haver duas cópias a divergir.
+  const configExportavel: LotesJSON = { ...config, nomeProjeto };
+
+  const erros = [...validarNomeProjeto(nomeProjeto), ...validarLotes(config)];
   const podeExportar = erros.length === 0;
 
   // "Por atribuir" é derivado, não é estado próprio: são os perfis do catálogo
@@ -106,14 +119,19 @@ export function Modulo2({
   async function lerPerfisDeFicheiros(ficheiros: FileList): Promise<{ perfis: PerfilJSON[]; falhados: string[] }> {
     const carregados: PerfilJSON[] = [];
     const falhados: string[] = [];
+    let nomeDeFicheiro = "";
 
     for (const ficheiro of Array.from(ficheiros)) {
       try {
-        carregados.push(...importarPerfisJSON(await ficheiro.text()));
+        const importado = importarPerfisJSON(await ficheiro.text());
+        carregados.push(...importado.perfis);
+        if (nomeDeFicheiro === "") nomeDeFicheiro = importado.nomeProjeto;
       } catch (erro) {
         falhados.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
     }
+
+    onAdotarNomeProjeto(nomeDeFicheiro);
     return { perfis: carregados, falhados };
   }
 
@@ -145,6 +163,7 @@ export function Modulo2({
     try {
       const importado = importarLotesJSON(await ficheiro.text());
       onAlterarConfig(() => importado);
+      onAdotarNomeProjeto(importado.nomeProjeto);
       // Os perfis vêm dentro do ficheiro de lotes: passam a fazer parte do
       // catálogo, para poderem ser corrigidos no Módulo 1 como os restantes.
       onAcrescentarPerfis(perfisEmLotes(importado));
@@ -161,15 +180,22 @@ export function Modulo2({
     const exemplo = structuredClone(LOTES_EXEMPLO);
     onAlterarConfig(() => exemplo);
     onSubstituirPerfis(structuredClone(PERFIS_EXEMPLO));
+    onDefinirNomeProjeto(NOME_PROJETO_EXEMPLO);
     setMensagem({ tipo: "sucesso", texto: "Agrupamento de exemplo carregado." });
   }
 
   function descarregarJSON() {
-    descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), "Lotes.json");
+    descarregarBlob(
+      new Blob([lotesParaJSON(configExportavel)], { type: "application/json" }),
+      nomeComProjeto(nomeProjeto, "Lotes.json"),
+    );
   }
 
   async function descarregarWord() {
-    descarregarBlob(await gerarDocxBlob([documentoRegrasEPrecoBase(config)]), "Requisitos_e_regras.docx");
+    descarregarBlob(
+      await gerarDocxBlob([documentoRegrasEPrecoBase(configExportavel)]),
+      nomeComProjeto(nomeProjeto, "Requisitos_e_regras.docx"),
+    );
   }
 
   /**
@@ -182,8 +208,8 @@ export function Modulo2({
     try {
       for (const lote of lotesComPerfis) {
         const especificacoes = lote.perfis.map((entrada) => especificacao(entrada.perfil, lote));
-        const nome = `${nomeSeguro(lote.designacao, `Lote ${lote.numero}`)}.xlsx`;
-        descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes), nome);
+        const resto = `${nomeSeguro(lote.designacao, `Lote ${lote.numero}`)}.xlsx`;
+        descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes), nomeComProjeto(nomeProjeto, resto));
       }
     } finally {
       setAGerar(false);
@@ -192,8 +218,8 @@ export function Modulo2({
 
   function descarregarFormulariosJSON() {
     descarregarBlob(
-      new Blob([formulariosParaJSON(config)], { type: "application/json" }),
-      "Formularios_Declaracao.json",
+      new Blob([formulariosParaJSON(configExportavel)], { type: "application/json" }),
+      nomeComProjeto(nomeProjeto, "Formularios_Declaracao.json"),
     );
   }
 
@@ -218,8 +244,8 @@ export function Modulo2({
           </div>
         </div>
         <p className="modulo-subtitulo">
-          Recebe os perfis definidos no Módulo 1 — enviados diretamente ou carregados de ficheiro —, agrupa-os em
-          lotes e atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos.
+          Recebe os perfis definidos no Módulo 1 enviados diretamente ou carregados de ficheiro, agrupa-os em lotes e
+          atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos.
         </p>
       </header>
 

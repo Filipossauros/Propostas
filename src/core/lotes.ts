@@ -20,6 +20,7 @@ export function lotesIniciais(): LotesJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
+    nomeProjeto: "",
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
     lotes: [],
@@ -133,6 +134,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
   return {
     ...config,
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
+    nomeProjeto: config.nomeProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
     lotes: config.lotes.map((lote) => ({
       ...lote,
@@ -161,6 +163,7 @@ export function formulariosParaJSON(config: LotesJSON): string {
   const ficheiro = {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "formularios" as const,
+    nomeProjeto: config.nomeProjeto,
     nomeProcedimento: config.nomeProcedimento,
     formularios: config.lotes.flatMap((lote) =>
       lote.perfis.map((entrada) => ({

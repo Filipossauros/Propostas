@@ -6,11 +6,12 @@ import {
   importarPerfisJSON,
   perfilInicial,
   perfisParaJSON,
+  validarNomeProjeto,
   validarPerfis,
 } from "../core/perfil";
-import { PERFIS_EXEMPLO } from "../core/exemplo";
+import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { RequisitosEditor } from "./RequisitosEditor";
@@ -18,18 +19,30 @@ import { RequisitosEditor } from "./RequisitosEditor";
 interface Props {
   perfis: PerfilJSON[];
   onAlterarPerfis: (perfis: PerfilJSON[]) => void;
+  nomeProjeto: string;
+  onAlterarNomeProjeto: (nome: string) => void;
+  /** Aceita o nome vindo de um ficheiro importado, se ainda não houver um definido. */
+  onAdotarNomeProjeto: (nome: string) => void;
   /** Número do lote a que cada perfil já está atribuído, indexado pelo id do perfil. */
   lotePorPerfilId: Record<string, string>;
   onIrParaLotes: () => void;
 }
 
-export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLotes }: Props) {
+export function Modulo1({
+  perfis,
+  onAlterarPerfis,
+  nomeProjeto,
+  onAlterarNomeProjeto,
+  onAdotarNomeProjeto,
+  lotePorPerfilId,
+  onIrParaLotes,
+}: Props) {
   const [idEmEdicao, setIdEmEdicao] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
   const inputImportarRef = useRef<HTMLInputElement>(null);
 
-  const erros = validarPerfis(perfis);
+  const erros = [...validarNomeProjeto(nomeProjeto), ...validarPerfis(perfis)];
   const podeExportar = erros.length === 0;
 
   // O perfil em edição é sempre um dos do catálogo: se o id guardado deixar de
@@ -81,11 +94,11 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
     setMensagem(null);
     setAGerar(true);
     try {
-      const nome =
+      const resto =
         perfis.length === 1
           ? `Declaracao_Experiencia_${nomeSeguro(perfis[0].perfil, "Perfil")}.xlsx`
           : "Declaracoes_Experiencia.xlsx";
-      descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes()), nome);
+      descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes()), nomeComProjeto(nomeProjeto, resto));
     } finally {
       setAGerar(false);
     }
@@ -93,20 +106,28 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
 
   function descarregarJSON() {
     setMensagem(null);
-    descarregarBlob(new Blob([perfisParaJSON(perfis)], { type: "application/json" }), "Perfis.json");
+    descarregarBlob(
+      new Blob([perfisParaJSON(perfis, nomeProjeto)], { type: "application/json" }),
+      nomeComProjeto(nomeProjeto, "Perfis.json"),
+    );
   }
 
   async function importarJSON(ficheiros: FileList) {
     const carregados: PerfilJSON[] = [];
     const falhados: string[] = [];
+    let nomeDeFicheiro = "";
 
     for (const ficheiro of Array.from(ficheiros)) {
       try {
-        carregados.push(...importarPerfisJSON(await ficheiro.text()));
+        const importado = importarPerfisJSON(await ficheiro.text());
+        carregados.push(...importado.perfis);
+        if (nomeDeFicheiro === "") nomeDeFicheiro = importado.nomeProjeto;
       } catch (erro) {
         falhados.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
     }
+
+    onAdotarNomeProjeto(nomeDeFicheiro);
 
     if (carregados.length > 0) {
       // Um perfil reimportado substitui a versão em memória; os restantes juntam-se.
@@ -124,6 +145,7 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
 
   function carregarExemplo() {
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
+    onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
     setIdEmEdicao(null);
     setMensagem({ tipo: "sucesso", texto: `${PERFIS_EXEMPLO.length} perfis de exemplo carregados.` });
   }
@@ -153,6 +175,20 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
+
+      <section className="painel">
+        <label className="campo-largo">
+          <span className="rotulo">Nome do projeto</span>
+          <input
+            type="text"
+            value={nomeProjeto}
+            placeholder="ex.: Modernização dos sistemas de informação"
+            onChange={(e) => onAlterarNomeProjeto(e.target.value)}
+            aria-invalid={nomeProjeto.trim() === ""}
+          />
+        </label>
+        <p className="ajuda">Identifica o projeto e dá nome a todos os ficheiros descarregados, nos dois módulos.</p>
+      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
