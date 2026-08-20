@@ -1,7 +1,8 @@
-// Validação, (des)serialização e texto de caderno de encargos de um PERFIL — Módulo 1.
+// Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
-import type { PerfilJSON, Requisito } from "./types";
+import type { PerfilJSON, PerfisJSON, Requisito } from "./types";
 import { MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
+import { gerarId } from "./id";
 
 export interface ErroValidacao {
   campo: string;
@@ -12,16 +13,41 @@ export function perfilInicial(): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
+    id: gerarId(),
     perfil: "",
     nBlocos: 15,
     requisitos: [],
   };
 }
 
-export function ehPerfilGuardado(valor: unknown): valor is PerfilJSON {
-  if (typeof valor !== "object" || valor === null) return false;
-  const p = valor as Partial<PerfilJSON>;
-  return p.tipo === "perfil" && p.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(p.requisitos);
+/**
+ * Cópia de um perfil com identidade nova — duplicar não pode partilhar o `id`,
+ * ou as duas cópias passariam a ser o mesmo perfil aos olhos da propagação.
+ * Os requisitos também levam ids novos, para poderem ser editados em separado.
+ */
+export function duplicarPerfil(perfil: PerfilJSON): PerfilJSON {
+  return {
+    ...perfil,
+    id: gerarId(),
+    perfil: `${perfil.perfil} (cópia)`,
+    requisitos: perfil.requisitos.map((r) => ({ ...r, id: gerarId() })),
+  };
+}
+
+export function ehListaDePerfisGuardada(valor: unknown): valor is PerfilJSON[] {
+  return (
+    Array.isArray(valor) &&
+    valor.every((p) => {
+      if (typeof p !== "object" || p === null) return false;
+      const perfil = p as Partial<PerfilJSON>;
+      return (
+        perfil.tipo === "perfil" &&
+        perfil.schemaVersion === SCHEMA_VERSION_ATUAL &&
+        typeof perfil.id === "string" &&
+        Array.isArray(perfil.requisitos)
+      );
+    })
+  );
 }
 
 export function validarRequisitos(requisitos: Requisito[]): ErroValidacao[] {
@@ -77,8 +103,44 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
   return [...erros, ...validarRequisitos(perfil.requisitos)];
 }
 
-export function perfilParaJSON(perfil: PerfilJSON): string {
-  return JSON.stringify(perfil, null, 2);
+/**
+ * Valida o conjunto de perfis do Módulo 1.
+ *
+ * Além dos erros de cada perfil, exige designações distintas: é a designação
+ * que dá nome à folha do perfil no formulário Excel e que identifica o perfil
+ * na leitura das declarações, pelo que duas iguais tornariam a declaração
+ * impossível de atribuir a um deles.
+ */
+export function validarPerfis(perfis: PerfilJSON[]): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+
+  if (perfis.length === 0) {
+    erros.push({ campo: "perfis", mensagem: "Crie pelo menos um perfil." });
+  }
+
+  const designacoesVistas = new Set<string>();
+  perfis.forEach((perfil, idx) => {
+    const designacao = perfil.perfil.trim();
+    const nome = designacao || `Perfil ${idx + 1}`;
+
+    if (designacao !== "" && designacoesVistas.has(designacao)) {
+      erros.push({ campo: `perfis[${idx}].perfil`, mensagem: `Designação de perfil repetida: "${designacao}".` });
+    } else if (designacao !== "") {
+      designacoesVistas.add(designacao);
+    }
+
+    for (const erro of validarPerfil(perfil)) {
+      erros.push({ campo: `perfis[${idx}].${erro.campo}`, mensagem: `${nome}: ${erro.mensagem}` });
+    }
+  });
+
+  return erros;
+}
+
+/** Serializa todos os perfis num ficheiro único. */
+export function perfisParaJSON(perfis: PerfilJSON[]): string {
+  const ficheiro: PerfisJSON = { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "perfis", perfis };
+  return JSON.stringify(ficheiro, null, 2);
 }
 
 export class ErroImportacao extends Error {}
@@ -105,21 +167,47 @@ function verificarSchemaVersion(bruto: Record<string, unknown>): void {
   }
 }
 
-/** Reconstrói um perfil a partir de um JSON exportado. */
-export function importarPerfilJSON(texto: string): PerfilJSON {
-  const bruto = analisarJSON(texto);
-  verificarSchemaVersion(bruto);
-
-  if (bruto.tipo !== "perfil") {
-    throw new ErroImportacao(
-      `Este ficheiro é do tipo "${String(bruto.tipo)}", não um perfil. Carregue um ficheiro de perfil (Módulo 1).`,
-    );
-  }
+/**
+ * Normaliza um perfil vindo de ficheiro. Ficheiros gerados antes de o perfil
+ * ter identidade própria não trazem `id`: damos-lhe um, para que passe a
+ * participar na propagação de alterações como qualquer outro.
+ */
+function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
   if (!Array.isArray(bruto.requisitos)) {
     throw new ErroImportacao("O ficheiro de perfil não contém uma lista de requisitos.");
   }
+  const perfil = bruto as unknown as PerfilJSON;
+  return { ...perfil, tipo: "perfil", id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId() };
+}
 
-  return bruto as unknown as PerfilJSON;
+/**
+ * Reconstrói os perfis de um ficheiro exportado. Aceita tanto o ficheiro único
+ * com vários perfis (`tipo: "perfis"`) como o ficheiro de perfil isolado
+ * (`tipo: "perfil"`) das versões anteriores.
+ */
+export function importarPerfisJSON(texto: string): PerfilJSON[] {
+  const bruto = analisarJSON(texto);
+  verificarSchemaVersion(bruto);
+
+  if (bruto.tipo === "perfis") {
+    if (!Array.isArray(bruto.perfis)) {
+      throw new ErroImportacao("O ficheiro de perfis não contém uma lista de perfis.");
+    }
+    return bruto.perfis.map((p) => {
+      if (typeof p !== "object" || p === null || Array.isArray(p)) {
+        throw new ErroImportacao("O ficheiro de perfis contém uma entrada que não é um perfil.");
+      }
+      return normalizarPerfil(p as Record<string, unknown>);
+    });
+  }
+
+  if (bruto.tipo === "perfil") {
+    return [normalizarPerfil(bruto)];
+  }
+
+  throw new ErroImportacao(
+    `Este ficheiro é do tipo "${String(bruto.tipo)}", não um perfil. Carregue um ficheiro de perfil (Módulo 1).`,
+  );
 }
 
 /** Lê o `tipo` de um ficheiro de configuração, validando primeiro a versão de esquema. */

@@ -572,8 +572,10 @@ button:disabled {
   margin: 0;
 }
 
-.lista-perfis-livres li,
-.lista-declaracoes li {
+/* Filhos diretos: estas listas contêm dicas de requisitos, que trazem uma
+   lista própria lá dentro e não devem herdar o traço nem o espaçamento. */
+.lista-perfis-livres > li,
+.lista-declaracoes > li {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -583,8 +585,8 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.lista-perfis-livres li:last-child,
-.lista-declaracoes li:last-child {
+.lista-perfis-livres > li:last-child,
+.lista-declaracoes > li:last-child {
   border-bottom: none;
 }
 
@@ -598,11 +600,121 @@ button:disabled {
   font-size: 0.82rem;
 }
 
-.lista-perfis-livres li > div,
+.lista-perfis-livres > li > div,
 .declaracao-identificacao {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* ------------------------------------------------- Catálogo de perfis (M1) */
+
+.lista-perfis-catalogo {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perfil-catalogo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border: 1px solid var(--borda);
+  border-left: 3px solid transparent;
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+}
+
+.perfil-catalogo-ativo {
+  border-left-color: var(--azul-500);
+  background: var(--azul-100);
+}
+
+/* O alvo ocupa todo o espaço livre para que a linha inteira seja clicável. */
+.perfil-catalogo-alvo {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+/* ------------------------------------------------------- Dica de requisitos */
+
+.dica {
+  position: relative;
+  display: inline-flex;
+}
+
+.dica-alvo {
+  padding: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px dotted var(--borda-forte);
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+}
+
+.dica-conteudo {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(380px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  font-size: 0.82rem;
+
+  /* Escondida por visibilidade, e não por display, para continuar a existir
+     na árvore de acessibilidade e ser alcançável por aria-describedby. */
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.dica:hover .dica-conteudo,
+.dica:focus-within .dica-conteudo {
+  visibility: visible;
+  opacity: 1;
+}
+
+.dica-conteudo ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dica-conteudo li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dica-exigencia {
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+.dica-vazia {
+  color: var(--texto-suave);
 }
 
 .lista-lotes {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LOTES_EXEMPLO, PERFIL_EXEMPLO, PERFIS_EXEMPLO } from "./exemplo";
-import { importarPerfilJSON, perfilParaJSON, validarPerfil } from "./perfil";
+import { importarPerfisJSON, perfisParaJSON, validarPerfil, validarPerfis } from "./perfil";
 import { importarLotesJSON, lotesParaJSON, totalProcedimento, validarLotes } from "./lotes";
 
 // O exemplo é aquilo que uma pessoa carrega para experimentar a aplicação pela
@@ -11,10 +11,13 @@ describe("dados de exemplo", () => {
     expect(validarPerfil(PERFIL_EXEMPLO)).toHaveLength(0);
   });
 
-  it("todos os perfis do exemplo são válidos", () => {
-    for (const p of PERFIS_EXEMPLO) {
-      expect(validarPerfil(p), p.perfil).toHaveLength(0);
-    }
+  it("todos os perfis do exemplo são válidos, e distintos entre si", () => {
+    expect(validarPerfis(PERFIS_EXEMPLO)).toHaveLength(0);
+  });
+
+  it("os identificadores de perfil do exemplo são únicos", () => {
+    const ids = PERFIS_EXEMPLO.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("o agrupamento de exemplo é válido e exportável", () => {
@@ -26,7 +29,7 @@ describe("dados de exemplo", () => {
   });
 
   it("os ficheiros de exemplo são reimportáveis pela própria aplicação", () => {
-    expect(importarPerfilJSON(perfilParaJSON(PERFIL_EXEMPLO))).toEqual(PERFIL_EXEMPLO);
+    expect(importarPerfisJSON(perfisParaJSON(PERFIS_EXEMPLO))).toEqual(PERFIS_EXEMPLO);
     expect(importarLotesJSON(lotesParaJSON(LOTES_EXEMPLO))).toEqual(LOTES_EXEMPLO);
   });
 

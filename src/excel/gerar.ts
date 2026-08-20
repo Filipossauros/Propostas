@@ -15,9 +15,9 @@ import {
   LINHA_TITULO,
   LISTAS_MESES,
   LISTAS_SIM_NAO_MAIUSC,
-  NOME_FOLHA_EXPERIENCIA,
   NOME_FOLHA_LEIAME,
   NOME_FOLHA_LISTAS,
+  nomeFolhaPerfil,
   OFFSET_CABECALHO_DATAS_PROJETO,
   OFFSET_CLIENTE_PROJETO,
   OFFSET_DATAS_PROJETO,
@@ -49,16 +49,36 @@ import {
   ANO_MAXIMO,
 } from "./layout";
 
+// Paleta: duas famílias e uma só exceção.
+//
+// Tudo o que é estrutura (faixas, subcabeçalhos, rótulos) vive na família azul,
+// do mais escuro para o mais claro conforme desce na hierarquia. Tudo o que é
+// leitura passiva (notas, campos bloqueados) fica em cinzento-azulado. O amarelo
+// é a única exceção, e é deliberada: marca exclusivamente o que o candidato tem
+// de preencher — nenhum outro elemento do formulário o usa.
 const COR_FAIXA = "FF1F4E78";
 const COR_SUBCABECALHO = "FF2E75B6";
-const COR_ROTULO_BG = "FFF2F2F2";
-const COR_CAMPO_BG = "FFFAF0DC";
-const COR_CAMPO_TEXTO = "FF1F4E78";
-const COR_CAMPO_BORDA = "FFB99C5E";
+const COR_ROTULO_BG = "FFEDF1F5";
+const COR_ROTULO_TEXTO = "FF1F3B54";
+const COR_CAMPO_BG = "FFFFF8E1";
+const COR_CAMPO_TEXTO = "FF1F2933";
+const COR_CAMPO_BORDA = "FFE0C67A";
 const COR_CAMPO_BLOQUEADO_BG = "FFE9ECF1";
-const COR_CAMPO_BLOQUEADO_TEXTO = "FF3B4A5A";
+const COR_CAMPO_BLOQUEADO_TEXTO = "FF4A5A6A";
 const COR_NOTA_BG = "FFEFF3F6";
+const COR_NOTA_TEXTO = "FF4A5A6A";
 const COR_BRANCO = "FFFFFFFF";
+
+/** Alturas de linha, para o formulário respirar em vez de se colar todo. */
+const ALTURA_TITULO = 26;
+const ALTURA_SUBTITULO = 20;
+const ALTURA_FAIXA = 22;
+const ALTURA_IDENTIFICACAO = 20;
+const ALTURA_CAMPO = 20;
+const ALTURA_CABECALHO_DATAS = 16;
+const ALTURA_SUBCABECALHO = 32;
+const ALTURA_REQUISITO = 20;
+const ALTURA_SEPARADOR = 8;
 
 const COLUNAS: Array<{ largura: number }> = [
   { largura: 30 }, // A
@@ -81,16 +101,17 @@ function aplicarFaixa(sheet: ExcelJS.Worksheet, linha: number, texto: string): v
   cell.value = texto;
   cell.fill = fillSolido(COR_FAIXA);
   cell.font = { bold: true, color: { argb: COR_BRANCO }, size: 11 };
-  cell.alignment = { vertical: "middle", horizontal: "left" };
+  cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
   cell.protection = { locked: true };
   for (let c = 1; c <= 8; c++) sheet.getCell(linha, c).protection = { locked: true };
+  sheet.getRow(linha).height = ALTURA_FAIXA;
 }
 
 function aplicarRotulo(cell: ExcelJS.Cell, texto: string): void {
   cell.value = texto;
   cell.fill = fillSolido(COR_ROTULO_BG);
-  cell.font = { bold: true, size: 10 };
-  cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+  cell.font = { bold: true, size: 10, color: { argb: COR_ROTULO_TEXTO } };
+  cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true, indent: 1 };
   cell.protection = { locked: true };
 }
 
@@ -119,9 +140,19 @@ function aplicarCampoBloqueado(cell: ExcelJS.Cell, valor: string, alinhamento: "
   cell.protection = { locked: true };
 }
 
-/** Cabeçalho pequeno ("Mês"/"Ano") por cima de uma célula de data — mesmo tratamento do subcabeçalho dos requisitos. */
+/**
+ * Cabeçalho pequeno ("Mês"/"Ano") por cima de uma célula de data do projeto.
+ *
+ * Deliberadamente mais discreto do que o subcabeçalho dos requisitos: são dois
+ * níveis diferentes da hierarquia e, com o mesmo azul forte nos dois, o bloco
+ * ficava com duas faixas a competir pela mesma atenção.
+ */
 function aplicarCabecalhoData(cell: ExcelJS.Cell, texto: string): void {
-  aplicarSubcabecalho(cell, texto);
+  cell.value = texto;
+  cell.fill = fillSolido(COR_ROTULO_BG);
+  cell.font = { bold: true, size: 8, color: { argb: COR_ROTULO_TEXTO } };
+  cell.alignment = { vertical: "middle", horizontal: "center" };
+  cell.protection = { locked: true };
 }
 
 function aplicarSubcabecalho(cell: ExcelJS.Cell, texto: string): void {
@@ -199,18 +230,27 @@ function subtitulo(config: EspecificacaoFormulario): string {
   return config.perfil;
 }
 
-function construirFolhaLeiame(wb: ExcelJS.Workbook, config: EspecificacaoFormulario): void {
+function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string; perfil: string }>): void {
   const sheet = wb.addWorksheet(NOME_FOLHA_LEIAME);
   sheet.getColumn(1).width = 110;
+
+  const umPerfil = folhas.length === 1;
+  const indice = umPerfil
+    ? [{ texto: folhas[0].perfil }]
+    : [
+        { texto: "Este ficheiro tem uma folha por perfil. Preencha apenas a folha do perfil a que se candidata:" },
+        ...folhas.map((f) => ({ texto: `    • ${f.perfil}  →  folha "${f.nome}"` })),
+      ];
 
   const linhas: Array<{ texto: string; titulo?: boolean }> = [
     { texto: "DECLARAÇÃO DE EXPERIÊNCIA PROFISSIONAL — INSTRUÇÕES DE PREENCHIMENTO", titulo: true },
     { texto: "" },
-    { texto: subtitulo(config) },
+    ...indice,
     { texto: "" },
     {
-      texto:
-        "1. Preencha primeiro os dados de identificação, no topo da folha \"Experiência\". Todos os campos são de preenchimento obrigatório.",
+      texto: umPerfil
+        ? `1. Preencha primeiro os dados de identificação, no topo da folha "${folhas[0].nome}". Todos os campos são de preenchimento obrigatório.`
+        : "1. Preencha primeiro os dados de identificação, no topo da folha do perfil a que se candidata. Todos os campos são de preenchimento obrigatório.",
     },
     {
       texto:
@@ -253,8 +293,12 @@ function construirFolhaListas(wb: ExcelJS.Workbook): void {
   }
 }
 
-function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFormulario): void {
-  const sheet = wb.addWorksheet(NOME_FOLHA_EXPERIENCIA);
+function construirFolhaExperiencia(
+  wb: ExcelJS.Workbook,
+  config: EspecificacaoFormulario,
+  nomeFolha: string,
+): void {
+  const sheet = wb.addWorksheet(nomeFolha);
   COLUNAS.forEach((c, idx) => {
     sheet.getColumn(idx + 1).width = c.largura;
   });
@@ -262,14 +306,18 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
   sheet.mergeCells(LINHA_TITULO, 1, LINHA_TITULO, 8);
   const tituloCell = sheet.getCell(LINHA_TITULO, 1);
   tituloCell.value = "DECLARAÇÃO DE EXPERIÊNCIA PROFISSIONAL";
-  tituloCell.font = { bold: true, size: 14 };
-  tituloCell.alignment = { horizontal: "center" };
+  tituloCell.font = { bold: true, size: 14, color: { argb: COR_FAIXA } };
+  tituloCell.alignment = { horizontal: "center", vertical: "middle" };
+  sheet.getRow(LINHA_TITULO).height = ALTURA_TITULO;
 
+  // O subtítulo é a designação do perfil, e é por ele que o Módulo 3 localiza
+  // esta folha ao ler a declaração — ver `encontrarFolhaExperiencia`.
   sheet.mergeCells(LINHA_SUBTITULO, 1, LINHA_SUBTITULO, 8);
   const subtituloCell = sheet.getCell(LINHA_SUBTITULO, 1);
   subtituloCell.value = subtitulo(config);
-  subtituloCell.font = { italic: true, size: 11 };
-  subtituloCell.alignment = { horizontal: "center" };
+  subtituloCell.font = { italic: true, size: 11, color: { argb: COR_ROTULO_TEXTO } };
+  subtituloCell.alignment = { horizontal: "center", vertical: "middle" };
+  sheet.getRow(LINHA_SUBTITULO).height = ALTURA_SUBTITULO;
 
   aplicarFaixa(sheet, LINHA_FAIXA_IDENTIFICACAO, "IDENTIFICAÇÃO DO CANDIDATO");
 
@@ -286,21 +334,24 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
       aplicarCampoEditavel(campo);
       validarTexto(campo);
     }
+    sheet.getRow(linha).height = ALTURA_IDENTIFICACAO;
   }
 
   sheet.mergeCells(LINHA_DECLARACAO_VERACIDADE, 1, LINHA_DECLARACAO_VERACIDADE, 8);
   const declaracaoCell = sheet.getCell(LINHA_DECLARACAO_VERACIDADE, 1);
   declaracaoCell.value = TEXTO_DECLARACAO_VERACIDADE;
-  declaracaoCell.alignment = { wrapText: true, vertical: "middle" };
-  declaracaoCell.font = { italic: true, size: 9 };
+  declaracaoCell.fill = fillSolido(COR_NOTA_BG);
+  declaracaoCell.alignment = { wrapText: true, vertical: "middle", indent: 1 };
+  declaracaoCell.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
   declaracaoCell.protection = { locked: true };
-  sheet.getRow(LINHA_DECLARACAO_VERACIDADE).height = 45;
+  sheet.getRow(LINHA_DECLARACAO_VERACIDADE).height = 32;
 
   aplicarRotulo(sheet.getCell(LINHA_ASSINATURA, 1), ROTULO_ASSINATURA);
   sheet.mergeCells(LINHA_ASSINATURA, 2, LINHA_ASSINATURA, 8);
   aplicarCampoEditavel(sheet.getCell(LINHA_ASSINATURA, 2));
+  sheet.getRow(LINHA_ASSINATURA).height = ALTURA_CAMPO;
 
-  void LINHA_BRANCO_APOS_IDENTIFICACAO; // linha em branco: nenhuma célula a preencher
+  sheet.getRow(LINHA_BRANCO_APOS_IDENTIFICACAO).height = ALTURA_SEPARADOR;
 
   const nRequisitos = config.requisitos.length;
   for (let i = 1; i <= config.nBlocos; i++) {
@@ -309,6 +360,7 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     aplicarFaixa(sheet, linhaInicial, tituloFaixaBloco(i));
 
     const linhaClienteProjeto = linhaInicial + OFFSET_CLIENTE_PROJETO;
+    sheet.getRow(linhaClienteProjeto).height = ALTURA_CAMPO;
     aplicarRotulo(sheet.getCell(linhaClienteProjeto, 1), TEXTO_ROTULO_CLIENTE);
     sheet.mergeCells(linhaClienteProjeto, 2, linhaClienteProjeto, 3);
     const campoCliente = sheet.getCell(linhaClienteProjeto, 2);
@@ -322,6 +374,7 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     validarTexto(campoProjeto);
 
     const linhaFuncao = linhaInicial + OFFSET_FUNCAO;
+    sheet.getRow(linhaFuncao).height = ALTURA_CAMPO;
     aplicarRotulo(sheet.getCell(linhaFuncao, 1), TEXTO_ROTULO_FUNCAO);
     sheet.mergeCells(linhaFuncao, 2, linhaFuncao, 8);
     const campoFuncao = sheet.getCell(linhaFuncao, 2);
@@ -334,6 +387,7 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 5), TEXTO_CABECALHO_MES);
     aplicarCabecalhoData(sheet.getCell(linhaCabecalhoDatas, 6), TEXTO_CABECALHO_ANO);
     sheet.mergeCells(linhaCabecalhoDatas, 7, linhaCabecalhoDatas, 8);
+    sheet.getRow(linhaCabecalhoDatas).height = ALTURA_CABECALHO_DATAS;
 
     const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
     aplicarRotulo(sheet.getCell(linhaDatas, 1), TEXTO_ROTULO_INICIO_PROJETO);
@@ -355,10 +409,11 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     sheet.mergeCells(linhaDatas, 7, linhaDatas, 8);
     const disclaimerEmCurso = sheet.getCell(linhaDatas, 7);
     disclaimerEmCurso.value = TEXTO_DISCLAIMER_PROJETO_EM_CURSO;
-    disclaimerEmCurso.font = { italic: true, size: 8 };
-    disclaimerEmCurso.alignment = { wrapText: true, vertical: "middle" };
+    disclaimerEmCurso.fill = fillSolido(COR_NOTA_BG);
+    disclaimerEmCurso.font = { italic: true, size: 8, color: { argb: COR_NOTA_TEXTO } };
+    disclaimerEmCurso.alignment = { wrapText: true, vertical: "middle", indent: 1 };
     disclaimerEmCurso.protection = { locked: true };
-    sheet.getRow(linhaDatas).height = 42;
+    sheet.getRow(linhaDatas).height = 40;
 
     const linhaSub = linhaInicial + OFFSET_SUBCABECALHO;
     sheet.mergeCells(linhaSub, 1, linhaSub, 3);
@@ -368,13 +423,14 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     aplicarSubcabecalho(sheet.getCell(linhaSub, 6), TEXTO_SUBCABECALHO_INICIO_ANO);
     aplicarSubcabecalho(sheet.getCell(linhaSub, 7), TEXTO_SUBCABECALHO_FIM_MES);
     aplicarSubcabecalho(sheet.getCell(linhaSub, 8), TEXTO_SUBCABECALHO_FIM_ANO);
-    sheet.getRow(linhaSub).height = 32;
+    sheet.getRow(linhaSub).height = ALTURA_SUBCABECALHO;
 
     config.requisitos.forEach((requisito, idxReq) => {
       const linhaReq = linhaInicial + OFFSET_PRIMEIRA_LINHA_REQUISITO + idxReq;
+      sheet.getRow(linhaReq).height = ALTURA_REQUISITO;
       sheet.mergeCells(linhaReq, 1, linhaReq, 3);
       aplicarRotulo(sheet.getCell(linhaReq, 1), requisito.designacao);
-      sheet.getCell(linhaReq, 1).alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+      sheet.getCell(linhaReq, 1).alignment = { vertical: "middle", horizontal: "left", wrapText: true, indent: 1 };
 
       const declaraCell = sheet.getCell(linhaReq, 4);
       aplicarCampoEditavel(declaraCell, "center");
@@ -400,12 +456,12 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
     const notaCell = sheet.getCell(linhaNota, 1);
     notaCell.value = TEXTO_NOTA_BLOCO;
     notaCell.fill = fillSolido(COR_NOTA_BG);
-    notaCell.font = { italic: true, size: 9 };
-    notaCell.alignment = { wrapText: true, vertical: "middle" };
+    notaCell.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
+    notaCell.alignment = { wrapText: true, vertical: "middle", indent: 1 };
     notaCell.protection = { locked: true };
-    sheet.getRow(linhaNota).height = 30;
+    sheet.getRow(linhaNota).height = 34;
 
-    void offsetBrancoBloco(nRequisitos); // linha em branco: nenhuma célula a preencher
+    sheet.getRow(linhaInicial + offsetBrancoBloco(nRequisitos)).height = ALTURA_SEPARADOR;
   }
 
   sheet.views = [{ state: "frozen", ySplit: LINHA_FAIXA_IDENTIFICACAO }];
@@ -427,21 +483,36 @@ function construirFolhaExperiencia(wb: ExcelJS.Workbook, config: EspecificacaoFo
   });
 }
 
-/** Gera o workbook completo (3 folhas) a partir da configuração — PLANO.md secção 5. */
-export function gerarWorkbookDeclaracao(config: EspecificacaoFormulario): ExcelJS.Workbook {
+/**
+ * Gera o workbook do formulário: "Leia-me", "Listas" (oculta) e uma folha por
+ * perfil. Um ficheiro único, mesmo quando os perfis são vários — o candidato
+ * recebe um só anexo e preenche a folha do perfil a que se candidata.
+ */
+export function gerarWorkbookDeclaracao(especificacoes: EspecificacaoFormulario[]): ExcelJS.Workbook {
+  if (especificacoes.length === 0) {
+    throw new Error("Não há perfis para gerar o formulário.");
+  }
+
   const wb = new ExcelJS.Workbook();
   wb.creator = "Propostas";
   wb.created = new Date();
 
-  construirFolhaLeiame(wb, config);
+  const usados = new Set<string>();
+  const folhas = especificacoes.map((config) => ({
+    config,
+    nome: nomeFolhaPerfil(config.perfil, usados),
+    perfil: config.perfil,
+  }));
+
+  construirFolhaLeiame(wb, folhas);
   construirFolhaListas(wb);
-  construirFolhaExperiencia(wb, config);
+  for (const folha of folhas) construirFolhaExperiencia(wb, folha.config, folha.nome);
 
   return wb;
 }
 
-export async function gerarDeclaracaoExcelBlob(config: EspecificacaoFormulario): Promise<Blob> {
-  const wb = gerarWorkbookDeclaracao(config);
+export async function gerarDeclaracaoExcelBlob(especificacoes: EspecificacaoFormulario[]): Promise<Blob> {
+  const wb = gerarWorkbookDeclaracao(especificacoes);
   const buffer = await wb.xlsx.writeBuffer();
   return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

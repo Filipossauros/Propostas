@@ -1,8 +1,9 @@
 import { useState } from "react";
-import type { PerfilJSON } from "./core/types";
+import type { LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import { CHAVE_PERFIL, CHAVE_POR_ATRIBUIR } from "./core/persistencia";
-import { ehPerfilGuardado, perfilInicial } from "./core/perfil";
+import { CHAVE_LOTES, CHAVE_PERFIS } from "./core/persistencia";
+import { ehListaDePerfisGuardada } from "./core/perfil";
+import { lotePorPerfilId, lotesIniciais, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
@@ -11,47 +12,49 @@ import { Modulo3 } from "./modulo3/Modulo3";
 type Aba = "modulo1" | "modulo2" | "modulo3";
 
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
-  { chave: "modulo1", numero: "1", titulo: "Perfil", descricao: "Requisitos e formulário" },
+  { chave: "modulo1", numero: "1", titulo: "Perfis", descricao: "Requisitos e formulário" },
   { chave: "modulo2", numero: "2", titulo: "Lotes", descricao: "Agrupamento e preço base" },
   { chave: "modulo3", numero: "3", titulo: "Avaliação", descricao: "Apuramento das declarações" },
 ];
 
-function ehListaDePerfis(valor: unknown): valor is PerfilJSON[] {
-  return (
-    Array.isArray(valor) &&
-    valor.every((p) => {
-      if (typeof p !== "object" || p === null) return false;
-      const perfil = p as Partial<PerfilJSON>;
-      return perfil.tipo === "perfil" && perfil.schemaVersion === SCHEMA_VERSION_ATUAL;
-    })
-  );
+function ehLotesGuardado(valor: unknown): valor is LotesJSON {
+  if (typeof valor !== "object" || valor === null) return false;
+  const l = valor as Partial<LotesJSON>;
+  return l.tipo === "lotes" && l.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(l.lotes);
 }
 
 function App() {
   const [aba, setAba] = useState<Aba>("modulo1");
 
-  // Vive aqui, e não dentro do Módulo 2, para que o Módulo 1 possa entregar um
-  // perfil diretamente ao Módulo 2 sem passar por ficheiro.
-  const [porAtribuir, setPorAtribuir] = useEstadoPersistente<PerfilJSON[]>(
-    CHAVE_POR_ATRIBUIR,
-    () => [],
-    ehListaDePerfis,
-  );
+  // O catálogo de perfis e o agrupamento em lotes vivem aqui, e não dentro dos
+  // respetivos módulos, porque são partilhados: o Módulo 1 define os perfis, o
+  // Módulo 2 agrupa-os e também os pode carregar de ficheiro. Ter um só dono
+  // para cada um é o que permite que uma alteração feita num módulo se reflita
+  // no outro — ver `aplicarPerfis`.
+  const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(CHAVE_PERFIS, () => [], ehListaDePerfisGuardada);
+  const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(CHAVE_LOTES, lotesIniciais, ehLotesGuardado);
 
-  // Vive aqui, e não dentro do Módulo 1, para que o Módulo 2 possa devolver um
-  // perfil ao Módulo 1 para edição (ex.: carregado de ficheiro por engano, ou a
-  // corrigir antes de reatribuir a um lote).
-  const [perfil, setPerfil] = useEstadoPersistente<PerfilJSON>(CHAVE_PERFIL, perfilInicial, ehPerfilGuardado);
-
-  function enviarParaLotes(perfilEnviado: PerfilJSON) {
-    setPorAtribuir((atual) => [...atual, perfilEnviado]);
-    setAba("modulo2");
-    window.scrollTo({ top: 0 });
+  /**
+   * Ponto único de alteração do catálogo.
+   *
+   * Depois de atualizar os perfis, repõe-nos nos lotes onde já estejam
+   * atribuídos: é isto que torna a edição transversal, em vez de deixar o lote
+   * com uma cópia congelada dos requisitos de quando lá foi colocado.
+   */
+  function aplicarPerfis(novos: PerfilJSON[]) {
+    setPerfis(novos);
+    setLotes((atual) => sincronizarPerfisEmLotes(atual, novos));
   }
 
-  function importarParaEdicao(perfilImportado: PerfilJSON) {
-    setPerfil(perfilImportado);
-    setAba("modulo1");
+  /** Acrescenta perfis vindos de ficheiro, substituindo os que já existam com o mesmo id. */
+  function acrescentarPerfis(novos: PerfilJSON[]) {
+    const porId = new Map(perfis.map((p) => [p.id, p]));
+    for (const p of novos) porId.set(p.id, p);
+    aplicarPerfis([...porId.values()]);
+  }
+
+  function irPara(destino: Aba) {
+    setAba(destino);
     window.scrollTo({ top: 0 });
   }
 
@@ -83,12 +86,22 @@ function App() {
       </header>
 
       <main>
-        {aba === "modulo1" && <Modulo1 perfil={perfil} setPerfil={setPerfil} onEnviarParaLotes={enviarParaLotes} />}
+        {aba === "modulo1" && (
+          <Modulo1
+            perfis={perfis}
+            onAlterarPerfis={aplicarPerfis}
+            lotePorPerfilId={lotePorPerfilId(lotes)}
+            onIrParaLotes={() => irPara("modulo2")}
+          />
+        )}
         {aba === "modulo2" && (
           <Modulo2
-            porAtribuir={porAtribuir}
-            onAlterarPorAtribuir={setPorAtribuir}
-            onImportarParaEdicao={importarParaEdicao}
+            perfis={perfis}
+            config={lotes}
+            onAlterarConfig={setLotes}
+            onAcrescentarPerfis={acrescentarPerfis}
+            onSubstituirPerfis={aplicarPerfis}
+            onIrParaPerfis={() => irPara("modulo1")}
           />
         )}
         {aba === "modulo3" && <Modulo3 />}
@@ -96,7 +109,7 @@ function App() {
 
       <footer className="app-rodape">
         <p>
-          Aplicação 100% local: nenhum ficheiro sai do posto de trabalho e não há qualquer chamada de rede. O perfil e
+          Aplicação 100% local: nenhum ficheiro sai do posto de trabalho e não há qualquer chamada de rede. Os perfis e
           o agrupamento em edição são guardados neste navegador; os dados das declarações em avaliação vivem apenas em
           memória e desaparecem ao fechar o separador.
         </p>

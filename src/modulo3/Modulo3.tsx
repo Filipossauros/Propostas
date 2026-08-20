@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import type { Alerta, ConfiguracaoAvaliacao, Declaracao, LotesJSON, PerfilJSON } from "../core/types";
-import { ErroImportacao, importarPerfilJSON, lerTipoConfiguracao } from "../core/perfil";
+import { ErroImportacao, importarPerfisJSON, lerTipoConfiguracao } from "../core/perfil";
 import { importarLotesJSON } from "../core/lotes";
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { lerDeclaracaoExcel } from "../excel/ler";
@@ -104,9 +104,17 @@ export function Modulo3() {
           setMensagem({ tipo: "erro", texto: "Este agrupamento não tem perfis atribuídos a lotes." });
           return;
         }
-      } else if (tipo === "perfil") {
-        const perfil = importarPerfilJSON(texto);
-        opcoes = [{ chave: "perfil-único", etiqueta: perfil.perfil, perfil, nMinimoElementos: 1 }];
+      } else if (tipo === "perfil" || tipo === "perfis") {
+        opcoes = importarPerfisJSON(texto).map((perfil) => ({
+          chave: perfil.id,
+          etiqueta: perfil.perfil,
+          perfil,
+          nMinimoElementos: 1,
+        }));
+        if (opcoes.length === 0) {
+          setMensagem({ tipo: "erro", texto: "Este ficheiro não contém perfis." });
+          return;
+        }
       } else {
         setMensagem({ tipo: "erro", texto: `Tipo de ficheiro não reconhecido: "${tipo}".` });
         return;
@@ -201,7 +209,7 @@ export function Modulo3() {
         <header className="painel-cabecalho">
           <h3>Passo 1 · Configuração</h3>
           <p className="painel-nota">
-            Carregue o JSON do agrupamento de lotes (Módulo 2) ou de um perfil isolado (Módulo 1).
+            Carregue o JSON do agrupamento de lotes (Módulo 2) ou dos perfis (Módulo 1).
           </p>
         </header>
 
@@ -238,7 +246,7 @@ export function Modulo3() {
             <label>
               <span className="rotulo">Data limite para apresentação de propostas</span>
               <input type="date" value={dataLimite} onChange={(e) => setDataLimite(e.target.value)} aria-invalid={dataLimite === ""} />
-              <span className="ajuda">Define o fim dos projetos declarados como em curso.</span>
+              <span className="ajuda">Nenhuma experiência é admitida com data posterior a esta.</span>
             </label>
 
             <label>

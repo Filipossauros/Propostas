@@ -1,6 +1,7 @@
 import type { Lote, PerfilEmLote, PerfilJSON } from "../core/types";
 import { formatarMoeda, precoBaseEntrada, totalLote } from "../core/lotes";
 import { CampoNumero } from "../ui/CampoNumero";
+import { DicaRequisitos } from "../ui/DicaRequisitos";
 
 interface Props {
   lote: Lote;
@@ -55,7 +56,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, onDesc
             <li key={entrada.id} className="perfil-em-lote">
               <div className="perfil-em-lote-titulo">
                 <strong>{entrada.perfil.perfil || "(perfil sem designação)"}</strong>
-                <span className="meta">{entrada.perfil.requisitos.length} requisito(s)</span>
+                <DicaRequisitos requisitos={entrada.perfil.requisitos} />
               </div>
 
               <div className="perfil-em-lote-campos">

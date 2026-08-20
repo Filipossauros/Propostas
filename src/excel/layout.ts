@@ -4,7 +4,37 @@
 
 export const NOME_FOLHA_LEIAME = "Leia-me";
 export const NOME_FOLHA_LISTAS = "Listas";
+/**
+ * Nome da folha de experiência nos ficheiros de perfil único, gerados por
+ * versões anteriores. Agora cada perfil tem folha própria, com o nome dado
+ * pela sua designação — ver `nomeFolhaPerfil`.
+ */
 export const NOME_FOLHA_EXPERIENCIA = "Experiência";
+
+/** Caracteres que o Excel não admite em nomes de folha, e o limite de 31 carateres. */
+const PROIBIDOS_EM_NOME_DE_FOLHA = /[:\\/?*[\]]/g;
+const MAX_NOME_FOLHA = 31;
+
+/**
+ * Nome da folha de um perfil, derivado da sua designação.
+ *
+ * `usados` garante nomes distintos quando duas designações colidem depois de
+ * truncadas aos 31 carateres do Excel. A leitura não depende deste nome: o
+ * Módulo 3 localiza a folha pelo subtítulo, que traz a designação por inteiro.
+ */
+export function nomeFolhaPerfil(designacao: string, usados: Set<string> = new Set()): string {
+  const limpo = designacao.replace(PROIBIDOS_EM_NOME_DE_FOLHA, " ").trim() || NOME_FOLHA_EXPERIENCIA;
+  const base = limpo.slice(0, MAX_NOME_FOLHA);
+
+  let nome = base;
+  let sufixo = 2;
+  while (usados.has(nome)) {
+    const marca = ` (${sufixo++})`;
+    nome = `${base.slice(0, MAX_NOME_FOLHA - marca.length)}${marca}`;
+  }
+  usados.add(nome);
+  return nome;
+}
 
 export const LINHA_TITULO = 1;
 export const LINHA_SUBTITULO = 2;

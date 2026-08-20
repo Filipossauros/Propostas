@@ -12,34 +12,38 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
-| **1 · Perfil** | Elemento técnico | Define os requisitos mínimos de experiência de um perfil | Formulário Excel, JSON do perfil, texto para o caderno de encargos |
-| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Excel (tabela + requisitos + texto), JSON do agrupamento, formulário por perfil |
+| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
+| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, Excel do procedimento, JSON do agrupamento, formulários de declaração |
 | **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos nas declarações recebidas | Relatório Excel de 5 folhas, incluindo o traço de apuramento |
 
-Quem define o perfil não sabe ainda o número do procedimento nem como os lotes serão
-agrupados — por isso nem o Módulo 1 nem o Módulo 2 os pedem, e o formulário gerado não
-contém qualquer campo de lote. O número do procedimento aparece apenas como campo de
-identificação que o próprio candidato preenche ao entregar a declaração.
+Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
+agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
+do procedimento é sempre campo de preenchimento livre; o lote vem pré-preenchido e bloqueado
+quando o formulário é gerado a partir de um lote já definido no Módulo 2, e fica em branco
+quando é gerado no Módulo 1.
 
-No fim do Módulo 1 pode enviar o perfil diretamente para o Módulo 2, sem passar por
-ficheiro. A importação por ficheiro continua disponível no Módulo 2, para quando o
-agrupamento é feito por outra pessoa ou noutro momento.
+### Um catálogo de perfis, partilhado
+
+Os perfis vivem num único catálogo, partilhado pelos Módulos 1 e 2. Carregar um ficheiro no
+Módulo 2 acrescenta os perfis a esse catálogo, e corrigir um requisito no Módulo 1 reflete-se
+de imediato no lote onde o perfil já esteja atribuído — não há cópias a divergir. É o `id` de
+cada perfil, preservado na importação e na exportação, que sustenta essa correspondência;
+duplicar um perfil dá-lhe identidade nova, precisamente para que passe a ser outro.
 
 ## Experimentar
 
 Cada módulo tem um botão **Carregar exemplo** que preenche tudo com dados realistas.
 Os mesmos dados estão em `exemplos/` como ficheiros JSON:
 
-- `exemplos/perfil-exemplo.json` — um perfil, para o Módulo 1.
+- `exemplos/perfis-exemplo.json` — quatro perfis, para o Módulo 1.
 - `exemplos/lotes-exemplo.json` — dois lotes com quatro perfis, para os Módulos 2 e 3.
 
 São gerados a partir de `src/core/exemplo.ts` (fonte única) com `npm run exemplos`.
 
 ### Preço base
 
-O preço base de cada perfil dentro de um lote é `horas × preço unitário/hora`. O n.º mínimo
-de elementos **não** multiplica esse valor: é uma condição de admissibilidade da proposta
-(quantos currículos o concorrente tem de apresentar), não uma quantidade contratada.
+O preço base de cada perfil dentro de um lote é
+`n.º mínimo de elementos × horas × preço unitário/hora`, sem IVA.
 
 ## Princípios
 
@@ -54,7 +58,7 @@ de elementos **não** multiplica esse valor: é uma condição de admissibilidad
 
 ## Persistência
 
-O trabalho de configuração — o perfil em edição (Módulo 1) e o agrupamento de lotes
+O trabalho de configuração — o catálogo de perfis (Módulo 1) e o agrupamento de lotes
 (Módulo 2) — é guardado no `localStorage` do navegador e reaparece na sessão seguinte.
 
 As declarações carregadas no Módulo 3 **nunca** são guardadas: contêm dados pessoais de

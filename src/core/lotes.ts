@@ -118,13 +118,85 @@ export function importarLotesJSON(texto: string): LotesJSON {
     throw new ErroImportacao("O ficheiro não contém uma lista de lotes.");
   }
 
-  // A taxa de IVA e o nome do procedimento foram acrescentados depois:
-  // ficheiros anteriores não os têm.
+  // A taxa de IVA, o nome do procedimento e a identidade do perfil foram
+  // acrescentados depois: ficheiros anteriores não os têm.
   const config = bruto as unknown as LotesJSON;
   return {
     ...config,
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
     nomeProcedimento: config.nomeProcedimento ?? "",
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada) => ({
+        ...entrada,
+        perfil: {
+          ...entrada.perfil,
+          id: typeof entrada.perfil.id === "string" && entrada.perfil.id !== "" ? entrada.perfil.id : gerarId(),
+        },
+      })),
+    })),
+  };
+}
+
+/** Todos os perfis atribuídos a lotes, na ordem em que aparecem. */
+export function perfisEmLotes(config: LotesJSON): PerfilJSON[] {
+  return config.lotes.flatMap((lote) => lote.perfis.map((entrada) => entrada.perfil));
+}
+
+/**
+ * Ficheiro único com os formulários de declaração de todos os perfis atribuídos
+ * a lotes, e a informação de lote que os acompanha. É o par em JSON do ficheiro
+ * Excel dos formulários — mesma matéria, formato legível por outra aplicação.
+ */
+export function formulariosParaJSON(config: LotesJSON): string {
+  const ficheiro = {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "formularios" as const,
+    nomeProcedimento: config.nomeProcedimento,
+    formularios: config.lotes.flatMap((lote) =>
+      lote.perfis.map((entrada) => ({
+        lote: lote.numero,
+        loteDesignacao: lote.designacao,
+        perfil: entrada.perfil.perfil,
+        nBlocos: entrada.perfil.nBlocos,
+        nMinimoElementos: entrada.nMinimoElementos,
+        horas: entrada.horas,
+        valorHora: entrada.valorHora,
+        precoBase: precoBaseEntrada(entrada),
+        requisitos: entrada.perfil.requisitos,
+      })),
+    ),
+  };
+  return JSON.stringify(ficheiro, null, 2);
+}
+
+/** Número do lote a que cada perfil está atribuído, indexado pelo id do perfil. */
+export function lotePorPerfilId(config: LotesJSON): Record<string, string> {
+  const mapa: Record<string, string> = {};
+  for (const lote of config.lotes) {
+    for (const entrada of lote.perfis) mapa[entrada.perfil.id] = lote.numero;
+  }
+  return mapa;
+}
+
+/**
+ * Repõe nos lotes a versão atual de cada perfil do catálogo do Módulo 1.
+ *
+ * É isto que torna a edição transversal: alterar um requisito no Módulo 1
+ * altera-o também no lote onde o perfil já esteja atribuído. Um perfil que
+ * tenha desaparecido do catálogo é retirado do lote — deixou de existir.
+ */
+export function sincronizarPerfisEmLotes(config: LotesJSON, perfis: PerfilJSON[]): LotesJSON {
+  const porId = new Map(perfis.map((p) => [p.id, p]));
+  return {
+    ...config,
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.flatMap((entrada) => {
+        const atual = porId.get(entrada.perfil.id);
+        return atual === undefined ? [] : [{ ...entrada, perfil: atual }];
+      }),
+    })),
   };
 }
 

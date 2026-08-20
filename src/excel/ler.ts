@@ -16,7 +16,10 @@ import type {
 import { gerarId } from "../core/id";
 import {
   CAMPOS_IDENTIFICACAO,
+  LINHA_SUBTITULO,
   NOME_FOLHA_EXPERIENCIA,
+  NOME_FOLHA_LEIAME,
+  NOME_FOLHA_LISTAS,
   OFFSET_CLIENTE_PROJETO,
   OFFSET_DATAS_PROJETO,
   OFFSET_FUNCAO,
@@ -67,6 +70,30 @@ function identificacaoVazia(): Identificacao {
   return { nome: "", entidadeConcorrente: "", procedimento: "", lote: "", perfil: "" };
 }
 
+/**
+ * Localiza a folha do perfil que se está a avaliar.
+ *
+ * O formulário passou a ter uma folha por perfil, e o nome da folha é a
+ * designação truncada aos 31 carateres do Excel — não serve de chave fiável.
+ * O subtítulo, esse, traz a designação por inteiro: é por aí que se procura.
+ * As alternativas cobrem os ficheiros de perfil único das versões anteriores.
+ */
+function encontrarFolhaExperiencia(workbook: XLSX.WorkBook, perfil: string): XLSX.WorkSheet | null {
+  const candidatas = workbook.SheetNames.filter(
+    (nome) => nome !== NOME_FOLHA_LEIAME && nome !== NOME_FOLHA_LISTAS,
+  );
+
+  const alvo = perfil.trim();
+  for (const nome of candidatas) {
+    const sheet = workbook.Sheets[nome];
+    if (sheet && lerTexto(sheet, `A${LINHA_SUBTITULO}`) === alvo) return sheet;
+  }
+
+  if (workbook.Sheets[NOME_FOLHA_EXPERIENCIA]) return workbook.Sheets[NOME_FOLHA_EXPERIENCIA];
+  if (candidatas.length === 1) return workbook.Sheets[candidatas[0]] ?? null;
+  return null;
+}
+
 export interface ResultadoLeitura {
   declaracao: Declaracao;
   /** false quando a estrutura básica (folha, âncoras, requisitos) não corresponde ao esperado. */
@@ -84,12 +111,12 @@ export function lerDeclaracaoExcel(
   config: ConfiguracaoAvaliacao,
 ): ResultadoLeitura {
   const alertas: Alerta[] = [];
-  const sheet = workbook.Sheets[NOME_FOLHA_EXPERIENCIA];
+  const sheet = encontrarFolhaExperiencia(workbook, config.perfil);
 
   if (!sheet) {
     alertas.push({
       tipo: "estruturaIncompativel",
-      mensagem: `Folha "${NOME_FOLHA_EXPERIENCIA}" não encontrada no ficheiro.`,
+      mensagem: `Não foi encontrada no ficheiro a folha do perfil "${config.perfil}".`,
     });
     return {
       estruturaValida: false,

@@ -15,6 +15,7 @@ function perfil(id: string, nome: string, requisitos: Requisito[]): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
+    id,
     perfil: nome,
     nBlocos: 15,
     requisitos: requisitos.map((r) => ({ ...r, id: `${id}-${r.id}` })),

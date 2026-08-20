@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   ErroImportacao,
+  duplicarPerfil,
   gerarTextoCadernoEncargos,
-  importarPerfilJSON,
+  importarPerfisJSON,
   lerTipoConfiguracao,
-  perfilParaJSON,
+  perfisParaJSON,
   validarPerfil,
+  validarPerfis,
 } from "./perfil";
 import { lotesParaJSON } from "./lotes";
 import { lotesComPerfis, perfil, requisito } from "./fixtures";
@@ -40,30 +42,79 @@ describe("validarPerfil", () => {
   });
 });
 
-describe("importação/exportação de perfil", () => {
-  it("repõe o estado completo (ida e volta)", () => {
-    const original = perfil();
-    expect(importarPerfilJSON(perfilParaJSON(original))).toEqual(original);
+describe("validarPerfis", () => {
+  it("aceita um conjunto de perfis distintos", () => {
+    expect(validarPerfis([perfil({ perfil: "A" }), perfil({ perfil: "B" })])).toHaveLength(0);
+  });
+
+  it("exige pelo menos um perfil", () => {
+    expect(validarPerfis([]).some((e) => e.campo === "perfis")).toBe(true);
+  });
+
+  it("rejeita designações de perfil repetidas — é a designação que dá nome à folha", () => {
+    const erros = validarPerfis([perfil({ perfil: "Igual" }), perfil({ perfil: "Igual" })]);
+    expect(erros.some((e) => e.mensagem.includes("repetida"))).toBe(true);
+  });
+
+  it("propaga os erros de cada perfil, identificando-o", () => {
+    const erros = validarPerfis([perfil({ perfil: "Analista", requisitos: [] })]);
+    expect(erros.some((e) => e.mensagem.startsWith("Analista:"))).toBe(true);
+  });
+});
+
+describe("duplicarPerfil", () => {
+  it("dá identidade nova ao perfil e aos seus requisitos", () => {
+    const original = perfil({ requisitos: [requisito("r1", 12, "Java")] });
+    const copia = duplicarPerfil(original);
+
+    expect(copia.id).not.toBe(original.id);
+    expect(copia.requisitos[0].id).not.toBe(original.requisitos[0].id);
+    expect(copia.requisitos[0].designacao).toBe("Java");
+  });
+
+  it("distingue a cópia pela designação, para não colidir com o original", () => {
+    expect(duplicarPerfil(perfil({ perfil: "Analista" })).perfil).toBe("Analista (cópia)");
+  });
+});
+
+describe("importação/exportação de perfis", () => {
+  it("repõe o estado completo (ida e volta), com vários perfis", () => {
+    const originais = [perfil({ perfil: "A" }), perfil({ perfil: "B" })];
+    expect(importarPerfisJSON(perfisParaJSON(originais))).toEqual(originais);
+  });
+
+  it("aceita um ficheiro de perfil isolado, das versões anteriores", () => {
+    const isolado = JSON.stringify(perfil({ perfil: "Antigo" }));
+    expect(importarPerfisJSON(isolado).map((p) => p.perfil)).toEqual(["Antigo"]);
+  });
+
+  it("dá identidade a um perfil de ficheiro anterior, que não a tinha", () => {
+    const semId = { ...perfil({ perfil: "Sem id" }) } as Record<string, unknown>;
+    delete semId.id;
+
+    const [importado] = importarPerfisJSON(JSON.stringify(semId));
+    expect(typeof importado.id).toBe("string");
+    expect(importado.id).not.toBe("");
   });
 
   it("rejeita schemaVersion desconhecida", () => {
     const antigo = JSON.stringify({ ...perfil(), schemaVersion: "1.0" });
-    expect(() => importarPerfilJSON(antigo)).toThrow(ErroImportacao);
+    expect(() => importarPerfisJSON(antigo)).toThrow(ErroImportacao);
   });
 
   it("rejeita JSON inválido", () => {
-    expect(() => importarPerfilJSON("{ isto não é json")).toThrow(ErroImportacao);
+    expect(() => importarPerfisJSON("{ isto não é json")).toThrow(ErroImportacao);
   });
 
   it("rejeita um ficheiro de lotes carregado como perfil", () => {
     const lotes = lotesParaJSON(lotesComPerfis([{ numero: "1", perfis: [perfil()] }]));
-    expect(() => importarPerfilJSON(lotes)).toThrow(/não um perfil/i);
+    expect(() => importarPerfisJSON(lotes)).toThrow(/não um perfil/i);
   });
 });
 
 describe("lerTipoConfiguracao", () => {
-  it("distingue perfil de lotes", () => {
-    expect(lerTipoConfiguracao(perfilParaJSON(perfil()))).toBe("perfil");
+  it("distingue perfis de lotes", () => {
+    expect(lerTipoConfiguracao(perfisParaJSON([perfil()]))).toBe("perfis");
     expect(lerTipoConfiguracao(lotesParaJSON(lotesComPerfis([{ numero: "1", perfis: [perfil()] }])))).toBe("lotes");
   });
 });

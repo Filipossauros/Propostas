@@ -45,7 +45,7 @@ export function mesesDeAnos(anos: number): number {
 // --------------------------------------------------------------------------
 
 /**
- * Saída do Módulo 1.
+ * Um perfil do Módulo 1.
  *
  * Não contém procedimento nem lote: nesta fase pré-contratual nenhum dos dois
  * existe ainda. O número do procedimento aparece apenas no formulário entregue
@@ -54,10 +54,28 @@ export function mesesDeAnos(anos: number): number {
 export interface PerfilJSON {
   schemaVersion: string;
   tipo: "perfil";
+  /**
+   * Identidade estável do perfil, atribuída na criação e preservada na
+   * importação/exportação. É o que permite que uma alteração aos requisitos
+   * feita no Módulo 1 se propague ao mesmo perfil já atribuído a um lote.
+   */
+  id: string;
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
   perfil: string;
   nBlocos: number;
   requisitos: Requisito[];
+}
+
+/**
+ * Saída do Módulo 1: um ficheiro único com todos os perfis definidos.
+ *
+ * A importação continua a aceitar ficheiros de perfil isolado (`tipo: "perfil"`),
+ * gerados por versões anteriores, e admite carregar vários ficheiros de uma vez.
+ */
+export interface PerfisJSON {
+  schemaVersion: string;
+  tipo: "perfis";
+  perfis: PerfilJSON[];
 }
 
 /** O que o gerador do formulário Excel precisa de saber. */

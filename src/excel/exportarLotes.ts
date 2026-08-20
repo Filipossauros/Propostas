@@ -8,7 +8,7 @@ import ExcelJS from "exceljs";
 import type { LotesJSON } from "../core/types";
 import { formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "../core/lotes";
 import { agruparPorExigencia } from "../core/perfil";
-import { documentoCadernoEncargos, documentoProgramaConcurso } from "../core/cadernoEncargos";
+import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { documentoParaTexto } from "../core/documento";
 
 const AZUL = "FF1F4E78";
@@ -205,8 +205,7 @@ export function construirWorkbookLotes(config: LotesJSON): ExcelJS.Workbook {
 
   folhaPrecoBase(wb, config);
   folhaRequisitos(wb, config);
-  folhaTexto(wb, "Caderno de encargos", documentoParaTexto(documentoCadernoEncargos(config)));
-  folhaTexto(wb, "Programa do concurso", documentoParaTexto(documentoProgramaConcurso(config)));
+  folhaTexto(wb, "Regras", documentoParaTexto(documentoRegrasEPrecoBase(config)));
 
   return wb;
 }

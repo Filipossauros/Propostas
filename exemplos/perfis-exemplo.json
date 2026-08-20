@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "2.0",
+  "tipo": "perfis",
+  "perfis": [
+    {
+      "schemaVersion": "2.0",
+      "tipo": "perfil",
+      "id": "p1",
+      "perfil": "Programador Sénior — Java",
+      "nBlocos": 15,
+      "requisitos": [
+        {
+          "id": "p1-r1",
+          "designacao": "Desenvolvimento de software (geral)",
+          "mesesMinimos": 120
+        },
+        {
+          "id": "p1-r2",
+          "designacao": "Java (versão 8 ou superior)",
+          "mesesMinimos": 60
+        },
+        {
+          "id": "p1-r3",
+          "designacao": "Desenvolvimento de APIs REST",
+          "mesesMinimos": 36
+        }
+      ]
+    },
+    {
+      "schemaVersion": "2.0",
+      "tipo": "perfil",
+      "id": "p2",
+      "perfil": "Programador Front-end",
+      "nBlocos": 15,
+      "requisitos": [
+        {
+          "id": "p2-r1",
+          "designacao": "Desenvolvimento de software (geral)",
+          "mesesMinimos": 60
+        },
+        {
+          "id": "p2-r2",
+          "designacao": "React",
+          "mesesMinimos": 36
+        },
+        {
+          "id": "p2-r3",
+          "designacao": "Acessibilidade web (WCAG)",
+          "mesesMinimos": 24
+        }
+      ]
+    },
+    {
+      "schemaVersion": "2.0",
+      "tipo": "perfil",
+      "id": "p3",
+      "perfil": "Arquiteto de Integração",
+      "nBlocos": 15,
+      "requisitos": [
+        {
+          "id": "p3-r1",
+          "designacao": "Desenvolvimento de software (geral)",
+          "mesesMinimos": 120
+        },
+        {
+          "id": "p3-r2",
+          "designacao": "Integração de sistemas de informação",
+          "mesesMinimos": 60
+        },
+        {
+          "id": "p3-r3",
+          "designacao": "Normas de interoperabilidade em saúde (HL7 / FHIR)",
+          "mesesMinimos": 36
+        }
+      ]
+    },
+    {
+      "schemaVersion": "2.0",
+      "tipo": "perfil",
+      "id": "p4",
+      "perfil": "Engenheiro de Dados",
+      "nBlocos": 15,
+      "requisitos": [
+        {
+          "id": "p4-r1",
+          "designacao": "Modelação e exploração de bases de dados relacionais",
+          "mesesMinimos": 60
+        },
+        {
+          "id": "p4-r2",
+          "designacao": "Processos de extração, transformação e carregamento (ETL)",
+          "mesesMinimos": 36
+        }
+      ]
+    }
+  ]
+}

@@ -22,10 +22,13 @@ export function requisito(id = "r1", mesesMinimos = 12, designacao = `Requisito 
   return { id, designacao, mesesMinimos };
 }
 
+let proximoIdPerfil = 1;
+
 export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
+    id: `perfil-${proximoIdPerfil++}`,
     perfil: "Perfil Teste",
     nBlocos: 3,
     requisitos: [requisito()],

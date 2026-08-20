@@ -103,18 +103,14 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
   });
 }
 
-/** Anexo técnico: requisitos por lote e perfil, mais o preço base. */
-export function documentoCadernoEncargos(config: LotesJSON): Documento {
-  return {
-    titulo: "Requisitos mínimos de experiência profissional e preço base",
-    subtitulo: "Conteúdo para o Caderno de Encargos e respetivo Anexo Técnico",
-    blocos: [
-      { tipo: "titulo", nivel: 1, texto: "Preço base" },
-      tabelaPrecoBase(config),
-      { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
-      ...blocosDeRequisitos(config),
-    ],
-  };
+/** Preço base e requisitos por lote e perfil. */
+function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Preço base" },
+    tabelaPrecoBase(config),
+    { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
+    ...blocosDeRequisitos(config),
+  ];
 }
 
 // --------------------------------------------------------------------------
@@ -134,11 +130,19 @@ function descricaoBlocos(config: LotesJSON): string {
   return "Cada formulário comporta o número de blocos de projeto nele previsto.";
 }
 
-/** Regras de comprovação e apuramento, em secções e não em artigos. */
-export function documentoProgramaConcurso(config: LotesJSON): Documento {
+/**
+ * Documento único do procedimento: preço base, requisitos e regras.
+ *
+ * Um só título — o das regras — e todo o resto em secções debaixo dele. As
+ * regras vão em secções e não em artigos: a numeração e a inserção sistemática
+ * ficam para a redação das peças.
+ */
+export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
   return {
     titulo: "Regras de comprovação e apuramento da experiência profissional",
     blocos: [
+      ...blocosPrecoBaseERequisitos(config),
+
       { tipo: "titulo", nivel: 1, texto: "Comprovação da experiência profissional" },
       {
         tipo: "lista",
@@ -147,7 +151,8 @@ export function documentoProgramaConcurso(config: LotesJSON): Documento {
           "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o formulário de declaração de experiência profissional, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
           "O formulário é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica qualificada, não sendo admissível a sua substituição por assinatura do representante do concorrente.",
           `${descricaoBlocos(config)} Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do formulário quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
-          "Em cada bloco de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter obrigatoriamente a indicação «SIM» ou «NÃO», não sendo admitidos campos por preencher.",
+          "Em cada bloco de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
+          "O formulário não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
           "O formulário de declaração de experiência profissional deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido formulário deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica qualificada.",
           "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
         ],
@@ -184,6 +189,7 @@ export function documentoProgramaConcurso(config: LotesJSON): Documento {
         itens: [
           "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
           "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
+          "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
           "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
           "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo bloco.",
           "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos — apenas o mês ou apenas o ano, de início ou de fim —, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
