@@ -14,7 +14,8 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 |---|---|---|---|
 | **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
 | **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
-| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente |
+| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
+| **4 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 3, mais a ordenação de cada lote e os vencedores |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
 agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
@@ -53,17 +54,25 @@ decorrer não é experiência adquirida. O formulário Excel trava-a na validaç
 impô-la no apuramento — é este último que decide, porque a validação do Excel
 pode sempre ser contornada.
 
-**Um lote por concorrente**, quando ativada no Módulo 2. Os lotes são
-apreciados por ordem crescente do número: quem fica com o lote 1 é marcado
-como impedido nos seguintes, mesmo cumprindo todos os requisitos. A regra sai
-no documento Word com título próprio e é aplicada na avaliação.
+**Um lote por concorrente**, quando ativada no Módulo 2. A regra sai no
+documento Word com título próprio, e é aplicada em dois tempos, porque em dois
+tempos chega a informação de que depende:
+
+- No **Módulo 3** ainda não há preço — o formulário de declaração não o traz —,
+  pelo que não se pode dizer quem fica com o quê. Assinala-se apenas o
+  *impedimento potencial*: quem é admitido em mais do que um lote só pode ficar
+  com um deles. Ninguém é excluído por esta via.
+- No **Módulo 4**, com os preços na mão, os lotes decidem-se pela ordem
+  crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
+  que aí apresente o preço mais baixo.
 
 ### O que não passa pelo Excel
 
 O **conteúdo funcional** e as **certificações** de um perfil saem apenas no
-documento Word, cada um em tabela própria por baixo dos requisitos — as
-certificações uma por linha, como os requisitos, porque cada uma é exigência
-autónoma e vírgulas fazem parte do nome ("Oracle Certified Professional, Java SE"). Nenhum dos
+documento Word, cada um em tabela própria por baixo dos requisitos. Ambos são
+listas, uma entrada por linha, como os requisitos: cada atividade e cada
+certificação é uma unidade autónoma, e vírgulas e pontos e vírgulas fazem parte
+do nome ("Oracle Certified Professional, Java SE") em vez de o separarem. Nenhum dos
 dois é matéria que o candidato declare no formulário: o primeiro descreve o
 trabalho a contratar, e a certificação verifica-se contra as peças da proposta,
 fora desta ferramenta. Pedi-los em Excel só produziria respostas que ninguém
@@ -89,8 +98,11 @@ perfil que a exija — chamada de atenção, não verificação.
 O trabalho de configuração — o catálogo de perfis (Módulo 1) e o agrupamento de lotes
 (Módulo 2) — é guardado no `localStorage` do navegador e reaparece na sessão seguinte.
 
-As declarações carregadas no Módulo 3 **nunca** são guardadas: contêm dados pessoais de
-candidatos e vivem apenas em memória, desaparecendo ao fechar o separador.
+As declarações carregadas no Módulo 3, o apuramento que delas resulta e os preços
+indicados no Módulo 4 **nunca** são guardados: contêm dados pessoais de candidatos
+e matéria de proposta, e vivem apenas em memória, desaparecendo ao fechar o
+separador. O mesmo vale para o JSON de resultados e para o relatório Excel — são
+descarregamentos deliberados, e devem ser guardados com o cuidado devido.
 
 ## Desenvolvimento
 
@@ -108,7 +120,7 @@ npm run build    # build de produção (pasta dist/)
   O vocabulário visual dos dois ficheiros gerados vive em `src/excel/estilo.ts`: é a partilha
   que os faz parecer da mesma casa.
 - `src/pdf/` — comparador PDF ↔ Excel (pdf.js).
-- `src/modulo1/`, `src/modulo2/`, `src/modulo3/` — interface de cada módulo.
+- `src/modulo1/` … `src/modulo4/` — interface de cada módulo.
 - `src/ui/` — componentes partilhados.
 
 ## Implantação (GitHub Pages)

@@ -1,6 +1,6 @@
 // Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
-import type { Certificacao, PerfilJSON, PerfisJSON, Requisito } from "./types";
+import type { ItemPerfil, PerfilJSON, PerfisJSON, Requisito } from "./types";
 import { MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
 import { gerarId } from "./id";
 
@@ -16,7 +16,7 @@ export function perfilInicial(): PerfilJSON {
     id: gerarId(),
     perfil: "",
     nBlocos: 15,
-    conteudoFuncional: "",
+    conteudoFuncional: [],
     certificacoes: [],
     requisitos: [],
   };
@@ -33,6 +33,7 @@ export function duplicarPerfil(perfil: PerfilJSON): PerfilJSON {
     id: gerarId(),
     perfil: `${perfil.perfil} (cópia)`,
     requisitos: perfil.requisitos.map((r) => ({ ...r, id: gerarId() })),
+    conteudoFuncional: perfil.conteudoFuncional.map((a) => ({ ...a, id: gerarId() })),
     certificacoes: perfil.certificacoes.map((c) => ({ ...c, id: gerarId() })),
   };
 }
@@ -99,14 +100,19 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
   if (!Number.isInteger(perfil.nBlocos) || perfil.nBlocos < 1) {
     erros.push({ campo: "nBlocos", mensagem: "O n.º de blocos deve ser um inteiro ≥ 1." });
   }
-  if (perfil.conteudoFuncional.trim() === "") {
+  if (perfil.conteudoFuncional.length === 0) {
     erros.push({ campo: "conteudoFuncional", mensagem: "Descreva o conteúdo funcional do perfil." });
   }
   if (perfil.requisitos.length === 0) {
     erros.push({ campo: "requisitos", mensagem: "Defina pelo menos um requisito." });
   }
 
-  return [...erros, ...validarRequisitos(perfil.requisitos), ...validarCertificacoes(perfil.certificacoes)];
+  return [
+    ...erros,
+    ...validarRequisitos(perfil.requisitos),
+    ...validarItens(perfil.conteudoFuncional, "conteudoFuncional", "atividade"),
+    ...validarItens(perfil.certificacoes, "certificacoes", "certificação"),
+  ];
 }
 
 /**
@@ -184,13 +190,14 @@ function verificarSchemaVersion(bruto: Record<string, unknown>): void {
 }
 
 /**
- * Certificações vindas de ficheiro.
+ * Uma lista de itens vinda de ficheiro.
  *
- * Ficheiros gerados antes de as certificações serem uma lista trazem-nas como
- * uma frase separada por ponto e vírgula: converte-se, para que continuem a
- * abrir. Também se aceita a lista, com id novo quando o ficheiro não o traz.
+ * Ficheiros gerados antes de o conteúdo funcional e as certificações serem
+ * listas trazem-nos como uma frase separada por ponto e vírgula: converte-se,
+ * para que continuem a abrir. Também se aceita a lista, com id novo quando o
+ * ficheiro não o traz.
  */
-function normalizarCertificacoes(bruto: unknown): Certificacao[] {
+function normalizarItens(bruto: unknown): ItemPerfil[] {
   if (typeof bruto === "string") {
     return itensSeparados(bruto).map((designacao) => ({ id: gerarId(), designacao }));
   }
@@ -199,10 +206,10 @@ function normalizarCertificacoes(bruto: unknown): Certificacao[] {
   return bruto
     .map((c) => {
       if (typeof c === "string") return { id: gerarId(), designacao: c };
-      const certificacao = c as Partial<Certificacao>;
+      const item = c as Partial<ItemPerfil>;
       return {
-        id: typeof certificacao.id === "string" && certificacao.id !== "" ? certificacao.id : gerarId(),
-        designacao: typeof certificacao.designacao === "string" ? certificacao.designacao : "",
+        id: typeof item.id === "string" && item.id !== "" ? item.id : gerarId(),
+        designacao: typeof item.designacao === "string" ? item.designacao : "",
       };
     })
     .filter((c) => c.designacao.trim() !== "");
@@ -222,8 +229,8 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
     ...perfil,
     tipo: "perfil",
     id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
-    conteudoFuncional: typeof perfil.conteudoFuncional === "string" ? perfil.conteudoFuncional : "",
-    certificacoes: normalizarCertificacoes((bruto as { certificacoes?: unknown }).certificacoes),
+    conteudoFuncional: normalizarItens((bruto as { conteudoFuncional?: unknown }).conteudoFuncional),
+    certificacoes: normalizarItens((bruto as { certificacoes?: unknown }).certificacoes),
   };
 }
 
@@ -287,36 +294,42 @@ export function itensSeparados(texto: string): string[] {
     .filter((i) => i !== "");
 }
 
-/**
- * Designações das certificações exigidas pelo perfil, sem as entradas em
- * branco. Lista vazia quando o perfil não exige nenhuma, que é o caso da
- * maioria.
- */
-export function certificacoesDoPerfil(perfil: PerfilJSON): string[] {
-  return (perfil.certificacoes ?? []).map((c) => c.designacao.trim()).filter((d) => d !== "");
+/** Designações de uma lista do perfil, sem as entradas em branco. */
+export function designacoesDe(itens: ItemPerfil[] | undefined): string[] {
+  return (itens ?? []).map((i) => i.designacao.trim()).filter((d) => d !== "");
 }
 
 /**
- * Valida as certificações de um perfil. O campo é opcional — nenhuma
- * certificação é situação normal —, mas uma linha criada e deixada em branco,
- * ou repetida, é engano de preenchimento.
+ * Designações das certificações exigidas pelo perfil. Lista vazia quando o
+ * perfil não exige nenhuma, que é o caso da maioria.
  */
-export function validarCertificacoes(certificacoes: Certificacao[]): ErroValidacao[] {
+export function certificacoesDoPerfil(perfil: PerfilJSON): string[] {
+  return designacoesDe(perfil.certificacoes);
+}
+
+/** Atividades do conteúdo funcional do perfil. */
+export function conteudoFuncionalDoPerfil(perfil: PerfilJSON): string[] {
+  return designacoesDe(perfil.conteudoFuncional);
+}
+
+/**
+ * Valida uma lista de itens do perfil. Uma linha criada e deixada em branco,
+ * ou repetida, é engano de preenchimento — mesmo quando a lista, no todo, é
+ * opcional.
+ */
+export function validarItens(itens: ItemPerfil[], campo: string, nome: string): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   const vistas = new Set<string>();
 
-  certificacoes.forEach((c, idx) => {
-    const designacao = c.designacao.trim();
+  itens.forEach((item, idx) => {
+    const designacao = item.designacao.trim();
     if (designacao === "") {
       erros.push({
-        campo: `certificacoes[${idx}].designacao`,
-        mensagem: "A designação da certificação não pode ficar vazia. Remova a linha se não for exigida.",
+        campo: `${campo}[${idx}].designacao`,
+        mensagem: `A designação da ${nome} não pode ficar vazia. Remova a linha se não for necessária.`,
       });
     } else if (vistas.has(designacao)) {
-      erros.push({
-        campo: `certificacoes[${idx}].designacao`,
-        mensagem: `Certificação repetida: "${designacao}".`,
-      });
+      erros.push({ campo: `${campo}[${idx}].designacao`, mensagem: `Entrada repetida: "${designacao}".` });
     } else {
       vistas.add(designacao);
     }

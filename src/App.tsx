@@ -8,13 +8,15 @@ import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
+import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 
-type Aba = "modulo1" | "modulo2" | "modulo3";
+type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4";
 
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
   { chave: "modulo1", numero: "1", titulo: "Perfis", descricao: "Requisitos e formulário" },
   { chave: "modulo2", numero: "2", titulo: "Lotes", descricao: "Agrupamento e preço base" },
   { chave: "modulo3", numero: "3", titulo: "Avaliação", descricao: "Apuramento das declarações" },
+  { chave: "modulo4", numero: "4", titulo: "Ordenação", descricao: "Preço e classificação" },
 ];
 
 function ehLotesGuardado(valor: unknown): valor is LotesJSON {
@@ -25,6 +27,11 @@ function ehLotesGuardado(valor: unknown): valor is LotesJSON {
 
 function App() {
   const [aba, setAba] = useState<Aba>("modulo1");
+
+  // O apuramento entregue pelo Módulo 3 ao Módulo 4 vive aqui, em memória e
+  // nunca no navegador: traz as declarações dos candidatos, que são dados
+  // pessoais e desaparecem ao fechar o separador.
+  const [apuramentoParaOrdenar, setApuramentoParaOrdenar] = useState<Apuramento | null>(null);
 
   // O catálogo de perfis e o agrupamento em lotes vivem aqui, e não dentro dos
   // respetivos módulos, porque são partilhados: o Módulo 1 define os perfis, o
@@ -124,7 +131,18 @@ function App() {
             onSubstituirPerfis={aplicarPerfis}
           />
         )}
-        {aba === "modulo3" && <Modulo3 />}
+        {aba === "modulo3" && (
+          <Modulo3
+            onIrParaOrdenacao={(resultado, config) => {
+              setApuramentoParaOrdenar({ resultado, config });
+              irPara("modulo4");
+            }}
+          />
+        )}
+
+        {aba === "modulo4" && (
+          <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
+        )}
       </main>
     </div>
   );

@@ -6,7 +6,7 @@
 // são feitas depois, na redação do procedimento.
 
 import type { LotesJSON, PerfilJSON } from "./types";
-import { agruparPorExigencia, certificacoesDoPerfil, itensSeparados } from "./perfil";
+import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
 import { celula, type BlocoDocumento, type Documento } from "./documento";
 
@@ -67,13 +67,11 @@ function tabelaPrecoBase(config: LotesJSON): BlocoDocumento {
 /**
  * Conteúdo funcional do perfil, uma atividade por linha.
  *
- * O texto é registado como uma frase com atividades separadas por ponto e
- * vírgula; aqui separa-se em linhas, que é como se lê num anexo técnico. Fica
- * logo abaixo da tabela de requisitos do mesmo perfil, e nunca sai em Excel:
- * descreve o trabalho a contratar, não algo que o candidato declare.
+ * Fica logo abaixo da tabela de requisitos do mesmo perfil, e nunca sai em
+ * Excel: descreve o trabalho a contratar, não algo que o candidato declare.
  */
-function tabelaConteudoFuncional(conteudoFuncional: string): BlocoDocumento[] {
-  const atividades = itensSeparados(conteudoFuncional);
+function tabelaConteudoFuncional(perfil: PerfilJSON): BlocoDocumento[] {
+  const atividades = conteudoFuncionalDoPerfil(perfil);
   if (atividades.length === 0) return [];
 
   return [
@@ -143,7 +141,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
         ),
       },
       ...tabelaCertificacoes(entrada.perfil),
-      ...tabelaConteudoFuncional(entrada.perfil.conteudoFuncional),
+      ...tabelaConteudoFuncional(entrada.perfil),
     ]);
 
     return [cabecalho, ...perfis];

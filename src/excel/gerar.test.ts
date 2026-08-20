@@ -213,7 +213,7 @@ describe("matéria que não chega ao formulário", () => {
     const texto = textoDoLivro(wb);
 
     for (const p of PERFIS_EXEMPLO) {
-      expect(texto).not.toContain(p.conteudoFuncional.split(";")[0].trim());
+      for (const atividade of p.conteudoFuncional) expect(texto).not.toContain(atividade.designacao);
     }
   });
 });

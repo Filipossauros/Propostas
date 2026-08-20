@@ -15,7 +15,7 @@ function req(id: string, designacao: string, mesesMinimos: number): Requisito {
 function perfil(
   id: string,
   nome: string,
-  conteudoFuncional: string,
+  conteudoFuncional: string[],
   requisitos: Requisito[],
   /** Campo opcional: só dois dos perfis do exemplo exigem certificação. */
   certificacoes: string[] = [],
@@ -26,31 +26,51 @@ function perfil(
     id,
     perfil: nome,
     nBlocos: 15,
-    conteudoFuncional,
+    conteudoFuncional: conteudoFuncional.map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
     certificacoes: certificacoes.map((designacao, i) => ({ id: `${id}-c${i + 1}`, designacao })),
     requisitos: requisitos.map((r) => ({ ...r, id: `${id}-${r.id}` })),
   };
 }
 
-export const PERFIL_EXEMPLO: PerfilJSON = perfil("p1", "Programador Sénior — Java", "Desenho e implementação de componentes aplicacionais em Java; Definição de APIs REST e respetiva documentação; Revisão de código e apoio técnico à equipa; Diagnóstico e correção de incidentes em produção.", [
+export const PERFIL_EXEMPLO: PerfilJSON = perfil("p1", "Programador Sénior — Java", [
+  "Desenho e implementação de componentes aplicacionais em Java",
+  "Definição de APIs REST e respetiva documentação",
+  "Revisão de código e apoio técnico à equipa",
+  "Diagnóstico e correção de incidentes em produção",
+], [
   req("r1", "Desenvolvimento de software (geral)", 120),
   req("r2", "Java (versão 8 ou superior)", 60),
   req("r3", "Desenvolvimento de APIs REST", 36),
 ], ["Oracle Certified Professional, Java SE Programmer"]);
 
-const PERFIL_FRONTEND = perfil("p2", "Programador Front-end", "Implementação de interfaces web a partir de especificações de desenho; Garantia de conformidade com as normas de acessibilidade; Escrita de testes de interface; Articulação com as equipas de back-end.", [
+const PERFIL_FRONTEND = perfil("p2", "Programador Front-end", [
+  "Implementação de interfaces web a partir de especificações de desenho",
+  "Garantia de conformidade com as normas de acessibilidade",
+  "Escrita de testes de interface",
+  "Articulação com as equipas de back-end",
+], [
   req("r1", "Desenvolvimento de software (geral)", 60),
   req("r2", "React", 36),
   req("r3", "Acessibilidade web (WCAG)", 24),
 ]);
 
-const PERFIL_INTEGRACAO = perfil("p3", "Arquiteto de Integração", "Análise e levantamento de requisitos funcionais, não funcionais e de negócio; Caracterização de fluxos de informação e processos; Elaboração de casos de uso e documentação funcional de projeto; Realização de formações na ótica do utilizador.", [
+const PERFIL_INTEGRACAO = perfil("p3", "Arquiteto de Integração", [
+  "Análise e levantamento de requisitos funcionais, não funcionais e de negócio",
+  "Caracterização de fluxos de informação e processos",
+  "Elaboração de casos de uso e documentação funcional de projeto",
+  "Realização de formações na ótica do utilizador",
+], [
   req("r1", "Desenvolvimento de software (geral)", 120),
   req("r2", "Integração de sistemas de informação", 60),
   req("r3", "Normas de interoperabilidade em saúde (HL7 / FHIR)", 36),
 ], ["HL7 FHIR Foundation (HL7 International)", "TOGAF Enterprise Architecture Foundation"]);
 
-const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", "Modelação de dados e otimização de consultas; Construção e manutenção de processos de extração, transformação e carregamento; Monitorização da qualidade dos dados; Preparação de conjuntos de dados para análise.", [
+const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
+  "Modelação de dados e otimização de consultas",
+  "Construção e manutenção de processos de extração, transformação e carregamento",
+  "Monitorização da qualidade dos dados",
+  "Preparação de conjuntos de dados para análise",
+], [
   req("r1", "Modelação e exploração de bases de dados relacionais", 60),
   req("r2", "Processos de extração, transformação e carregamento (ETL)", 36),
 ]);

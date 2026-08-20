@@ -48,34 +48,43 @@ describe("avaliarProcedimento", () => {
 });
 
 describe("limitação de um lote por concorrente", () => {
-  it("impede quem já ficou com um lote de ficar com o seguinte", () => {
+  it("assinala como potencial o impedimento de quem cumpre mais do que um lote", () => {
     const resultado = avaliar(LOTES_EXEMPLO);
 
-    // A Alfa cumpre os dois lotes, mas só fica com o primeiro.
-    expect(concorrente(resultado, "1", "Alfa").admitido).toBe(true);
-    const alfaNoDois = concorrente(resultado, "2", "Alfa");
-    expect(alfaNoDois.cumpreRequisitos).toBe(true);
-    expect(alfaNoDois.impedidoPeloLote).toBe("1");
-    expect(alfaNoDois.admitido).toBe(false);
+    // A Alfa cumpre os dois lotes. Qual deles fica por decidir: depende do
+    // preço, que não consta do formulário de declaração.
+    expect(concorrente(resultado, "1", "Alfa").potencialImpedimento).toEqual(["2"]);
+    expect(concorrente(resultado, "2", "Alfa").potencialImpedimento).toEqual(["1"]);
   });
 
-  it("deixa o lote seguinte para quem não ficou com nenhum", () => {
+  it("não exclui ninguém: quem cumpre é admitido em todos os lotes em que cumpre", () => {
     const resultado = avaliar(LOTES_EXEMPLO);
-    expect(concorrente(resultado, "2", "Beta").admitido).toBe(true);
-  });
-
-  it("sem a limitação, o mesmo concorrente fica com os dois lotes", () => {
-    const semLimite: LotesJSON = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
-    const resultado = avaliar(semLimite, declaracoesExemplo(semLimite));
 
     expect(concorrente(resultado, "1", "Alfa").admitido).toBe(true);
     expect(concorrente(resultado, "2", "Alfa").admitido).toBe(true);
-    expect(concorrente(resultado, "2", "Alfa").impedidoPeloLote).toBeNull();
+    expect(concorrente(resultado, "2", "Beta").admitido).toBe(true);
   });
 
-  it("dentro do mesmo lote nenhum concorrente impede outro", () => {
+  it("quem só cumpre um lote não tem impedimento a assinalar", () => {
     const resultado = avaliar(LOTES_EXEMPLO);
-    const noPrimeiro = noLote(resultado, "1").concorrentes;
-    expect(noPrimeiro.every((c) => c.impedidoPeloLote === null)).toBe(true);
+
+    // A Beta fica aquém no lote 1, pelo que só cumpre o lote 2.
+    expect(concorrente(resultado, "1", "Beta").cumpreRequisitos).toBe(false);
+    expect(concorrente(resultado, "2", "Beta").potencialImpedimento).toEqual([]);
+  });
+
+  it("não assinala impedimento no lote onde o concorrente nem sequer é admitido", () => {
+    const resultado = avaliar(LOTES_EXEMPLO);
+
+    // A Beta não é admitida no lote 1: cumprir o lote 2 não lhe tira nada aqui.
+    expect(concorrente(resultado, "1", "Beta").admitido).toBe(false);
+    expect(concorrente(resultado, "1", "Beta").potencialImpedimento).toEqual([]);
+  });
+
+  it("sem a limitação, não há impedimento nenhum a assinalar", () => {
+    const semLimite: LotesJSON = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
+    const resultado = avaliar(semLimite, declaracoesExemplo(semLimite));
+
+    expect(concorrente(resultado, "2", "Alfa").potencialImpedimento).toEqual([]);
   });
 });

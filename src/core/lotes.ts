@@ -214,12 +214,13 @@ export function perfisComCertificacao(config: LotesJSON): PerfilComCertificacao[
 }
 
 /**
- * Chamada de atenção a apresentar por cada perfil que exija certificação.
- * Texto fixo: é o que o júri tem de ler, e não uma paráfrase por caso.
+ * Chamada de atenção das certificações. Dita uma só vez, e não por perfil: é o
+ * mesmo aviso para todos, e repeti-lo linha a linha ocupava a página sem
+ * acrescentar nada. Os perfis a que respeita ficam listados por baixo.
  */
 export const AVISO_CERTIFICACAO =
-  "Além dos requisitos mínimos verificados, este perfil requer ainda a apresentação de uma certificação. " +
-  "Deve ser validada a apresentação da mesma nas peças da proposta.";
+  "Além dos requisitos mínimos verificados, este(s) perfil(is) requer(em) ainda a apresentação de uma " +
+  "certificação. Deve ser validada a apresentação da mesma nas peças da proposta.";
 
 /** Número do lote a que cada perfil está atribuído, indexado pelo id do perfil. */
 export function lotePorPerfilId(config: LotesJSON): Record<string, string> {

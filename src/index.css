@@ -836,6 +836,35 @@ button:disabled {
   color: var(--texto-suave);
 }
 
+/* A dica do apuramento é uma conta, e lê-se como tal: parcelas em cima,
+   total em baixo, separado por um traço. */
+.dica-apuramento {
+  max-width: min(460px, 86vw);
+}
+
+.dica-total,
+.dica-descartados {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--borda);
+}
+
+.dica-total strong,
+.dica-descartados strong {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  margin-bottom: 2px;
+}
+
+.dica-descartados span {
+  display: block;
+  color: var(--texto-suave);
+}
+
 /* Separada dos requisitos por um traço: é exigência de outra natureza — não é
    apurada aqui, verifica-se contra as peças da proposta. */
 .dica-certificacoes {
@@ -1077,9 +1106,10 @@ button:disabled {
   color: var(--texto-suave);
 }
 
-/* Escolha de qual concorrente aparece nas tabelas de detalhe. Fica dentro do
-   fluxo dos resultados, imediatamente antes das tabelas que comanda. */
-.seletor-concorrente {
+/* Filtro dos resultados. Fica no topo, e não junto de uma tabela em
+   particular, porque vale para todas: uma tabela filtrada ao lado de outra
+   por filtrar leria como contradição. */
+.filtro-resultados {
   display: flex;
   align-items: flex-end;
   gap: 14px;
@@ -1090,12 +1120,44 @@ button:disabled {
   background: var(--superficie-alt);
 }
 
-.seletor-concorrente label {
-  min-width: min(320px, 100%);
+.filtro-resultados label {
+  min-width: min(280px, 100%);
 }
 
-.seletor-concorrente .ajuda {
-  margin: 0 0 4px;
+.filtro-resultados button {
+  margin-bottom: 2px;
+}
+
+/* A regra que governa a ordenação, dita antes da tabela que a aplica: sem ela,
+   um preço mais baixo que não vence lê-se como erro. */
+.aviso-regra {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--azul-500);
+  border-radius: var(--raio-pequeno);
+  background: var(--azul-100);
+  font-size: 0.88rem;
+}
+
+.aviso-regra strong {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--azul-700);
+}
+
+/* O campo de preço é dinheiro: alinha à direita e conta os dígitos. */
+.tabela-precos td:last-child {
+  width: 220px;
+}
+
+.tabela-precos input {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Chamada de atenção do Módulo 3 para os perfis que exigem certificação.
@@ -1109,27 +1171,28 @@ button:disabled {
   background: var(--ambar-fundo);
 }
 
-.aviso-certificacao h4 {
+.aviso-certificacao p {
   margin: 0 0 8px;
-  font-size: 0.92rem;
-  font-weight: 650;
+  font-size: 0.88rem;
   color: var(--ambar);
 }
 
+/* Os perfis vão em linha corrida, e não em blocos: o aviso já foi dado uma
+   vez, e o que falta é só dizer a quem respeita. */
 .aviso-certificacao ul {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 0.88rem;
+  gap: 2px;
+  font-size: 0.85rem;
 }
 
 .aviso-certificacao li {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tabela .numerico {

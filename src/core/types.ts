@@ -31,11 +31,24 @@ export interface Requisito {
   mesesMinimos: number;
 }
 
-/** Uma certificação exigida a cada elemento proposto para o perfil. */
-export interface Certificacao {
+/**
+ * Uma entrada de uma lista de texto do perfil.
+ *
+ * Serve as atividades do conteúdo funcional e as certificações exigidas: em
+ * ambos os casos cada entrada é uma unidade autónoma, com nome próprio onde
+ * vírgulas e pontos e vírgulas fazem parte do nome e não podem separar nada.
+ * A linha é a unidade, na interface e nas tabelas do documento Word.
+ */
+export interface ItemPerfil {
   id: string;
   designacao: string;
 }
+
+/** Uma atividade do conteúdo funcional do perfil. */
+export type Atividade = ItemPerfil;
+
+/** Uma certificação exigida a cada elemento proposto para o perfil. */
+export type Certificacao = ItemPerfil;
 
 export function anosDeMeses(meses: number): number {
   return meses / MESES_POR_ANO;
@@ -69,12 +82,11 @@ export interface PerfilJSON {
   perfil: string;
   nBlocos: number;
   /**
-   * Atividades que se espera que o perfil desempenhe, separadas por ponto e
-   * vírgula. Só entra no documento Word: descreve o trabalho a contratar, e
-   * não é matéria que o candidato declare no formulário — daí não aparecer em
-   * nenhum Excel.
+   * Atividades que se espera que o perfil desempenhe, uma por entrada. Só
+   * entra no documento Word: descreve o trabalho a contratar, e não é matéria
+   * que o candidato declare no formulário — daí não aparecer em nenhum Excel.
    */
-  conteudoFuncional: string;
+  conteudoFuncional: Atividade[];
   /**
    * Certificações exigidas ao elemento, uma por entrada. Campo opcional: a
    * maioria dos perfis não exige nenhuma.

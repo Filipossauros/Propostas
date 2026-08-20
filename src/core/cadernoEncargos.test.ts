@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
-import { certificacoes, lotesComPerfis, perfil, requisito } from "./fixtures";
+import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
 import { mesesDeAnos } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
@@ -114,7 +114,7 @@ describe("limitação de um lote por concorrente", () => {
 describe("conteúdo funcional do perfil", () => {
   it("sai numa tabela própria, uma atividade por linha", () => {
     const config = lotesComPerfis([
-      { numero: "1", perfis: [perfil({ conteudoFuncional: "Primeira atividade; Segunda atividade" })] },
+      { numero: "1", perfis: [perfil({ conteudoFuncional: itens("Primeira atividade", "Segunda atividade") })] },
     ]);
     const doc = documentoRegrasEPrecoBase(config);
     const tabela = doc.blocos.find(

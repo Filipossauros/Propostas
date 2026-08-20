@@ -9,7 +9,24 @@
       "id": "p1",
       "perfil": "Programador Sénior — Java",
       "nBlocos": 15,
-      "conteudoFuncional": "Desenho e implementação de componentes aplicacionais em Java; Definição de APIs REST e respetiva documentação; Revisão de código e apoio técnico à equipa; Diagnóstico e correção de incidentes em produção.",
+      "conteudoFuncional": [
+        {
+          "id": "p1-a1",
+          "designacao": "Desenho e implementação de componentes aplicacionais em Java"
+        },
+        {
+          "id": "p1-a2",
+          "designacao": "Definição de APIs REST e respetiva documentação"
+        },
+        {
+          "id": "p1-a3",
+          "designacao": "Revisão de código e apoio técnico à equipa"
+        },
+        {
+          "id": "p1-a4",
+          "designacao": "Diagnóstico e correção de incidentes em produção"
+        }
+      ],
       "certificacoes": [
         {
           "id": "p1-c1",
@@ -40,7 +57,24 @@
       "id": "p2",
       "perfil": "Programador Front-end",
       "nBlocos": 15,
-      "conteudoFuncional": "Implementação de interfaces web a partir de especificações de desenho; Garantia de conformidade com as normas de acessibilidade; Escrita de testes de interface; Articulação com as equipas de back-end.",
+      "conteudoFuncional": [
+        {
+          "id": "p2-a1",
+          "designacao": "Implementação de interfaces web a partir de especificações de desenho"
+        },
+        {
+          "id": "p2-a2",
+          "designacao": "Garantia de conformidade com as normas de acessibilidade"
+        },
+        {
+          "id": "p2-a3",
+          "designacao": "Escrita de testes de interface"
+        },
+        {
+          "id": "p2-a4",
+          "designacao": "Articulação com as equipas de back-end"
+        }
+      ],
       "certificacoes": [],
       "requisitos": [
         {
@@ -66,7 +100,24 @@
       "id": "p3",
       "perfil": "Arquiteto de Integração",
       "nBlocos": 15,
-      "conteudoFuncional": "Análise e levantamento de requisitos funcionais, não funcionais e de negócio; Caracterização de fluxos de informação e processos; Elaboração de casos de uso e documentação funcional de projeto; Realização de formações na ótica do utilizador.",
+      "conteudoFuncional": [
+        {
+          "id": "p3-a1",
+          "designacao": "Análise e levantamento de requisitos funcionais, não funcionais e de negócio"
+        },
+        {
+          "id": "p3-a2",
+          "designacao": "Caracterização de fluxos de informação e processos"
+        },
+        {
+          "id": "p3-a3",
+          "designacao": "Elaboração de casos de uso e documentação funcional de projeto"
+        },
+        {
+          "id": "p3-a4",
+          "designacao": "Realização de formações na ótica do utilizador"
+        }
+      ],
       "certificacoes": [
         {
           "id": "p3-c1",
@@ -101,7 +152,24 @@
       "id": "p4",
       "perfil": "Engenheiro de Dados",
       "nBlocos": 15,
-      "conteudoFuncional": "Modelação de dados e otimização de consultas; Construção e manutenção de processos de extração, transformação e carregamento; Monitorização da qualidade dos dados; Preparação de conjuntos de dados para análise.",
+      "conteudoFuncional": [
+        {
+          "id": "p4-a1",
+          "designacao": "Modelação de dados e otimização de consultas"
+        },
+        {
+          "id": "p4-a2",
+          "designacao": "Construção e manutenção de processos de extração, transformação e carregamento"
+        },
+        {
+          "id": "p4-a3",
+          "designacao": "Monitorização da qualidade dos dados"
+        },
+        {
+          "id": "p4-a4",
+          "designacao": "Preparação de conjuntos de dados para análise"
+        }
+      ],
       "certificacoes": [],
       "requisitos": [
         {

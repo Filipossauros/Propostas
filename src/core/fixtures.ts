@@ -5,6 +5,7 @@ import type {
   Bloco,
   Certificacao,
   ConfiguracaoAvaliacao,
+  ItemPerfil,
   Declaracao,
   LinhaRequisito,
   LotesJSON,
@@ -23,6 +24,11 @@ export function requisito(id = "r1", mesesMinimos = 12, designacao = `Requisito 
   return { id, designacao, mesesMinimos };
 }
 
+/** Itens de lista (atividades, certificações) a partir das designações. */
+export function itens(...designacoes: string[]): ItemPerfil[] {
+  return designacoes.map((designacao, i) => ({ id: `item-${i + 1}`, designacao }));
+}
+
 /** Certificações a partir das designações, com ids derivados da posição. */
 export function certificacoes(...designacoes: string[]): Certificacao[] {
   return designacoes.map((designacao, i) => ({ id: `cert-${i + 1}`, designacao }));
@@ -37,7 +43,7 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
     id: `perfil-${proximoIdPerfil++}`,
     perfil: "Perfil Teste",
     nBlocos: 3,
-    conteudoFuncional: "Atividade A; Atividade B",
+    conteudoFuncional: itens("Atividade A", "Atividade B"),
     certificacoes: [],
     requisitos: [requisito()],
     ...parcial,

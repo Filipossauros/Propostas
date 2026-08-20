@@ -13,6 +13,8 @@ import type {
   ResultadoProcedimento,
 } from "../core/avaliacaoProcedimento";
 import { requisitosFalhados } from "../core/avaliacaoProcedimento";
+import type { Ordenacao } from "../core/ordenacao";
+import { REGRA_UM_LOTE } from "../core/ordenacao";
 import { anosDeMeses } from "../core/types";
 import {
   COR_AVISO_BG,
@@ -181,12 +183,23 @@ function formatarMesAno(data: MesAno | null): string {
   return data === null ? "" : `${String(data.mes).padStart(2, "0")}/${data.ano}`;
 }
 
-/** Situação final do concorrente no lote, já com a limitação de um lote aplicada. */
+/** Situação do concorrente no lote: admitido ou não, e nada mais. */
 function situacao(c: ResultadoConcorrenteLote): Celula {
-  if (c.impedidoPeloLote !== null) {
-    return cel(`Impedido — já ficou com o lote ${c.impedidoPeloLote}`, "aviso");
-  }
-  return c.cumpreRequisitos ? cel("Cumpre", "cumpre") : cel("Não cumpre", "falha");
+  return c.admitido ? cel("Admitido", "cumpre") : cel("Não admitido", "falha");
+}
+
+/**
+ * Impedimento potencial: os outros lotes em que o mesmo concorrente também é
+ * admitido. Não é uma exclusão — qual dos lotes lhe fica decide-se pelo preço.
+ */
+function potencialImpedimento(c: ResultadoConcorrenteLote): Celula {
+  if (c.potencialImpedimento.length === 0) return cel("");
+  const lotes = c.potencialImpedimento.join(", ");
+  return cel(
+    `Também admitido ${c.potencialImpedimento.length === 1 ? `no lote ${lotes}` : `nos lotes ${lotes}`}: ` +
+      `só pode ficar com um`,
+    "aviso",
+  );
 }
 
 function porLoteEConcorrente<T>(
@@ -268,13 +281,15 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
   sheet.mergeCells(linhaNota, 1, linhaNota, 2);
   const nota = sheet.getCell(linhaNota, 1);
   nota.value =
-    "Este relatório sinaliza o cumprimento dos requisitos mínimos de experiência. A decisão é do júri. " +
-    "As certificações eventualmente exigidas não são aqui apuradas: verificam-se nas peças da proposta.";
+    "Este relatório sinaliza o cumprimento dos requisitos mínimos de experiência, e nada mais. " +
+    "A adjudicação decide-se pelo preço, que não consta do formulário de declaração: por isso um concorrente " +
+    "admitido em mais do que um lote é aqui assinalado como impedimento potencial, e não como impedido. " +
+    "As certificações eventualmente exigidas também não são apuradas: verificam-se nas peças da proposta.";
   nota.fill = fillSolido(COR_NOTA_BG);
   nota.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
   nota.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
   nota.border = contorno(COR_GRELHA);
-  sheet.getRow(linhaNota).height = 44;
+  sheet.getRow(linhaNota).height = 66;
 }
 
 function adicionarResumo(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, subtitulo: string): void {
@@ -287,11 +302,20 @@ function adicionarResumo(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento,
       { titulo: "Designação do lote", largura: 30 },
       { titulo: "Concorrente", largura: 32 },
       { titulo: "Cumpre os requisitos", largura: 20 },
-      { titulo: "Situação", largura: 34, quebra: true },
+      { titulo: "Situação", largura: 16 },
+      { titulo: "Impedimento potencial", largura: 40, quebra: true },
       { titulo: "N.º de alertas", largura: 14, numerico: true },
     ],
     linhas: porLoteEConcorrente(resultado.lotes, (lote, c) => [
-      [lote.numero, lote.designacao, c.concorrente, sim(c.cumpreRequisitos), situacao(c), c.nAlertas],
+      [
+        lote.numero,
+        lote.designacao,
+        c.concorrente,
+        sim(c.cumpreRequisitos),
+        situacao(c),
+        potencialImpedimento(c),
+        c.nAlertas,
+      ],
     ]),
     vazio: "Nenhum concorrente se apresentou a qualquer lote.",
   });
@@ -505,12 +529,121 @@ function adicionarTraco(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, 
 }
 
 // --------------------------------------------------------------------------
+// Ordenação das propostas — Módulo 4
+// --------------------------------------------------------------------------
+
+function preco(valor: number | null): Valor {
+  return valor === null ? "" : valor;
+}
+
+function situacaoDaProposta(p: Ordenacao["lotes"][number]["propostas"][number]): Celula {
+  if (p.impedidaPeloLote !== null) return cel(`Impedida — venceu o lote ${p.impedidaPeloLote}`, "aviso");
+  if (p.preco === null) return cel("Sem preço indicado", "aviso");
+  return p.vencedora ? cel("Vencedora", "cumpre") : cel("Ordenada");
+}
+
+/** A ordenação inteira: todas as propostas admitidas, por lote e por preço. */
+function adicionarOrdenacao(wb: ExcelJS.Workbook, ordenacao: Ordenacao, subtitulo: string): void {
+  const sheet = adicionarFolhaTabela(wb, {
+    nome: "Ordenação por lote",
+    titulo: "Ordenação das propostas pelo preço",
+    subtitulo: ordenacao.umLotePorConcorrente ? `${subtitulo} · um lote por concorrente` : subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Designação do lote", largura: 30 },
+      { titulo: "Posição", largura: 10, numerico: true },
+      { titulo: "Concorrente", largura: 34 },
+      { titulo: "Preço proposto (s/ IVA)", largura: 20, numerico: true },
+      { titulo: "Situação", largura: 34, quebra: true },
+      { titulo: "Empate no preço", largura: 15 },
+    ],
+    linhas: ordenacao.lotes.flatMap((lote) =>
+      lote.propostas.map((p): Linha => [
+        lote.numero,
+        lote.designacao,
+        p.posicao ?? "",
+        p.concorrente,
+        preco(p.preco),
+        situacaoDaProposta(p),
+        p.empatada ? cel("Sim", "aviso") : "Não",
+      ]),
+    ),
+    vazio: "Nenhuma proposta admitida a ordenar.",
+  });
+
+  formatarComoMoeda(sheet, 5, ordenacao.lotes.reduce((soma, l) => soma + l.propostas.length, 0));
+
+  if (ordenacao.umLotePorConcorrente) adicionarNotaDaRegra(sheet, 7);
+}
+
+/** Só os vencedores: a leitura que a decisão do procedimento precisa. */
+function adicionarVencedores(wb: ExcelJS.Workbook, ordenacao: Ordenacao, subtitulo: string): void {
+  const vencedores = ordenacao.lotes.flatMap((lote) => {
+    const vencedora = lote.propostas.find((p) => p.vencedora);
+    return [
+      [
+        lote.numero,
+        lote.designacao,
+        vencedora?.concorrente ?? cel("Sem proposta vencedora", "falha"),
+        preco(vencedora?.preco ?? null),
+        vencedora?.empatada === true ? cel("Sim", "aviso") : "Não",
+      ] as Linha,
+    ];
+  });
+
+  const sheet = adicionarFolhaTabela(wb, {
+    nome: "Vencedores",
+    titulo: "Proposta vencedora de cada lote",
+    subtitulo,
+    colunas: [
+      { titulo: "Lote", largura: 8, numerico: true },
+      { titulo: "Designação do lote", largura: 34 },
+      { titulo: "Concorrente", largura: 36 },
+      { titulo: "Preço proposto (s/ IVA)", largura: 20, numerico: true },
+      { titulo: "Empate no preço", largura: 15 },
+    ],
+    linhas: vencedores,
+    vazio: "Nenhum lote tem proposta vencedora.",
+  });
+
+  formatarComoMoeda(sheet, 4, vencedores.length);
+
+  if (ordenacao.umLotePorConcorrente) adicionarNotaDaRegra(sheet, 5);
+}
+
+/** Euros com duas casas, para os preços se lerem como preços. */
+function formatarComoMoeda(sheet: ExcelJS.Worksheet, coluna: number, nLinhas: number): void {
+  for (let i = 0; i < nLinhas; i++) {
+    sheet.getCell(LINHA_CABECALHO + 1 + i, coluna).numFmt = '#,##0.00 "€"';
+  }
+}
+
+/**
+ * A regra sai por extenso na folha, e não só na aplicação: quem receber o
+ * ficheiro tem de perceber por que razão o preço mais baixo de um lote pode
+ * não ser o vencedor.
+ */
+function adicionarNotaDaRegra(sheet: ExcelJS.Worksheet, nColunas: number): void {
+  const linha = sheet.rowCount + 2;
+  sheet.mergeCells(linha, 1, linha, nColunas);
+  const cell = sheet.getCell(linha, 1);
+  cell.value = REGRA_UM_LOTE;
+  cell.fill = fillSolido(COR_NOTA_BG);
+  cell.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
+  cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+  cell.border = contorno(COR_GRELHA);
+  sheet.getRow(linha).height = 40;
+}
+
+// --------------------------------------------------------------------------
 // Livro
 // --------------------------------------------------------------------------
 
 export function construirWorkbookResultados(
   resultado: ResultadoProcedimento,
   config: LotesJSON,
+  /** Quando presente, o relatório leva também a ordenação das propostas (Módulo 4). */
+  ordenacao?: Ordenacao,
 ): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Propostas";
@@ -525,6 +658,13 @@ export function construirWorkbookResultados(
   adicionarAlertas(wb, resultado, subtitulo);
   adicionarTraco(wb, resultado, subtitulo);
 
+  // A ordenação vem logo a seguir ao resumo, e antes do detalhe: é a leitura
+  // que a decisão do procedimento precisa.
+  if (ordenacao !== undefined) {
+    adicionarOrdenacao(wb, ordenacao, subtitulo);
+    adicionarVencedores(wb, ordenacao, subtitulo);
+  }
+
   const usados = new Set<string>();
   for (const concorrente of concorrentesDoProcedimento(resultado)) {
     adicionarFolhaDoConcorrente(wb, resultado, concorrente, nomeDeFolha(concorrente, usados));
@@ -536,8 +676,9 @@ export function construirWorkbookResultados(
 export async function gerarResultadosBlob(
   resultado: ResultadoProcedimento,
   config: LotesJSON,
+  ordenacao?: Ordenacao,
 ): Promise<Blob> {
-  const buffer = await construirWorkbookResultados(resultado, config).xlsx.writeBuffer();
+  const buffer = await construirWorkbookResultados(resultado, config, ordenacao).xlsx.writeBuffer();
   return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });

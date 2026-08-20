@@ -15,7 +15,7 @@ import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { RequisitosEditor } from "./RequisitosEditor";
-import { CertificacoesEditor } from "./CertificacoesEditor";
+import { ListaItensEditor } from "./ListaItensEditor";
 
 interface Props {
   perfis: PerfilJSON[];
@@ -296,30 +296,36 @@ export function Modulo1({
             onChange={(requisitos) => alterarEmEdicao({ requisitos })}
           />
 
-          <CertificacoesEditor
-            certificacoes={emEdicao.certificacoes}
+          <ListaItensEditor
+            titulo="Certificações"
+            nota={
+              "Opcional. Uma certificação por linha. Saem no documento Word, em tabela própria; não aparecem em " +
+              "nenhum formulário Excel, porque a certificação é verificada fora desta ferramenta, contra as peças " +
+              "da proposta."
+            }
+            nomeItem="certificação"
+            rotuloColuna="Designação da certificação"
+            placeholder="ex.: Oracle Certified Professional, Java SE Programmer"
+            textoVazio="Este perfil não exige certificações."
+            rotuloAdicionar="+ Adicionar certificação"
+            itens={emEdicao.certificacoes}
             onChange={(certificacoes) => alterarEmEdicao({ certificacoes })}
           />
 
-          <section className="painel">
-            <header className="painel-cabecalho">
-              <h3>Conteúdo Funcional do Perfil</h3>
-              <p className="painel-nota">
-                Atividades que se espera que o perfil desempenhe, separadas por ponto e vírgula. Sai no documento
-                Word, em tabela própria por baixo dos requisitos; não aparece em nenhum formulário Excel.
-              </p>
-            </header>
-            <label>
-              <span className="rotulo-oculto">Conteúdo funcional do perfil</span>
-              <textarea
-                rows={4}
-                value={emEdicao.conteudoFuncional}
-                placeholder="ex.: Análise e levantamento de requisitos funcionais, não funcionais e de negócio; Caracterização de fluxos de informação e processos; Elaboração de casos de uso e documentação funcional de projeto; Realização de formações na ótica do utilizador."
-                onChange={(e) => alterarEmEdicao({ conteudoFuncional: e.target.value })}
-                aria-invalid={emEdicao.conteudoFuncional.trim() === ""}
-              />
-            </label>
-          </section>
+          <ListaItensEditor
+            titulo="Conteúdo Funcional do Perfil"
+            nota={
+              "Atividades que se espera que o perfil desempenhe, uma por linha. Saem no documento Word, em tabela " +
+              "própria por baixo dos requisitos; não aparecem em nenhum formulário Excel."
+            }
+            nomeItem="atividade"
+            rotuloColuna="Designação da atividade"
+            placeholder="ex.: Análise e levantamento de requisitos funcionais, não funcionais e de negócio"
+            textoVazio="Ainda não há atividades. Acrescente a primeira."
+            rotuloAdicionar="+ Adicionar atividade"
+            itens={emEdicao.conteudoFuncional}
+            onChange={(conteudoFuncional) => alterarEmEdicao({ conteudoFuncional })}
+          />
         </>
       )}
 

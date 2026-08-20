@@ -4,6 +4,7 @@ import { construirWorkbookResultados } from "./exportarResultados";
 import { avaliarProcedimento } from "../core/avaliacaoProcedimento";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
 import { proporAgrupamentos } from "../core/reconciliacao";
+import { chavePreco, ordenarPropostas } from "../core/ordenacao";
 
 function resultadoDoExemplo() {
   const declaracoes = declaracoesExemplo(LOTES_EXEMPLO);
@@ -118,5 +119,58 @@ describe("formatação do relatório", () => {
 
     expect(situacoes.find((s) => s.texto === "Sim")?.cor).toBe("FF1B6E3C");
     expect(situacoes.find((s) => s.texto === "Não")?.cor).toBe("FFB3261E");
+  });
+});
+
+describe("relatório com a ordenação do Módulo 4", () => {
+  const resultado = resultadoDoExemplo();
+
+  function comOrdenacao() {
+    const precos: Record<string, number> = {};
+    for (const lote of resultado.lotes) {
+      lote.concorrentes
+        .filter((c) => c.admitido)
+        .forEach((c, idx) => {
+          precos[chavePreco(lote.loteId, c.concorrente)] = 100 + idx * 10;
+        });
+    }
+    return construirWorkbookResultados(resultado, LOTES_EXEMPLO, ordenarPropostas(resultado, precos));
+  }
+
+  it("sem ordenação, o relatório é o do Módulo 3", () => {
+    const nomes = construirWorkbookResultados(resultado, LOTES_EXEMPLO).worksheets.map((s) => s.name);
+    expect(nomes).not.toContain("Ordenação por lote");
+    expect(nomes).not.toContain("Vencedores");
+  });
+
+  it("com ordenação, acrescenta as folhas da ordenação e dos vencedores", () => {
+    const nomes = comOrdenacao().worksheets.map((s) => s.name);
+
+    expect(nomes).toContain("Ordenação por lote");
+    expect(nomes).toContain("Vencedores");
+    // As folhas do Módulo 3 continuam todas lá.
+    expect(nomes).toContain("Traço de apuramento");
+    expect(nomes).toContain("Alfa Sistemas, S.A.");
+  });
+
+  it("a folha dos vencedores traz um lote por linha", () => {
+    const wb = comOrdenacao();
+    expect(cabecalho(wb, "Vencedores")).toContain("Preço proposto (s/ IVA)");
+    // Uma linha por lote. A nota da regra vem depois, e não é uma linha de dados.
+    const numerosDeLote = corpo(wb, "Vencedores").map((l) => String(l[0]));
+    expect(numerosDeLote.filter((n) => n === "1" || n === "2")).toEqual(["1", "2"]);
+  });
+
+  it("a regra de um lote por concorrente sai por extenso na folha", () => {
+    const texto = corpo(comOrdenacao(), "Vencedores")
+      .flat()
+      .map((c) => String(c ?? ""))
+      .join(" ");
+    expect(texto).toContain("ordem crescente do número");
+  });
+
+  it("os preços saem formatados como euros", () => {
+    const sheet = folha(comOrdenacao(), "Ordenação por lote");
+    expect(sheet.getCell(LINHA_CABECALHO + 1, 5).numFmt).toContain("€");
   });
 });

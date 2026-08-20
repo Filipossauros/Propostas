@@ -5,7 +5,12 @@ import { AVISO_CERTIFICACAO, importarLotesJSON, perfisComCertificacao } from "..
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
 import { lerDeclaracoesDoWorkbook, lerWorkbookDeFicheiro } from "../excel/ler";
 import { agruparAtribuicoes, proporAtribuicoes, type AtribuicaoConcorrente } from "../core/reconciliacao";
-import { avaliarProcedimento, type DeclaracaoAtribuida } from "../core/avaliacaoProcedimento";
+import {
+  avaliarProcedimento,
+  type DeclaracaoAtribuida,
+  type ResultadoProcedimento,
+} from "../core/avaliacaoProcedimento";
+import { resultadosParaJSON } from "../core/resultadosJSON";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { extrairTextoPdfNormalizado } from "../pdf/extrairTextoPdf";
 import { extrairValoresDeclarados } from "../pdf/extrairValores";
@@ -26,7 +31,12 @@ function requisitosPorId(config: LotesJSON): Map<string, string> {
   return mapa;
 }
 
-export function Modulo3() {
+interface Props {
+  /** Entrega os resultados apurados ao Módulo 4, sem passar por ficheiro. */
+  onIrParaOrdenacao: (resultado: ResultadoProcedimento, config: LotesJSON) => void;
+}
+
+export function Modulo3({ onIrParaOrdenacao }: Props) {
   const [config, setConfig] = useState<LotesJSON | null>(null);
   const [atribuidas, setAtribuidas] = useState<DeclaracaoAtribuida[]>([]);
   const [atribuicoes, setAtribuicoes] = useState<AtribuicaoConcorrente[] | null>(null);
@@ -148,6 +158,46 @@ export function Modulo3() {
     }
   }
 
+  /**
+   * Retira uma declaração da avaliação.
+   *
+   * Chega ficheiro trocado, versão repetida, folha que afinal não era daquele
+   * concorrente — e sem isto a única saída era recarregar tudo. Sai também o
+   * alerta do PDF que lhe estivesse associado: sem declaração, não tem a que
+   * respeitar.
+   */
+  function removerDeclaracao(id: string) {
+    const restantes = atribuidas.filter((a) => a.declaracao.id !== id);
+    setAtribuidas(restantes);
+    setAlertasPdf((atual) => {
+      const copia = new Map(atual);
+      copia.delete(id);
+      return copia;
+    });
+
+    // O passo 3 é refeito para os nomes que restam, mas as correções já feitas
+    // aos nomes de relatório mantêm-se: quem removeu uma declaração não tem de
+    // voltar a dizer quem é quem.
+    setAtribuicoes((atual) => {
+      if (atual === null) return null;
+      const escolhido = new Map(atual.map((a) => [a.nomeOriginal, a.nomeCanonico]));
+      return proporAtribuicoes(
+        restantes.map((a) => a.declaracao.identificacao.entidadeConcorrente).filter((n) => n.trim() !== ""),
+      ).map((a) => ({ ...a, nomeCanonico: escolhido.get(a.nomeOriginal) ?? a.nomeCanonico }));
+    });
+
+    setMensagem({ tipo: "sucesso", texto: "Declaração removida da avaliação." });
+  }
+
+  /** Retira só a comparação com o PDF, deixando a declaração onde está. */
+  function removerPdf(id: string) {
+    setAlertasPdf((atual) => {
+      const copia = new Map(atual);
+      copia.delete(id);
+      return copia;
+    });
+  }
+
   async function compararComPdfAssinado(declaracao: Declaracao, ficheiroPdf: File) {
     if (config === null) return;
     setACompararPdf(declaracao.id);
@@ -160,6 +210,14 @@ export function Modulo3() {
     } finally {
       setACompararPdf(null);
     }
+  }
+
+  function descarregarResultadosJSON() {
+    if (config === null || resultado === null) return;
+    descarregarBlob(
+      new Blob([resultadosParaJSON(resultado, config)], { type: "application/json" }),
+      nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.json"),
+    );
   }
 
   async function exportar() {
@@ -230,25 +288,18 @@ export function Modulo3() {
 
         {/* A certificação não é apurada aqui — verifica-se nas peças da proposta.
             É precisamente por não entrar em nenhum quadro do apuramento que tem
-            de ser dita em voz alta, logo ao carregar o agrupamento. */}
+            de ser dita em voz alta, logo ao carregar o agrupamento. Uma só vez:
+            o aviso é o mesmo para todos os perfis. */}
         {comCertificacao.length > 0 && (
           <div className="aviso-certificacao">
-            <h4>
-              {comCertificacao.length === 1
-                ? "Um perfil deste procedimento exige certificação"
-                : `${comCertificacao.length} perfis deste procedimento exigem certificação`}
-            </h4>
+            <p>{AVISO_CERTIFICACAO}</p>
             <ul>
               {comCertificacao.map((p) => (
                 <li key={`${p.loteNumero}-${p.perfil}`}>
                   <strong>
                     Lote {p.loteNumero} · {p.perfil}
                   </strong>
-                  <span>{AVISO_CERTIFICACAO}</span>
-                  <span className="meta">
-                    {p.certificacoes.length === 1 ? "Certificação exigida" : "Certificações exigidas"}:{" "}
-                    {p.certificacoes.join("; ")}
-                  </span>
+                  <span className="meta">{p.certificacoes.join("; ")}</span>
                 </li>
               ))}
             </ul>
@@ -303,25 +354,49 @@ export function Modulo3() {
                           {d.alertas.length > 0 && ` · ${d.alertas.length} alerta(s)`}
                         </span>
                       </div>
-                      <label className="anexar-pdf">
-                        {aCompararPdf === d.id
-                          ? "A comparar…"
-                          : alertasDoFicheiro
-                            ? alertasDoFicheiro.length === 0
-                              ? "✓ PDF confirma o Excel"
-                              : `${alertasDoFicheiro.length} divergência(s) com o PDF`
-                            : "Anexar PDF assinado"}
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          className="input-ficheiro-oculto"
-                          onChange={(e) => {
-                            const ficheiroPdf = e.target.files?.[0];
-                            if (ficheiroPdf) void compararComPdfAssinado(d, ficheiroPdf);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
+                      <div className="acoes-linha">
+                        <label className="anexar-pdf">
+                          {aCompararPdf === d.id
+                            ? "A comparar…"
+                            : alertasDoFicheiro
+                              ? alertasDoFicheiro.length === 0
+                                ? "✓ PDF confirma o Excel"
+                                : `${alertasDoFicheiro.length} divergência(s) com o PDF`
+                              : "Anexar PDF assinado"}
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            className="input-ficheiro-oculto"
+                            onChange={(e) => {
+                              const ficheiroPdf = e.target.files?.[0];
+                              if (ficheiroPdf) void compararComPdfAssinado(d, ficheiroPdf);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+
+                        {alertasDoFicheiro !== undefined && (
+                          <button
+                            type="button"
+                            className="botao-icone"
+                            onClick={() => removerPdf(d.id)}
+                            title="Retirar o PDF anexado"
+                            aria-label={`Retirar o PDF anexado a "${d.identificacao.nome || d.ficheiro}"`}
+                          >
+                            ⌫
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="botao-icone botao-perigo"
+                          onClick={() => removerDeclaracao(d.id)}
+                          title="Remover esta declaração"
+                          aria-label={`Remover a declaração de "${d.identificacao.nome || d.ficheiro}"`}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -394,8 +469,30 @@ export function Modulo3() {
                 concorrente.
               </p>
             </header>
-            <button type="button" className="botao-principal" onClick={() => void exportar()} disabled={aExportar}>
-              {aExportar ? "A gerar…" : "Descarregar relatório Excel"}
+            <div className="acoes">
+              <button type="button" className="botao-principal" onClick={() => void exportar()} disabled={aExportar}>
+                {aExportar ? "A gerar…" : "Descarregar relatório Excel"}
+              </button>
+              <button type="button" className="botao-secundario" onClick={descarregarResultadosJSON}>
+                Descarregar resultados (JSON)
+              </button>
+            </div>
+            <p className="ajuda">
+              O JSON leva o apuramento inteiro e é o que o Módulo 4 lê para ordenar as propostas. Como o relatório
+              Excel, contém dados pessoais dos elementos propostos: guarde-o com o mesmo cuidado.
+            </p>
+          </section>
+
+          <section className="painel painel-avancar">
+            <div>
+              <h3>Continuar para a ordenação das propostas</h3>
+              <p className="painel-nota">
+                Envia este apuramento diretamente para o Módulo 4, sem passar por ficheiro. Lá indica-se o preço de
+                cada proposta admitida e obtém-se a ordenação de cada lote.
+              </p>
+            </div>
+            <button type="button" className="botao-principal" onClick={() => onIrParaOrdenacao(resultado, config)}>
+              Ir para o Módulo 4 →
             </button>
           </section>
         </>
