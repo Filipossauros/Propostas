@@ -157,10 +157,7 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Perfis</h3>
-          <p className="painel-nota">
-            Escolha um perfil para o editar em baixo. Duplicar um perfil já definido poupa trabalho quando os
-            requisitos são parecidos.
-          </p>
+          <p className="painel-nota">Escolha um perfil para o editar em baixo.</p>
         </header>
 
         {perfis.length === 0 ? (

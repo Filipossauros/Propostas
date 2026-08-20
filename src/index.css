@@ -523,43 +523,105 @@ button:disabled {
   color: var(--ambar);
 }
 
-/* ---------------------------------------------------------- Requisitos M1 */
+/* ------------------------------------------- Listas compactas de edição */
 
-.lista-requisitos {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 14px;
-}
+/* Requisitos (M1) e perfis dentro de um lote (M2) partilham esta estrutura:
+   cabeçalho com os rótulos uma única vez, e depois uma linha densa por item. */
 
-.linha-requisito {
-  padding: 12px;
+.tabela-edicao {
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
-.linha-requisito + .linha-requisito {
-  margin-top: 8px;
+.tabela-edicao-cabecalho {
+  padding: 6px 10px;
+  background: var(--superficie-alt);
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-suave);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.linha-requisito-campos {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
+.lista-requisitos,
+.lista-perfis-lote {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.ordem {
+.linha-edicao {
+  padding: 6px 10px;
+}
+
+.linha-edicao + .linha-edicao {
+  border-top: 1px solid var(--borda);
+}
+
+.linha-edicao:nth-child(even) {
+  background: color-mix(in srgb, var(--superficie-alt) 45%, transparent);
+}
+
+.linha-a-arrastar {
+  opacity: 0.4;
+}
+
+/* Traço de destino durante o arrasto, desenhado por dentro para não empurrar
+   a linha nem provocar saltos enquanto se arrasta por cima dela. */
+.linha-edicao[data-alvo] {
+  box-shadow: inset 0 -2px 0 var(--azul-500);
+}
+
+/* Todas as colunas têm largura fixa, exceto a da designação.
+   Com colunas `auto`, o cabeçalho e as linhas mediam larguras diferentes — o
+   cabeçalho tem células vazias onde a linha tem botões — e os rótulos deixavam
+   de assentar sobre os campos que descrevem. */
+.grelha-requisito {
+  display: grid;
+  grid-template-columns: 26px minmax(180px, 1fr) 216px 102px;
+  align-items: center;
+  gap: 10px;
+}
+
+.grelha-perfil-lote {
+  display: grid;
+  grid-template-columns: 26px minmax(160px, 1fr) 78px 96px 104px 116px 102px;
+  align-items: center;
+  gap: 10px;
+}
+
+/* O preço base é dinheiro: alinha à direita, cabeçalho incluído. */
+.grelha-perfil-lote > :nth-child(6) {
+  text-align: right;
+}
+
+.pega {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-bottom: 6px;
-  flex: none;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--raio-pequeno);
   background: var(--superficie-alt);
   color: var(--texto-suave);
   font-size: 0.75rem;
   font-weight: 600;
+  cursor: grab;
+  user-select: none;
+}
+
+.pega:active {
+  cursor: grabbing;
+}
+
+.linha-edicao .aviso {
+  margin: 4px 0 0 36px;
+}
+
+.estado-vazio-encaixado {
+  margin: 12px;
 }
 
 /* --------------------------------------------------------------- Lotes M2 */
@@ -612,10 +674,10 @@ button:disabled {
 .lista-perfis-catalogo {
   list-style: none;
   padding: 0;
-  margin: 0 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  margin: 0 0 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  overflow: hidden;
 }
 
 .perfil-catalogo {
@@ -624,11 +686,12 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  border: 1px solid var(--borda);
+  padding: 4px 10px 4px 7px;
   border-left: 3px solid transparent;
-  border-radius: var(--raio-pequeno);
-  background: var(--superficie);
+}
+
+.perfil-catalogo + .perfil-catalogo {
+  border-top: 1px solid var(--borda);
 }
 
 .perfil-catalogo-ativo {
@@ -641,8 +704,9 @@ button:disabled {
   flex: 1 1 240px;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
   padding: 4px 0;
   text-align: left;
   background: none;
@@ -734,38 +798,29 @@ button:disabled {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  padding: 14px;
+  padding: 10px 12px;
   background: var(--superficie-alt);
   border-bottom: 1px solid var(--borda);
   flex-wrap: wrap;
 }
 
-.perfil-em-lote {
-  padding: 14px;
-  border-bottom: 1px solid var(--borda);
+.cartao-lote .tabela-edicao {
+  margin: 0;
+  border: none;
+  border-radius: 0;
 }
 
 .perfil-em-lote-titulo {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.perfil-em-lote-campos {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  margin-bottom: 10px;
+  gap: 8px;
+  min-width: 0;
   flex-wrap: wrap;
 }
 
 .valor-calculado {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-bottom: 8px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .cartao-lote-rodape {
@@ -773,8 +828,9 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--azul-100);
+  border-top: 1px solid var(--borda);
   font-size: 0.9rem;
 }
 
@@ -970,6 +1026,15 @@ button:disabled {
   font-size: 0.82rem;
   color: var(--texto-suave);
   white-space: nowrap;
+}
+
+/* Sem rótulo por cima, o campo e o equivalente ficam na mesma linha de base. */
+.linha-edicao .campo-anos {
+  align-items: center;
+}
+
+.linha-edicao .equivalente-meses {
+  padding-bottom: 0;
 }
 
 /* --------------------------------------------------------- Texto copiável */

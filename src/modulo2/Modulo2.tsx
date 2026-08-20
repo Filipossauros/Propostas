@@ -18,7 +18,7 @@ import { LOTES_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
 import { gerarLotesBlob } from "../excel/exportarLotes";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { descarregarBlob } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
@@ -172,11 +172,6 @@ export function Modulo2({
 
   async function descarregarWord() {
     descarregarBlob(await gerarDocxBlob([documentoRegrasEPrecoBase(config)]), "Requisitos_e_regras.docx");
-  }
-
-  async function descarregarFormulario(perfil: PerfilJSON, numeroLote: string) {
-    const nome = `Declaracao_Lote${nomeSeguro(numeroLote, "X")}_${nomeSeguro(perfil.perfil, "Perfil")}.xlsx`;
-    descarregarBlob(await gerarDeclaracaoExcelBlob([especificacao(perfil, numeroLote)]), nome);
   }
 
   async function descarregarFormulariosExcel() {
@@ -368,7 +363,6 @@ export function Modulo2({
               onAlterar={(alteracao) => atualizarLote(lote.id, alteracao)}
               onRemover={() => removerLote(lote.id)}
               onRetirarPerfil={(perfilEmLoteId) => retirarPerfil(lote.id, perfilEmLoteId)}
-              onDescarregarFormulario={(perfil) => void descarregarFormulario(perfil, lote.numero)}
             />
           ))}
         </div>

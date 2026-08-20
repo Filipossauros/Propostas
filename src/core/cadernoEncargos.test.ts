@@ -39,12 +39,35 @@ describe("documentoRegrasEPrecoBase", () => {
     expect(gerado).toContain("120");
   });
 
-  it("cobre preço base, requisitos, comprovação, exclusão e regra de apuramento", () => {
+  it("reúne todas as regras sob um único título", () => {
+    const titulos = doc.blocos.filter((b) => b.tipo === "titulo").map((b) => (b.tipo === "titulo" ? b.texto : ""));
+
+    expect(titulos).toEqual(expect.arrayContaining(["Regras de apuramento da experiência"]));
+    for (const removido of [
+      "Comprovação da experiência profissional",
+      "Exclusão",
+      "Correspondência dos períodos declarados",
+      "Regra de apuramento da experiência",
+    ]) {
+      expect(titulos).not.toContain(removido);
+    }
+  });
+
+  it("as regras vão numa única lista numerada, em sequência", () => {
+    const listas = doc.blocos.filter((b) => b.tipo === "lista");
+
+    expect(listas).toHaveLength(1);
+    expect(listas[0].tipo === "lista" && listas[0].numerada).toBe(true);
+  });
+
+  it("mantém o preço base e os requisitos como secções próprias", () => {
     expect(texto).toContain("Preço base");
     expect(texto).toContain("Requisitos mínimos de experiência profissional");
-    expect(texto).toContain("Comprovação da experiência profissional");
-    expect(texto).toContain("Exclusão");
-    expect(texto).toContain("Regra de apuramento da experiência");
+  });
+
+  it("conserva as matérias das secções que deixaram de ter título próprio", () => {
+    expect(texto).toContain("São excluídas as propostas");
+    expect(texto).toContain("tempo de dedicação efetiva");
   });
 
   it("não estrutura o conteúdo em artigos — isso fica para a redação das peças", () => {

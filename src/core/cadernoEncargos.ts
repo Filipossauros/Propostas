@@ -143,8 +143,12 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
     blocos: [
       ...blocosPrecoBaseERequisitos(config),
 
-      { tipo: "titulo", nivel: 1, texto: "Comprovação da experiência profissional" },
+      { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
       {
+        // Uma só numeração para todas as regras, sem secções pelo meio: as
+        // remissões entre normas ("nos termos do n.º 2") só são inequívocas se
+        // a sequência correr de fio a pavio. As causas de exclusão vão numa
+        // única regra, com alíneas em (i)/(ii)/(iii), para não quebrar a série.
         tipo: "lista",
         numerada: true,
         itens: [
@@ -155,38 +159,8 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
           "O formulário não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
           "O formulário de declaração de experiência profissional deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido formulário deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica qualificada.",
           "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
-        ],
-      },
-
-      { tipo: "titulo", nivel: 1, texto: "Exclusão" },
-      {
-        tipo: "paragrafo",
-        texto:
-          "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos:",
-      },
-      {
-        tipo: "lista",
-        itens: [
-          "A falta de apresentação do formulário de declaração de experiência profissional;",
-          "A falta de assinatura do PDF do formulário de declaração de experiência profissional, mediante assinatura eletrónica qualificada pelo próprio titular da experiência;",
-          "A alteração da estrutura do formulário disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
-        ],
-      },
-
-      { tipo: "titulo", nivel: 1, texto: "Correspondência dos períodos declarados" },
-      {
-        tipo: "paragrafo",
-        texto:
-          "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em " +
-          "causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a " +
-          "dedicação não tenha sido integral ao longo do período do projeto.",
-      },
-
-      { tipo: "titulo", nivel: 1, texto: "Regra de apuramento da experiência" },
-      {
-        tipo: "lista",
-        numerada: true,
-        itens: [
+          "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do formulário de declaração de experiência profissional; (ii) a falta de assinatura do PDF do formulário de declaração de experiência profissional, mediante assinatura eletrónica qualificada pelo próprio titular da experiência; ou (iii) a alteração da estrutura do formulário disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
+          "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a dedicação não tenha sido integral ao longo do período do projeto.",
           "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
           "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
           "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
