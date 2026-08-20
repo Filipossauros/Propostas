@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { Alerta, Declaracao, LotesJSON } from "../core/types";
 import { ErroImportacao } from "../core/perfil";
-import { importarLotesJSON } from "../core/lotes";
+import { AVISO_CERTIFICACAO, importarLotesJSON, perfisComCertificacao } from "../core/lotes";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
 import { lerDeclaracoesDoWorkbook, lerWorkbookDeFicheiro } from "../excel/ler";
 import { proporAgrupamentos, type GrupoConcorrentes } from "../core/reconciliacao";
@@ -30,6 +30,7 @@ export function Modulo3() {
   const [config, setConfig] = useState<LotesJSON | null>(null);
   const [atribuidas, setAtribuidas] = useState<DeclaracaoAtribuida[]>([]);
   const [grupos, setGrupos] = useState<GrupoConcorrentes[] | null>(null);
+  const [concorrentesConfirmados, setConcorrentesConfirmados] = useState(false);
   const [alertasPdf, setAlertasPdf] = useState<Map<string, Alerta[]>>(new Map());
   const [aCompararPdf, setACompararPdf] = useState<string | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
@@ -46,16 +47,27 @@ export function Modulo3() {
     [atribuidas],
   );
 
+  /** Quantas declarações vieram com cada nome de entidade — o peso de cada cartão do passo 3. */
+  const contagemPorNome = useMemo(() => {
+    const contagem = new Map<string, number>();
+    for (const nome of nomesEntidade) contagem.set(nome, (contagem.get(nome) ?? 0) + 1);
+    return contagem;
+  }, [nomesEntidade]);
+
+  /** Perfis que exigem certificação — verificada fora da aplicação, e por isso assinalada aqui. */
+  const comCertificacao = useMemo(() => (config === null ? [] : perfisComCertificacao(config)), [config]);
+
   const resultado = useMemo(() => {
-    if (config === null || grupos === null || atribuidas.length === 0) return null;
+    if (config === null || grupos === null || !concorrentesConfirmados || atribuidas.length === 0) return null;
     return avaliarProcedimento(config, atribuidas, grupos, alertasPdf);
-  }, [config, atribuidas, grupos, alertasPdf]);
+  }, [config, atribuidas, grupos, concorrentesConfirmados, alertasPdf]);
 
   const nPerfis = config?.lotes.reduce((soma, l) => soma + l.perfis.length, 0) ?? 0;
 
   function limparAvaliacao() {
     setAtribuidas([]);
     setGrupos(null);
+    setConcorrentesConfirmados(false);
     setAlertasPdf(new Map());
   }
 
@@ -87,6 +99,7 @@ export function Modulo3() {
     const declaracoes = declaracoesExemplo(exemplo);
     setAtribuidas(declaracoes);
     setGrupos(proporAgrupamentos(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente)));
+    setConcorrentesConfirmados(true);
     setAlertasPdf(new Map());
     setMensagem({
       tipo: "sucesso",
@@ -105,6 +118,7 @@ export function Modulo3() {
     if (config === null) return;
     setAProcessar(true);
     setGrupos(null);
+    setConcorrentesConfirmados(false);
     setAlertasPdf(new Map());
     try {
       const lidas: DeclaracaoAtribuida[] = [];
@@ -177,10 +191,7 @@ export function Modulo3() {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Passo 1 · Agrupamento do procedimento</h3>
-          <p className="painel-nota">
-            Carregue o JSON do agrupamento (Módulo 2). Traz os lotes, os perfis, os requisitos e o n.º mínimo de
-            elementos — não há mais nada a configurar aqui.
-          </p>
+          <p className="painel-nota">Carregue o JSON do agrupamento (Módulo 2).</p>
         </header>
 
         <div className="acoes">
@@ -208,8 +219,34 @@ export function Modulo3() {
             <li>
               Limitação de um lote por concorrente: <strong>{config.umLotePorConcorrente ? "sim" : "não"}</strong>
             </li>
-            <li>Nenhuma experiência é admitida com data posterior ao mês corrente.</li>
           </ul>
+        )}
+
+        {/* A certificação não é apurada aqui — verifica-se nas peças da proposta.
+            É precisamente por não entrar em nenhum quadro do apuramento que tem
+            de ser dita em voz alta, logo ao carregar o agrupamento. */}
+        {comCertificacao.length > 0 && (
+          <div className="aviso-certificacao">
+            <h4>
+              {comCertificacao.length === 1
+                ? "Um perfil deste procedimento exige certificação"
+                : `${comCertificacao.length} perfis deste procedimento exigem certificação`}
+            </h4>
+            <ul>
+              {comCertificacao.map((p) => (
+                <li key={`${p.loteNumero}-${p.perfil}`}>
+                  <strong>
+                    Lote {p.loteNumero} · {p.perfil}
+                  </strong>
+                  <span>{AVISO_CERTIFICACAO}</span>
+                  <span className="meta">
+                    {p.certificacoes.length === 1 ? "Certificação exigida" : "Certificações exigidas"}:{" "}
+                    {p.certificacoes.join("; ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
@@ -307,9 +344,26 @@ export function Modulo3() {
       {config !== null && grupos !== null && (
         <section className="painel">
           <header className="painel-cabecalho">
-            <h3>Passo 3 · Reconciliação de concorrentes</h3>
+            <h3>Passo 3 · Quem é cada concorrente</h3>
+            <p className="painel-nota">
+              O concorrente de cada declaração é o nome que o próprio elemento escreveu no formulário. Quando a mesma
+              empresa vem escrita de maneiras diferentes — «ABC» e «ABC, S.A.» —, contaria como duas propostas
+              distintas, e nenhuma delas teria elementos suficientes. Confirme abaixo quem é quem: cada cartão é um
+              concorrente.
+            </p>
           </header>
-          <ReconciliacaoConcorrentes grupos={grupos} onChange={setGrupos} />
+
+          <ReconciliacaoConcorrentes grupos={grupos} contagemPorNome={contagemPorNome} onChange={setGrupos} />
+
+          {concorrentesConfirmados ? (
+            <p className="ajuda">
+              Concorrentes confirmados. Qualquer correção feita aqui em cima refaz de imediato o apuramento em baixo.
+            </p>
+          ) : (
+            <button type="button" className="botao-principal" onClick={() => setConcorrentesConfirmados(true)}>
+              Confirmar concorrentes e apurar
+            </button>
+          )}
         </section>
       )}
 
@@ -326,8 +380,8 @@ export function Modulo3() {
             <header className="painel-cabecalho">
               <h3>Exportação</h3>
               <p className="painel-nota">
-                O relatório inclui o traço de apuramento, para que qualquer terceiro possa reconstituir o cálculo à
-                mão.
+                Uma folha com o resumo por lote e o desagregado por requisito, e uma folha de perfis por cada
+                concorrente.
               </p>
             </header>
             <button type="button" className="botao-principal" onClick={exportar}>

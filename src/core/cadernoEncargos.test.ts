@@ -129,6 +129,38 @@ describe("conteúdo funcional do perfil", () => {
   });
 });
 
+describe("certificações do perfil", () => {
+  function tabelaDeCertificacoes(certificacoes: string) {
+    const config = lotesComPerfis([{ numero: "1", perfis: [perfil({ certificacoes })] }]);
+    return documentoRegrasEPrecoBase(config).blocos.find(
+      (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Certificações",
+    );
+  }
+
+  it("saem numa tabela própria, uma certificação por linha", () => {
+    const tabela = tabelaDeCertificacoes("Certificação A; Certificação B");
+
+    expect(tabela).toBeDefined();
+    expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toEqual([
+      "Certificação A",
+      "Certificação B",
+    ]);
+  });
+
+  it("o campo é opcional: sem certificações não há tabela", () => {
+    expect(tabelaDeCertificacoes("")).toBeUndefined();
+  });
+
+  it("a tabela fica abaixo da dos requisitos mínimos", () => {
+    const config = lotesComPerfis([{ numero: "1", perfis: [perfil({ certificacoes: "Certificação A" })] }]);
+    const blocos = documentoRegrasEPrecoBase(config).blocos;
+    const indice = (titulo: string) =>
+      blocos.findIndex((b) => b.tipo === "tabela" && b.colunas[0].titulo === titulo);
+
+    expect(indice("Certificações")).toBeGreaterThan(indice("Requisito"));
+  });
+});
+
 describe("normas de nulidade da experiência", () => {
   const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
 

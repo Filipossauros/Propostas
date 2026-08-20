@@ -297,6 +297,26 @@ export function Modulo1({
 
           <section className="painel">
             <header className="painel-cabecalho">
+              <h3>Certificações</h3>
+              <p className="painel-nota">
+                Opcional. Certificações exigidas ao elemento, separadas por ponto e vírgula. Saem no documento Word,
+                em tabela própria; não aparecem em nenhum formulário Excel, porque a certificação é verificada fora
+                desta ferramenta, contra as peças da proposta.
+              </p>
+            </header>
+            <label>
+              <span className="rotulo-oculto">Certificações exigidas</span>
+              <textarea
+                rows={2}
+                value={emEdicao.certificacoes}
+                placeholder="ex.: Oracle Certified Professional, Java SE Programmer; TOGAF Enterprise Architecture Foundation"
+                onChange={(e) => alterarEmEdicao({ certificacoes: e.target.value })}
+              />
+            </label>
+          </section>
+
+          <section className="painel">
+            <header className="painel-cabecalho">
               <h3>Conteúdo Funcional do Perfil</h3>
               <p className="painel-nota">
                 Atividades que se espera que o perfil desempenhe, separadas por ponto e vírgula. Sai no documento

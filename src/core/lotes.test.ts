@@ -4,6 +4,7 @@ import {
   linhasTabelaValores,
   lotesIniciais,
   lotesParaJSON,
+  perfisComCertificacao,
   totalLote,
   totalProcedimento,
   validarLotes,
@@ -117,5 +118,31 @@ describe("IVA", () => {
 
     const importado = importarLotesJSON(JSON.stringify(semTaxa));
     expect(importado.taxaIva).toBe(TAXA_IVA_PADRAO);
+  });
+});
+
+describe("perfisComCertificacao", () => {
+  it("assinala só os perfis que exigem certificação, com o lote onde estão", () => {
+    const config = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ perfil: "Programador", certificacoes: "Certificação A; Certificação B" })] },
+      { numero: "2", perfis: [perfil({ perfil: "Analista" })] },
+    ]);
+
+    expect(perfisComCertificacao(config)).toEqual([
+      {
+        loteNumero: "1",
+        loteDesignacao: "Lote 1",
+        perfil: "Programador",
+        certificacoes: ["Certificação A", "Certificação B"],
+      },
+    ]);
+  });
+
+  it("o agrupamento exportado leva as certificações, para o Módulo 3 poder avisar", () => {
+    const config = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ certificacoes: "Certificação A" })] },
+    ]);
+
+    expect(perfisComCertificacao(importarLotesJSON(lotesParaJSON(config)))).toHaveLength(1);
   });
 });

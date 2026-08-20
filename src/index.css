@@ -829,6 +829,24 @@ button:disabled {
   color: var(--texto-suave);
 }
 
+/* Separada dos requisitos por um traço: é exigência de outra natureza — não é
+   apurada aqui, verifica-se contra as peças da proposta. */
+.dica-certificacoes {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--borda);
+}
+
+.dica-certificacoes strong {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  margin-bottom: 2px;
+}
+
 .lista-lotes {
   display: flex;
   flex-direction: column;
@@ -904,17 +922,40 @@ button:disabled {
   border-color: var(--azul-500);
 }
 
+.resumo-reconciliacao {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+
 .lista-grupos {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 14px;
+  margin: 14px 0;
 }
 
 .cartao-grupo {
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
   padding: 12px;
+}
+
+/* O nome canónico em destaque no topo do cartão: é ele que responde à pergunta
+   do passo — "quem é este concorrente?" — antes de se olhar para as variantes. */
+.cartao-grupo-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.cartao-grupo-cabecalho h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
 }
 
 .lista-nomes-originais {
@@ -1058,6 +1099,61 @@ button:disabled {
 /* Reaproveita a lista de erros para um resumo neutro, sem a cor de erro. */
 .lista-sem-erro {
   color: var(--texto-suave);
+}
+
+/* Escolha de qual concorrente aparece nas tabelas de detalhe. Fica dentro do
+   fluxo dos resultados, imediatamente antes das tabelas que comanda. */
+.seletor-concorrente {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-alt);
+}
+
+.seletor-concorrente label {
+  min-width: min(320px, 100%);
+}
+
+.seletor-concorrente .ajuda {
+  margin: 0 0 4px;
+}
+
+/* Chamada de atenção do Módulo 3 para os perfis que exigem certificação.
+   Âmbar, e não vermelho: nada está errado — há é matéria a verificar fora
+   desta aplicação, que de outro modo não apareceria em lado nenhum. */
+.aviso-certificacao {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--ambar);
+  border-radius: var(--raio-pequeno);
+  background: var(--ambar-fundo);
+}
+
+.aviso-certificacao h4 {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--ambar);
+}
+
+.aviso-certificacao ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.aviso-certificacao li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .tabela .numerico {

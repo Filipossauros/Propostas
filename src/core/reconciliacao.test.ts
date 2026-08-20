@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { construirMapaReconciliacao, normalizarNomeEntidade, proporAgrupamentos } from "./reconciliacao";
+import {
+  construirMapaReconciliacao,
+  escolherNomeCanonico,
+  normalizarNomeEntidade,
+  proporAgrupamentos,
+} from "./reconciliacao";
 
 describe("normalizarNomeEntidade", () => {
   it("remove acentos e uniformiza maiúsculas", () => {
@@ -31,5 +36,15 @@ describe("construirMapaReconciliacao", () => {
     const grupos = proporAgrupamentos(["ABC", "ABC, S.A."]);
     const mapa = construirMapaReconciliacao(grupos);
     expect(mapa.get("ABC")).toBe(mapa.get("ABC, S.A."));
+  });
+});
+
+describe("escolherNomeCanonico", () => {
+  it("prefere o nome mais completo", () => {
+    expect(escolherNomeCanonico(["ABC", "ABC, S.A.", "ABC SA"])).toBe("ABC, S.A.");
+  });
+
+  it("desempata pela ordem alfabética", () => {
+    expect(escolherNomeCanonico(["Beta", "Alfa"])).toBe("Alfa");
   });
 });

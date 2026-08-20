@@ -18,15 +18,15 @@ function linhas(wb: XLSX.WorkBook, folha: string): unknown[][] {
 describe("construirWorkbookResultados", () => {
   const wb = construirWorkbookResultados(resultadoDoExemplo(), LOTES_EXEMPLO);
 
-  it("traz as folhas agregadas e as desagregadas", () => {
+  it("traz as folhas agregadas, as desagregadas e uma folha de perfis por concorrente", () => {
     expect(wb.SheetNames).toEqual([
       "Procedimento",
       "Resumo por lote",
-      "Perfis",
       "Elementos",
       "Requisitos",
       "Alertas",
-      "Traço de apuramento",
+      "Alfa Sistemas, S.A.",
+      "Beta Consultores, Lda.",
     ]);
   });
 
@@ -44,9 +44,14 @@ describe("construirWorkbookResultados", () => {
     expect(corpo.every((l) => typeof l[5] === "number")).toBe(true);
   });
 
-  it("deixa o traço de apuramento reconstituível, com períodos admitidos", () => {
-    const [, ...corpo] = linhas(wb, "Traço de apuramento");
-    expect(corpo.some((l) => l[6] === "Admitido")).toBe(true);
+  it("dá a cada concorrente uma folha só com os perfis da sua proposta", () => {
+    const [identificacao, , cabecalho, ...corpo] = linhas(wb, "Alfa Sistemas, S.A.");
+
+    expect(identificacao).toEqual(["Concorrente", "Alfa Sistemas, S.A."]);
+    expect(cabecalho).toContain("N.º mínimo exigido");
+    // Os quatro perfis dos dois lotes a que a Alfa se apresentou.
+    expect(corpo).toHaveLength(4);
+    expect(corpo.every((l) => l[2] !== "")).toBe(true);
   });
 
   it("regista na capa se a limitação de um lote por concorrente está ativa", () => {

@@ -32,6 +32,7 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
     perfil: "Perfil Teste",
     nBlocos: 3,
     conteudoFuncional: "Atividade A; Atividade B",
+    certificacoes: "",
     requisitos: [requisito()],
     ...parcial,
   };

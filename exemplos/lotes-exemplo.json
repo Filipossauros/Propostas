@@ -20,6 +20,7 @@
             "perfil": "Programador Sénior — Java",
             "nBlocos": 15,
             "conteudoFuncional": "Desenho e implementação de componentes aplicacionais em Java; Definição de APIs REST e respetiva documentação; Revisão de código e apoio técnico à equipa; Diagnóstico e correção de incidentes em produção.",
+            "certificacoes": "Oracle Certified Professional, Java SE Programmer",
             "requisitos": [
               {
                 "id": "p1-r1",
@@ -51,6 +52,7 @@
             "perfil": "Programador Front-end",
             "nBlocos": 15,
             "conteudoFuncional": "Implementação de interfaces web a partir de especificações de desenho; Garantia de conformidade com as normas de acessibilidade; Escrita de testes de interface; Articulação com as equipas de back-end.",
+            "certificacoes": "",
             "requisitos": [
               {
                 "id": "p2-r1",
@@ -89,6 +91,7 @@
             "perfil": "Arquiteto de Integração",
             "nBlocos": 15,
             "conteudoFuncional": "Análise e levantamento de requisitos funcionais, não funcionais e de negócio; Caracterização de fluxos de informação e processos; Elaboração de casos de uso e documentação funcional de projeto; Realização de formações na ótica do utilizador.",
+            "certificacoes": "HL7 FHIR Foundation (HL7 International); TOGAF Enterprise Architecture Foundation",
             "requisitos": [
               {
                 "id": "p3-r1",
@@ -120,6 +123,7 @@
             "perfil": "Engenheiro de Dados",
             "nBlocos": 15,
             "conteudoFuncional": "Modelação de dados e otimização de consultas; Construção e manutenção de processos de extração, transformação e carregamento; Monitorização da qualidade dos dados; Preparação de conjuntos de dados para análise.",
+            "certificacoes": "",
             "requisitos": [
               {
                 "id": "p4-r1",

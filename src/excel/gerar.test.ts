@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import type { EspecificacaoFormulario } from "../core/types";
 import { configAvaliacao, requisito } from "../core/fixtures";
+import { PERFIS_EXEMPLO } from "../core/exemplo";
 import { CAMPOS_IDENTIFICACAO, alturaBloco, linhaInicialBloco, nomeFolhaPerfil } from "./layout";
 import { gerarWorkbookDeclaracao } from "./gerar";
 import { lerDeclaracaoExcel } from "./ler";
@@ -180,6 +181,40 @@ describe("gerarWorkbookDeclaracao", () => {
 
     expect(estruturaValida).toBe(false);
     expect(declaracao.alertas.some((a) => a.tipo === "requisitosDivergentes")).toBe(true);
+  });
+});
+
+describe("matéria que não chega ao formulário", () => {
+  /** Todo o texto de todas as folhas do livro, incluindo o Leia-me. */
+  function textoDoLivro(wb: ReturnType<typeof gerarWorkbookDeclaracao>): string {
+    return wb.worksheets.map((folha) => folha.getSheetValues().flat().join("\n")).join("\n");
+  }
+
+  it("não leva as certificações exigidas, que se verificam fora desta ferramenta", () => {
+    const comCertificacao = PERFIS_EXEMPLO.filter((p) => p.certificacoes.trim() !== "");
+    expect(comCertificacao.length).toBeGreaterThan(0);
+
+    const wb = gerarWorkbookDeclaracao(
+      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: p.nBlocos, requisitos: p.requisitos })),
+    );
+    const texto = textoDoLivro(wb);
+
+    for (const p of comCertificacao) {
+      for (const certificacao of p.certificacoes.split(";")) {
+        expect(texto).not.toContain(certificacao.trim());
+      }
+    }
+  });
+
+  it("também não leva o conteúdo funcional, pela mesma razão", () => {
+    const wb = gerarWorkbookDeclaracao(
+      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: p.nBlocos, requisitos: p.requisitos })),
+    );
+    const texto = textoDoLivro(wb);
+
+    for (const p of PERFIS_EXEMPLO) {
+      expect(texto).not.toContain(p.conteudoFuncional.split(";")[0].trim());
+    }
   });
 });
 

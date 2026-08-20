@@ -89,7 +89,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
 
                   <div className="perfil-em-lote-titulo">
                     <strong>{entrada.perfil.perfil || "(perfil sem designação)"}</strong>
-                    <DicaRequisitos requisitos={entrada.perfil.requisitos} />
+                    <DicaRequisitos requisitos={entrada.perfil.requisitos} certificacoes={entrada.perfil.certificacoes} />
                   </div>
 
                   <CampoNumero

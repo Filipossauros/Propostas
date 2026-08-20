@@ -12,7 +12,14 @@ function req(id: string, designacao: string, mesesMinimos: number): Requisito {
   return { id, designacao, mesesMinimos };
 }
 
-function perfil(id: string, nome: string, conteudoFuncional: string, requisitos: Requisito[]): PerfilJSON {
+function perfil(
+  id: string,
+  nome: string,
+  conteudoFuncional: string,
+  requisitos: Requisito[],
+  /** Campo opcional: só dois dos perfis do exemplo exigem certificação. */
+  certificacoes = "",
+): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
@@ -20,6 +27,7 @@ function perfil(id: string, nome: string, conteudoFuncional: string, requisitos:
     perfil: nome,
     nBlocos: 15,
     conteudoFuncional,
+    certificacoes,
     requisitos: requisitos.map((r) => ({ ...r, id: `${id}-${r.id}` })),
   };
 }
@@ -28,7 +36,7 @@ export const PERFIL_EXEMPLO: PerfilJSON = perfil("p1", "Programador Sénior — 
   req("r1", "Desenvolvimento de software (geral)", 120),
   req("r2", "Java (versão 8 ou superior)", 60),
   req("r3", "Desenvolvimento de APIs REST", 36),
-]);
+], "Oracle Certified Professional, Java SE Programmer");
 
 const PERFIL_FRONTEND = perfil("p2", "Programador Front-end", "Implementação de interfaces web a partir de especificações de desenho; Garantia de conformidade com as normas de acessibilidade; Escrita de testes de interface; Articulação com as equipas de back-end.", [
   req("r1", "Desenvolvimento de software (geral)", 60),
@@ -40,7 +48,7 @@ const PERFIL_INTEGRACAO = perfil("p3", "Arquiteto de Integração", "Análise e 
   req("r1", "Desenvolvimento de software (geral)", 120),
   req("r2", "Integração de sistemas de informação", 60),
   req("r3", "Normas de interoperabilidade em saúde (HL7 / FHIR)", 36),
-]);
+], "HL7 FHIR Foundation (HL7 International); TOGAF Enterprise Architecture Foundation");
 
 const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", "Modelação de dados e otimização de consultas; Construção e manutenção de processos de extração, transformação e carregamento; Monitorização da qualidade dos dados; Preparação de conjuntos de dados para análise.", [
   req("r1", "Modelação e exploração de bases de dados relacionais", 60),

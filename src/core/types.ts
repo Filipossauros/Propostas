@@ -69,6 +69,17 @@ export interface PerfilJSON {
    * nenhum Excel.
    */
   conteudoFuncional: string;
+  /**
+   * Certificações exigidas ao elemento, separadas por ponto e vírgula. Campo
+   * opcional: a maioria dos perfis não exige nenhuma.
+   *
+   * Tal como o conteúdo funcional, só entra no documento Word — e por uma razão
+   * mais forte: a certificação é verificada fora desta ferramenta, contra as
+   * peças da proposta, e não há nada que o candidato possa declarar sobre ela
+   * no formulário. Pedi-la em Excel só produziria uma resposta que ninguém
+   * apuraria.
+   */
+  certificacoes: string;
   requisitos: Requisito[];
 }
 

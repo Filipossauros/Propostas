@@ -6,7 +6,7 @@
 // são feitas depois, na redação do procedimento.
 
 import type { LotesJSON } from "./types";
-import { agruparPorExigencia } from "./perfil";
+import { agruparPorExigencia, itensSeparados } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
 import { celula, type BlocoDocumento, type Documento } from "./documento";
 
@@ -73,11 +73,7 @@ function tabelaPrecoBase(config: LotesJSON): BlocoDocumento {
  * descreve o trabalho a contratar, não algo que o candidato declare.
  */
 function tabelaConteudoFuncional(conteudoFuncional: string): BlocoDocumento[] {
-  const atividades = conteudoFuncional
-    .split(/[;\n]/)
-    .map((a) => a.trim().replace(/\.$/, ""))
-    .filter((a) => a !== "");
-
+  const atividades = itensSeparados(conteudoFuncional);
   if (atividades.length === 0) return [];
 
   return [
@@ -85,6 +81,30 @@ function tabelaConteudoFuncional(conteudoFuncional: string): BlocoDocumento[] {
       tipo: "tabela",
       colunas: [{ titulo: "Conteúdo Funcional do Perfil", peso: 100 }],
       linhas: atividades.map((atividade) => [celula(atividade)]),
+    },
+  ];
+}
+
+/**
+ * Certificações exigidas ao elemento, uma por linha.
+ *
+ * O campo é opcional, e a tabela só existe quando alguma foi indicada — um
+ * quadro vazio intitulado "Certificações" leria como "nenhuma é exigida", que
+ * é coisa diferente de não haver quadro nenhum.
+ *
+ * A certificação não é apurada por esta ferramenta: verifica-se contra as peças
+ * da proposta. Por isso vive só aqui e no programa do concurso, e não chega a
+ * nenhum formulário Excel.
+ */
+function tabelaCertificacoes(certificacoes: string): BlocoDocumento[] {
+  const exigidas = itensSeparados(certificacoes);
+  if (exigidas.length === 0) return [];
+
+  return [
+    {
+      tipo: "tabela",
+      colunas: [{ titulo: "Certificações", peso: 100 }],
+      linhas: exigidas.map((certificacao) => [celula(certificacao)]),
     },
   ];
 }
@@ -122,6 +142,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
           ]),
         ),
       },
+      ...tabelaCertificacoes(entrada.perfil.certificacoes),
       ...tabelaConteudoFuncional(entrada.perfil.conteudoFuncional),
     ]);
 

@@ -5,7 +5,7 @@
 
 import type { Lote, LotesJSON, PerfilEmLote, PerfilJSON } from "./types";
 import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
-import { ErroImportacao, type ErroValidacao } from "./perfil";
+import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
 
 export function criarLote(numero: string): Lote {
@@ -183,6 +183,43 @@ export function formulariosParaJSON(config: LotesJSON): string {
   };
   return JSON.stringify(ficheiro, null, 2);
 }
+
+/** Um perfil do agrupamento que exige certificação, com o lote onde está. */
+export interface PerfilComCertificacao {
+  loteNumero: string;
+  loteDesignacao: string;
+  perfil: string;
+  certificacoes: string[];
+}
+
+/**
+ * Perfis do agrupamento que exigem certificação.
+ *
+ * O Módulo 3 usa isto para chamar a atenção do júri: a certificação não é
+ * apurada por esta aplicação — verifica-se contra as peças da proposta — e o
+ * risco é justamente passar despercebida por não aparecer em lado nenhum do
+ * apuramento.
+ */
+export function perfisComCertificacao(config: LotesJSON): PerfilComCertificacao[] {
+  return config.lotes.flatMap((lote) =>
+    lote.perfis
+      .map((entrada) => ({
+        loteNumero: lote.numero,
+        loteDesignacao: lote.designacao,
+        perfil: entrada.perfil.perfil,
+        certificacoes: certificacoesDoPerfil(entrada.perfil),
+      }))
+      .filter((p) => p.certificacoes.length > 0),
+  );
+}
+
+/**
+ * Chamada de atenção a apresentar por cada perfil que exija certificação.
+ * Texto fixo: é o que o júri tem de ler, e não uma paráfrase por caso.
+ */
+export const AVISO_CERTIFICACAO =
+  "Além dos requisitos mínimos verificados, este perfil requer ainda a apresentação de uma certificação. " +
+  "Deve ser validada a apresentação da mesma nas peças da proposta.";
 
 /** Número do lote a que cada perfil está atribuído, indexado pelo id do perfil. */
 export function lotePorPerfilId(config: LotesJSON): Record<string, string> {

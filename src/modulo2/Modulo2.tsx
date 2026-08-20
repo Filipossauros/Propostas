@@ -369,7 +369,7 @@ export function Modulo2({
               <li key={perfil.id}>
                 <div>
                   <strong>{perfil.perfil || "(perfil sem designação)"}</strong>
-                  <DicaRequisitos requisitos={perfil.requisitos} />
+                  <DicaRequisitos requisitos={perfil.requisitos} certificacoes={perfil.certificacoes} />
                 </div>
                 {config.lotes.length === 0 ? (
                   <span className="meta">crie um lote para poder atribuir</span>

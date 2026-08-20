@@ -12,9 +12,9 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
-| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência e o conteúdo funcional de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
+| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
 | **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
-| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito e o traço de apuramento |
+| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito e uma folha por concorrente |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
 agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
@@ -57,6 +57,19 @@ pode sempre ser contornada.
 apreciados por ordem crescente do número: quem fica com o lote 1 é marcado
 como impedido nos seguintes, mesmo cumprindo todos os requisitos. A regra sai
 no documento Word com título próprio e é aplicada na avaliação.
+
+### O que não passa pelo Excel
+
+O **conteúdo funcional** e as **certificações** de um perfil saem apenas no
+documento Word, cada um em tabela própria por baixo dos requisitos. Nenhum dos
+dois é matéria que o candidato declare no formulário: o primeiro descreve o
+trabalho a contratar, e a certificação verifica-se contra as peças da proposta,
+fora desta ferramenta. Pedi-los em Excel só produziria respostas que ninguém
+apuraria.
+
+Como a certificação não entra em nenhum quadro do apuramento, o risco é passar
+despercebida. Por isso o Módulo 3, ao carregar o agrupamento, assinala cada
+perfil que a exija — chamada de atenção, não verificação.
 
 ## Princípios
 

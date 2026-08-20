@@ -71,7 +71,7 @@ export function proporAgrupamentos(nomes: string[]): GrupoConcorrentes[] {
 }
 
 /** O nome mais completo do grupo; em caso de empate, o primeiro por ordem alfabética. */
-function escolherNomeCanonico(nomes: string[]): string {
+export function escolherNomeCanonico(nomes: string[]): string {
   return nomes
     .slice()
     .sort((a, b) => b.length - a.length || a.localeCompare(b, "pt"))[0];

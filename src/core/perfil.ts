@@ -17,6 +17,7 @@ export function perfilInicial(): PerfilJSON {
     perfil: "",
     nBlocos: 15,
     conteudoFuncional: "",
+    certificacoes: "",
     requisitos: [],
   };
 }
@@ -196,6 +197,7 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
     tipo: "perfil",
     id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
     conteudoFuncional: typeof perfil.conteudoFuncional === "string" ? perfil.conteudoFuncional : "",
+    certificacoes: typeof perfil.certificacoes === "string" ? perfil.certificacoes : "",
   };
 }
 
@@ -243,6 +245,28 @@ export function lerTipoConfiguracao(texto: string): string {
   const bruto = analisarJSON(texto);
   verificarSchemaVersion(bruto);
   return String(bruto.tipo ?? "");
+}
+
+/**
+ * Separa um campo de texto livre em itens — por ponto e vírgula ou por linha.
+ *
+ * É assim que o conteúdo funcional e as certificações são registados: uma frase
+ * corrida a escrever, uma lista a ler. O ponto final de fecho é retirado, para
+ * que a última entrada não fique diferente das outras.
+ */
+export function itensSeparados(texto: string): string[] {
+  return texto
+    .split(/[;\n]/)
+    .map((i) => i.trim().replace(/\.$/, ""))
+    .filter((i) => i !== "");
+}
+
+/**
+ * Certificações exigidas pelo perfil. Lista vazia quando o campo — que é
+ * opcional — está por preencher, que é o caso da maioria dos perfis.
+ */
+export function certificacoesDoPerfil(perfil: PerfilJSON): string[] {
+  return itensSeparados(perfil.certificacoes ?? "");
 }
 
 export interface GrupoDeExigencia {

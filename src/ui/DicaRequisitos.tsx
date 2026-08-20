@@ -1,9 +1,12 @@
 import { useId } from "react";
 import type { Requisito } from "../core/types";
 import { anosDeMeses } from "../core/types";
+import { itensSeparados } from "../core/perfil";
 
 interface Props {
   requisitos: Requisito[];
+  /** Campo opcional do perfil; vazio na maioria dos casos. */
+  certificacoes?: string;
 }
 
 /**
@@ -13,13 +16,18 @@ interface Props {
  * passar o rato: assim um leitor de ecrã encontra-o por `aria-describedby`,
  * que é o que torna a dica utilizável sem rato.
  */
-export function DicaRequisitos({ requisitos }: Props) {
+export function DicaRequisitos({ requisitos, certificacoes = "" }: Props) {
   const id = useId();
+  const exigidas = itensSeparados(certificacoes);
 
   return (
     <span className="dica">
+      {/* A existência de certificação vai também no rótulo, e não só dentro da
+          dica: é uma exigência que se verifica fora desta ferramenta, e quem
+          percorre a lista de perfis tem de dar por ela sem ter de abrir cada uma. */}
       <button type="button" className="dica-alvo" aria-describedby={id}>
         {requisitos.length} requisito(s)
+        {exigidas.length > 0 && ` + ${exigidas.length === 1 ? "certificação" : "certificações"}`}
       </button>
 
       <span role="tooltip" id={id} className="dica-conteudo">
@@ -36,6 +44,13 @@ export function DicaRequisitos({ requisitos }: Props) {
               </li>
             ))}
           </ul>
+        )}
+
+        {exigidas.length > 0 && (
+          <span className="dica-certificacoes">
+            <strong>{exigidas.length === 1 ? "Certificação exigida" : "Certificações exigidas"}</strong>
+            {exigidas.join("; ")}
+          </span>
         )}
       </span>
     </span>

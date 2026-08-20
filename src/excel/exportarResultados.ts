@@ -3,7 +3,7 @@
 // recursos (estilos, validação, proteção) que aqui obrigaram a exceljs.
 
 import * as XLSX from "xlsx";
-import type { LotesJSON, MesAno } from "../core/types";
+import type { LotesJSON } from "../core/types";
 import type {
   ResultadoConcorrenteLote,
   ResultadoLote,
@@ -13,10 +13,6 @@ import { requisitosFalhados } from "../core/avaliacaoProcedimento";
 import { anosDeMeses } from "../core/types";
 
 type Linha = (string | number)[];
-
-function formatarMesAno(data: MesAno | null): string {
-  return data === null ? "" : `${String(data.mes).padStart(2, "0")}/${data.ano}`;
-}
 
 function sim(valor: boolean): string {
   return valor ? "Sim" : "Não";
@@ -51,10 +47,45 @@ function folhaResumo(resultado: ResultadoProcedimento): XLSX.WorkSheet {
   return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
-function folhaPerfis(resultado: ResultadoProcedimento): XLSX.WorkSheet {
+/** Todos os concorrentes do procedimento, por ordem alfabética e sem repetições. */
+function concorrentesDoProcedimento(resultado: ResultadoProcedimento): string[] {
+  const nomes = new Set<string>();
+  for (const lote of resultado.lotes) for (const c of lote.concorrentes) nomes.add(c.concorrente);
+  return [...nomes].sort((a, b) => a.localeCompare(b, "pt"));
+}
+
+/** Caracteres que o formato Excel não admite num nome de folha. */
+const PROIBIDOS_EM_NOME_DE_FOLHA = /[:\\/?*[\]]/g;
+
+/**
+ * Nome de folha para um concorrente: sem caracteres proibidos e com 31
+ * caracteres no máximo, que é o limite do formato. Dois nomes longos podem
+ * ficar iguais depois do corte — daí o sufixo numérico.
+ */
+function nomeDeFolha(concorrente: string, jaUsados: Set<string>): string {
+  const limpo = concorrente.replace(PROIBIDOS_EM_NOME_DE_FOLHA, " ").replace(/\s+/g, " ").trim();
+  const base = limpo === "" ? "Concorrente" : limpo;
+
+  let nome = base.slice(0, 31);
+  for (let n = 2; jaUsados.has(nome); n++) {
+    const sufixo = ` (${n})`;
+    nome = base.slice(0, 31 - sufixo.length) + sufixo;
+  }
+  jaUsados.add(nome);
+  return nome;
+}
+
+/**
+ * Os perfis de um concorrente, em folha própria.
+ *
+ * Uma folha por concorrente, e não uma folha com todos: é assim que se imprime
+ * ou se envia a apreciação de uma proposta sem levar atrás as das concorrentes.
+ * O nome vai na primeira linha porque o nome da folha pode ter sido cortado.
+ */
+function folhaPerfisDoConcorrente(resultado: ResultadoProcedimento, concorrente: string): XLSX.WorkSheet {
   const cabecalho = [
     "Lote",
-    "Concorrente",
+    "Designação do lote",
     "Perfil",
     "N.º de elementos",
     "N.º mínimo exigido",
@@ -62,19 +93,23 @@ function folhaPerfis(resultado: ResultadoProcedimento): XLSX.WorkSheet {
     "Todos os elementos cumprem",
     "Cumpre",
   ];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) =>
-    c.perfis.map((p) => [
+
+  const linhas: Linha[] = resultado.lotes.flatMap((lote) => {
+    const c = lote.concorrentes.find((x) => x.concorrente === concorrente);
+    if (c === undefined) return [];
+    return c.perfis.map((p) => [
       lote.numero,
-      c.concorrente,
+      lote.designacao,
       p.perfil,
       p.nElementos,
       p.nMinimoElementos,
       sim(p.nElementosSuficiente),
       sim(p.todosElementosCumprem),
       sim(p.cumpre),
-    ]),
-  );
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+    ]);
+  });
+
+  return XLSX.utils.aoa_to_sheet([["Concorrente", concorrente], [], cabecalho, ...linhas]);
 }
 
 function folhaElementos(resultado: ResultadoProcedimento): XLSX.WorkSheet {
@@ -148,63 +183,6 @@ function folhaAlertas(resultado: ResultadoProcedimento): XLSX.WorkSheet {
   return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
 }
 
-/**
- * Traço do apuramento: os períodos que entraram e os que foram descartados.
- * É o que permite a um terceiro reconstituir a contagem à mão.
- */
-function folhaTraco(resultado: ResultadoProcedimento): XLSX.WorkSheet {
-  const cabecalho = [
-    "Lote",
-    "Concorrente",
-    "Perfil",
-    "Elemento",
-    "Requisito",
-    "Bloco",
-    "Situação",
-    "Início",
-    "Fim",
-    "Origem / motivo",
-  ];
-  const linhas: Linha[] = porLoteEConcorrente(resultado.lotes, (lote, c) =>
-    c.perfis.flatMap((p) => {
-      const porId = new Map(p.requisitos.map((r) => [r.id, r.designacao]));
-      return p.elementos.flatMap((e) =>
-        e.apuramento.requisitos.flatMap((r) => {
-          const designacao = porId.get(r.requisitoId) ?? r.requisitoId;
-          const nome = e.declaracao.identificacao.nome;
-          return [
-            ...r.periodosAdmitidos.map((periodo): Linha => [
-              lote.numero,
-              c.concorrente,
-              p.perfil,
-              nome,
-              designacao,
-              periodo.blocoIndice,
-              "Admitido",
-              formatarMesAno(periodo.inicio),
-              formatarMesAno(periodo.fim),
-              periodo.origem === "linha" ? "Datas da linha" : "Período do projeto",
-            ]),
-            ...r.periodosDescartados.map((descarte): Linha => [
-              lote.numero,
-              c.concorrente,
-              p.perfil,
-              nome,
-              designacao,
-              descarte.blocoIndice,
-              "Descartado",
-              "",
-              "",
-              descarte.motivo,
-            ]),
-          ];
-        }),
-      );
-    }),
-  );
-  return XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
-}
-
 export function construirWorkbookResultados(
   resultado: ResultadoProcedimento,
   config: LotesJSON,
@@ -222,11 +200,18 @@ export function construirWorkbookResultados(
 
   XLSX.utils.book_append_sheet(wb, capa, "Procedimento");
   XLSX.utils.book_append_sheet(wb, folhaResumo(resultado), "Resumo por lote");
-  XLSX.utils.book_append_sheet(wb, folhaPerfis(resultado), "Perfis");
   XLSX.utils.book_append_sheet(wb, folhaElementos(resultado), "Elementos");
   XLSX.utils.book_append_sheet(wb, folhaRequisitos(resultado), "Requisitos");
   XLSX.utils.book_append_sheet(wb, folhaAlertas(resultado), "Alertas");
-  XLSX.utils.book_append_sheet(wb, folhaTraco(resultado), "Traço de apuramento");
+
+  const usados = new Set<string>();
+  for (const concorrente of concorrentesDoProcedimento(resultado)) {
+    XLSX.utils.book_append_sheet(
+      wb,
+      folhaPerfisDoConcorrente(resultado, concorrente),
+      nomeDeFolha(concorrente, usados),
+    );
+  }
 
   return wb;
 }
