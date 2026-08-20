@@ -486,10 +486,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
           <section className="painel painel-avancar">
             <div>
               <h3>Continuar para a ordenação das propostas</h3>
-              <p className="painel-nota">
-                Envia este apuramento diretamente para o Módulo 4, sem passar por ficheiro. Lá indica-se o preço de
-                cada proposta admitida e obtém-se a ordenação de cada lote.
-              </p>
+              <p className="painel-nota">Envia este apuramento diretamente para o Módulo 4, sem passar por ficheiro.</p>
             </div>
             <button type="button" className="botao-principal" onClick={() => onIrParaOrdenacao(resultado, config)}>
               Ir para o Módulo 4 →

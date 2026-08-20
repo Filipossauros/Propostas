@@ -158,9 +158,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
             <li>
               {apuramento.config.nomeProjeto || "(projeto sem nome)"} · {apuramento.resultado.lotes.length} lote(s)
             </li>
-            <li>
-              {admitidas.length} proposta(s) admitida(s) — só estas entram na ordenação.
-            </li>
+            <li>{admitidas.length} proposta(s) admitida(s).</li>
             <li>
               Limitação de um lote por concorrente:{" "}
               <strong>{apuramento.resultado.umLotePorConcorrente ? "sim" : "não"}</strong>

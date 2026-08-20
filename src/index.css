@@ -837,9 +837,17 @@ button:disabled {
 }
 
 /* A dica do apuramento é uma conta, e lê-se como tal: parcelas em cima,
-   total em baixo, separado por um traço. */
+   total em baixo, separado por um traço.
+
+   Abre para a esquerda, e não para a direita como as restantes: a coluna dos
+   meses apurados fica a meio de uma tabela larga, e uma dica larga a abrir
+   para a direita empurrava a tabela, deixando uma faixa em branco à direita
+   sempre que aparecia. Ancorada à direita do alvo, cresce sobre o espaço que
+   a tabela já ocupa. */
 .dica-apuramento {
   max-width: min(460px, 86vw);
+  left: auto;
+  right: 0;
 }
 
 .dica-total,
