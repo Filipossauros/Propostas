@@ -84,12 +84,13 @@ export interface EspecificacaoFormulario {
   nBlocos: number;
   requisitos: Requisito[];
   /**
-   * Número do lote, quando já se conhece (formulário descarregado a partir do
-   * Módulo 2, dentro de um lote). Pré-preenche e bloqueia o campo "Lote" no
-   * formulário. Ausente quando o formulário é gerado a partir do Módulo 1,
-   * antes de o perfil ser agrupado em qualquer lote.
+   * Número e designação do lote, quando já se conhecem (formulário descarregado
+   * a partir do Módulo 2, dentro de um lote). Pré-preenchem e bloqueiam os
+   * campos de lote no formulário. Ausentes quando o formulário é gerado a
+   * partir do Módulo 1, antes de o perfil ser agrupado em qualquer lote.
    */
   lote?: string;
+  loteDesignacao?: string;
 }
 
 // --------------------------------------------------------------------------
@@ -190,6 +191,7 @@ export interface Identificacao {
   entidadeConcorrente: string;
   procedimento: string;
   lote: string;
+  loteDesignacao: string;
   perfil: string;
 }
 

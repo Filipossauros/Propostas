@@ -330,6 +330,8 @@ function construirFolhaExperiencia(
       aplicarCampoBloqueado(campo, config.perfil);
     } else if (nomeCampo === "lote" && config.lote) {
       aplicarCampoBloqueado(campo, config.lote);
+    } else if (nomeCampo === "loteDesignacao" && config.loteDesignacao) {
+      aplicarCampoBloqueado(campo, config.loteDesignacao);
     } else {
       aplicarCampoEditavel(campo);
       validarTexto(campo);

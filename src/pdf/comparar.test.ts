@@ -42,6 +42,7 @@ function declaracao(opts: Partial<Declaracao> = {}): Declaracao {
       entidadeConcorrente: "ABC, Lda.",
       procedimento: "20270001",
       lote: "1",
+      loteDesignacao: "Lote Teste",
       perfil: "Perfil",
     },
     blocos: [bloco()],

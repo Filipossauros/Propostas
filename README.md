@@ -13,7 +13,7 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
 | **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
-| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, Excel do procedimento, JSON do agrupamento, formulários de declaração |
+| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
 | **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos nas declarações recebidas | Relatório Excel de 5 folhas, incluindo o traço de apuramento |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão

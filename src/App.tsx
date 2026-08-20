@@ -106,14 +106,6 @@ function App() {
         )}
         {aba === "modulo3" && <Modulo3 />}
       </main>
-
-      <footer className="app-rodape">
-        <p>
-          Aplicação 100% local: nenhum ficheiro sai do posto de trabalho e não há qualquer chamada de rede. Os perfis e
-          o agrupamento em edição são guardados neste navegador; os dados das declarações em avaliação vivem apenas em
-          memória e desaparecem ao fechar o separador.
-        </p>
-      </footer>
     </div>
   );
 }

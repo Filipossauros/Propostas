@@ -35,6 +35,12 @@ describe("validarLotes", () => {
     expect(validarLotes(config).some((e) => e.mensagem.includes("repetido"))).toBe(true);
   });
 
+  it("exige a designação do lote — dá nome ao ficheiro de formulários", () => {
+    const config = lotesExemplo();
+    config.lotes[0].designacao = "   ";
+    expect(validarLotes(config).some((e) => e.campo === "lotes[0].designacao")).toBe(true);
+  });
+
   it("exige horas e valor/hora positivos", () => {
     const config = lotesExemplo();
     config.lotes[0].perfis[0].horas = 0;

@@ -15,10 +15,8 @@ import {
 import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { gerarDocxBlob } from "../word/gerarDocx";
 import { LOTES_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
-import { PERSISTENCIA_DISPONIVEL } from "../core/persistencia";
-import { gerarLotesBlob } from "../excel/exportarLotes";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { descarregarBlob } from "../ui/descarregar";
+import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
@@ -38,8 +36,14 @@ interface Props {
 }
 
 /** Especificação do formulário de um perfil dentro de um lote. */
-function especificacao(perfil: PerfilJSON, numeroLote?: string): EspecificacaoFormulario {
-  return { perfil: perfil.perfil, nBlocos: perfil.nBlocos, requisitos: perfil.requisitos, lote: numeroLote };
+function especificacao(perfil: PerfilJSON, lote?: Lote): EspecificacaoFormulario {
+  return {
+    perfil: perfil.perfil,
+    nBlocos: perfil.nBlocos,
+    requisitos: perfil.requisitos,
+    lote: lote?.numero,
+    loteDesignacao: lote?.designacao,
+  };
 }
 
 export function Modulo2({
@@ -64,9 +68,7 @@ export function Modulo2({
   // devolve-o a esta lista sem ser preciso mantê-la em sincronia à mão.
   const idsEmLotes = new Set(perfisEmLotes(config).map((p) => p.id));
   const porAtribuir = perfis.filter((p) => !idsEmLotes.has(p.id));
-  const especificacoesDeTodos = config.lotes.flatMap((lote) =>
-    lote.perfis.map((entrada) => especificacao(entrada.perfil, lote.numero)),
-  );
+  const lotesComPerfis = config.lotes.filter((lote) => lote.perfis.length > 0);
 
   function atualizarLote(loteId: string, alteracao: Partial<Lote>) {
     onAlterarConfig((atual) => ({
@@ -166,18 +168,23 @@ export function Modulo2({
     descarregarBlob(new Blob([lotesParaJSON(config)], { type: "application/json" }), "Lotes.json");
   }
 
-  async function descarregarExcel() {
-    descarregarBlob(await gerarLotesBlob(config), "Lotes.xlsx");
-  }
-
   async function descarregarWord() {
     descarregarBlob(await gerarDocxBlob([documentoRegrasEPrecoBase(config)]), "Requisitos_e_regras.docx");
   }
 
+  /**
+   * Um ficheiro Excel por lote, com uma folha por perfil desse lote e o nome
+   * do próprio lote. Cada lote é entregue aos seus concorrentes em separado —
+   * um ficheiro só, com todos os lotes, daria a cada um os perfis dos outros.
+   */
   async function descarregarFormulariosExcel() {
     setAGerar(true);
     try {
-      descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoesDeTodos), "Formularios_Declaracao.xlsx");
+      for (const lote of lotesComPerfis) {
+        const especificacoes = lote.perfis.map((entrada) => especificacao(entrada.perfil, lote));
+        const nome = `${nomeSeguro(lote.designacao, `Lote ${lote.numero}`)}.xlsx`;
+        descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes), nome);
+      }
     } finally {
       setAGerar(false);
     }
@@ -396,14 +403,11 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Saídas</h3>
+          <h3>Anexo Técnico</h3>
         </header>
         <div className="acoes">
           <button type="button" className="botao-principal" onClick={descarregarWord} disabled={!podeExportar}>
             Descarregar documento Word
-          </button>
-          <button type="button" className="botao-secundario" onClick={descarregarExcel} disabled={!podeExportar}>
-            Descarregar Excel
           </button>
           <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
             Descarregar agrupamento (JSON)
@@ -413,15 +417,14 @@ export function Modulo2({
           O documento Word reúne, com tabelas formatadas, os requisitos e o preço base para o caderno de encargos e as
           regras de comprovação e apuramento para o programa do concurso.
         </p>
-        {PERSISTENCIA_DISPONIVEL && <p className="ajuda">O agrupamento em edição é guardado neste navegador.</p>}
       </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Formulários de Declaração</h3>
           <p className="painel-nota">
-            Um ficheiro único com os formulários de todos os perfis atribuídos a lotes — no Excel, uma folha por
-            perfil.
+            Um ficheiro Excel por lote, com o nome do lote e uma folha por perfil. O JSON reúne todos os lotes num
+            ficheiro só.
           </p>
         </header>
         <div className="acoes">
@@ -429,22 +432,28 @@ export function Modulo2({
             type="button"
             className="botao-secundario"
             onClick={descarregarFormulariosExcel}
-            disabled={aGerar || especificacoesDeTodos.length === 0}
+            disabled={aGerar || !podeExportar || lotesComPerfis.length === 0}
           >
-            {aGerar ? "A gerar…" : "Descarregar formulários (Excel)"}
+            {aGerar
+              ? "A gerar…"
+              : `Descarregar formulários (Excel, ${lotesComPerfis.length} ficheiro${lotesComPerfis.length === 1 ? "" : "s"})`}
           </button>
           <button
             type="button"
             className="botao-secundario"
             onClick={descarregarFormulariosJSON}
-            disabled={especificacoesDeTodos.length === 0}
+            disabled={!podeExportar || lotesComPerfis.length === 0}
           >
             Descarregar formulários (JSON)
           </button>
         </div>
-        {especificacoesDeTodos.length === 0 && (
-          <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>
+        {lotesComPerfis.length > 1 && (
+          <p className="ajuda">
+            São {lotesComPerfis.length} descarregamentos seguidos, um por lote — o navegador pode pedir autorização
+            para descarregar vários ficheiros.
+          </p>
         )}
+        {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
       </section>
     </div>
   );

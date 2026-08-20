@@ -78,6 +78,7 @@ export function declaracao(parcial: Partial<Declaracao> = {}): Declaracao {
     entidadeConcorrente: "ABC, Lda.",
     procedimento: "20270001",
     lote: "1",
+    loteDesignacao: "Lote Teste",
     perfil: "Perfil Teste",
     ...parcial.identificacao,
   };
@@ -99,7 +100,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,
       numero: e.numero,
-      designacao: "",
+      designacao: `Lote ${e.numero}`,
       perfis: e.perfis.map((p) => ({ ...criarPerfilEmLote(p), horas: 100, valorHora: 50, nMinimoElementos: 2 })),
     })),
   };

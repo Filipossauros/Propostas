@@ -75,18 +75,26 @@ describe("gerarWorkbookDeclaracao", () => {
     expect(sheet.getCell(linhaPerfil.linha, 2).value).toBe(NOME_PERFIL);
   });
 
-  it("deixa o campo Lote em branco e editável quando o formulário vem do Módulo 1", () => {
+  it("deixa os campos de lote em branco e editáveis quando o formulário vem do Módulo 1", () => {
     const sheet = folhaDe(gerarWorkbookDeclaracao([perfilExemplo()]));
-    const linhaLote = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!;
 
-    expect(sheet.getCell(linhaLote.linha, 2).value).toBeFalsy();
+    for (const campo of ["lote", "loteDesignacao"] as const) {
+      const linha = CAMPOS_IDENTIFICACAO.find((c) => c.campo === campo)!.linha;
+      expect(sheet.getCell(linha, 2).value).toBeFalsy();
+      expect(sheet.getCell(linha, 2).protection?.locked).toBe(false);
+    }
   });
 
-  it("pré-preenche e bloqueia o campo Lote quando o formulário vem de um lote do Módulo 2", () => {
-    const sheet = folhaDe(gerarWorkbookDeclaracao([perfilExemplo({ lote: "3" })]));
+  it("pré-preenche e bloqueia o número e a designação do lote quando o formulário vem do Módulo 2", () => {
+    const especificacao = perfilExemplo({ lote: "3", loteDesignacao: "Integração e dados" });
+    const sheet = folhaDe(gerarWorkbookDeclaracao([especificacao]));
     const linhaLote = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!;
+    const linhaDesignacao = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "loteDesignacao")!;
 
     expect(sheet.getCell(linhaLote.linha, 2).value).toBe("3");
+    expect(sheet.getCell(linhaLote.linha, 2).protection?.locked).not.toBe(false);
+    expect(sheet.getCell(linhaDesignacao.linha, 2).value).toBe("Integração e dados");
+    expect(sheet.getCell(linhaDesignacao.linha, 2).protection?.locked).not.toBe(false);
   });
 
   it("o subtítulo é só o perfil — é por ele que a folha é localizada na leitura", () => {

@@ -38,14 +38,13 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
         </label>
 
         <label className="campo-crescente">
-          <span className="rotulo">
-            Designação do lote <span className="etiqueta-opcional">opcional</span>
-          </span>
+          <span className="rotulo">Designação do lote</span>
           <input
             type="text"
             value={lote.designacao}
             placeholder="ex.: Desenvolvimento aplicacional"
             onChange={(e) => onAlterar({ designacao: e.target.value })}
+            aria-invalid={lote.designacao.trim() === ""}
           />
         </label>
 
@@ -67,7 +66,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
             <span>N.º mín.</span>
             <span>Horas</span>
             <span>Preço/hora</span>
-            <span>Preço base</span>
+            <span>Preço base s/ IVA</span>
             <span />
           </div>
 

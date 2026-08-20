@@ -101,18 +101,6 @@ body {
   color: var(--texto-suave);
 }
 
-.app-rodape {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid var(--borda);
-  color: var(--texto-suave);
-  font-size: 0.82rem;
-}
-
-.app-rodape p {
-  margin: 0;
-}
-
 /* ------------------------------------------------------------------- Abas */
 
 .abas {
@@ -300,6 +288,16 @@ body {
 
 .campo-largo {
   grid-column: 1 / -1;
+}
+
+/* Campos lado a lado numa só linha, cada um com a largura que precisa — ao
+   contrário de .grelha-campos, que dá a todos a mesma coluna e deixa buracos
+   quando um campo é largo e o outro é um número. */
+.linha-campos {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 label {

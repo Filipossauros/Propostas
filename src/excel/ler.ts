@@ -67,7 +67,7 @@ function lerDeclara(sheet: XLSX.WorkSheet, ref: string): "SIM" | "NÃO" | null {
 }
 
 function identificacaoVazia(): Identificacao {
-  return { nome: "", entidadeConcorrente: "", procedimento: "", lote: "", perfil: "" };
+  return { nome: "", entidadeConcorrente: "", procedimento: "", lote: "", loteDesignacao: "", perfil: "" };
 }
 
 /**

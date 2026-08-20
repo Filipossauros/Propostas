@@ -226,8 +226,8 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
               <h3>Identificação do perfil</h3>
             </header>
 
-            <div className="grelha-campos">
-              <label className="campo-largo">
+            <div className="linha-campos">
+              <label className="campo-crescente">
                 <span className="rotulo">Perfil</span>
                 <input
                   type="text"
@@ -238,8 +238,10 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
                 />
               </label>
 
-              <label>
-                <span className="rotulo">N.º de blocos de projeto do formulário</span>
+              <label className="campo-estreito">
+                <span className="rotulo" title="Quantos projetos distintos cada candidato poderá declarar">
+                  N.º de blocos
+                </span>
                 <CampoNumero
                   valor={emEdicao.nBlocos}
                   min={1}
@@ -248,7 +250,6 @@ export function Modulo1({ perfis, onAlterarPerfis, lotePorPerfilId, onIrParaLote
                   invalido={!Number.isInteger(emEdicao.nBlocos) || emEdicao.nBlocos < 1}
                   onChange={(nBlocos) => alterarEmEdicao({ nBlocos })}
                 />
-                <span className="ajuda">Quantos projetos distintos cada candidato poderá declarar.</span>
               </label>
             </div>
           </section>

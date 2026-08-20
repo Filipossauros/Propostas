@@ -48,6 +48,15 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
       numerosVistos.add(numero);
     }
 
+    // A designação é obrigatória: dá nome ao ficheiro de formulários do lote e
+    // aparece pré-preenchida na declaração entregue ao candidato.
+    if (lote.designacao.trim() === "") {
+      erros.push({
+        campo: `lotes[${idxLote}].designacao`,
+        mensagem: `Lote ${numero || idxLote + 1}: indique a designação do lote.`,
+      });
+    }
+
     if (lote.perfis.length === 0) {
       erros.push({
         campo: `lotes[${idxLote}].perfis`,
