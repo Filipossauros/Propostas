@@ -3,7 +3,7 @@ import type { LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
 import { CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistencia";
 import { ehListaDePerfisGuardada } from "./core/perfil";
-import { lotePorPerfilId, lotesIniciais, sincronizarPerfisEmLotes } from "./core/lotes";
+import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
@@ -39,7 +39,12 @@ function App() {
   // para cada um é o que permite que uma alteração feita num módulo se reflita
   // no outro — ver `aplicarPerfis`.
   const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(CHAVE_PERFIS, () => [], ehListaDePerfisGuardada);
-  const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(CHAVE_LOTES, lotesIniciais, ehLotesGuardado);
+  const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(
+    CHAVE_LOTES,
+    lotesIniciais,
+    ehLotesGuardado,
+    normalizarLotesGuardados,
+  );
   const [nomeProjeto, setNomeProjeto] = useEstadoPersistente<string>(
     CHAVE_NOME_PROJETO,
     () => "",

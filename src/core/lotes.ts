@@ -17,6 +17,7 @@ import {
   LOCAIS_POSTO,
   REGIMES_POSTO,
   REQUISITOS_EQUIPAMENTO_PADRAO,
+  requisitosEquipamentoAtualizados,
   SCHEMA_VERSION_ATUAL,
   TAXA_IVA_PADRAO,
   informacaoEavaliaInicial,
@@ -230,6 +231,22 @@ export function importarLotesJSON(texto: string): LotesJSON {
   };
 }
 
+/**
+ * Põe em dia um agrupamento que estava guardado — no navegador ou num ficheiro.
+ *
+ * O que ficou gravado traz o modelo do dia em que foi gravado, e a aplicação
+ * entretanto andou: campos que não existiam, opções que foram retiradas, textos
+ * de partida que mudaram. É aqui que essa distância se resolve, num sítio só,
+ * para o resto da aplicação poder contar com o modelo atual.
+ */
+export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
+  return {
+    ...config,
+    postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
+    eavalia: normalizarEavalia(config.eavalia),
+  };
+}
+
 /** As respostas admitidas pela lista de validação do formulário eAvalia. */
 const RESPOSTAS_EAVALIA: RespostaEavalia[] = [
   "",
@@ -291,7 +308,9 @@ function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
     outroLocal: typeof p.outroLocal === "string" ? p.outroLocal : "",
     equipamento: lerEscolha(p.equipamento ?? p.equipamentos, EQUIPAMENTOS_POSTO, partida.equipamento),
     requisitosEquipamento:
-      typeof p.requisitosEquipamento === "string" ? p.requisitosEquipamento : REQUISITOS_EQUIPAMENTO_PADRAO,
+      typeof p.requisitosEquipamento === "string"
+        ? requisitosEquipamentoAtualizados(p.requisitosEquipamento)
+        : REQUISITOS_EQUIPAMENTO_PADRAO,
   };
 }
 

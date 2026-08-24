@@ -77,6 +77,14 @@ indicar, e a linha do local nem chega a existir. O mesmo vale para os requisitos
 do equipamento, que só saem quando o equipamento é do prestador — é a ele que se
 exigem.
 
+O texto dos requisitos tem um valor de partida, e é editável. Quando esse valor
+de partida muda, quem tem um agrupamento guardado — no navegador ou em ficheiro
+— continuaria com o antigo para sempre: quem nunca lhe mexeu não escolheu aquele
+texto, aceitou o que lhe deram. Por isso, ao reabrir, um texto de partida antigo
+que ninguém tenha tocado passa ao atual (`requisitosEquipamentoAtualizados`);
+um texto ajustado à mão fica como está, e há um «repor o texto de partida» para
+quem se arrepender.
+
 Nada disto é opcional: o posto de trabalho vai para o Caderno de Encargos e
 vincula quem executa, pelo que um local por indicar, um «Outro» sem sítio ou os
 requisitos do equipamento em branco travam os descarregamentos do Módulo 2, como

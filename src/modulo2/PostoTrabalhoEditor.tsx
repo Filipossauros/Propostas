@@ -1,5 +1,12 @@
+import { useId } from "react";
 import type { EquipamentoPosto, LocalPosto, PostoTrabalho, RegimePosto } from "../core/types";
-import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO, regimeTemLocal } from "../core/types";
+import {
+  EQUIPAMENTOS_POSTO,
+  LOCAIS_POSTO,
+  REGIMES_POSTO,
+  REQUISITOS_EQUIPAMENTO_PADRAO,
+  regimeTemLocal,
+} from "../core/types";
 
 interface Props {
   posto: PostoTrabalho;
@@ -78,6 +85,8 @@ function Grupo<T extends string>({
 }
 
 export function PostoTrabalhoEditor({ posto, onChange }: Props) {
+  const idRequisitos = useId();
+
   return (
     <div className="posto-trabalho">
       {/* O regime vem primeiro porque comanda o resto: em regime remoto não há
@@ -121,10 +130,30 @@ export function PostoTrabalhoEditor({ posto, onChange }: Props) {
 
       {/* Os requisitos só fazem sentido — e só saem no documento — quando o
           equipamento é do prestador: é a ele que se exigem. */}
+      {/* O rótulo e o botão são irmãos, e não pai e filho: um botão dentro da
+          etiqueta passaria a fazer parte do nome do campo, e quem ouve a página
+          ouviria "Requisitos mínimos… repor o texto de partida" de cada vez que
+          lá chegasse. */}
       {posto.equipamento === "Equipamentos do Prestador" && (
-        <label className="campo-largo">
-          <span className="rotulo">Requisitos mínimos do equipamento do prestador</span>
+        <div className="campo-largo">
+          <div className="linha-rotulo">
+            <label className="rotulo" htmlFor={idRequisitos}>
+              Requisitos mínimos do equipamento do prestador
+            </label>
+            {/* Quem ajustou o texto e se arrependeu não tinha por onde voltar
+                atrás: o de partida não estava em lado nenhum. */}
+            {posto.requisitosEquipamento !== REQUISITOS_EQUIPAMENTO_PADRAO && (
+              <button
+                type="button"
+                className="ligacao"
+                onClick={() => onChange({ ...posto, requisitosEquipamento: REQUISITOS_EQUIPAMENTO_PADRAO })}
+              >
+                repor o texto de partida
+              </button>
+            )}
+          </div>
           <textarea
+            id={idRequisitos}
             rows={8}
             value={posto.requisitosEquipamento}
             placeholder="Uma característica por linha. Uma primeira linha terminada em dois pontos encabeça a tabela."
@@ -134,7 +163,7 @@ export function PostoTrabalhoEditor({ posto, onChange }: Props) {
           {posto.requisitosEquipamento.trim() === "" && (
             <span className="aviso aviso-erro">Indique os requisitos mínimos do equipamento.</span>
           )}
-        </label>
+        </div>
       )}
     </div>
   );

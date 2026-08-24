@@ -251,6 +251,47 @@ export const REQUISITOS_EQUIPAMENTO_PADRAO = [
   "Wi-Fi 6.",
 ].join("\n");
 
+/**
+ * Textos de partida que já foram o valor por omissão e deixaram de ser.
+ *
+ * Um agrupamento guardado no navegador — ou num ficheiro JSON — traz consigo o
+ * texto do dia em que foi criado, e continuaria a trazê-lo para sempre. Quem
+ * nunca lhe mexeu não escolheu esse texto: aceitou o de partida, e é o de
+ * partida que quer. Reconhecendo-se o texto antigo intacto, passa ao atual;
+ * quem o tiver ajustado fica com o seu, que é escolha sua.
+ */
+const REQUISITOS_EQUIPAMENTO_ANTERIORES = [
+  [
+    "Computador com mínimo:",
+    "Arquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads.",
+    "Frequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz.",
+    "32 GB de memória RAM",
+    "Unidade de disco rígido de estado sólido (SSD) com capacidade mínima de 500 GB.",
+    "Wi-Fi 6",
+  ].join("\n"),
+];
+
+/** Compara textos multilinha sem ficar preso a espaços ou linhas em branco. */
+function mesmasLinhas(a: string, b: string): boolean {
+  const linhas = (t: string) =>
+    t
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l !== "")
+      .join("\n");
+  return linhas(a) === linhas(b);
+}
+
+/**
+ * O texto a usar, dado o que vinha guardado: o atual, se o guardado for um
+ * texto de partida antigo que ninguém chegou a tocar.
+ */
+export function requisitosEquipamentoAtualizados(guardado: string): string {
+  return REQUISITOS_EQUIPAMENTO_ANTERIORES.some((antigo) => mesmasLinhas(guardado, antigo))
+    ? REQUISITOS_EQUIPAMENTO_PADRAO
+    : guardado;
+}
+
 export function postoTrabalhoInicial(): PostoTrabalho {
   return {
     regime: "Híbrido",

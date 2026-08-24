@@ -4,6 +4,7 @@ import {
   linhasTabelaValores,
   lotesIniciais,
   lotesParaJSON,
+  normalizarLotesGuardados,
   perfisComCertificacao,
   validarEavalia,
   validarPostoTrabalho,
@@ -12,7 +13,12 @@ import {
   validarLotes,
 } from "./lotes";
 import { ErroImportacao } from "./perfil";
-import { TAXA_IVA_PADRAO, informacaoEavaliaInicial, postoTrabalhoInicial } from "./types";
+import {
+  REQUISITOS_EQUIPAMENTO_PADRAO,
+  TAXA_IVA_PADRAO,
+  informacaoEavaliaInicial,
+  postoTrabalhoInicial,
+} from "./types";
 import { certificacoes, lotesComPerfis, perfil } from "./fixtures";
 import type { LotesJSON } from "./types";
 
@@ -146,6 +152,57 @@ describe("perfisComCertificacao", () => {
     ]);
 
     expect(perfisComCertificacao(importarLotesJSON(lotesParaJSON(config)))).toHaveLength(1);
+  });
+});
+
+describe("normalizarLotesGuardados", () => {
+  it("põe em dia o texto de partida antigo que ninguém chegou a tocar", () => {
+    const antigo = [
+      "Computador com mínimo:",
+      "Arquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads.",
+      "Frequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz.",
+      "32 GB de memória RAM",
+      "Unidade de disco rígido de estado sólido (SSD) com capacidade mínima de 500 GB.",
+      "Wi-Fi 6",
+    ].join("\n");
+    const base = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
+
+    const posto = normalizarLotesGuardados({
+      ...base,
+      postoTrabalho: { ...base.postoTrabalho, requisitosEquipamento: antigo },
+    }).postoTrabalho;
+
+    expect(posto.requisitosEquipamento).toBe(REQUISITOS_EQUIPAMENTO_PADRAO);
+    expect(posto.requisitosEquipamento).toContain("Placa de vídeo dedicada com 12 GB");
+  });
+
+  it("mas não mexe no texto que alguém ajustou", () => {
+    const meu = "Computador com mínimo:\nO que a equipa já tem.";
+    const base = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
+
+    expect(
+      normalizarLotesGuardados({
+        ...base,
+        postoTrabalho: { ...base.postoTrabalho, requisitosEquipamento: meu },
+      }).postoTrabalho.requisitosEquipamento,
+    ).toBe(meu);
+  });
+
+  it("e trata o resto do posto de trabalho e do eAvalia", () => {
+    const base = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
+    const guardado = {
+      ...base,
+      // Como ficaria gravado por uma versão anterior: listas, e um regime que
+      // deixou de existir.
+      postoTrabalho: { regimes: ["Teletrabalho"], equipamentos: ["Equipamentos da SPMS"] },
+      eavalia: { iap: "Inventada" },
+    } as unknown as LotesJSON;
+
+    const posto = normalizarLotesGuardados(guardado);
+
+    expect(posto.postoTrabalho.regime).toBe("Híbrido");
+    expect(posto.postoTrabalho.equipamento).toBe("Equipamentos da SPMS");
+    expect(posto.eavalia.iap).toBe("");
   });
 });
 

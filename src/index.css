@@ -439,6 +439,31 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Rótulo com uma ação ao lado, na mesma linha. */
+.linha-rotulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+/* Ação secundária ao lado de um rótulo: pesa como texto, não como botão. */
+.ligacao {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--azul-700);
+  text-decoration: underline;
+}
+
+.ligacao:hover {
+  color: var(--azul-900);
+}
+
 .botao-principal {
   padding: 9px 18px;
   border: 1px solid var(--azul-700);
