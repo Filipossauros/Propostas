@@ -276,8 +276,8 @@ describe("posto de trabalho", () => {
     );
 
     expect(tabela).toBeDefined();
-    expect(tabela!.tipo === "tabela" ? tabela!.legenda : "").toBe("Computador com mínimo:");
-    expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toContain("32 GB de memória RAM");
+    expect(tabela!.tipo === "tabela" ? tabela!.legenda : "").toBe("Posto de trabalho os seguintes requisitos mínimos:");
+    expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toContain("32 GB de memória RAM;");
   });
 
   it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {

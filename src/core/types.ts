@@ -241,12 +241,14 @@ export interface PostoTrabalho {
  * características, uma por linha.
  */
 export const REQUISITOS_EQUIPAMENTO_PADRAO = [
-  "Computador com mínimo:",
-  "Arquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads.",
-  "Frequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz.",
-  "32 GB de memória RAM",
-  "Unidade de disco rígido de estado sólido (SSD) com capacidade mínima de 500 GB.",
-  "Wi-Fi 6",
+  "Posto de trabalho os seguintes requisitos mínimos:",
+  "Arquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads;",
+  "Frequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz;",
+  "32 GB de memória RAM;",
+  "Placa de vídeo dedicada com 12 GB de memória de vídeo (VRAM) não compartilhada e suporte a aceleração " +
+    "por hardware para computação paralela e Inteligência Artificial;",
+  "Unidade de armazenamento com capacidade de 1TB NVMe;",
+  "Wi-Fi 6.",
 ].join("\n");
 
 export function postoTrabalhoInicial(): PostoTrabalho {
