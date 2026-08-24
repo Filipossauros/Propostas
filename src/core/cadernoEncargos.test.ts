@@ -4,6 +4,7 @@ import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
 import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
 import { mesesDeAnos } from "./types";
+import type { LotesJSON } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
   const doc = documentoRegrasEPrecoBase(LOTES_EXEMPLO);
@@ -199,5 +200,65 @@ describe("documentoParaTexto", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
     expect(texto).toMatch(/\+-+\+/);
     expect(texto).toMatch(/\|.+\|/);
+  });
+});
+
+describe("posto de trabalho", () => {
+  function documento(posto: Partial<LotesJSON["postoTrabalho"]> = {}) {
+    const base = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
+    return documentoRegrasEPrecoBase({ ...base, postoTrabalho: { ...base.postoTrabalho, ...posto } });
+  }
+
+  function opcoesDe(doc: ReturnType<typeof documento>, titulo: string) {
+    const blocos = doc.blocos;
+    const idx = blocos.findIndex((b) => b.tipo === "titulo" && b.texto === titulo);
+    const seguinte = blocos[idx + 1];
+    return seguinte?.tipo === "opcoes" ? seguinte.itens : [];
+  }
+
+  it("sai como secção própria do documento", () => {
+    expect(documento().blocos.some((b) => b.tipo === "titulo" && b.texto === "Posto de trabalho")).toBe(true);
+  });
+
+  it("mostra as opções não escolhidas, e não só as escolhidas", () => {
+    const locais = opcoesDe(documento(), "Local da prestação de serviços / entrega dos bens");
+
+    expect(locais.map((o) => o.texto)).toEqual(["Lisboa", "Porto", "Maia", "Évora", "Outro:"]);
+    expect(locais.filter((o) => o.marcada).map((o) => o.texto)).toEqual(["Lisboa", "Porto"]);
+  });
+
+  it("os valores de partida são os do formulário: Lisboa e Porto, híbrido, equipamento do prestador", () => {
+    const doc = documento();
+
+    expect(opcoesDe(doc, "Regime da prestação de serviços").filter((o) => o.marcada).map((o) => o.texto)).toEqual([
+      "Híbrido",
+    ]);
+    expect(opcoesDe(doc, "Equipamentos para os recursos").filter((o) => o.marcada).map((o) => o.texto)).toEqual([
+      "Equipamentos do Prestador",
+    ]);
+  });
+
+  it("o local 'Outro' leva consigo o sítio indicado", () => {
+    const locais = opcoesDe(
+      documento({ locais: ["Outro"], outroLocal: "Coimbra" }),
+      "Local da prestação de serviços / entrega dos bens",
+    );
+
+    expect(locais.find((o) => o.marcada)?.texto).toBe("Outro: Coimbra");
+  });
+
+  it("os requisitos do equipamento saem em introdução e lista", () => {
+    const blocos = documento().blocos;
+    const idx = blocos.findIndex((b) => b.tipo === "paragrafo" && b.texto === "Computador com mínimo:");
+    const lista = blocos[idx + 1];
+
+    expect(idx).toBeGreaterThan(0);
+    expect(lista.tipo === "lista" ? lista.itens : []).toContain("32 GB de memória RAM");
+  });
+
+  it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {
+    const blocos = documento({ equipamentos: ["Equipamentos da SPMS"] }).blocos;
+
+    expect(blocos.some((b) => b.tipo === "paragrafo" && b.texto === "Computador com mínimo:")).toBe(false);
   });
 });

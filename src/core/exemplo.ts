@@ -5,7 +5,7 @@
 // leem esta constante diretamente — sem qualquer pedido de rede.
 
 import type { Bloco, Declaracao, LotesJSON, MesAno, PerfilEmLote, PerfilJSON, Requisito } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
 
 function req(id: string, designacao: string, mesesMinimos: number): Requisito {
@@ -84,6 +84,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
   umLotePorConcorrente: true,
+  postoTrabalho: postoTrabalhoInicial(),
   eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" },
   lotes: [
     {

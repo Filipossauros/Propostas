@@ -184,9 +184,68 @@ export interface LotesJSON {
    * tenha ficado com um fica impedido nos seguintes.
    */
   umLotePorConcorrente: boolean;
+  /** Condições de execução: onde, em que regime e com que equipamento. */
+  postoTrabalho: PostoTrabalho;
   /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */
   eavalia: InformacaoEavalia;
   lotes: Lote[];
+}
+
+// --------------------------------------------------------------------------
+// Posto de trabalho
+// --------------------------------------------------------------------------
+
+/**
+ * As opções do posto de trabalho são caixas de seleção, e o valor de cada uma
+ * é o próprio texto que sai no documento. Guardar o rótulo, e não um código,
+ * poupa uma tabela de tradução que mais tarde ou mais cedo divergiria do que
+ * está escrito nas peças.
+ */
+export const LOCAIS_POSTO = ["Lisboa", "Porto", "Maia", "Évora", "Outro"] as const;
+export const REGIMES_POSTO = ["Presencial", "Híbrido", "Teletrabalho", "Remoto"] as const;
+export const EQUIPAMENTOS_POSTO = ["Equipamentos da SPMS", "Equipamentos do Prestador"] as const;
+
+export type LocalPosto = (typeof LOCAIS_POSTO)[number];
+export type RegimePosto = (typeof REGIMES_POSTO)[number];
+export type EquipamentoPosto = (typeof EQUIPAMENTOS_POSTO)[number];
+
+export interface PostoTrabalho {
+  /** Local da prestação de serviços / entrega dos bens. */
+  locais: LocalPosto[];
+  /** Onde, quando "Outro" está assinalado. */
+  outroLocal: string;
+  regimes: RegimePosto[];
+  equipamentos: EquipamentoPosto[];
+  /**
+   * Requisitos mínimos do equipamento, quando é do prestador. Texto livre,
+   * com um valor de partida que serve a maioria dos procedimentos e que quem
+   * prepara as peças ajusta ao caso.
+   */
+  requisitosEquipamento: string;
+}
+
+/**
+ * Requisitos mínimos por omissão do equipamento do prestador. A primeira linha
+ * é a introdução — daí acabar em dois pontos —, e as restantes são as
+ * características, uma por linha.
+ */
+export const REQUISITOS_EQUIPAMENTO_PADRAO = [
+  "Computador com mínimo:",
+  "Arquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads.",
+  "Frequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz.",
+  "32 GB de memória RAM",
+  "Unidade de disco rígido de estado sólido (SSD) com capacidade mínima de 500 GB.",
+  "Wi-Fi 6",
+].join("\n");
+
+export function postoTrabalhoInicial(): PostoTrabalho {
+  return {
+    locais: ["Lisboa", "Porto"],
+    outroLocal: "",
+    regimes: ["Híbrido"],
+    equipamentos: ["Equipamentos do Prestador"],
+    requisitosEquipamento: REQUISITOS_EQUIPAMENTO_PADRAO,
+  };
 }
 
 // --------------------------------------------------------------------------

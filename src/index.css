@@ -1136,6 +1136,65 @@ button:disabled {
   margin-bottom: 2px;
 }
 
+/* Os grupos do posto de trabalho reproduzem um formulário de caixas: cada
+   grupo com o seu título, e as opções por baixo. */
+.posto-trabalho {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grupo-opcoes {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  padding: 10px 14px 12px;
+  margin: 0;
+}
+
+.grupo-opcoes legend {
+  padding: 0 6px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+}
+
+.linha-opcao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Sobrepõe-se ao empilhamento dos `label` do resto da aplicação: aqui o
+   caixote vai ao lado do texto, como num formulário em papel. */
+.linha-opcao label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.linha-opcao input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--azul-500);
+}
+
+/* As opções respiram um pouco, sem chegarem a parecer parágrafos. */
+.grupo-opcoes .linha-opcao + .linha-opcao {
+  margin-top: 6px;
+}
+
+.campo-outro-local {
+  max-width: 280px;
+}
+
 /* As perguntas do eAvalia são longas e a resposta é curta: uma coluna de
    perguntas com o seu campo por baixo lê-se melhor do que uma grelha. */
 .grelha-eavalia {

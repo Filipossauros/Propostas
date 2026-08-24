@@ -3,8 +3,25 @@
 // Nota de método sobre o preço base: o valor de cada perfil dentro de um lote é
 // `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
 
-import type { InformacaoEavalia, Lote, LotesJSON, PerfilEmLote, PerfilJSON, RespostaEavalia } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, informacaoEavaliaInicial } from "./types";
+import type {
+  InformacaoEavalia,
+  Lote,
+  LotesJSON,
+  PerfilEmLote,
+  PerfilJSON,
+  PostoTrabalho,
+  RespostaEavalia,
+} from "./types";
+import {
+  EQUIPAMENTOS_POSTO,
+  LOCAIS_POSTO,
+  REGIMES_POSTO,
+  REQUISITOS_EQUIPAMENTO_PADRAO,
+  SCHEMA_VERSION_ATUAL,
+  TAXA_IVA_PADRAO,
+  informacaoEavaliaInicial,
+  postoTrabalhoInicial,
+} from "./types";
 import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
 
@@ -24,6 +41,7 @@ export function lotesIniciais(): LotesJSON {
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
     umLotePorConcorrente: false,
+    postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
     lotes: [],
   };
@@ -139,6 +157,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     nomeProjeto: config.nomeProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
+    postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
     eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
     lotes: config.lotes.map((lote) => ({
       ...lote,
@@ -180,6 +199,30 @@ function normalizarEavalia(bruto: unknown): InformacaoEavalia {
     iap: lerResposta(e.iap),
     chaveMovelDigital: lerResposta(e.chaveMovelDigital),
     idiomas: lerResposta(e.idiomas),
+  };
+}
+
+/** Só as opções que constam da lista, e sem repetições, pela ordem da lista. */
+function lerOpcoes<T extends string>(bruto: unknown, admitidas: readonly T[]): T[] {
+  if (!Array.isArray(bruto)) return [];
+  return admitidas.filter((opcao) => bruto.includes(opcao));
+}
+
+/**
+ * Posto de trabalho vindo de ficheiro. Ficheiros anteriores a este campo não o
+ * trazem, e nesses assume-se o valor de partida — que é o que o utilizador
+ * veria se começasse agora.
+ */
+function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
+  if (typeof bruto !== "object" || bruto === null) return postoTrabalhoInicial();
+  const p = bruto as Record<string, unknown>;
+  return {
+    locais: lerOpcoes(p.locais, LOCAIS_POSTO),
+    outroLocal: typeof p.outroLocal === "string" ? p.outroLocal : "",
+    regimes: lerOpcoes(p.regimes, REGIMES_POSTO),
+    equipamentos: lerOpcoes(p.equipamentos, EQUIPAMENTOS_POSTO),
+    requisitosEquipamento:
+      typeof p.requisitosEquipamento === "string" ? p.requisitosEquipamento : REQUISITOS_EQUIPAMENTO_PADRAO,
   };
 }
 

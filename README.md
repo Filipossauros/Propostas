@@ -66,6 +66,13 @@ tempos chega a informação de que depende:
   crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
   que aí apresente o preço mais baixo.
 
+### O posto de trabalho
+
+O documento Word leva uma secção com as condições de execução — local, regime e
+equipamento —, reproduzida como o formulário de onde vem: com as caixas por
+marcar à vista, e não só as escolhidas. Uma opção rejeitada e uma opção
+esquecida não são a mesma coisa, e quem lê as peças tem de as poder distinguir.
+
 ### O pedido de parecer eAvalia
 
 O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
@@ -73,6 +80,11 @@ O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
 células escritas — o nome do projeto no objeto da aquisição, três respostas de
 alinhamento tecnológico e as datas que as acompanham. As restantes medidas vão
 como já vêm no modelo.
+
+A data só acompanha as respostas que assumem um compromisso futuro («Cumpre
+Totalmente», «Cumpre Parcialmente»). É regra do próprio formulário, escrita na
+formatação condicional da célula da data: quem já cumpre não tem data por que se
+comprometer, e a quem não se aplica não há data a pedir.
 
 É por isso que este ficheiro não passa pelo exceljs, que o reescreveria por
 inteiro a partir da sua própria leitura: abre-se o ZIP, escrevem-se as células

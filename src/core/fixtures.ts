@@ -13,7 +13,7 @@ import type {
   PerfilJSON,
   Requisito,
 } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, informacaoEavaliaInicial } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, informacaoEavaliaInicial, postoTrabalhoInicial } from "./types";
 import { criarPerfilEmLote } from "./lotes";
 
 export function ma(ano: number, mes: number): MesAno {
@@ -112,6 +112,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     nomeProcedimento: "Procedimento Teste",
     taxaIva: TAXA_IVA_PADRAO,
     umLotePorConcorrente: false,
+    postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,

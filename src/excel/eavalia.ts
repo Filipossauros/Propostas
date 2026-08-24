@@ -57,6 +57,17 @@ const MEDIDAS: Medida[] = [
 
 export class ErroModeloEavalia extends Error {}
 
+/**
+ * Respostas que levam data: as que assumem um compromisso para o futuro.
+ *
+ * A regra é do próprio formulário, e está lá escrita na formatação condicional
+ * da célula da data: "Cumpre Totalmente" e "Cumpre Parcialmente" tratam-na de
+ * uma maneira, "Já cumpre", "Não cumpre" e "Não aplicável" de outra. Quem já
+ * cumpre não tem data por que se comprometer, e a quem não se aplica não há
+ * data nenhuma a pedir.
+ */
+const RESPOSTAS_COM_DATA: RespostaEavalia[] = ["Cumpre Totalmente", "Cumpre Parcialmente"];
+
 // --------------------------------------------------------------------------
 // Manipulação do XML das folhas
 // --------------------------------------------------------------------------
@@ -160,8 +171,8 @@ function decodificarBase64(base64: string): Uint8Array {
  * Preenche o modelo eAvalia com o nome do projeto e as três respostas.
  *
  * Uma medida por responder fica em branco, que é como o modelo já vem — e a
- * formatação condicional do próprio formulário assinala-a. A data só
- * acompanha as respostas efetivamente dadas.
+ * formatação condicional do próprio formulário assinala-a. A data só acompanha
+ * as respostas que assumem um compromisso futuro (ver `RESPOSTAS_COM_DATA`).
  */
 export async function gerarEavaliaBlob(
   config: LotesJSON,
@@ -196,9 +207,11 @@ export async function gerarEavaliaBlob(
     alinhamento = escreverCelula(alinhamento, `E${medida.linha}`, (attrs) =>
       celulaDeTexto(`E${medida.linha}`, attrs, resposta),
     );
-    alinhamento = escreverCelula(alinhamento, `F${medida.linha}`, (attrs) =>
-      celulaDeNumero(`F${medida.linha}`, attrs, serie),
-    );
+    if (RESPOSTAS_COM_DATA.includes(resposta)) {
+      alinhamento = escreverCelula(alinhamento, `F${medida.linha}`, (attrs) =>
+        celulaDeNumero(`F${medida.linha}`, attrs, serie),
+      );
+    }
   }
   zip.file(FOLHA_ALINHAMENTO, alinhamento);
 

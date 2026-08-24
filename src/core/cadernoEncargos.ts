@@ -5,10 +5,11 @@
 // secções e não em artigos: a inserção sistemática e a numeração dos artigos
 // são feitas depois, na redação do procedimento.
 
-import type { LotesJSON, PerfilJSON } from "./types";
+import type { EquipamentoPosto, LocalPosto, LotesJSON, PerfilJSON, PostoTrabalho, RegimePosto } from "./types";
+import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO } from "./types";
 import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
-import { celula, type BlocoDocumento, type Documento } from "./documento";
+import { celula, opcao, type BlocoDocumento, type Documento } from "./documento";
 
 const DIREITA = "direita" as const;
 
@@ -159,6 +160,95 @@ function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
 }
 
 // --------------------------------------------------------------------------
+// Posto de trabalho
+// --------------------------------------------------------------------------
+
+/**
+ * O local "Outro" só diz alguma coisa acompanhado do sítio: sem ele, sai como
+ * está no formulário, para se ver que ficou por especificar.
+ */
+function textoDoLocal(local: LocalPosto, posto: PostoTrabalho): string {
+  if (local !== "Outro") return local;
+  return posto.outroLocal.trim() === "" ? "Outro:" : `Outro: ${posto.outroLocal.trim()}`;
+}
+
+function blocoDeOpcoes<T extends string>(
+  titulo: string,
+  todas: readonly T[],
+  escolhidas: T[],
+  rotulo: (opcao: T) => string = (o) => o,
+): BlocoDocumento[] {
+  return [
+    { tipo: "titulo", nivel: 2, texto: titulo },
+    { tipo: "opcoes", itens: todas.map((o) => opcao(rotulo(o), escolhidas.includes(o))) },
+  ];
+}
+
+/**
+ * Requisitos do equipamento, tal como foram escritos.
+ *
+ * O texto é livre e multilinha. Uma linha terminada em dois pontos é
+ * introdução e sai como parágrafo; as restantes são características e saem em
+ * lista. É a estrutura do texto de partida, e mantém-se para quem o reescreva.
+ */
+function blocosDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
+  const linhas = texto
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "");
+  if (linhas.length === 0) return [];
+
+  const blocos: BlocoDocumento[] = [];
+  let caracteristicas: string[] = [];
+
+  const fecharLista = () => {
+    if (caracteristicas.length > 0) {
+      blocos.push({ tipo: "lista", itens: caracteristicas });
+      caracteristicas = [];
+    }
+  };
+
+  for (const linha of linhas) {
+    if (linha.endsWith(":")) {
+      fecharLista();
+      blocos.push({ tipo: "paragrafo", texto: linha });
+    } else {
+      caracteristicas.push(linha);
+    }
+  }
+  fecharLista();
+
+  return blocos;
+}
+
+/**
+ * Condições de execução do contrato: onde se presta o serviço, em que regime e
+ * com que equipamento. Reproduz o formulário com as caixas de seleção, e não
+ * só o que ficou escolhido — ver o bloco "opcoes" em documento.ts.
+ */
+function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
+  const posto = config.postoTrabalho;
+  const comEquipamentoDoPrestador = posto.equipamentos.includes("Equipamentos do Prestador");
+
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Posto de trabalho" },
+
+    ...blocoDeOpcoes<LocalPosto>(
+      "Local da prestação de serviços / entrega dos bens",
+      LOCAIS_POSTO,
+      posto.locais,
+      (local) => textoDoLocal(local, posto),
+    ),
+
+    ...blocoDeOpcoes<RegimePosto>("Regime da prestação de serviços", REGIMES_POSTO, posto.regimes),
+
+    ...blocoDeOpcoes<EquipamentoPosto>("Equipamentos para os recursos", EQUIPAMENTOS_POSTO, posto.equipamentos),
+
+    ...(comEquipamentoDoPrestador ? blocosDosRequisitosDeEquipamento(posto.requisitosEquipamento) : []),
+  ];
+}
+
+// --------------------------------------------------------------------------
 // Regras para o Programa do Concurso
 // --------------------------------------------------------------------------
 
@@ -211,6 +301,8 @@ export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
     titulo: "Regras de comprovação e apuramento da experiência profissional",
     blocos: [
       ...blocosPrecoBaseERequisitos(config),
+
+      ...blocosPostoTrabalho(config),
 
       ...blocosUmLotePorConcorrente(config),
 

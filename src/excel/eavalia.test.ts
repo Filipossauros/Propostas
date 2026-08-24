@@ -58,15 +58,29 @@ describe("gerarEavaliaBlob", () => {
     expect(await celula(zip, ALINHAMENTO, "E44")).toContain("Cumpre Parcialmente");
   });
 
-  it("data as respostas com o dia da geração", async () => {
+  it("data com o dia da geração as respostas que assumem compromisso futuro", async () => {
     const zip = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Já cumpre", idiomas: "Já cumpre" }),
+      config({ iap: "Cumpre Totalmente", chaveMovelDigital: "Cumpre Parcialmente", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
 
     for (const ref of ["F6", "F26", "F44"]) {
       expect(await celula(zip, ALINHAMENTO, ref)).toContain(`<v>${serieDeData(DIA)}</v>`);
     }
+  });
+
+  it("não data quem já cumpre nem aquilo a que não se aplica", async () => {
+    const zip = await gerar(
+      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      DIA,
+    );
+    const original = await modelo();
+
+    // A regra é do próprio formulário: só "Cumpre Totalmente" e "Cumpre
+    // Parcialmente" comprometem uma data.
+    expect(await celula(zip, ALINHAMENTO, "F6")).toBe(await celula(original, ALINHAMENTO, "F6"));
+    expect(await celula(zip, ALINHAMENTO, "F26")).toBe(await celula(original, ALINHAMENTO, "F26"));
+    expect(await celula(zip, ALINHAMENTO, "F44")).toContain(`<v>${serieDeData(DIA)}</v>`);
   });
 
   it("deixa em branco — como o modelo vem — a medida por responder, e sem data", async () => {
@@ -83,7 +97,7 @@ describe("gerarEavaliaBlob", () => {
   });
 
   it("preserva o estilo das células que preenche", async () => {
-    const zip = await gerar(config({ iap: "Já cumpre", chaveMovelDigital: "", idiomas: "" }), DIA);
+    const zip = await gerar(config({ iap: "Cumpre Parcialmente", chaveMovelDigital: "", idiomas: "" }), DIA);
 
     // s="17" na resposta e s="14" na data — é o estilo que dá formato de data.
     expect(await celula(zip, ALINHAMENTO, "E6")).toContain('s="17"');

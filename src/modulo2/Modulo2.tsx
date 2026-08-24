@@ -21,6 +21,7 @@ import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
+import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
@@ -426,6 +427,20 @@ export function Modulo2({
           <TabelaValores config={config} />
         </section>
       )}
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Posto de trabalho</h3>
+          <p className="painel-nota">
+            Onde se presta o serviço, em que regime e com que equipamento. Sai no documento Word, em secção própria,
+            com as opções que ficaram por escolher à vista.
+          </p>
+        </header>
+        <PostoTrabalhoEditor
+          posto={config.postoTrabalho}
+          onChange={(postoTrabalho) => onAlterarConfig((atual) => ({ ...atual, postoTrabalho }))}
+        />
+      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
