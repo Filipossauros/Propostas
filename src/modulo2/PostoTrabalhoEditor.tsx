@@ -1,12 +1,38 @@
 import type { EquipamentoPosto, LocalPosto, PostoTrabalho, RegimePosto } from "../core/types";
-import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO } from "../core/types";
+import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO, regimeTemLocal } from "../core/types";
 
 interface Props {
   posto: PostoTrabalho;
   onChange: (posto: PostoTrabalho) => void;
 }
 
-/** Um grupo de caixas de seleção, com o seu título. */
+/** Escolha única, em lista pendente. */
+function Escolha<T extends string>({
+  titulo,
+  todas,
+  escolhida,
+  onAlterar,
+}: {
+  titulo: string;
+  todas: readonly T[];
+  escolhida: T;
+  onAlterar: (escolhida: T) => void;
+}) {
+  return (
+    <label className="campo-escolha">
+      <span className="rotulo">{titulo}</span>
+      <select value={escolhida} onChange={(e) => onAlterar(e.target.value as T)}>
+        {todas.map((opcao) => (
+          <option key={opcao} value={opcao}>
+            {opcao}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Um grupo de caixas de seleção, onde as escolhas se acumulam. */
 function Grupo<T extends string>({
   titulo,
   todas,
@@ -48,47 +74,49 @@ function Grupo<T extends string>({
 }
 
 export function PostoTrabalhoEditor({ posto, onChange }: Props) {
-  const comEquipamentoDoPrestador = posto.equipamentos.includes("Equipamentos do Prestador");
-
   return (
     <div className="posto-trabalho">
-      <Grupo<LocalPosto>
-        titulo="Local da prestação de serviços / entrega dos bens"
-        todas={LOCAIS_POSTO}
-        escolhidas={posto.locais}
-        onAlterar={(locais) => onChange({ ...posto, locais })}
-        extra={(local) =>
-          local === "Outro" && posto.locais.includes("Outro") ? (
-            <input
-              type="text"
-              className="campo-outro-local"
-              value={posto.outroLocal}
-              placeholder="Indique o local"
-              aria-label="Outro local da prestação de serviços"
-              aria-invalid={posto.outroLocal.trim() === ""}
-              onChange={(e) => onChange({ ...posto, outroLocal: e.target.value })}
-            />
-          ) : null
-        }
-      />
-
-      <Grupo<RegimePosto>
+      {/* O regime vem primeiro porque comanda o resto: em regime remoto não há
+          local a indicar, e o campo do local nem chega a aparecer. */}
+      <Escolha<RegimePosto>
         titulo="Regime da prestação de serviços"
         todas={REGIMES_POSTO}
-        escolhidas={posto.regimes}
-        onAlterar={(regimes) => onChange({ ...posto, regimes })}
+        escolhida={posto.regime}
+        onAlterar={(regime) => onChange({ ...posto, regime })}
       />
 
-      <Grupo<EquipamentoPosto>
+      {regimeTemLocal(posto.regime) && (
+        <Grupo<LocalPosto>
+          titulo="Local da prestação de serviços"
+          todas={LOCAIS_POSTO}
+          escolhidas={posto.locais}
+          onAlterar={(locais) => onChange({ ...posto, locais })}
+          extra={(local) =>
+            local === "Outro" && posto.locais.includes("Outro") ? (
+              <input
+                type="text"
+                className="campo-outro-local"
+                value={posto.outroLocal}
+                placeholder="Indique o local"
+                aria-label="Outro local da prestação de serviços"
+                aria-invalid={posto.outroLocal.trim() === ""}
+                onChange={(e) => onChange({ ...posto, outroLocal: e.target.value })}
+              />
+            ) : null
+          }
+        />
+      )}
+
+      <Escolha<EquipamentoPosto>
         titulo="Equipamentos para os recursos"
         todas={EQUIPAMENTOS_POSTO}
-        escolhidas={posto.equipamentos}
-        onAlterar={(equipamentos) => onChange({ ...posto, equipamentos })}
+        escolhida={posto.equipamento}
+        onAlterar={(equipamento) => onChange({ ...posto, equipamento })}
       />
 
       {/* Os requisitos só fazem sentido — e só saem no documento — quando o
           equipamento é do prestador: é a ele que se exigem. */}
-      {comEquipamentoDoPrestador && (
+      {posto.equipamento === "Equipamentos do Prestador" && (
         <label className="campo-largo">
           <span className="rotulo">Requisitos mínimos do equipamento do prestador</span>
           <textarea

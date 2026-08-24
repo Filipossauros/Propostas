@@ -6,7 +6,7 @@
 // são feitas depois, na redação do procedimento.
 
 import type { EquipamentoPosto, LocalPosto, LotesJSON, PerfilJSON, PostoTrabalho, RegimePosto } from "./types";
-import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO } from "./types";
+import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO, regimeTemLocal } from "./types";
 import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
 import { celula, opcao, type BlocoDocumento, type Documento } from "./documento";
@@ -222,29 +222,32 @@ function blocosDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
 }
 
 /**
- * Condições de execução do contrato: onde se presta o serviço, em que regime e
- * com que equipamento. Reproduz o formulário com as caixas de seleção, e não
+ * Condições de execução do contrato: em que regime se presta o serviço, onde,
+ * e com que equipamento. Reproduz o formulário com as caixas de seleção, e não
  * só o que ficou escolhido — ver o bloco "opcoes" em documento.ts.
+ *
+ * O regime vem primeiro porque comanda o resto: em regime remoto não há local
+ * a indicar, e a secção do local nem chega a existir.
  */
 function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
   const posto = config.postoTrabalho;
-  const comEquipamentoDoPrestador = posto.equipamentos.includes("Equipamentos do Prestador");
 
   return [
     { tipo: "titulo", nivel: 1, texto: "Posto de trabalho" },
 
-    ...blocoDeOpcoes<LocalPosto>(
-      "Local da prestação de serviços / entrega dos bens",
-      LOCAIS_POSTO,
-      posto.locais,
-      (local) => textoDoLocal(local, posto),
-    ),
+    ...blocoDeOpcoes<RegimePosto>("Regime da prestação de serviços", REGIMES_POSTO, [posto.regime]),
 
-    ...blocoDeOpcoes<RegimePosto>("Regime da prestação de serviços", REGIMES_POSTO, posto.regimes),
+    ...(regimeTemLocal(posto.regime)
+      ? blocoDeOpcoes<LocalPosto>("Local da prestação de serviços", LOCAIS_POSTO, posto.locais, (local) =>
+          textoDoLocal(local, posto),
+        )
+      : []),
 
-    ...blocoDeOpcoes<EquipamentoPosto>("Equipamentos para os recursos", EQUIPAMENTOS_POSTO, posto.equipamentos),
+    ...blocoDeOpcoes<EquipamentoPosto>("Equipamentos para os recursos", EQUIPAMENTOS_POSTO, [posto.equipamento]),
 
-    ...(comEquipamentoDoPrestador ? blocosDosRequisitosDeEquipamento(posto.requisitosEquipamento) : []),
+    ...(posto.equipamento === "Equipamentos do Prestador"
+      ? blocosDosRequisitosDeEquipamento(posto.requisitosEquipamento)
+      : []),
   ];
 }
 

@@ -209,18 +209,29 @@ function lerOpcoes<T extends string>(bruto: unknown, admitidas: readonly T[]): T
 }
 
 /**
+ * Uma escolha única, aceitando também a lista com que estes campos já foram
+ * guardados: fica a primeira que ainda conste da lista de opções. Um valor que
+ * tenha entretanto deixado de existir — o antigo regime de teletrabalho — cai
+ * no valor de partida, que é o que o utilizador veria se começasse agora.
+ */
+function lerEscolha<T extends string>(bruto: unknown, admitidas: readonly T[], omissao: T): T {
+  const candidatos = Array.isArray(bruto) ? bruto : [bruto];
+  return (candidatos.find((c) => admitidas.includes(c as T)) as T | undefined) ?? omissao;
+}
+
+/**
  * Posto de trabalho vindo de ficheiro. Ficheiros anteriores a este campo não o
- * trazem, e nesses assume-se o valor de partida — que é o que o utilizador
- * veria se começasse agora.
+ * trazem, e nesses assume-se o valor de partida.
  */
 function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
   if (typeof bruto !== "object" || bruto === null) return postoTrabalhoInicial();
   const p = bruto as Record<string, unknown>;
+  const partida = postoTrabalhoInicial();
   return {
+    regime: lerEscolha(p.regime ?? p.regimes, REGIMES_POSTO, partida.regime),
     locais: lerOpcoes(p.locais, LOCAIS_POSTO),
     outroLocal: typeof p.outroLocal === "string" ? p.outroLocal : "",
-    regimes: lerOpcoes(p.regimes, REGIMES_POSTO),
-    equipamentos: lerOpcoes(p.equipamentos, EQUIPAMENTOS_POSTO),
+    equipamento: lerEscolha(p.equipamento ?? p.equipamentos, EQUIPAMENTOS_POSTO, partida.equipamento),
     requisitosEquipamento:
       typeof p.requisitosEquipamento === "string" ? p.requisitosEquipamento : REQUISITOS_EQUIPAMENTO_PADRAO,
   };

@@ -221,13 +221,13 @@ describe("posto de trabalho", () => {
   });
 
   it("mostra as opções não escolhidas, e não só as escolhidas", () => {
-    const locais = opcoesDe(documento(), "Local da prestação de serviços / entrega dos bens");
+    const locais = opcoesDe(documento(), "Local da prestação de serviços");
 
     expect(locais.map((o) => o.texto)).toEqual(["Lisboa", "Porto", "Maia", "Évora", "Outro:"]);
     expect(locais.filter((o) => o.marcada).map((o) => o.texto)).toEqual(["Lisboa", "Porto"]);
   });
 
-  it("os valores de partida são os do formulário: Lisboa e Porto, híbrido, equipamento do prestador", () => {
+  it("os valores de partida são os do formulário: híbrido, Lisboa e Porto, equipamento do prestador", () => {
     const doc = documento();
 
     expect(opcoesDe(doc, "Regime da prestação de serviços").filter((o) => o.marcada).map((o) => o.texto)).toEqual([
@@ -238,10 +238,36 @@ describe("posto de trabalho", () => {
     ]);
   });
 
+  it("o regime é um só, e o teletrabalho já não é opção", () => {
+    const regimes = opcoesDe(documento(), "Regime da prestação de serviços");
+
+    expect(regimes.map((o) => o.texto)).toEqual(["Presencial", "Híbrido", "Remoto"]);
+    expect(regimes.filter((o) => o.marcada)).toHaveLength(1);
+  });
+
+  it("o regime vem antes do local: é ele que decide se há local", () => {
+    const titulos = documento()
+      .blocos.filter((b) => b.tipo === "titulo")
+      .map((b) => b.texto);
+
+    expect(titulos.indexOf("Regime da prestação de serviços")).toBeLessThan(
+      titulos.indexOf("Local da prestação de serviços"),
+    );
+  });
+
+  it("em regime remoto não há local a indicar", () => {
+    const titulos = documento({ regime: "Remoto" })
+      .blocos.filter((b) => b.tipo === "titulo")
+      .map((b) => b.texto);
+
+    expect(titulos).toContain("Regime da prestação de serviços");
+    expect(titulos).not.toContain("Local da prestação de serviços");
+  });
+
   it("o local 'Outro' leva consigo o sítio indicado", () => {
     const locais = opcoesDe(
       documento({ locais: ["Outro"], outroLocal: "Coimbra" }),
-      "Local da prestação de serviços / entrega dos bens",
+      "Local da prestação de serviços",
     );
 
     expect(locais.find((o) => o.marcada)?.texto).toBe("Outro: Coimbra");
@@ -257,7 +283,7 @@ describe("posto de trabalho", () => {
   });
 
   it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {
-    const blocos = documento({ equipamentos: ["Equipamentos da SPMS"] }).blocos;
+    const blocos = documento({ equipamento: "Equipamentos da SPMS" }).blocos;
 
     expect(blocos.some((b) => b.tipo === "paragrafo" && b.texto === "Computador com mínimo:")).toBe(false);
   });

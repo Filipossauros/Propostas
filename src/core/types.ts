@@ -196,26 +196,37 @@ export interface LotesJSON {
 // --------------------------------------------------------------------------
 
 /**
- * As opções do posto de trabalho são caixas de seleção, e o valor de cada uma
- * é o próprio texto que sai no documento. Guardar o rótulo, e não um código,
- * poupa uma tabela de tradução que mais tarde ou mais cedo divergiria do que
- * está escrito nas peças.
+ * As opções do posto de trabalho guardam o próprio texto que sai no documento,
+ * e não um código: poupa uma tabela de tradução que mais tarde ou mais cedo
+ * divergiria do que está escrito nas peças.
  */
 export const LOCAIS_POSTO = ["Lisboa", "Porto", "Maia", "Évora", "Outro"] as const;
-export const REGIMES_POSTO = ["Presencial", "Híbrido", "Teletrabalho", "Remoto"] as const;
+export const REGIMES_POSTO = ["Presencial", "Híbrido", "Remoto"] as const;
 export const EQUIPAMENTOS_POSTO = ["Equipamentos da SPMS", "Equipamentos do Prestador"] as const;
 
 export type LocalPosto = (typeof LOCAIS_POSTO)[number];
 export type RegimePosto = (typeof REGIMES_POSTO)[number];
 export type EquipamentoPosto = (typeof EQUIPAMENTOS_POSTO)[number];
 
+/**
+ * Regimes em que há um sítio onde estar. No remoto não há local a indicar —
+ * é isso que o distingue —, e por isso o campo do local nem chega a existir.
+ */
+export const REGIMES_COM_LOCAL: RegimePosto[] = ["Presencial", "Híbrido"];
+
+export function regimeTemLocal(regime: RegimePosto): boolean {
+  return REGIMES_COM_LOCAL.includes(regime);
+}
+
 export interface PostoTrabalho {
-  /** Local da prestação de serviços / entrega dos bens. */
+  /** Um só regime: presencial, híbrido ou remoto — não se acumulam. */
+  regime: RegimePosto;
+  /** Local da prestação de serviços. Só conta nos regimes com local. */
   locais: LocalPosto[];
   /** Onde, quando "Outro" está assinalado. */
   outroLocal: string;
-  regimes: RegimePosto[];
-  equipamentos: EquipamentoPosto[];
+  /** De quem é o equipamento. Ou de um, ou do outro. */
+  equipamento: EquipamentoPosto;
   /**
    * Requisitos mínimos do equipamento, quando é do prestador. Texto livre,
    * com um valor de partida que serve a maioria dos procedimentos e que quem
@@ -240,10 +251,10 @@ export const REQUISITOS_EQUIPAMENTO_PADRAO = [
 
 export function postoTrabalhoInicial(): PostoTrabalho {
   return {
+    regime: "Híbrido",
     locais: ["Lisboa", "Porto"],
     outroLocal: "",
-    regimes: ["Híbrido"],
-    equipamentos: ["Equipamentos do Prestador"],
+    equipamento: "Equipamentos do Prestador",
     requisitosEquipamento: REQUISITOS_EQUIPAMENTO_PADRAO,
   };
 }

@@ -68,10 +68,15 @@ tempos chega a informação de que depende:
 
 ### O posto de trabalho
 
-O documento Word leva uma secção com as condições de execução — local, regime e
-equipamento —, reproduzida como o formulário de onde vem: com as caixas por
-marcar à vista, e não só as escolhidas. Uma opção rejeitada e uma opção
-esquecida não são a mesma coisa, e quem lê as peças tem de as poder distinguir.
+O documento Word leva uma secção com as condições de execução, reproduzida como
+o formulário de onde vem: com as caixas por marcar à vista, e não só as
+escolhidas. Uma opção rejeitada e uma opção esquecida não são a mesma coisa, e
+quem lê as peças tem de as poder distinguir.
+
+O regime vem primeiro porque comanda o resto: em regime remoto não há local a
+indicar, e a secção do local nem chega a existir. O mesmo vale para os
+requisitos do equipamento, que só existem quando o equipamento é do prestador —
+é a ele que se exigem.
 
 ### O pedido de parecer eAvalia
 

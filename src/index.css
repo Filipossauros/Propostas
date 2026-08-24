@@ -1195,6 +1195,12 @@ button:disabled {
   max-width: 280px;
 }
 
+/* As escolhas únicas do posto de trabalho: a lista pendente é estreita, e o
+   rótulo por cima como nos restantes campos da aplicação. */
+.campo-escolha select {
+  max-width: 320px;
+}
+
 /* As perguntas do eAvalia são longas e a resposta é curta: uma coluna de
    perguntas com o seu campo por baixo lê-se melhor do que uma grelha. */
 .grelha-eavalia {
