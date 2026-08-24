@@ -5,6 +5,11 @@
   "nomeProcedimento": "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   "taxaIva": 23,
   "umLotePorConcorrente": true,
+  "eavalia": {
+    "iap": "Já cumpre",
+    "chaveMovelDigital": "Não aplicável",
+    "idiomas": "Cumpre Parcialmente"
+  },
   "lotes": [
     {
       "id": "lote-1",

@@ -1136,6 +1136,19 @@ button:disabled {
   margin-bottom: 2px;
 }
 
+/* As perguntas do eAvalia são longas e a resposta é curta: uma coluna de
+   perguntas com o seu campo por baixo lê-se melhor do que uma grelha. */
+.grelha-eavalia {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.grelha-eavalia select {
+  max-width: 320px;
+}
+
 /* A regra que governa a ordenação, dita antes da tabela que a aplica: sem ela,
    um preço mais baixo que não vence lê-se como erro. */
 .aviso-regra {

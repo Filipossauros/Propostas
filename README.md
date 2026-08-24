@@ -13,7 +13,7 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
 | **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
-| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, formulários de declaração (um Excel por lote) |
+| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, pedido de parecer eAvalia, formulários de declaração (um Excel por lote) |
 | **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
 | **4 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 3, mais a ordenação de cada lote e os vencedores |
 
@@ -66,6 +66,21 @@ tempos chega a informação de que depende:
   crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
   que aí apresente o preço mais baixo.
 
+### O pedido de parecer eAvalia
+
+O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
+(`src/excel/modelos/`), que é ficheiro de terceiros: sai como entrou, com sete
+células escritas — o nome do projeto no objeto da aquisição, três respostas de
+alinhamento tecnológico e as datas que as acompanham. As restantes medidas vão
+como já vêm no modelo.
+
+É por isso que este ficheiro não passa pelo exceljs, que o reescreveria por
+inteiro a partir da sua própria leitura: abre-se o ZIP, escrevem-se as células
+nos dois XML que as contêm, e fecha-se com as restantes entradas intactas. Um
+teste confirma-o — só essas duas folhas mudam, byte a byte. As respostas
+oferecidas na interface são exatamente as da lista de validação do formulário,
+porque um valor de fora seria recusado por ele.
+
 ### O que não passa pelo Excel
 
 O **conteúdo funcional** e as **certificações** de um perfil saem apenas no
@@ -116,9 +131,9 @@ npm run build    # build de produção (pasta dist/)
 ### Estrutura
 
 - `src/core/` — núcleo de cálculo puro (Regra A), perfis, lotes, validação e agregação.
-- `src/excel/` — geração do formulário e do relatório (exceljs) e leitura de declarações (SheetJS).
-  O vocabulário visual dos dois ficheiros gerados vive em `src/excel/estilo.ts`: é a partilha
-  que os faz parecer da mesma casa.
+- `src/excel/` — geração do formulário e do relatório (exceljs), leitura de declarações (SheetJS)
+  e preenchimento do modelo eAvalia (`eavalia.ts`, sobre o ZIP). O vocabulário visual dos dois
+  ficheiros gerados vive em `src/excel/estilo.ts`: é a partilha que os faz parecer da mesma casa.
 - `src/pdf/` — comparador PDF ↔ Excel (pdf.js).
 - `src/modulo1/` … `src/modulo4/` — interface de cada módulo.
 - `src/ui/` — componentes partilhados.

@@ -84,6 +84,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
   umLotePorConcorrente: true,
+  eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" },
   lotes: [
     {
       id: "lote-1",

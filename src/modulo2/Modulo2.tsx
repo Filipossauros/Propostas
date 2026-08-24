@@ -16,9 +16,11 @@ import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { gerarDocxBlob } from "../word/gerarDocx";
 import { LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
+import { ErroModeloEavalia, gerarEavaliaBlob } from "../excel/eavalia";
 import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
+import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
@@ -183,6 +185,28 @@ export function Modulo2({
       await gerarDocxBlob([documentoRegrasEPrecoBase(configExportavel)]),
       nomeComProjeto(nomeProjeto, "Requisitos_e_regras.docx"),
     );
+  }
+
+  /**
+   * O pedido de parecer prévio eAvalia, preenchido sobre o modelo oficial.
+   *
+   * O modelo é de terceiros e sai tal e qual, com sete células escritas: o
+   * nome do projeto, as três respostas de alinhamento tecnológico e as datas
+   * que as acompanham.
+   */
+  async function descarregarEavalia() {
+    setMensagem(null);
+    try {
+      descarregarBlob(
+        await gerarEavaliaBlob(configExportavel),
+        `Pedido_PPP_eavalia_${nomeSeguro(nomeProjeto, "Projeto")}.xlsx`,
+      );
+    } catch (erro) {
+      setMensagem({
+        tipo: "erro",
+        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar o pedido eAvalia.",
+      });
+    }
   }
 
   /**
@@ -405,6 +429,19 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
+          <h3>Informação eAvalia</h3>
+          <p className="painel-nota">
+            Respostas às medidas de alinhamento tecnológico do pedido de parecer prévio.
+          </p>
+        </header>
+        <InformacaoEavaliaEditor
+          eavalia={config.eavalia}
+          onChange={(eavalia) => onAlterarConfig((atual) => ({ ...atual, eavalia }))}
+        />
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
           <h3>Anexo Técnico</h3>
         </header>
         <div className="acoes">
@@ -414,10 +451,19 @@ export function Modulo2({
           <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
             Descarregar agrupamento (JSON)
           </button>
+          <button
+            type="button"
+            className="botao-secundario"
+            onClick={() => void descarregarEavalia()}
+            disabled={!podeExportar}
+          >
+            Descarregar pedido eAvalia (Excel)
+          </button>
         </div>
         <p className="ajuda">
           O documento Word reúne, com tabelas formatadas, os requisitos e o preço base para o caderno de encargos e as
-          regras de comprovação e apuramento para o programa do concurso.
+          regras de comprovação e apuramento para o programa do concurso. O pedido eAvalia é o modelo oficial do
+          parecer prévio, preenchido com o nome do projeto e com as respostas da secção anterior.
         </p>
       </section>
 

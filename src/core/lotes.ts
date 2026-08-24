@@ -3,8 +3,8 @@
 // Nota de método sobre o preço base: o valor de cada perfil dentro de um lote é
 // `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
 
-import type { Lote, LotesJSON, PerfilEmLote, PerfilJSON } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO } from "./types";
+import type { InformacaoEavalia, Lote, LotesJSON, PerfilEmLote, PerfilJSON, RespostaEavalia } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, informacaoEavaliaInicial } from "./types";
 import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
 
@@ -24,6 +24,7 @@ export function lotesIniciais(): LotesJSON {
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
     umLotePorConcorrente: false,
+    eavalia: informacaoEavaliaInicial(),
     lotes: [],
   };
 }
@@ -138,6 +139,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     nomeProjeto: config.nomeProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
+    eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
     lotes: config.lotes.map((lote) => ({
       ...lote,
       perfis: lote.perfis.map((entrada) => ({
@@ -148,6 +150,36 @@ export function importarLotesJSON(texto: string): LotesJSON {
         },
       })),
     })),
+  };
+}
+
+/** As respostas admitidas pela lista de validação do formulário eAvalia. */
+const RESPOSTAS_EAVALIA: RespostaEavalia[] = [
+  "",
+  "Cumpre Totalmente",
+  "Cumpre Parcialmente",
+  "Já cumpre",
+  "Não cumpre",
+  "Não aplicável",
+];
+
+function lerResposta(valor: unknown): RespostaEavalia {
+  return RESPOSTAS_EAVALIA.includes(valor as RespostaEavalia) ? (valor as RespostaEavalia) : "";
+}
+
+/**
+ * Respostas eAvalia vindas de ficheiro. Ficheiros anteriores a este campo não
+ * o trazem, e um valor que não conste da lista de validação é descartado: o
+ * formulário recusá-lo-ia, e é preferível ficar por responder do que levar lá
+ * um valor que não abre.
+ */
+function normalizarEavalia(bruto: unknown): InformacaoEavalia {
+  if (typeof bruto !== "object" || bruto === null) return informacaoEavaliaInicial();
+  const e = bruto as Record<string, unknown>;
+  return {
+    iap: lerResposta(e.iap),
+    chaveMovelDigital: lerResposta(e.chaveMovelDigital),
+    idiomas: lerResposta(e.idiomas),
   };
 }
 

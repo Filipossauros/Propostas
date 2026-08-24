@@ -184,7 +184,50 @@ export interface LotesJSON {
    * tenha ficado com um fica impedido nos seguintes.
    */
   umLotePorConcorrente: boolean;
+  /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */
+  eavalia: InformacaoEavalia;
   lotes: Lote[];
+}
+
+// --------------------------------------------------------------------------
+// eAvalia — pedido de parecer prévio
+// --------------------------------------------------------------------------
+
+/**
+ * Resposta a uma medida de alinhamento tecnológico.
+ *
+ * Os valores são exatamente os da lista de validação do formulário eAvalia
+ * (folha "Backup", B7:B11) e não podem ser traduzidos nem arredondados: o
+ * ficheiro é validado contra essa lista, e um valor de fora seria recusado.
+ * "Já cumpre" e "Cumpre Totalmente" coexistirem é redundância do formulário
+ * original, que não nos cabe corrigir.
+ *
+ * A cadeia vazia é o estado inicial — a medida ainda por responder —, e é
+ * também como o formulário chega: a célula em branco.
+ */
+export type RespostaEavalia =
+  | ""
+  | "Cumpre Totalmente"
+  | "Cumpre Parcialmente"
+  | "Já cumpre"
+  | "Não cumpre"
+  | "Não aplicável";
+
+/**
+ * As três medidas do formulário eAvalia que esta aplicação preenche. As
+ * restantes vêm já respondidas no modelo e não são tocadas.
+ */
+export interface InformacaoEavalia {
+  /** Utilização da plataforma de interoperabilidade da AP (iAP). */
+  iap: RespostaEavalia;
+  /** Chave móvel digital como único método de autenticação nos portais públicos. */
+  chaveMovelDigital: RespostaEavalia;
+  /** Portal disponível pelo menos em português e inglês. */
+  idiomas: RespostaEavalia;
+}
+
+export function informacaoEavaliaInicial(): InformacaoEavalia {
+  return { iap: "", chaveMovelDigital: "", idiomas: "" };
 }
 
 export const TAXA_IVA_PADRAO = 23;
