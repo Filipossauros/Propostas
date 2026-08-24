@@ -86,10 +86,13 @@ equipamento tornou aplicável.
 ### O pedido de parecer eAvalia
 
 O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
-(`src/excel/modelos/`), que é ficheiro de terceiros: sai como entrou, com sete
+(`src/excel/modelos/`), que é ficheiro de terceiros: sai como entrou, com oito
 células escritas — o nome do projeto no objeto da aquisição, três respostas de
-alinhamento tecnológico e as datas que as acompanham. As restantes medidas vão
-como já vêm no modelo.
+alinhamento tecnológico com as datas que as acompanham, e a conformidade com o
+Quadro Nacional de Referência para a Cibersegurança, que vai sempre como «Não
+aplicável». Esta última é a única resposta que se escreve por cima do que o
+modelo trazia: não é decisão que se tome procedimento a procedimento, e por isso
+não se pergunta. As restantes medidas vão como já vêm no modelo.
 
 A data só acompanha as respostas que assumem um compromisso futuro («Cumpre
 Totalmente», «Cumpre Parcialmente»). É regra do próprio formulário, escrita na

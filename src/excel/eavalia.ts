@@ -2,7 +2,7 @@
 //
 // Ao contrário do formulário de declaração e do relatório de avaliação, este
 // ficheiro não é gerado: é um modelo fornecido pela entidade que o recebe, e
-// aqui apenas se escrevem valores em sete células. Tudo o resto — folhas
+// aqui apenas se escrevem valores em oito células. Tudo o resto — folhas
 // ocultas, listas de validação, formatação condicional, fórmulas, XML
 // personalizado, definições de impressão — tem de sair exatamente como entrou.
 //
@@ -22,12 +22,16 @@ import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
  * o formulário for substituído por outra versão em que as linhas tenham
  * mudado de sítio, escrever às cegas em E6 poria a resposta na medida errada.
  * Confirma-se antes que a linha ainda é aquela.
+ *
+ * A resposta ou vem de um campo respondido no Módulo 2 (`campo`), ou é sempre
+ * a mesma neste procedimento (`fixa`) e não se pergunta a ninguém.
  */
-interface Medida {
-  campo: keyof InformacaoEavalia;
+interface MedidaBase {
   linha: number;
   inicioDoTexto: string;
 }
+
+type Medida = (MedidaBase & { campo: keyof InformacaoEavalia }) | (MedidaBase & { fixa: RespostaEavalia });
 
 /** Folha "Alinhamento Tecnológico" — a terceira do livro. */
 const FOLHA_ALINHAMENTO = "xl/worksheets/sheet3.xml";
@@ -52,6 +56,16 @@ const MEDIDAS: Medida[] = [
     campo: "idiomas",
     linha: 44,
     inicioDoTexto: "Disponibilização dos serviços e conteúdos pelo menos nos idiomas português e inglês",
+  },
+  // Resposta fixa: a conformidade com o Quadro Nacional de Referência para a
+  // Cibersegurança não se aplica a esta aquisição, e não é decisão que se tome
+  // procedimento a procedimento — daí não haver campo por que a perguntar.
+  // Esta é a única medida cuja célula já vem preenchida no modelo e ainda
+  // assim se escreve: o valor que lá está é substituído.
+  {
+    fixa: "Não aplicável",
+    linha: 70,
+    inicioDoTexto: "Conformidade com o Quadro Nacional de Referência para a Cibersegurança",
   },
 ];
 
@@ -87,26 +101,38 @@ function escaparXml(texto: string): string {
 }
 
 /**
- * Substitui uma célula vazia pelo seu conteúdo, preservando os atributos —
+ * Escreve numa célula, preservando os atributos que o modelo lhe deu —
  * designadamente `s`, que é o estilo, e é o que dá à data o formato de data.
  *
- * Exige que a célula exista e esteja vazia (`<c r="E6" s="17"/>`): se já
- * tivesse valor, ou não existisse, o modelo não seria o que se espera e
- * escrever nele às cegas seria pior do que não escrever.
+ * Por omissão exige que a célula esteja vazia (`<c r="E6" s="17"/>`): escrever
+ * por cima de um valor que o modelo já traz seria apagar o trabalho de quem o
+ * preencheu. `sobrepor` levanta essa exigência, e só se usa onde a resposta é
+ * fixa e conhecida — a linha já foi confirmada pelo texto da medida.
+ *
+ * O `t` que a célula tivesse é descartado: o valor novo traz o seu (`inlineStr`
+ * no texto, nenhum no número), e duas vezes o mesmo atributo não é XML válido.
  */
-function escreverCelula(xml: string, ref: string, conteudo: (atributos: string) => string): string {
+function escreverCelula(
+  xml: string,
+  ref: string,
+  conteudo: (atributos: string) => string,
+  sobrepor = false,
+): string {
   const vazia = new RegExp(`<c r="${ref}"([^>]*?)/>`);
-  const encontrada = vazia.exec(xml);
+  const preenchida = new RegExp(`<c r="${ref}"([^>]*?)>[\\s\\S]*?</c>`);
+
+  const encontrada = vazia.exec(xml) ?? (sobrepor ? preenchida.exec(xml) : null);
   if (encontrada === null) {
     throw new ErroModeloEavalia(
       `O modelo eAvalia não tem a célula ${ref} por preencher. ` +
         "O ficheiro-modelo terá sido substituído por outra versão.",
     );
   }
+
   // Substituição por função: o nome do projeto é texto livre, e um "$&" ou um
   // "$1" lá dentro seria interpretado como padrão se fosse passado como cadeia.
-  const substituto = conteudo(encontrada[1]);
-  return xml.replace(vazia, () => substituto);
+  const substituto = conteudo(encontrada[1].replace(/\s+t="[^"]*"/g, ""));
+  return xml.replace(encontrada[0], () => substituto);
 }
 
 function celulaDeTexto(ref: string, atributos: string, valor: string): string {
@@ -168,7 +194,8 @@ function decodificarBase64(base64: string): Uint8Array {
 }
 
 /**
- * Preenche o modelo eAvalia com o nome do projeto e as três respostas.
+ * Preenche o modelo eAvalia com o nome do projeto, as três respostas do Módulo
+ * 2 e a resposta fixa da medida de cibersegurança.
  *
  * Uma medida por responder fica em branco, que é como o modelo já vem — e a
  * formatação condicional do próprio formulário assinala-a. A data só acompanha
@@ -201,11 +228,16 @@ export async function gerarEavaliaBlob(
       );
     }
 
-    const resposta: RespostaEavalia = config.eavalia[medida.campo];
+    const fixa = "fixa" in medida;
+    const resposta: RespostaEavalia = fixa ? medida.fixa : config.eavalia[medida.campo];
     if (resposta === "") continue;
 
-    alinhamento = escreverCelula(alinhamento, `E${medida.linha}`, (attrs) =>
-      celulaDeTexto(`E${medida.linha}`, attrs, resposta),
+    alinhamento = escreverCelula(
+      alinhamento,
+      `E${medida.linha}`,
+      (attrs) => celulaDeTexto(`E${medida.linha}`, attrs, resposta),
+      // Só a resposta fixa se escreve por cima do que o modelo traz.
+      fixa,
     );
     if (RESPOSTAS_COM_DATA.includes(resposta)) {
       alinhamento = escreverCelula(alinhamento, `F${medida.linha}`, (attrs) =>

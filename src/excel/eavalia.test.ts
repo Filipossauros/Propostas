@@ -90,6 +90,34 @@ describe("gerarEavaliaBlob", () => {
     expect(await celula(zip, ALINHAMENTO, "F26")).toBe(await celula(await modelo(), ALINHAMENTO, "F26"));
   });
 
+  it("a medida da cibersegurança vai sempre como não aplicável", async () => {
+    const respondido = await gerar(
+      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      DIA,
+    );
+    const porResponder = await gerar(config(informacaoEavaliaInicial()), DIA);
+
+    for (const zip of [respondido, porResponder]) {
+      expect(await celula(zip, ALINHAMENTO, "E70")).toContain("Não aplicável");
+      // Não aplicável não assume compromisso nenhum: não leva data.
+      expect(await celula(zip, ALINHAMENTO, "F70")).toBe(await celula(await modelo(), ALINHAMENTO, "F70"));
+    }
+  });
+
+  it("substitui o valor que o modelo trazia nessa medida, e só nessa", async () => {
+    const zip = await gerar(config(informacaoEavaliaInicial()), DIA);
+    const original = await modelo();
+
+    expect(await celula(original, ALINHAMENTO, "E70")).toContain('t="s"');
+    expect(await celula(zip, ALINHAMENTO, "E70")).not.toContain('t="s"');
+    // s="17" é o estilo da coluna das respostas, e mantém-se; e não fica com
+    // dois atributos t, que não seria XML válido.
+    expect(await celula(zip, ALINHAMENTO, "E70")).toContain('s="17"');
+    expect((await celula(zip, ALINHAMENTO, "E70")).match(/ t="/g)).toHaveLength(1);
+    // A medida vizinha, também já preenchida no modelo, fica como estava.
+    expect(await celula(zip, ALINHAMENTO, "E68")).toBe(await celula(original, ALINHAMENTO, "E68"));
+  });
+
   it("leva o nome do projeto ao objeto da aquisição, com o XML escapado", async () => {
     const zip = await gerar(config(informacaoEavaliaInicial()), DIA);
 
