@@ -5,11 +5,11 @@
 // secções e não em artigos: a inserção sistemática e a numeração dos artigos
 // são feitas depois, na redação do procedimento.
 
-import type { EquipamentoPosto, LocalPosto, LotesJSON, PerfilJSON, PostoTrabalho, RegimePosto } from "./types";
-import { EQUIPAMENTOS_POSTO, LOCAIS_POSTO, REGIMES_POSTO, regimeTemLocal } from "./types";
+import type { LotesJSON, PerfilJSON, PostoTrabalho } from "./types";
+import { LOCAIS_POSTO, regimeTemLocal } from "./types";
 import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
 import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
-import { celula, opcao, type BlocoDocumento, type Documento } from "./documento";
+import { celula, type BlocoDocumento, type Documento } from "./documento";
 
 const DIREITA = "direita" as const;
 
@@ -163,90 +163,79 @@ function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
 // Posto de trabalho
 // --------------------------------------------------------------------------
 
-/**
- * O local "Outro" só diz alguma coisa acompanhado do sítio: sem ele, sai como
- * está no formulário, para se ver que ficou por especificar.
- */
-function textoDoLocal(local: LocalPosto, posto: PostoTrabalho): string {
-  if (local !== "Outro") return local;
-  return posto.outroLocal.trim() === "" ? "Outro:" : `Outro: ${posto.outroLocal.trim()}`;
-}
-
-function blocoDeOpcoes<T extends string>(
-  titulo: string,
-  todas: readonly T[],
-  escolhidas: T[],
-  rotulo: (opcao: T) => string = (o) => o,
-): BlocoDocumento[] {
-  return [
-    { tipo: "titulo", nivel: 2, texto: titulo },
-    { tipo: "opcoes", itens: todas.map((o) => opcao(rotulo(o), escolhidas.includes(o))) },
-  ];
+/** Os locais escolhidos, numa linha. "Outro" leva consigo o sítio indicado. */
+function locaisEscolhidos(posto: PostoTrabalho): string {
+  const escolhidos = LOCAIS_POSTO.filter((local) => posto.locais.includes(local)).map((local) => {
+    if (local !== "Outro") return local;
+    return posto.outroLocal.trim() === "" ? "Outro" : `Outro: ${posto.outroLocal.trim()}`;
+  });
+  // Um lugar por indicar não é o mesmo que nenhum lugar: numa peça de
+  // procedimento, uma célula em branco lê-se como esquecimento.
+  return escolhidos.length === 0 ? "(por indicar)" : escolhidos.join("; ");
 }
 
 /**
- * Requisitos do equipamento, tal como foram escritos.
+ * Requisitos do equipamento, tal como foram escritos, um por linha da tabela.
  *
- * O texto é livre e multilinha. Uma linha terminada em dois pontos é
- * introdução e sai como parágrafo; as restantes são características e saem em
- * lista. É a estrutura do texto de partida, e mantém-se para quem o reescreva.
+ * O texto é livre e multilinha. Uma primeira linha terminada em dois pontos é
+ * introdução, e vai para a legenda; as restantes são características, e cada
+ * uma é uma linha da tabela.
  */
-function blocosDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
+function tabelaDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
   const linhas = texto
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l !== "");
   if (linhas.length === 0) return [];
 
-  const blocos: BlocoDocumento[] = [];
-  let caracteristicas: string[] = [];
+  const temIntroducao = linhas[0].endsWith(":");
+  const caracteristicas = temIntroducao ? linhas.slice(1) : linhas;
+  if (caracteristicas.length === 0) return [];
 
-  const fecharLista = () => {
-    if (caracteristicas.length > 0) {
-      blocos.push({ tipo: "lista", itens: caracteristicas });
-      caracteristicas = [];
-    }
-  };
-
-  for (const linha of linhas) {
-    if (linha.endsWith(":")) {
-      fecharLista();
-      blocos.push({ tipo: "paragrafo", texto: linha });
-    } else {
-      caracteristicas.push(linha);
-    }
-  }
-  fecharLista();
-
-  return blocos;
+  return [
+    {
+      tipo: "tabela",
+      legenda: temIntroducao ? linhas[0] : undefined,
+      colunas: [{ titulo: "Requisitos mínimos do equipamento do prestador", peso: 100 }],
+      linhas: caracteristicas.map((c) => [celula(c)]),
+    },
+  ];
 }
 
 /**
  * Condições de execução do contrato: em que regime se presta o serviço, onde,
- * e com que equipamento. Reproduz o formulário com as caixas de seleção, e não
- * só o que ficou escolhido — ver o bloco "opcoes" em documento.ts.
+ * e com que equipamento.
  *
- * O regime vem primeiro porque comanda o resto: em regime remoto não há local
- * a indicar, e a secção do local nem chega a existir.
+ * Sai só o que ficou escolhido, e em tabela: é o que uma peça de procedimento
+ * fixa — as opções ponderadas e postas de lado ficam no rascunho, não no
+ * documento que vincula.
+ *
+ * O regime comanda o resto: em regime remoto não há local a indicar, e a
+ * linha do local nem chega a existir.
  */
 function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
   const posto = config.postoTrabalho;
 
+  const condicoes = [
+    [celula("Regime da prestação de serviços"), celula(posto.regime)],
+    ...(regimeTemLocal(posto.regime)
+      ? [[celula("Local da prestação de serviços"), celula(locaisEscolhidos(posto))]]
+      : []),
+    [celula("Equipamentos para os recursos"), celula(posto.equipamento)],
+  ];
+
   return [
     { tipo: "titulo", nivel: 1, texto: "Posto de trabalho" },
-
-    ...blocoDeOpcoes<RegimePosto>("Regime da prestação de serviços", REGIMES_POSTO, [posto.regime]),
-
-    ...(regimeTemLocal(posto.regime)
-      ? blocoDeOpcoes<LocalPosto>("Local da prestação de serviços", LOCAIS_POSTO, posto.locais, (local) =>
-          textoDoLocal(local, posto),
-        )
-      : []),
-
-    ...blocoDeOpcoes<EquipamentoPosto>("Equipamentos para os recursos", EQUIPAMENTOS_POSTO, [posto.equipamento]),
-
+    {
+      tipo: "tabela",
+      colunas: [
+        { titulo: "Condição", peso: 34 },
+        { titulo: "Opção fixada", peso: 66 },
+      ],
+      linhas: condicoes,
+    },
     ...(posto.equipamento === "Equipamentos do Prestador"
-      ? blocosDosRequisitosDeEquipamento(posto.requisitosEquipamento)
+      ? tabelaDosRequisitosDeEquipamento(posto.requisitosEquipamento)
       : []),
   ];
 }

@@ -209,82 +209,82 @@ describe("posto de trabalho", () => {
     return documentoRegrasEPrecoBase({ ...base, postoTrabalho: { ...base.postoTrabalho, ...posto } });
   }
 
-  function opcoesDe(doc: ReturnType<typeof documento>, titulo: string) {
+  /** A tabela que se segue ao título "Posto de trabalho". */
+  function tabelaDasCondicoes(doc: ReturnType<typeof documento>) {
     const blocos = doc.blocos;
-    const idx = blocos.findIndex((b) => b.tipo === "titulo" && b.texto === titulo);
+    const idx = blocos.findIndex((b) => b.tipo === "titulo" && b.texto === "Posto de trabalho");
     const seguinte = blocos[idx + 1];
-    return seguinte?.tipo === "opcoes" ? seguinte.itens : [];
+    if (seguinte?.tipo !== "tabela") throw new Error("o posto de trabalho não sai em tabela");
+    return seguinte;
+  }
+
+  function condicoes(doc: ReturnType<typeof documento>): Record<string, string> {
+    return Object.fromEntries(tabelaDasCondicoes(doc).linhas.map((l) => [l[0].texto, l[1].texto]));
   }
 
   it("sai como secção própria do documento", () => {
     expect(documento().blocos.some((b) => b.tipo === "titulo" && b.texto === "Posto de trabalho")).toBe(true);
   });
 
-  it("mostra as opções não escolhidas, e não só as escolhidas", () => {
-    const locais = opcoesDe(documento(), "Local da prestação de serviços");
+  it("sai em tabela, e só com o que ficou escolhido", () => {
+    const tabela = tabelaDasCondicoes(documento());
 
-    expect(locais.map((o) => o.texto)).toEqual(["Lisboa", "Porto", "Maia", "Évora", "Outro:"]);
-    expect(locais.filter((o) => o.marcada).map((o) => o.texto)).toEqual(["Lisboa", "Porto"]);
+    expect(tabela.colunas.map((c) => c.titulo)).toEqual(["Condição", "Opção fixada"]);
+    expect(condicoes(documento())).toEqual({
+      "Regime da prestação de serviços": "Híbrido",
+      "Local da prestação de serviços": "Lisboa; Porto",
+      "Equipamentos para os recursos": "Equipamentos do Prestador",
+    });
   });
 
-  it("os valores de partida são os do formulário: híbrido, Lisboa e Porto, equipamento do prestador", () => {
-    const doc = documento();
+  it("as opções postas de lado não vão ao documento", () => {
+    const texto = documentoParaTexto(documento());
 
-    expect(opcoesDe(doc, "Regime da prestação de serviços").filter((o) => o.marcada).map((o) => o.texto)).toEqual([
-      "Híbrido",
-    ]);
-    expect(opcoesDe(doc, "Equipamentos para os recursos").filter((o) => o.marcada).map((o) => o.texto)).toEqual([
-      "Equipamentos do Prestador",
-    ]);
-  });
-
-  it("o regime é um só, e o teletrabalho já não é opção", () => {
-    const regimes = opcoesDe(documento(), "Regime da prestação de serviços");
-
-    expect(regimes.map((o) => o.texto)).toEqual(["Presencial", "Híbrido", "Remoto"]);
-    expect(regimes.filter((o) => o.marcada)).toHaveLength(1);
+    expect(texto).not.toContain("Presencial");
+    expect(texto).not.toContain("Maia");
+    expect(texto).not.toContain("Equipamentos da SPMS");
   });
 
   it("o regime vem antes do local: é ele que decide se há local", () => {
-    const titulos = documento()
-      .blocos.filter((b) => b.tipo === "titulo")
-      .map((b) => b.texto);
+    const linhas = tabelaDasCondicoes(documento()).linhas.map((l) => l[0].texto);
 
-    expect(titulos.indexOf("Regime da prestação de serviços")).toBeLessThan(
-      titulos.indexOf("Local da prestação de serviços"),
+    expect(linhas.indexOf("Regime da prestação de serviços")).toBeLessThan(
+      linhas.indexOf("Local da prestação de serviços"),
     );
   });
 
   it("em regime remoto não há local a indicar", () => {
-    const titulos = documento({ regime: "Remoto" })
-      .blocos.filter((b) => b.tipo === "titulo")
-      .map((b) => b.texto);
-
-    expect(titulos).toContain("Regime da prestação de serviços");
-    expect(titulos).not.toContain("Local da prestação de serviços");
+    expect(Object.keys(condicoes(documento({ regime: "Remoto" })))).toEqual([
+      "Regime da prestação de serviços",
+      "Equipamentos para os recursos",
+    ]);
   });
 
   it("o local 'Outro' leva consigo o sítio indicado", () => {
-    const locais = opcoesDe(
-      documento({ locais: ["Outro"], outroLocal: "Coimbra" }),
-      "Local da prestação de serviços",
-    );
+    const doc = documento({ locais: ["Porto", "Outro"], outroLocal: "Coimbra" });
 
-    expect(locais.find((o) => o.marcada)?.texto).toBe("Outro: Coimbra");
+    expect(condicoes(doc)["Local da prestação de serviços"]).toBe("Porto; Outro: Coimbra");
   });
 
-  it("os requisitos do equipamento saem em introdução e lista", () => {
-    const blocos = documento().blocos;
-    const idx = blocos.findIndex((b) => b.tipo === "paragrafo" && b.texto === "Computador com mínimo:");
-    const lista = blocos[idx + 1];
+  it("um local por indicar é dito, e não deixado em branco", () => {
+    expect(condicoes(documento({ locais: [] }))["Local da prestação de serviços"]).toBe("(por indicar)");
+  });
 
-    expect(idx).toBeGreaterThan(0);
-    expect(lista.tipo === "lista" ? lista.itens : []).toContain("32 GB de memória RAM");
+  it("os requisitos do equipamento saem em tabela, um por linha", () => {
+    const tabela = documento().blocos.find(
+      (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Requisitos mínimos do equipamento do prestador",
+    );
+
+    expect(tabela).toBeDefined();
+    expect(tabela!.tipo === "tabela" ? tabela!.legenda : "").toBe("Computador com mínimo:");
+    expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toContain("32 GB de memória RAM");
   });
 
   it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {
     const blocos = documento({ equipamento: "Equipamentos da SPMS" }).blocos;
 
-    expect(blocos.some((b) => b.tipo === "paragrafo" && b.texto === "Computador com mínimo:")).toBe(false);
+    expect(
+      blocos.some((b) => b.tipo === "tabela" && b.colunas[0].titulo.startsWith("Requisitos mínimos")),
+    ).toBe(false);
   });
 });

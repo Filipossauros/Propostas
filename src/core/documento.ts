@@ -20,33 +20,12 @@ export interface Coluna {
   peso?: number;
 }
 
-/** Uma caixa de seleção do documento: o que se oferecia, e o que ficou marcado. */
-export interface Opcao {
-  texto: string;
-  marcada: boolean;
-}
-
 export type BlocoDocumento =
   | { tipo: "titulo"; nivel: 1 | 2 | 3; texto: string }
   | { tipo: "paragrafo"; texto: string }
   | { tipo: "nota"; texto: string }
   | { tipo: "lista"; itens: string[]; numerada?: boolean }
-  /**
-   * Lista de caixas de seleção, com as marcadas e as não marcadas.
-   *
-   * As não marcadas saem também, e não só as escolhidas: o documento reproduz
-   * um formulário, e quem o lê tem de ver o que foi ponderado e não escolhido
-   * — é isso que distingue uma opção rejeitada de uma esquecida.
-   */
-  | { tipo: "opcoes"; itens: Opcao[] }
   | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] };
-
-export const MARCA_MARCADA = "☒";
-export const MARCA_VAZIA = "☐";
-
-export function opcao(texto: string, marcada: boolean): Opcao {
-  return { texto, marcada };
-}
 
 export interface Documento {
   titulo: string;
@@ -125,12 +104,6 @@ export function documentoParaTexto(doc: Documento): string {
       case "lista":
         partes.push(
           ...bloco.itens.map((item, i) => (bloco.numerada ? `${i + 1}. ${item}` : `  - ${item}`)),
-          "",
-        );
-        break;
-      case "opcoes":
-        partes.push(
-          ...bloco.itens.map((o) => `  ${o.marcada ? MARCA_MARCADA : MARCA_VAZIA} ${o.texto}`),
           "",
         );
         break;

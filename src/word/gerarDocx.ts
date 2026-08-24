@@ -17,7 +17,6 @@ import {
   WidthType,
 } from "docx";
 import type { Alinhamento, BlocoDocumento, Celula, Coluna, Documento } from "../core/documento";
-import { MARCA_MARCADA, MARCA_VAZIA } from "../core/documento";
 
 const AZUL = "1F4E78";
 const AZUL_CLARO = "2E75B6";
@@ -131,26 +130,6 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
             children: [
               new TextRun({ text: bloco.numerada ? `${i + 1}. ` : "• ", size: 20 }),
               new TextRun({ text: item, size: 20 }),
-            ],
-          }),
-      );
-
-    case "opcoes":
-      return bloco.itens.map(
-        (o) =>
-          new Paragraph({
-            spacing: { after: 60 },
-            indent: { left: 360, hanging: 360 },
-            children: [
-              // A marca vai com tipo de letra próprio: o Calibri do corpo não
-              // tem estes glifos, e sem isto ficaria à mercê da substituição
-              // que cada instalação do Word decidir fazer.
-              new TextRun({
-                text: `${o.marcada ? MARCA_MARCADA : MARCA_VAZIA} `,
-                font: "Segoe UI Symbol",
-                size: 20,
-              }),
-              new TextRun({ text: o.texto, size: 20, bold: o.marcada }),
             ],
           }),
       );
