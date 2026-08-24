@@ -432,8 +432,8 @@ export function Modulo2({
         <header className="painel-cabecalho">
           <h3>Posto de trabalho</h3>
           <p className="painel-nota">
-            Onde se presta o serviço, em que regime e com que equipamento. Sai no documento Word, em secção própria,
-            com as opções que ficaram por escolher à vista.
+            Em que regime se presta o serviço, onde e com que equipamento. Sai no documento Word, em tabela, com o
+            que aqui ficar fixado.
           </p>
         </header>
         <PostoTrabalhoEditor

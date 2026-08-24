@@ -5,12 +5,14 @@ import {
   lotesIniciais,
   lotesParaJSON,
   perfisComCertificacao,
+  validarEavalia,
+  validarPostoTrabalho,
   totalLote,
   totalProcedimento,
   validarLotes,
 } from "./lotes";
 import { ErroImportacao } from "./perfil";
-import { TAXA_IVA_PADRAO } from "./types";
+import { TAXA_IVA_PADRAO, informacaoEavaliaInicial, postoTrabalhoInicial } from "./types";
 import { certificacoes, lotesComPerfis, perfil } from "./fixtures";
 import type { LotesJSON } from "./types";
 
@@ -144,5 +146,80 @@ describe("perfisComCertificacao", () => {
     ]);
 
     expect(perfisComCertificacao(importarLotesJSON(lotesParaJSON(config)))).toHaveLength(1);
+  });
+});
+
+describe("validarPostoTrabalho", () => {
+  function posto(alteracoes: Partial<ReturnType<typeof postoTrabalhoInicial>> = {}) {
+    return { ...postoTrabalhoInicial(), ...alteracoes };
+  }
+
+  it("aceita o posto de trabalho de partida", () => {
+    expect(validarPostoTrabalho(posto())).toHaveLength(0);
+  });
+
+  it("exige o local quando o regime tem local", () => {
+    expect(validarPostoTrabalho(posto({ regime: "Presencial", locais: [] }))).toHaveLength(1);
+    expect(validarPostoTrabalho(posto({ regime: "Híbrido", locais: [] }))).toHaveLength(1);
+  });
+
+  it("não pede local em regime remoto — não há sítio a indicar", () => {
+    expect(validarPostoTrabalho(posto({ regime: "Remoto", locais: [] }))).toHaveLength(0);
+  });
+
+  it("exige saber qual é o outro local", () => {
+    const erros = validarPostoTrabalho(posto({ locais: ["Outro"], outroLocal: "  " }));
+
+    expect(erros.map((e) => e.campo)).toEqual(["postoTrabalho.outroLocal"]);
+  });
+
+  it("exige os requisitos quando o equipamento é do prestador", () => {
+    const erros = validarPostoTrabalho(posto({ requisitosEquipamento: "" }));
+
+    expect(erros.map((e) => e.campo)).toEqual(["postoTrabalho.requisitosEquipamento"]);
+  });
+
+  it("não os pede quando o equipamento é da SPMS — não é a ela que se exigem", () => {
+    const semRequisitos = posto({ equipamento: "Equipamentos da SPMS", requisitosEquipamento: "" });
+
+    expect(validarPostoTrabalho(semRequisitos)).toHaveLength(0);
+  });
+});
+
+describe("validarEavalia", () => {
+  it("exige as três respostas", () => {
+    expect(validarEavalia(informacaoEavaliaInicial())).toHaveLength(3);
+  });
+
+  it("aponta a medida que ficou por responder", () => {
+    const erros = validarEavalia({ iap: "Já cumpre", chaveMovelDigital: "", idiomas: "Não aplicável" });
+
+    expect(erros.map((e) => e.campo)).toEqual(["eavalia.chaveMovelDigital"]);
+  });
+
+  it("aceita quando todas estão respondidas", () => {
+    const respondido = { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" } as const;
+
+    expect(validarEavalia(respondido)).toHaveLength(0);
+  });
+});
+
+describe("o agrupamento só está completo com o posto de trabalho e o eAvalia", () => {
+  it("as duas secções travam a exportação enquanto estiverem por preencher", () => {
+    const config = lotesExemplo();
+    const incompleto = {
+      ...config,
+      postoTrabalho: { ...config.postoTrabalho, locais: [] },
+      eavalia: informacaoEavaliaInicial(),
+    };
+
+    expect(validarLotes(config)).toHaveLength(0);
+    // Pela ordem por que os painéis aparecem no Módulo 2.
+    expect(validarLotes(incompleto).map((e) => e.campo)).toEqual([
+      "postoTrabalho.locais",
+      "eavalia.iap",
+      "eavalia.chaveMovelDigital",
+      "eavalia.idiomas",
+    ]);
   });
 });

@@ -62,11 +62,17 @@ export function InformacaoEavaliaEditor({ eavalia, onChange }: Props) {
         ))}
       </div>
 
+      {porResponder > 0 && (
+        <p className="aviso aviso-erro">
+          {porResponder === 1 ? "Falta responder a uma medida." : `Faltam responder a ${porResponder} medidas.`} As
+          três são de preenchimento obrigatório.
+        </p>
+      )}
+
       <p className="ajuda">
-        Preenchem as medidas correspondentes na folha «Alinhamento Tecnológico» do pedido de parecer prévio, com a
-        data em que o ficheiro for gerado. As restantes medidas do formulário vão como já vêm no modelo.
-        {porResponder > 0 &&
-          ` ${porResponder} ainda por responder: ficam em branco no ficheiro, como o modelo as traz.`}
+        Preenchem as medidas correspondentes na folha «Alinhamento Tecnológico» do pedido de parecer prévio. A data
+        só acompanha as respostas que assumem um compromisso futuro — quem já cumpre não tem data por que se
+        comprometer. As restantes medidas do formulário vão como já vêm no modelo.
       </p>
     </>
   );

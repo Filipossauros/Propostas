@@ -77,6 +77,12 @@ indicar, e a linha do local nem chega a existir. O mesmo vale para os requisitos
 do equipamento, que só saem quando o equipamento é do prestador — é a ele que se
 exigem.
 
+Nada disto é opcional: o posto de trabalho vai para o Caderno de Encargos e
+vincula quem executa, pelo que um local por indicar, um «Outro» sem sítio ou os
+requisitos do equipamento em branco travam os descarregamentos do Módulo 2, como
+qualquer outra questão por resolver. Só se exige o que a escolha do regime e do
+equipamento tornou aplicável.
+
 ### O pedido de parecer eAvalia
 
 O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
@@ -96,6 +102,11 @@ nos dois XML que as contêm, e fecha-se com as restantes entradas intactas. Um
 teste confirma-o — só essas duas folhas mudam, byte a byte. As respostas
 oferecidas na interface são exatamente as da lista de validação do formulário,
 porque um valor de fora seria recusado por ele.
+
+As três respostas são de preenchimento obrigatório. Não é a aplicação a exigi-lo:
+o pedido de parecer segue com elas, e uma medida por responder deixaria a célula
+em branco no formulário oficial — pelo que, enquanto faltar alguma, o Módulo 2
+não deixa descarregar nada.
 
 ### O que não passa pelo Excel
 

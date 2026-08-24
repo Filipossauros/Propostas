@@ -21,6 +21,7 @@ import {
   TAXA_IVA_PADRAO,
   informacaoEavaliaInicial,
   postoTrabalhoInicial,
+  regimeTemLocal,
 } from "./types";
 import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
@@ -50,6 +51,61 @@ export function lotesIniciais(): LotesJSON {
 // --------------------------------------------------------------------------
 // Validação
 // --------------------------------------------------------------------------
+
+/**
+ * Condições de execução do posto de trabalho.
+ *
+ * O regime e o equipamento são listas pendentes com valor de partida: têm
+ * sempre resposta, e não há nada a exigir. O que pode ficar por dizer é o que
+ * depende dessas escolhas — o local, quando o regime o tem, e os requisitos,
+ * quando o equipamento é do prestador.
+ */
+export function validarPostoTrabalho(posto: PostoTrabalho): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+
+  if (regimeTemLocal(posto.regime)) {
+    if (posto.locais.length === 0) {
+      erros.push({
+        campo: "postoTrabalho.locais",
+        mensagem: `Posto de trabalho: em regime ${posto.regime.toLowerCase()}, indique o local da prestação de serviços.`,
+      });
+    }
+    if (posto.locais.includes("Outro") && posto.outroLocal.trim() === "") {
+      erros.push({
+        campo: "postoTrabalho.outroLocal",
+        mensagem: "Posto de trabalho: indique qual é o outro local da prestação de serviços.",
+      });
+    }
+  }
+
+  if (posto.equipamento === "Equipamentos do Prestador" && posto.requisitosEquipamento.trim() === "") {
+    erros.push({
+      campo: "postoTrabalho.requisitosEquipamento",
+      mensagem: "Posto de trabalho: indique os requisitos mínimos do equipamento do prestador.",
+    });
+  }
+
+  return erros;
+}
+
+/** As medidas do pedido de parecer eAvalia que esta aplicação preenche. */
+const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> = [
+  { campo: "iap", nome: "a utilização da plataforma de interoperabilidade da ARTE (iAP)" },
+  { campo: "chaveMovelDigital", nome: "a utilização de chave móvel digital" },
+  { campo: "idiomas", nome: "a disponibilização do portal em português e inglês" },
+];
+
+/**
+ * Respostas ao alinhamento tecnológico. Todas são exigidas: o pedido de parecer
+ * segue com elas, e uma célula em branco no formulário é uma medida por
+ * responder — não é uma resposta.
+ */
+export function validarEavalia(eavalia: InformacaoEavalia): ErroValidacao[] {
+  return MEDIDAS_EAVALIA.filter((m) => eavalia[m.campo] === "").map((m) => ({
+    campo: `eavalia.${m.campo}`,
+    mensagem: `Informação eAvalia: responda sobre ${m.nome}.`,
+  }));
+}
 
 export function validarLotes(config: LotesJSON): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
@@ -110,7 +166,9 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
     });
   });
 
-  return erros;
+  // No fim, e por esta ordem, porque é a ordem por que os painéis aparecem no
+  // Módulo 2: quem percorre a lista de erros percorre a página de cima a baixo.
+  return [...erros, ...validarPostoTrabalho(config.postoTrabalho), ...validarEavalia(config.eavalia)];
 }
 
 // --------------------------------------------------------------------------

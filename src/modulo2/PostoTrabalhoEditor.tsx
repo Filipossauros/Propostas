@@ -39,6 +39,7 @@ function Grupo<T extends string>({
   escolhidas,
   onAlterar,
   extra,
+  aviso,
 }: {
   titulo: string;
   todas: readonly T[];
@@ -46,6 +47,8 @@ function Grupo<T extends string>({
   onAlterar: (escolhidas: T[]) => void;
   /** Campo que acompanha uma opção — o "onde" do local "Outro". */
   extra?: (opcao: T) => React.ReactNode;
+  /** Mostrado por baixo das opções quando falta escolher. */
+  aviso?: string;
 }) {
   function alternar(opcao: T, marcada: boolean) {
     // Guarda-se pela ordem do formulário, e não pela ordem dos cliques: é
@@ -69,6 +72,7 @@ function Grupo<T extends string>({
           {extra?.(opcao)}
         </div>
       ))}
+      {aviso !== undefined && <p className="aviso aviso-erro">{aviso}</p>}
     </fieldset>
   );
 }
@@ -91,6 +95,7 @@ export function PostoTrabalhoEditor({ posto, onChange }: Props) {
           todas={LOCAIS_POSTO}
           escolhidas={posto.locais}
           onAlterar={(locais) => onChange({ ...posto, locais })}
+          aviso={posto.locais.length === 0 ? "Indique pelo menos um local." : undefined}
           extra={(local) =>
             local === "Outro" && posto.locais.includes("Outro") ? (
               <input
@@ -123,8 +128,12 @@ export function PostoTrabalhoEditor({ posto, onChange }: Props) {
             rows={8}
             value={posto.requisitosEquipamento}
             placeholder="Uma característica por linha. Uma linha terminada em dois pontos é introdução."
+            aria-invalid={posto.requisitosEquipamento.trim() === ""}
             onChange={(e) => onChange({ ...posto, requisitosEquipamento: e.target.value })}
           />
+          {posto.requisitosEquipamento.trim() === "" && (
+            <span className="aviso aviso-erro">Indique os requisitos mínimos do equipamento.</span>
+          )}
         </label>
       )}
     </div>
