@@ -178,9 +178,13 @@ function locaisEscolhidos(posto: PostoTrabalho): string {
  * Requisitos do equipamento, tal como foram escritos, um por linha da tabela.
  *
  * O texto é livre e multilinha. Uma primeira linha terminada em dois pontos é
- * introdução, e vai para a legenda; as restantes são características, e cada
- * uma é uma linha da tabela.
+ * introdução, e encabeça a tabela — não fica solta por cima dela, que era ler
+ * duas vezes a mesma coisa: o cabeçalho anuncia o que a tabela enumera. Sem
+ * essa linha, encabeça-a o nome do campo. As restantes linhas são
+ * características, uma por linha da tabela.
  */
+const TITULO_REQUISITOS_EQUIPAMENTO = "Requisitos mínimos do equipamento do prestador";
+
 function tabelaDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
   const linhas = texto
     .split("\n")
@@ -195,8 +199,7 @@ function tabelaDosRequisitosDeEquipamento(texto: string): BlocoDocumento[] {
   return [
     {
       tipo: "tabela",
-      legenda: temIntroducao ? linhas[0] : undefined,
-      colunas: [{ titulo: "Requisitos mínimos do equipamento do prestador", peso: 100 }],
+      colunas: [{ titulo: temIntroducao ? linhas[0] : TITULO_REQUISITOS_EQUIPAMENTO, peso: 100 }],
       linhas: caracteristicas.map((c) => [celula(c)]),
     },
   ];

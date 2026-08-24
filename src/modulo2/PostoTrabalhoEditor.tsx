@@ -127,7 +127,7 @@ export function PostoTrabalhoEditor({ posto, onChange }: Props) {
           <textarea
             rows={8}
             value={posto.requisitosEquipamento}
-            placeholder="Uma característica por linha. Uma linha terminada em dois pontos é introdução."
+            placeholder="Uma característica por linha. Uma primeira linha terminada em dois pontos encabeça a tabela."
             aria-invalid={posto.requisitosEquipamento.trim() === ""}
             onChange={(e) => onChange({ ...posto, requisitosEquipamento: e.target.value })}
           />

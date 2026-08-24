@@ -270,21 +270,41 @@ describe("posto de trabalho", () => {
     expect(condicoes(documento({ locais: [] }))["Local da prestação de serviços"]).toBe("(por indicar)");
   });
 
+  /** A tabela dos requisitos, se existir: vem logo a seguir à das condições. */
+  function tabelaDosRequisitos(posto: Partial<LotesJSON["postoTrabalho"]> = {}) {
+    const blocos = documento(posto).blocos;
+    const condicoes = blocos.findIndex((b) => b.tipo === "tabela" && b.colunas[0].titulo === "Condição");
+    const seguinte = blocos[condicoes + 1];
+    return seguinte?.tipo === "tabela" ? seguinte : undefined;
+  }
+
   it("os requisitos do equipamento saem em tabela, um por linha", () => {
-    const tabela = documento().blocos.find(
-      (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Requisitos mínimos do equipamento do prestador",
-    );
+    const tabela = tabelaDosRequisitos();
 
     expect(tabela).toBeDefined();
-    expect(tabela!.tipo === "tabela" ? tabela!.legenda : "").toBe("Posto de trabalho os seguintes requisitos mínimos:");
     expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toContain("32 GB de memória RAM;");
   });
 
-  it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {
-    const blocos = documento({ equipamento: "Equipamentos da SPMS" }).blocos;
+  it("a introdução encabeça a tabela, em vez de ficar solta por cima dela", () => {
+    const tabela = tabelaDosRequisitos();
 
-    expect(
-      blocos.some((b) => b.tipo === "tabela" && b.colunas[0].titulo.startsWith("Requisitos mínimos")),
-    ).toBe(false);
+    expect(tabela!.tipo === "tabela" ? tabela!.colunas[0].titulo : "").toBe(
+      "Posto de trabalho os seguintes requisitos mínimos:",
+    );
+    expect(tabela!.tipo === "tabela" ? tabela!.legenda : "nenhuma").toBeUndefined();
+    expect(documentoParaTexto(documento())).not.toContain("Computador com mínimo:");
+  });
+
+  it("sem introdução, encabeça a tabela o nome do campo", () => {
+    const tabela = tabelaDosRequisitos({ requisitosEquipamento: "Wi-Fi 6.\n32 GB de memória RAM;" });
+
+    expect(tabela!.tipo === "tabela" ? tabela!.colunas[0].titulo : "").toBe(
+      "Requisitos mínimos do equipamento do prestador",
+    );
+    expect(tabela!.tipo === "tabela" ? tabela!.linhas.length : 0).toBe(2);
+  });
+
+  it("sem equipamento do prestador não há requisitos a exigir-lhe", () => {
+    expect(tabelaDosRequisitos({ equipamento: "Equipamentos da SPMS" })).toBeUndefined();
   });
 });
