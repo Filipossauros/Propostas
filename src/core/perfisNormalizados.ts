@@ -2,9 +2,10 @@
 //
 // São os perfis-base da entidade: conteúdo funcional e requisitos mínimos
 // transversais, iguais em todos os procedimentos, aos quais depois se
-// acrescentam os requisitos tecnológicos específicos de cada projeto. Vêm com
-// o preço/hora de referência da tabela de preços, que o Módulo 2 usa como
-// ponto de partida e quem prepara o procedimento pode alterar.
+// acrescentam os requisitos tecnológicos específicos de cada projeto.
+//
+// Não trazem preço: o preço/hora é decisão de cada procedimento e escreve-se à
+// mão no Módulo 2, ao colocar o perfil no lote.
 //
 // GERADO a partir de Perfis_Base_Requisitos_Transversais_REVISTO_v2.xlsx — o
 // texto é transcrição, não reescrita. Alterações à redação fazem-se no ficheiro
@@ -20,8 +21,6 @@ interface Base {
   /** Número do perfil no Anexo Técnico. Não há perfil 9. */
   numero: number;
   nome: string;
-  /** Preço/hora de referência, sem IVA. */
-  valorHora: number;
   atividades: string[];
   /** Cada requisito com a experiência mínima em meses. */
   requisitos: Array<[string, number]>;
@@ -31,8 +30,6 @@ const BASE: Base[] = [
   {
     numero: 1,
     nome: "Arquiteto de Sistemas",
-    // Tabela de preços: «Arquiteto de sistemas».
-    valorHora: 47.31,
     atividades: [
       "Conceção da arquitetura de soluções aplicacionais, incluindo a definição de componentes, interfaces e fluxos de dados",
       "Conceção de soluções de integração entre sistemas de informação",
@@ -53,8 +50,6 @@ const BASE: Base[] = [
   {
     numero: 2,
     nome: "Fullstack",
-    // Tabela de preços: «Fullstack».
-    valorHora: 25.51,
     atividades: [
       "Desenvolvimento de aplicações web, na camada de interface (frontend) e na camada de serviços (backend)",
       "Desenvolvimento e integração de componentes aplicacionais",
@@ -75,8 +70,6 @@ const BASE: Base[] = [
   {
     numero: 3,
     nome: "Backend / Integração de Sistemas",
-    // Tabela de preços: «Backend - System Integration».
-    valorHora: 27.30,
     atividades: [
       "Desenvolvimento de serviços aplicacionais (backend) expostos através de interfaces programáticas (API)",
       "Desenvolvimento de soluções de integração entre sistemas de informação",
@@ -100,8 +93,6 @@ const BASE: Base[] = [
   {
     numero: 4,
     nome: "Frontend",
-    // Tabela de preços: «Frontend».
-    valorHora: 27.50,
     atividades: [
       "Desenvolvimento e manutenção de interfaces de utilizador de aplicações web",
       "Desenvolvimento de componentes de interface reutilizáveis",
@@ -123,8 +114,6 @@ const BASE: Base[] = [
   {
     numero: 5,
     nome: "Consultor de Administração de Sistemas",
-    // Tabela de preços: «Consultor de Administração de Sistemas e Observabilidade».
-    valorHora: 28.12,
     atividades: [
       "Monitorização do funcionamento e do desempenho das soluções",
       "Desenvolvimento e manutenção de painéis e de relatórios de monitorização",
@@ -141,8 +130,6 @@ const BASE: Base[] = [
   {
     numero: 6,
     nome: "Tester",
-    // Tabela de preços: «Tester».
-    valorHora: 22.60,
     atividades: [
       "Planeamento dos testes e análise dos requisitos para efeitos de teste",
       "Conceção, desenvolvimento e execução de planos e de casos de teste",
@@ -163,8 +150,6 @@ const BASE: Base[] = [
   {
     numero: 7,
     nome: "Analista Funcional",
-    // Tabela de preços: «Analista funcional».
-    valorHora: 26.22,
     atividades: [
       "Levantamento e análise de requisitos de negócio, funcionais e não funcionais",
       "Elaboração de especificações funcionais",
@@ -184,8 +169,6 @@ const BASE: Base[] = [
   {
     numero: 8,
     nome: "Gestor de Projeto",
-    // Tabela de preços: «Gestor de Projeto».
-    valorHora: 34.13,
     atividades: [
       "Planeamento do projeto e elaboração do respetivo plano",
       "Controlo e monitorização da execução do projeto, quanto a âmbito, prazos e recursos",
@@ -206,8 +189,6 @@ const BASE: Base[] = [
   {
     numero: 10,
     nome: "UX Designer",
-    // Tabela de preços: «Ux designer».
-    valorHora: 27.64,
     atividades: [
       "Conceção da experiência de utilização (UX) e da interface (UI) das soluções",
       "Elaboração de protótipos de alta fidelidade",
@@ -249,6 +230,5 @@ export const PERFIS_NORMALIZADOS: PerfilJSON[] = BASE.map((base) => {
       designacao,
       mesesMinimos,
     })),
-    valorHoraSugerido: base.valorHora,
   };
 });

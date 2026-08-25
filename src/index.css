@@ -439,6 +439,13 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Campo que a aplicação forma sozinha: mostra-se, não se escreve. */
+.campo-derivado {
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+  cursor: default;
+}
+
 /* Rótulo com uma ação ao lado, na mesma linha. */
 .linha-rotulo {
   display: flex;

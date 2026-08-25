@@ -4,6 +4,7 @@ import {
   linhasTabelaValores,
   lotesIniciais,
   lotesParaJSON,
+  nomeProcedimentoDe,
   normalizarLotesGuardados,
   perfisComCertificacao,
   validarEavalia,
@@ -152,6 +153,25 @@ describe("perfisComCertificacao", () => {
     ]);
 
     expect(perfisComCertificacao(importarLotesJSON(lotesParaJSON(config)))).toHaveLength(1);
+  });
+});
+
+describe("nomeProcedimentoDe", () => {
+  it("é o nome do projeto precedido da fórmula da entidade", () => {
+    expect(nomeProcedimentoDe("Portal do Utente")).toBe(
+      "Aquisição de Serviços de Desenvolvimento e Manutenção Portal do Utente",
+    );
+  });
+
+  it("sem projeto não há procedimento: meio nome numa peça é pior do que nenhum", () => {
+    expect(nomeProcedimentoDe("")).toBe("");
+    expect(nomeProcedimentoDe("   ")).toBe("");
+  });
+
+  it("não deixa passar espaço a mais de quem escreveu o nome do projeto", () => {
+    expect(nomeProcedimentoDe("  Portal do Utente  ")).toBe(
+      "Aquisição de Serviços de Desenvolvimento e Manutenção Portal do Utente",
+    );
   });
 });
 

@@ -17,6 +17,7 @@ import { extrairValoresDeclarados } from "../pdf/extrairValores";
 import { compararComPdf } from "../pdf/comparar";
 import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { podeCarregarExemplo } from "../ui/exemploProtegido";
 import { ReconciliacaoConcorrentes } from "./ReconciliacaoConcorrentes";
 import { ResultadosTabelas } from "./ResultadosTabelas";
 
@@ -105,6 +106,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   }
 
   function carregarExemplo() {
+    if (!podeCarregarExemplo()) return;
     const exemplo = structuredClone(LOTES_EXEMPLO);
     setConfig(exemplo);
     const declaracoes = declaracoesExemplo(exemplo);

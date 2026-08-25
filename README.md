@@ -80,10 +80,33 @@ altera é o ficheiro de origem. Os identificadores são estáveis (`pn1`, `pn2`,
 pelo que voltar a carregar o catálogo atualiza os perfis que já estejam num lote,
 em vez de criar cópias ao lado — a mesma regra da importação de ficheiros JSON.
 
-O preço/hora vive no perfil, e não no lote, porque é do perfil que é
-característico: o mesmo perfil vale o mesmo em todos os lotes onde apareça. Mas é
-sugestão, não decisão: ao entrar num lote passa a ser o preço daquele lote, onde
-continua a poder ser alterado. Um perfil escrito à mão continua a entrar a zero.
+O catálogo não traz preços. O preço/hora é decisão de cada procedimento e
+escreve-se à mão no Módulo 2, ao colocar o perfil no lote — como sempre foi, e
+para todos os perfis por igual.
+
+### O nome do procedimento
+
+Não se escreve: forma-se a partir do nome do projeto, precedido de «Aquisição de
+Serviços de Desenvolvimento e Manutenção». O campo do Módulo 2 mostra-o e não o
+deixa editar, e o nome altera-se alterando o do projeto, no Módulo 1. É uma peça
+que aparece no documento Word, no agrupamento e no pedido de parecer: escrita
+três vezes à mão, mais tarde ou mais cedo ficaria diferente numa delas.
+
+Sem nome de projeto não há nome de procedimento — fica vazio, e não meio nome.
+Pela mesma razão, «Recomeçar» no Módulo 1 apaga também o nome do projeto: sem
+dados, a aplicação apresenta-se como na primeira vez, e o nome de um projeto
+anterior num campo preenchido é o género de resto que acaba dentro de uma peça.
+
+### A palavra-passe dos exemplos
+
+Carregar exemplos substitui o trabalho em curso por dados fictícios, e o pior não
+é perder o que estava feito — é ficar sem saber se o que está no ecrã é o
+procedimento ou o exemplo. Por isso os botões «Carregar exemplo» pedem uma
+palavra-passe (`src/ui/exemploProtegido.ts`), uma vez por separador aberto.
+
+Não é segurança, e não se faz passar por isso: a aplicação corre inteira no
+navegador, sem servidor nenhum, pelo que a palavra-passe está no código que o
+navegador descarrega. É um travão contra o clique distraído, e é só isso.
 
 ### O posto de trabalho
 

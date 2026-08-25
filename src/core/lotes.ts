@@ -27,24 +27,31 @@ import {
 import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
 
+/**
+ * Início fixo do nome do procedimento. O nome não se escreve à mão: forma-se a
+ * partir do nome do projeto, para que as peças, os ficheiros e o pedido de
+ * parecer digam todos exatamente a mesma coisa.
+ */
+export const PREFIXO_NOME_PROCEDIMENTO = "Aquisição de Serviços de Desenvolvimento e Manutenção ";
+
+/**
+ * O nome do procedimento correspondente a um projeto.
+ *
+ * Sem nome de projeto não há nome de procedimento: metade de um nome numa peça
+ * é pior do que nenhum, e o nome do projeto por preencher já é questão por
+ * resolver no Módulo 1.
+ */
+export function nomeProcedimentoDe(nomeProjeto: string): string {
+  const projeto = nomeProjeto.trim();
+  return projeto === "" ? "" : PREFIXO_NOME_PROCEDIMENTO + projeto;
+}
+
 export function criarLote(numero: string): Lote {
   return { id: gerarId(), numero, designacao: "", perfis: [] };
 }
 
-/**
- * Coloca um perfil num lote. O preço/hora parte do valor de referência do
- * perfil, quando o catálogo o traga — poupa uma transcrição manual da tabela de
- * preços, sem deixar de ser editável, que é onde a decisão do procedimento se
- * toma.
- */
 export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
-  return {
-    id: gerarId(),
-    perfil,
-    horas: 0,
-    valorHora: perfil.valorHoraSugerido ?? 0,
-    nMinimoElementos: 1,
-  };
+  return { id: gerarId(), perfil, horas: 0, valorHora: 0, nMinimoElementos: 1 };
 }
 
 export function lotesIniciais(): LotesJSON {

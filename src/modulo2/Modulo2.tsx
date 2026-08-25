@@ -8,7 +8,9 @@ import {
   importarLotesJSON,
   lotesIniciais,
   lotesParaJSON,
+  nomeProcedimentoDe,
   perfisEmLotes,
+  PREFIXO_NOME_PROCEDIMENTO,
   taxaIva,
   validarLotes,
 } from "../core/lotes";
@@ -23,6 +25,7 @@ import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { podeCarregarExemplo } from "../ui/exemploProtegido";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
 
@@ -55,14 +58,28 @@ function especificacao(perfil: PerfilJSON, lote?: Lote): EspecificacaoFormulario
 
 export function Modulo2({
   perfis,
-  config,
-  onAlterarConfig,
+  config: configGuardada,
+  onAlterarConfig: alterarConfigGuardada,
   nomeProjeto,
   onDefinirNomeProjeto,
   onAdotarNomeProjeto,
   onAcrescentarPerfis,
   onSubstituirPerfis,
 }: Props) {
+  // O nome do procedimento não se escreve: forma-se a partir do nome do projeto
+  // pela regra da entidade. Deriva-se aqui, e não se guarda a partir do que
+  // esteja gravado, para que um agrupamento antigo — ou um ficheiro de outra
+  // pessoa — não traga consigo um nome que já não corresponde ao projeto.
+  const config: LotesJSON = { ...configGuardada, nomeProcedimento: nomeProcedimentoDe(nomeProjeto) };
+
+  /** Grava a alteração, e com ela o nome do procedimento que o projeto impõe. */
+  function onAlterarConfig(atualizar: (atual: LotesJSON) => LotesJSON) {
+    alterarConfigGuardada((atual) => ({
+      ...atualizar({ ...atual, nomeProcedimento: config.nomeProcedimento }),
+      nomeProcedimento: config.nomeProcedimento,
+    }));
+  }
+
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
   const inputPerfisRef = useRef<HTMLInputElement>(null);
@@ -167,6 +184,7 @@ export function Modulo2({
   }
 
   function carregarExemplo() {
+    if (!podeCarregarExemplo()) return;
     const exemplo = structuredClone(LOTES_EXEMPLO);
     onAlterarConfig(() => exemplo);
     onSubstituirPerfis(structuredClone(PERFIS_EXEMPLO));
@@ -272,8 +290,12 @@ export function Modulo2({
             <span className="rotulo">Nome do procedimento</span>
             <input
               type="text"
+              className="campo-derivado"
               value={config.nomeProcedimento}
-              onChange={(e) => onAlterarConfig((atual) => ({ ...atual, nomeProcedimento: e.target.value }))}
+              readOnly
+              aria-readonly="true"
+              placeholder={`${PREFIXO_NOME_PROCEDIMENTO}…`}
+              title="Formado a partir do nome do projeto. Altere o nome do projeto no Módulo 1."
             />
           </label>
 
@@ -289,7 +311,10 @@ export function Modulo2({
             />
           </label>
         </div>
-        <p className="ajuda">Todos os preços unitários são introduzidos sem IVA.</p>
+        <p className="ajuda">
+          O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO.trim()}» seguido do nome do projeto, e altera-se
+          alterando esse nome no Módulo 1. Todos os preços unitários são introduzidos sem IVA.
+        </p>
 
         <label className="campo-opcao">
           <input

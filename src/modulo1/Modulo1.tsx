@@ -11,11 +11,11 @@ import {
 } from "../core/perfil";
 import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
-import { formatarMoeda } from "../core/lotes";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { podeCarregarExemplo } from "../ui/exemploProtegido";
 import { RequisitosEditor } from "./RequisitosEditor";
 import { ListaItensEditor } from "./ListaItensEditor";
 
@@ -147,6 +147,7 @@ export function Modulo1({
   }
 
   function carregarExemplo() {
+    if (!podeCarregarExemplo()) return;
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
     onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
     setIdEmEdicao(null);
@@ -155,7 +156,7 @@ export function Modulo1({
 
   /**
    * Ponto de partida para um procedimento novo: o catálogo de perfis-base da
-   * entidade, com o preço/hora de referência de cada um.
+   * entidade.
    *
    * Junta-se ao que já esteja no catálogo em vez de o substituir — quem já tem
    * perfis escritos à mão não os perde por querer os normalizados também. Um
@@ -170,16 +171,20 @@ export function Modulo1({
     setMensagem({
       tipo: "sucesso",
       texto:
-        `${PERFIS_NORMALIZADOS.length} perfis normalizados carregados, com o preço/hora de referência. ` +
+        `${PERFIS_NORMALIZADOS.length} perfis normalizados carregados. ` +
         "Falta acrescentar a cada um os requisitos tecnológicos específicos do procedimento.",
     });
   }
 
   function recomecar() {
-    if (!confirm("Apagar todos os perfis em edição e recomeçar do zero?")) return;
+    if (!confirm("Apagar todos os perfis em edição e o nome do projeto, e recomeçar do zero?")) return;
     onAlterarPerfis([]);
+    // O nome do projeto vai com eles: sem dados, a aplicação apresenta-se como
+    // se fosse a primeira vez — e o nome de um projeto anterior num campo
+    // preenchido é o género de resto que acaba dentro de uma peça.
+    onAlterarNomeProjeto("");
     setIdEmEdicao(null);
-    setMensagem({ tipo: "sucesso", texto: "Perfis repostos." });
+    setMensagem({ tipo: "sucesso", texto: "Perfis e nome do projeto repostos." });
   }
 
   return (
@@ -238,9 +243,6 @@ export function Modulo1({
                     <strong>{p.perfil || "(perfil sem designação)"}</strong>
                     <span className="meta">
                       {p.requisitos.length} requisito(s) · {p.nBlocos} blocos
-                      {/* Só se mostra: o preço decide-se no lote, e é lá que se altera. */}
-                      {p.valorHoraSugerido !== undefined &&
-                        ` · ${formatarMoeda(p.valorHoraSugerido)}/h de referência`}
                       {numeroLote !== undefined && ` · lote ${numeroLote}`}
                     </span>
                   </button>

@@ -19,22 +19,6 @@ describe("PERFIS_NORMALIZADOS", () => {
     ]);
   });
 
-  it("cada perfil traz o preço/hora de referência da tabela de preços", () => {
-    const precos = Object.fromEntries(PERFIS_NORMALIZADOS.map((p) => [p.perfil, p.valorHoraSugerido]));
-
-    expect(precos).toEqual({
-      "Arquiteto de Sistemas": 47.31,
-      Fullstack: 25.51,
-      "Backend / Integração de Sistemas": 27.3,
-      Frontend: 27.5,
-      "Consultor de Administração de Sistemas": 28.12,
-      Tester: 22.6,
-      "Analista Funcional": 26.22,
-      "Gestor de Projeto": 34.13,
-      "UX Designer": 27.64,
-    });
-  });
-
   it("está pronto a usar: passa a validação do Módulo 1 sem retoques", () => {
     expect(validarPerfis(PERFIS_NORMALIZADOS)).toEqual([]);
   });
@@ -76,22 +60,9 @@ describe("PERFIS_NORMALIZADOS", () => {
   });
 });
 
-describe("preço/hora de referência no lote", () => {
-  it("um perfil normalizado entra no lote já com o seu preço", () => {
-    const arquiteto = PERFIS_NORMALIZADOS[0];
-
-    expect(criarPerfilEmLote(arquiteto).valorHora).toBe(47.31);
-  });
-
-  it("um perfil escrito à mão entra a zero, como sempre entrou", () => {
+describe("preço/hora", () => {
+  it("o catálogo não fixa preço: entra a zero, para ser escrito no procedimento", () => {
+    expect(criarPerfilEmLote(PERFIS_NORMALIZADOS[0]).valorHora).toBe(0);
     expect(criarPerfilEmLote(perfilInicial()).valorHora).toBe(0);
-  });
-
-  it("o preço do lote é independente do perfil depois de lá estar", () => {
-    const entrada = criarPerfilEmLote(PERFIS_NORMALIZADOS[0]);
-    const alterada = { ...entrada, valorHora: 50 };
-
-    expect(alterada.valorHora).toBe(50);
-    expect(PERFIS_NORMALIZADOS[0].valorHoraSugerido).toBe(47.31);
   });
 });
