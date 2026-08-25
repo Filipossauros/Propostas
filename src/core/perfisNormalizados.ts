@@ -14,9 +14,6 @@
 import type { PerfilJSON } from "./types";
 import { SCHEMA_VERSION_ATUAL } from "./types";
 
-/** N.º de blocos de projeto do formulário de declaração, igual em todos os perfis. */
-const N_BLOCOS = 15;
-
 interface Base {
   /** Número do perfil no Anexo Técnico. Não há perfil 9. */
   numero: number;
@@ -39,7 +36,6 @@ const BASE: Base[] = [
       "Elaboração de documentação técnica de arquitetura",
       "Apoio técnico às equipas de desenvolvimento",
       "Realização de ações de formação sobre as soluções desenvolvidas",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção de arquitetura de soluções em projetos de desenvolvimento de software", 72],
@@ -58,7 +54,6 @@ const BASE: Base[] = [
       "Elaboração de documentação técnica",
       "Apoio técnico às equipas de desenvolvimento",
       "Realização de ações de formação sobre as soluções desenvolvidas",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de software com intervenção na camada de interface (frontend)", 36],
@@ -79,7 +74,6 @@ const BASE: Base[] = [
       "Configuração e manutenção de processos de integração e entrega contínuas (CI/CD)",
       "Elaboração de documentação técnica",
       "Apoio técnico às equipas de desenvolvimento",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de serviços aplicacionais (backend)", 24],
@@ -102,7 +96,6 @@ const BASE: Base[] = [
       "Conceção, implementação e execução de testes automatizados de interface",
       "Elaboração de documentação técnica",
       "Realização de ações de formação sobre as soluções desenvolvidas",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de interfaces de utilizador de aplicações web (frontend)", 24],
@@ -120,7 +113,6 @@ const BASE: Base[] = [
       "Implementação e automatização de mecanismos de recolha de métricas e de alertas",
       "Elaboração de documentação técnica",
       "Realização de ações de formação sobre as soluções administradas",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Monitorização do funcionamento ou do desempenho de soluções aplicacionais", 24],
@@ -139,7 +131,6 @@ const BASE: Base[] = [
       "Execução de testes de segurança sobre fluxos de autenticação e de autorização",
       "Configuração e manutenção de ambientes de teste",
       "Elaboração de documentação de testes, designadamente casos de teste, relatórios de execução e autos de aceitação",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção e execução de testes de software", 36],
@@ -157,7 +148,6 @@ const BASE: Base[] = [
       "Definição de modelos de dados",
       "Elaboração de casos de uso ou de histórias de utilizador e dos respetivos critérios de aceitação",
       "Apoio às equipas de desenvolvimento e de teste na interpretação dos requisitos",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Análise funcional de sistemas de informação, incluindo o levantamento de requisitos", 36],
@@ -178,7 +168,6 @@ const BASE: Base[] = [
       "Criação e priorização do backlog do produto",
       "Definição e melhoria dos processos de qualidade do projeto",
       "Elaboração da documentação de gestão do projeto",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Gestão de projetos de sistemas de informação", 60],
@@ -196,7 +185,6 @@ const BASE: Base[] = [
       "Realização de testes de usabilidade e incorporação dos respetivos resultados",
       "Elaboração e manutenção de sistemas de design (design systems) e de bibliotecas de componentes",
       "Elaboração de documentação de suporte ao desenvolvimento das interfaces",
-      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção de soluções de experiência de utilização (UX) e de interface (UI)", 24],
@@ -221,7 +209,6 @@ export const PERFIS_NORMALIZADOS: PerfilJSON[] = BASE.map((base) => {
     tipo: "perfil",
     id,
     perfil: base.nome,
-    nBlocos: N_BLOCOS,
     conteudoFuncional: base.atividades.map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
     // Nenhum dos perfis-base exige certificação: é matéria de cada procedimento.
     certificacoes: [],

@@ -5,7 +5,7 @@
 // leem esta constante diretamente — sem qualquer pedido de rede.
 
 import type { Bloco, Declaracao, LotesJSON, MesAno, PerfilEmLote, PerfilJSON, Requisito } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
+import { N_BLOCOS_PADRAO, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
 
 function req(id: string, designacao: string, mesesMinimos: number): Requisito {
@@ -25,7 +25,6 @@ function perfil(
     tipo: "perfil",
     id,
     perfil: nome,
-    nBlocos: 15,
     conteudoFuncional: conteudoFuncional.map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
     certificacoes: certificacoes.map((designacao, i) => ({ id: `${id}-c${i + 1}`, designacao })),
     requisitos: requisitos.map((r) => ({ ...r, id: `${id}-${r.id}` })),
@@ -83,6 +82,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   nomeProjeto: NOME_PROJETO_EXEMPLO,
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
+  nBlocos: N_BLOCOS_PADRAO,
   umLotePorConcorrente: true,
   postoTrabalho: postoTrabalhoInicial(),
   eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" },

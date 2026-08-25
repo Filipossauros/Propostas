@@ -955,6 +955,18 @@ input.campo-derivado {
   font-variant-numeric: tabular-nums;
 }
 
+/* Entrada que a aplicação fixa: mostra-se, não se edita nem se remove. */
+.linha-fixa input[type="text"] {
+  background: var(--superficie-alt);
+  border-color: var(--borda);
+  color: var(--texto-suave);
+  cursor: default;
+}
+
+.pega-fixa {
+  cursor: default;
+}
+
 /* Campo que só faz sentido depois de uma opção estar ligada. */
 .campo-dependente {
   margin: 12px 0 0 30px;

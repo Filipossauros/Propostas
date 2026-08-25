@@ -34,8 +34,7 @@ function TabelaPlurianual({ config }: Props) {
     <div className="tabela-envolvente">
       <table className="tabela">
         <caption className="tabela-legenda">
-          Encargos a assumir por ano económico, com IVA incluído, e horas de que resultam. Um ano sem horas é um ano
-          em que o perfil não é contratado.
+          Encargos a assumir por ano económico, com IVA incluído, e horas de que resultam.
         </caption>
         <thead>
           <tr>

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import type { EspecificacaoFormulario, PerfilJSON } from "../core/types";
+import type { PerfilJSON } from "../core/types";
+import { ATIVIDADE_FIXA } from "../core/types";
 import {
   ErroImportacao,
   duplicarPerfil,
@@ -11,9 +12,8 @@ import {
 } from "../core/perfil";
 import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
-import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
-import { CampoNumero } from "../ui/CampoNumero";
+import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
+import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { RequisitosEditor } from "./RequisitosEditor";
@@ -84,24 +84,19 @@ export function Modulo1({
     setMensagem({ tipo: "sucesso", texto: "Perfil removido." });
   }
 
-  function especificacoes(): EspecificacaoFormulario[] {
-    return perfis.map((p) => ({
-      perfil: p.perfil,
-      nBlocos: p.nBlocos,
-      requisitos: p.requisitos,
-      lote: lotePorPerfilId[p.id],
-    }));
-  }
-
+  /**
+   * O Excel do Módulo 1 é o registo de quem prepara o procedimento, e não o
+   * formulário que os concorrentes preenchem — esse sai do Módulo 2, já com os
+   * lotes e o n.º de projetos que o procedimento fixou.
+   */
   async function gerarExcel() {
     setMensagem(null);
     setAGerar(true);
     try {
-      const resto =
-        perfis.length === 1
-          ? `Declaracao_Experiencia_${nomeSeguro(perfis[0].perfil, "Perfil")}.xlsx`
-          : "Declaracoes_Experiencia.xlsx";
-      descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes()), nomeComProjeto(nomeProjeto, resto));
+      descarregarBlob(
+        await gerarResumoPerfisBlob(perfis, nomeProjeto),
+        nomeComProjeto(nomeProjeto, "Perfis.xlsx"),
+      );
     } finally {
       setAGerar(false);
     }
@@ -244,7 +239,7 @@ export function Modulo1({
                   >
                     <strong>{p.perfil || "(perfil sem designação)"}</strong>
                     <span className="meta">
-                      {p.requisitos.length} requisito(s) · {p.nBlocos} blocos
+                      {p.requisitos.length} requisito(s) · {p.conteudoFuncional.length} atividade(s)
                       {numeroLote !== undefined && ` · lote ${numeroLote}`}
                     </span>
                   </button>
@@ -311,19 +306,6 @@ export function Modulo1({
                 />
               </label>
 
-              <label className="campo-estreito">
-                <span className="rotulo" title="Quantos projetos distintos cada candidato poderá declarar">
-                  N.º de blocos
-                </span>
-                <CampoNumero
-                  valor={emEdicao.nBlocos}
-                  min={1}
-                  step={1}
-                  sufixo="blocos"
-                  invalido={!Number.isInteger(emEdicao.nBlocos) || emEdicao.nBlocos < 1}
-                  onChange={(nBlocos) => alterarEmEdicao({ nBlocos })}
-                />
-              </label>
             </div>
           </section>
 
@@ -352,13 +334,15 @@ export function Modulo1({
             titulo="Conteúdo Funcional do Perfil"
             nota={
               "Atividades que se espera que o perfil desempenhe, uma por linha. Saem no documento Word, em tabela " +
-              "própria por baixo dos requisitos; não aparecem em nenhum formulário Excel."
+              "própria por baixo dos requisitos. A última é fixa e fecha a lista em todos os perfis: acrescente " +
+              "pelo menos uma antes dela."
             }
             nomeItem="atividade"
             rotuloColuna="Designação da atividade"
             placeholder="ex.: Análise e levantamento de requisitos funcionais, não funcionais e de negócio"
             textoVazio="Ainda não há atividades. Acrescente a primeira."
             rotuloAdicionar="+ Adicionar atividade"
+            itemFixo={ATIVIDADE_FIXA}
             itens={emEdicao.conteudoFuncional}
             onChange={(conteudoFuncional) => alterarEmEdicao({ conteudoFuncional })}
           />
@@ -384,14 +368,16 @@ export function Modulo1({
         </header>
         <div className="acoes">
           <button type="button" className="botao-principal" onClick={gerarExcel} disabled={aGerar || !podeExportar}>
-            {aGerar ? "A gerar…" : "Descarregar formulário Excel"}
+            {aGerar ? "A gerar…" : "Descarregar perfis (Excel)"}
           </button>
           <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
             Descarregar perfis (JSON)
           </button>
         </div>
         <p className="ajuda">
-          Um ficheiro Excel único, com uma folha por perfil, e um ficheiro JSON único com todos os perfis.
+          O Excel é o registo de quem prepara o procedimento: uma folha por perfil, com os requisitos, as
+          certificações e o conteúdo funcional que aqui ficaram escritos. Não é o formulário que os concorrentes
+          preenchem — esse sai do Módulo 2, já com os lotes. O JSON leva todos os perfis, para os retomar depois.
         </p>
       </section>
 

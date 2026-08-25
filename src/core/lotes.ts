@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import {
   ANOS_PLURIANUAIS,
+  N_BLOCOS_PADRAO,
   anosDeInicioAdmitidos,
   EQUIPAMENTOS_POSTO,
   LOCAIS_POSTO,
@@ -65,6 +66,7 @@ export function lotesIniciais(): LotesJSON {
     nomeProjeto: "",
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
+    nBlocos: N_BLOCOS_PADRAO,
     umLotePorConcorrente: false,
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
@@ -132,6 +134,12 @@ const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> =
  * perfil, pelo que a soma dos anos e o total são o mesmo número por construção.
  * Resta o ano de início, que tem janela.
  */
+/** N.º de projetos por formulário: um inteiro positivo, e não muito mais. */
+function validarNBlocos(config: LotesJSON): ErroValidacao[] {
+  if (Number.isInteger(config.nBlocos) && config.nBlocos >= 1) return [];
+  return [{ campo: "nBlocos", mensagem: "O n.º de projetos por Excel deve ser um inteiro maior do que zero." }];
+}
+
 export function validarEncargosPlurianuais(config: LotesJSON, hoje = new Date()): ErroValidacao[] {
   const encargos = config.encargosPlurianuais;
   if (!encargos.ativo) return [];
@@ -221,6 +229,7 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
   // Módulo 2: quem percorre a lista de erros percorre a página de cima a baixo.
   return [
     ...erros,
+    ...validarNBlocos(config),
     ...validarPostoTrabalho(config.postoTrabalho),
     ...validarEavalia(config.eavalia),
     ...validarEncargosPlurianuais(config),
@@ -268,6 +277,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
   return {
     ...config,
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
+    nBlocos: Number.isInteger(config.nBlocos) && config.nBlocos > 0 ? config.nBlocos : N_BLOCOS_PADRAO,
     nomeProjeto: config.nomeProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
@@ -410,7 +420,7 @@ export function formulariosParaJSON(config: LotesJSON): string {
         lote: lote.numero,
         loteDesignacao: lote.designacao,
         perfil: entrada.perfil.perfil,
-        nBlocos: entrada.perfil.nBlocos,
+        nBlocos: config.nBlocos,
         nMinimoElementos: entrada.nMinimoElementos,
         horas: entrada.horas,
         valorHora: entrada.valorHora,

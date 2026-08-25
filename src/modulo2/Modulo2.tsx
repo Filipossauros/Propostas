@@ -49,10 +49,10 @@ interface Props {
 }
 
 /** Especificação do formulário de um perfil dentro de um lote. */
-function especificacao(perfil: PerfilJSON, lote?: Lote): EspecificacaoFormulario {
+function especificacao(perfil: PerfilJSON, nBlocos: number, lote?: Lote): EspecificacaoFormulario {
   return {
     perfil: perfil.perfil,
-    nBlocos: perfil.nBlocos,
+    nBlocos,
     requisitos: perfil.requisitos,
     lote: lote?.numero,
     loteDesignacao: lote?.designacao,
@@ -245,7 +245,7 @@ export function Modulo2({
     setAGerar(true);
     try {
       for (const lote of lotesComPerfis) {
-        const especificacoes = lote.perfis.map((entrada) => especificacao(entrada.perfil, lote));
+        const especificacoes = lote.perfis.map((entrada) => especificacao(entrada.perfil, config.nBlocos, lote));
         const resto = `${nomeSeguro(lote.designacao, `Lote ${lote.numero}`)}.xlsx`;
         descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes), nomeComProjeto(nomeProjeto, resto));
       }
@@ -308,6 +308,20 @@ export function Modulo2({
           </label>
 
           <label className="campo-estreito">
+            <span className="rotulo" title="Quantos projetos distintos cada candidato poderá declarar por ficheiro">
+              N.º de projetos por Excel
+            </span>
+            <CampoNumero
+              valor={config.nBlocos}
+              min={1}
+              step={1}
+              invalido={!Number.isInteger(config.nBlocos) || config.nBlocos < 1}
+              aria-label="N.º de projetos por Excel"
+              onChange={(nBlocos) => onAlterarConfig((atual) => ({ ...atual, nBlocos }))}
+            />
+          </label>
+
+          <label className="campo-estreito">
             <span className="rotulo">Taxa de IVA</span>
             <CampoNumero
               valor={taxaIva(config)}
@@ -321,7 +335,8 @@ export function Modulo2({
         </div>
         <p className="ajuda">
           O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO.trim()}» seguido do nome do projeto, e altera-se
-          alterando esse nome no Módulo 1. Todos os preços unitários são introduzidos sem IVA.
+          alterando esse nome no Módulo 1. O n.º de projetos é o mesmo em todos os formulários de declaração. Todos
+          os preços unitários são introduzidos sem IVA.
         </p>
 
         <label className="campo-opcao">

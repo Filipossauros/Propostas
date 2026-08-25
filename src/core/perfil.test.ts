@@ -9,9 +9,11 @@ import {
   validarNomeProjeto,
   validarPerfil,
   validarPerfis,
+  conteudoFuncionalDoPerfil,
 } from "./perfil";
+import { ATIVIDADE_FIXA } from "./types";
 import { lotesParaJSON } from "./lotes";
-import { lotesComPerfis, perfil, requisito } from "./fixtures";
+import { itens, lotesComPerfis, perfil, requisito } from "./fixtures";
 
 describe("validarPerfil", () => {
   it("aceita um perfil válido", () => {
@@ -150,6 +152,36 @@ describe("gerarTextoCadernoEncargos", () => {
         "Experiência mínima de 5 anos (60 meses) em:\n" +
         "  - Java (versão 8 ou superior)\n" +
         "  - Desenvolvimento de APIs",
+    );
+  });
+});
+
+describe("atividade de fecho do conteúdo funcional", () => {
+  it("não se guarda no perfil, mas fecha sempre a lista", () => {
+    const p = perfil({ conteudoFuncional: itens("Levantamento de requisitos") });
+
+    expect(p.conteudoFuncional.map((i) => i.designacao)).toEqual(["Levantamento de requisitos"]);
+    expect(conteudoFuncionalDoPerfil(p)).toEqual(["Levantamento de requisitos", ATIVIDADE_FIXA]);
+  });
+
+  it("um ficheiro que a trazia guardada não a leva duas vezes", () => {
+    const guardado = perfil({ conteudoFuncional: itens("Levantamento de requisitos", ATIVIDADE_FIXA) });
+    const [lido] = importarPerfisJSON(perfisParaJSON([guardado], "Projeto")).perfis;
+
+    expect(lido.conteudoFuncional.map((i) => i.designacao)).toEqual(["Levantamento de requisitos"]);
+    expect(conteudoFuncionalDoPerfil(lido)).toEqual(["Levantamento de requisitos", ATIVIDADE_FIXA]);
+  });
+
+  it("e um perfil que só a tenha continua a precisar de uma atividade própria", () => {
+    const so = perfil({ conteudoFuncional: itens(ATIVIDADE_FIXA) });
+    const [lido] = importarPerfisJSON(perfisParaJSON([so], "Projeto")).perfis;
+
+    expect(validarPerfil(lido).map((e) => e.campo)).toContain("conteudoFuncional");
+  });
+
+  it("com uma atividade própria, o conteúdo funcional está completo", () => {
+    expect(validarPerfil(perfil({ conteudoFuncional: itens("Uma atividade") })).map((e) => e.campo)).not.toContain(
+      "conteudoFuncional",
     );
   });
 });

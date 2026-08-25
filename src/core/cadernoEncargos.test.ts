@@ -3,7 +3,7 @@ import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
 import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
-import { mesesDeAnos } from "./types";
+import { ATIVIDADE_FIXA, mesesDeAnos } from "./types";
 import type { LotesJSON } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
@@ -95,23 +95,12 @@ describe("documentoRegrasEPrecoBase", () => {
     expect(texto).not.toMatch(/versão mínima/i);
   });
 
-  it("indica o n.º de blocos quando é igual em todos os perfis", () => {
-    const config = lotesComPerfis([{ numero: "1", perfis: [perfil({ nBlocos: 15 })] }]);
+  it("indica o n.º de projetos por formulário, que é do procedimento", () => {
+    const config = { ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]), nBlocos: 15 };
+
     expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("comporta 15 blocos");
   });
 
-  it("evita afirmar um n.º de blocos quando os perfis divergem", () => {
-    const config = lotesComPerfis([
-      { numero: "1", perfis: [perfil({ nBlocos: 15 }), perfil({ perfil: "Outro", nBlocos: 20 })] },
-    ]);
-    const gerado = documentoParaTexto(documentoRegrasEPrecoBase(config));
-
-    expect(gerado).not.toContain("comporta 15 blocos");
-    expect(gerado).toContain("número de blocos de projeto nele previsto");
-  });
-});
-
-describe("limitação de um lote por concorrente", () => {
   it("só aparece quando a opção está ativa, e com título próprio", () => {
     const semLimite = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
     const titulo = "Limitação de adjudicação a um lote por concorrente";
@@ -138,9 +127,11 @@ describe("conteúdo funcional do perfil", () => {
     );
 
     expect(tabela).toBeDefined();
+    // A atividade de fecho não se guarda no perfil, mas fecha sempre a tabela.
     expect(tabela!.tipo === "tabela" ? tabela!.linhas.map((l) => l[0].texto) : []).toEqual([
       "Primeira atividade",
       "Segunda atividade",
+      ATIVIDADE_FIXA,
     ]);
   });
 });

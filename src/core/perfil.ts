@@ -1,7 +1,7 @@
 // Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
 import type { ItemPerfil, PerfilJSON, PerfisJSON, Requisito } from "./types";
-import { MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
+import { ATIVIDADE_FIXA, MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
 import { gerarId } from "./id";
 
 export interface ErroValidacao {
@@ -15,7 +15,6 @@ export function perfilInicial(): PerfilJSON {
     tipo: "perfil",
     id: gerarId(),
     perfil: "",
-    nBlocos: 15,
     conteudoFuncional: [],
     certificacoes: [],
     requisitos: [],
@@ -97,11 +96,12 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
   if (perfil.perfil.trim() === "") {
     erros.push({ campo: "perfil", mensagem: "Indique a designação do perfil." });
   }
-  if (!Number.isInteger(perfil.nBlocos) || perfil.nBlocos < 1) {
-    erros.push({ campo: "nBlocos", mensagem: "O n.º de blocos deve ser um inteiro ≥ 1." });
-  }
   if (perfil.conteudoFuncional.length === 0) {
-    erros.push({ campo: "conteudoFuncional", mensagem: "Descreva o conteúdo funcional do perfil." });
+    erros.push({
+      campo: "conteudoFuncional",
+      mensagem:
+        "Descreva o conteúdo funcional do perfil: além da atividade de fecho, que é fixa, indique pelo menos uma.",
+    });
   }
   if (perfil.requisitos.length === 0) {
     erros.push({ campo: "requisitos", mensagem: "Defina pelo menos um requisito." });
@@ -197,6 +197,21 @@ function verificarSchemaVersion(bruto: Record<string, unknown>): void {
  * para que continuem a abrir. Também se aceita a lista, com id novo quando o
  * ficheiro não o traz.
  */
+/** Compara textos ignorando espaços a mais, que é como as listas divergem. */
+function mesmoTexto(a: string, b: string): boolean {
+  return a.replace(/\s+/g, " ").trim() === b.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Retira a atividade de fecho de uma lista guardada.
+ *
+ * Ficheiros anteriores traziam-na como as outras. Deixá-la lá agora punha-a
+ * duas vezes no documento, uma delas apagável.
+ */
+export function semAtividadeFixa(itens: ItemPerfil[]): ItemPerfil[] {
+  return itens.filter((i) => !mesmoTexto(i.designacao, ATIVIDADE_FIXA));
+}
+
 function normalizarItens(bruto: unknown): ItemPerfil[] {
   if (typeof bruto === "string") {
     return itensSeparados(bruto).map((designacao) => ({ id: gerarId(), designacao }));
@@ -229,7 +244,7 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
     ...perfil,
     tipo: "perfil",
     id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
-    conteudoFuncional: normalizarItens((bruto as { conteudoFuncional?: unknown }).conteudoFuncional),
+    conteudoFuncional: semAtividadeFixa(normalizarItens((bruto as { conteudoFuncional?: unknown }).conteudoFuncional)),
     certificacoes: normalizarItens((bruto as { certificacoes?: unknown }).certificacoes),
   };
 }
@@ -307,9 +322,14 @@ export function certificacoesDoPerfil(perfil: PerfilJSON): string[] {
   return designacoesDe(perfil.certificacoes);
 }
 
-/** Atividades do conteúdo funcional do perfil. */
+/**
+ * Atividades do conteúdo funcional do perfil, com a cláusula de fecho no fim.
+ *
+ * A atividade fixa não está guardada no perfil — ver `ATIVIDADE_FIXA` —, pelo
+ * que é aqui que entra, e daqui que segue para o documento.
+ */
 export function conteudoFuncionalDoPerfil(perfil: PerfilJSON): string[] {
-  return designacoesDe(perfil.conteudoFuncional);
+  return [...designacoesDe(perfil.conteudoFuncional), ATIVIDADE_FIXA];
 }
 
 /**

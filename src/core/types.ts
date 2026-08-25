@@ -19,6 +19,9 @@ export const ANO_MAXIMO = 2035;
 /** Meses num ano — só se admitem anos completos como exigência mínima. */
 export const MESES_POR_ANO = 12;
 
+/** N.º de blocos de projeto por formulário, quando ninguém o altera. */
+export const N_BLOCOS_PADRAO = 15;
+
 export interface Requisito {
   id: string;
   designacao: string;
@@ -46,6 +49,18 @@ export interface ItemPerfil {
 
 /** Uma atividade do conteúdo funcional do perfil. */
 export type Atividade = ItemPerfil;
+
+/**
+ * Atividade que fecha o conteúdo funcional de todos os perfis.
+ *
+ * Não se guarda no perfil nem se edita: é cláusula de fecho, e a mesma em todos
+ * eles. Guardá-la como as outras era admitir que alguém a apagasse num perfil e
+ * não noutro, e ficar com peças que dizem coisas diferentes sobre a mesma
+ * matéria. Acrescenta-se no fim, onde quer que o conteúdo funcional saia.
+ */
+export const ATIVIDADE_FIXA =
+  "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito " +
+  "funcional do perfil";
 
 /** Uma certificação exigida a cada elemento proposto para o perfil. */
 export type Certificacao = ItemPerfil;
@@ -80,7 +95,6 @@ export interface PerfilJSON {
   id: string;
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
   perfil: string;
-  nBlocos: number;
   /**
    * Atividades que se espera que o perfil desempenhe, uma por entrada. Só
    * entra no documento Word: descreve o trabalho a contratar, e não é matéria
@@ -225,6 +239,14 @@ export interface LotesJSON {
   nomeProcedimento: string;
   /** Taxa de IVA em percentagem, aplicada aos preços base. */
   taxaIva: number;
+  /**
+   * N.º de blocos de projeto de cada formulário de declaração.
+   *
+   * É do procedimento e não do perfil: os formulários seguem todos com a mesma
+   * capacidade, e um número por perfil só dava azo a que dois concorrentes
+   * recebessem folhas diferentes para o mesmo trabalho.
+   */
+  nBlocos: number;
   /**
    * Quando verdadeiro, a mesma entidade não pode ficar com mais do que um
    * lote. Os lotes são percorridos por ordem do respetivo número, e quem já

@@ -256,7 +256,7 @@ export function lerDeclaracoesDoWorkbook(
 
     const { declaracao } = lerDeclaracaoExcel(nomeFicheiro, workbook, {
       perfil: escolhido.entrada.perfil.perfil,
-      nBlocos: escolhido.entrada.perfil.nBlocos,
+      nBlocos: config.nBlocos,
       requisitos: escolhido.entrada.perfil.requisitos,
       nMinimoElementos: escolhido.entrada.nMinimoElementos,
     });

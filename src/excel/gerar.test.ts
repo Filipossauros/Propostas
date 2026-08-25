@@ -195,7 +195,7 @@ describe("matéria que não chega ao formulário", () => {
     expect(comCertificacao.length).toBeGreaterThan(0);
 
     const wb = gerarWorkbookDeclaracao(
-      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: p.nBlocos, requisitos: p.requisitos })),
+      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: 15, requisitos: p.requisitos })),
     );
     const texto = textoDoLivro(wb);
 
@@ -208,7 +208,7 @@ describe("matéria que não chega ao formulário", () => {
 
   it("também não leva o conteúdo funcional, pela mesma razão", () => {
     const wb = gerarWorkbookDeclaracao(
-      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: p.nBlocos, requisitos: p.requisitos })),
+      PERFIS_EXEMPLO.map((p) => ({ perfil: p.perfil, nBlocos: 15, requisitos: p.requisitos })),
     );
     const texto = textoDoLivro(wb);
 

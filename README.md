@@ -12,7 +12,7 @@ O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
 
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
-| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Formulário Excel (uma folha por perfil), JSON com todos os perfis |
+| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Excel de resumo (uma folha por perfil), JSON com todos os perfis |
 | **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, pedido de parecer eAvalia, formulários de declaração (um Excel por lote) |
 | **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
 | **4 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 3, mais a ordenação de cada lote e os vencedores |
@@ -65,6 +65,33 @@ tempos chega a informação de que depende:
 - No **Módulo 4**, com os preços na mão, os lotes decidem-se pela ordem
   crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
   que aí apresente o preço mais baixo.
+
+### O que sai de cada módulo em Excel
+
+São dois ficheiros com propósitos opostos, e convém não os confundir.
+
+O do **Módulo 1** é o registo de quem prepara o procedimento: uma folha por
+perfil, com os requisitos e a exigência em anos e meses, as certificações e o
+conteúdo funcional. Serve para conferir e para arquivar o que ficou escrito. Leva
+as certificações, que o formulário não pode levar, e não tem um único campo por
+preencher — daí não ter amarelo nenhum, que nesta aplicação é a cor reservada ao
+que alguém escreve.
+
+O do **Módulo 2** é o formulário que os concorrentes preenchem, um por lote, com
+os blocos de projeto e as validações. Só existe depois de haver lotes, porque é
+o lote que o identifica.
+
+### A atividade que fecha o conteúdo funcional
+
+A cláusula «Outras atividades de natureza análoga às descritas…» é a mesma em
+todos os perfis e não se guarda em nenhum: acrescenta-se no fim, onde quer que o
+conteúdo funcional saia. Guardá-la como as outras era admitir que alguém a
+apagasse num perfil e não noutro, e ficar com peças a dizer coisas diferentes
+sobre a mesma matéria. No editor aparece como última linha, sem botões; ao
+importar um ficheiro que a trazia guardada, é retirada, para não sair duas vezes.
+
+Cada perfil tem de ter pelo menos uma atividade própria além dela: uma lista só
+com a cláusula de fecho não descreve trabalho nenhum.
 
 ### Os perfis normalizados
 

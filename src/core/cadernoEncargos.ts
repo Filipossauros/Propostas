@@ -229,8 +229,7 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
       tipo: "paragrafo",
       texto:
         "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de " +
-        "cada ano o produto do número de elementos pelas horas desse ano e pelo preço unitário por hora. Um " +
-        "perfil ao qual não sejam afetas horas num determinado ano não é contratado nesse ano.",
+        "cada ano o produto do número de elementos pelas horas desse ano e pelo preço unitário por hora.",
     },
     {
       tipo: "tabela",
@@ -358,17 +357,9 @@ function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
 // Regras para o Programa do Concurso
 // --------------------------------------------------------------------------
 
-/**
- * Número de blocos do formulário. Quando os perfis divergem, não se afirma um
- * número — seria falso para parte dos formulários.
- */
+/** Número de blocos do formulário, igual em todos: é do procedimento. */
 function descricaoBlocos(config: LotesJSON): string {
-  const valores = new Set(config.lotes.flatMap((l) => l.perfis.map((e) => e.perfil.nBlocos)));
-  if (valores.size === 1) {
-    const n = [...valores][0];
-    return `Cada formulário comporta ${n} blocos de projeto.`;
-  }
-  return "Cada formulário comporta o número de blocos de projeto nele previsto.";
+  return `Cada formulário comporta ${config.nBlocos} blocos de projeto.`;
 }
 
 /**

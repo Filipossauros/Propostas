@@ -4,6 +4,7 @@
   "nomeProjeto": "Modernização dos Sistemas de Informação",
   "nomeProcedimento": "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   "taxaIva": 23,
+  "nBlocos": 15,
   "umLotePorConcorrente": true,
   "postoTrabalho": {
     "regime": "Híbrido",
@@ -37,7 +38,6 @@
             "tipo": "perfil",
             "id": "p1",
             "perfil": "Programador Sénior — Java",
-            "nBlocos": 15,
             "conteudoFuncional": [
               {
                 "id": "p1-a1",
@@ -96,7 +96,6 @@
             "tipo": "perfil",
             "id": "p2",
             "perfil": "Programador Front-end",
-            "nBlocos": 15,
             "conteudoFuncional": [
               {
                 "id": "p2-a1",
@@ -157,7 +156,6 @@
             "tipo": "perfil",
             "id": "p3",
             "perfil": "Arquiteto de Integração",
-            "nBlocos": 15,
             "conteudoFuncional": [
               {
                 "id": "p3-a1",
@@ -220,7 +218,6 @@
             "tipo": "perfil",
             "id": "p4",
             "perfil": "Engenheiro de Dados",
-            "nBlocos": 15,
             "conteudoFuncional": [
               {
                 "id": "p4-a1",

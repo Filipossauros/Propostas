@@ -244,7 +244,6 @@ describe("no ficheiro e no documento", () => {
     // O valor de cada ano vai com as horas de que resulta.
     expect(texto).toMatch(/\(0 h\)/);
     expect(texto).toMatch(/\(40 h\)/);
-    expect(texto).toContain("não é contratado nesse ano");
     expect(texto).toContain("Total a assumir");
   });
 });

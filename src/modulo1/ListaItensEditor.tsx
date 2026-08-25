@@ -11,6 +11,11 @@ interface Props {
   placeholder: string;
   textoVazio: string;
   rotuloAdicionar: string;
+  /**
+   * Entrada que fecha a lista e não se edita nem se remove. É a cláusula de
+   * fecho do conteúdo funcional, que sai em todos os perfis por igual.
+   */
+  itemFixo?: string;
   itens: ItemPerfil[];
   onChange: (itens: ItemPerfil[]) => void;
 }
@@ -38,6 +43,7 @@ export function ListaItensEditor({
   placeholder,
   textoVazio,
   rotuloAdicionar,
+  itemFixo,
   itens,
   onChange,
 }: Props) {
@@ -56,7 +62,7 @@ export function ListaItensEditor({
         <p className="painel-nota">{nota}</p>
       </header>
 
-      {itens.length === 0 ? (
+      {itens.length === 0 && itemFixo === undefined ? (
         <p className="estado-vazio">{textoVazio}</p>
       ) : (
         <div className="tabela-edicao">
@@ -134,6 +140,17 @@ export function ListaItensEditor({
                 </li>
               );
             })}
+            {itemFixo !== undefined && (
+              <li className="linha-edicao linha-fixa">
+                <div className="grelha-certificacao">
+                  <span className="pega pega-fixa" aria-hidden="true">
+                    {itens.length + 1}
+                  </span>
+                  <input type="text" value={itemFixo} readOnly aria-label={`${rotuloColuna}, fixa`} />
+                  <span className="meta">fixa</span>
+                </div>
+              </li>
+            )}
           </ul>
         </div>
       )}
