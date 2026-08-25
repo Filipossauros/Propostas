@@ -15,6 +15,7 @@ import {
   linhasPlurianuais,
   linhasTabelaValores,
   taxaIva,
+  totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   totalLote,
   totalProcedimento,
@@ -185,6 +186,20 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     ),
   ]);
 
+  // Com um lote só, o subtotal seria o total repetido uma linha acima.
+  if (config.lotes.length > 1) {
+    for (const lote of config.lotes) {
+      linhas.push([
+        celula("", DIREITA, true),
+        celula(`Subtotal do lote ${lote.numero}`, undefined, true),
+        celula("", DIREITA, true),
+        celula("", DIREITA, true),
+        celula(lote.numero, DIREITA, true),
+        ...totaisPorAnoDoLote(config, lote.id).map((total) => celula(formatarMoeda(total), DIREITA, true)),
+      ]);
+    }
+  }
+
   const totais = totaisPorAnoPlurianual(config);
   linhas.push([
     celula("", DIREITA, true),
@@ -230,14 +245,26 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
       ],
       linhas,
     },
+    {
+      // A tabela dos anos exprime-se toda com IVA. O preço base do procedimento
+      // é elemento da peça e não pode sair dela por essa via.
+      tipo: "paragrafo",
+      texto:
+        `O preço base do procedimento é de ${formatarMoeda(totalProcedimento(config).semIva)}, sem IVA, ` +
+        `correspondendo a ${formatarMoeda(totalProcedimento(config).comIva)} com IVA à taxa legal em vigor.`,
+    },
   ];
 }
 
 function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
+  // Ou uma tabela, ou outra: com pedido plurianual, a repartição por anos é o
+  // preço base, e as duas juntas obrigavam a lê-las uma contra a outra.
+  const precoBase: BlocoDocumento[] = config.encargosPlurianuais.ativo
+    ? blocosEncargosPlurianuais(config)
+    : [{ tipo: "titulo", nivel: 1, texto: "Preço base" }, tabelaPrecoBase(config)];
+
   return [
-    { tipo: "titulo", nivel: 1, texto: "Preço base" },
-    tabelaPrecoBase(config),
-    ...blocosEncargosPlurianuais(config),
+    ...precoBase,
     { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
     ...blocosDeRequisitos(config),
   ];

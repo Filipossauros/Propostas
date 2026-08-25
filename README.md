@@ -156,9 +156,15 @@ resumo e o documento Word levam as horas ao lado do valor de cada ano, para que
 um zero se leia como o que é.
 
 Sem a opção ligada, tudo fica exatamente como estava: um campo de horas por
-perfil, e um resumo com uma tabela só. Com ela ligada, o resumo ganha a tabela
-dos anos — só de leitura, como o resto do resumo: escreve-se nos lotes e nos
-parâmetros, e aqui vê-se o efeito das duas coisas juntas.
+perfil e a tabela do preço base de sempre. Com ela ligada, a tabela dos anos
+**substitui** a do preço base — no resumo do Módulo 2 e no documento Word. Ou
+uma, ou outra: dizem o mesmo preço base por caminhos diferentes, e apresentá-las
+juntas obrigava a lê-las uma contra a outra. A tabela dos anos leva os subtotais
+de cada lote, e o resumo é só de leitura, como sempre foi.
+
+A tabela dos anos exprime-se toda com IVA, pelo que o preço base do procedimento
+— que é elemento da peça — sai numa linha própria por baixo dela, sem IVA e com
+IVA.
 
 ### O pedido de parecer eAvalia
 

@@ -597,6 +597,7 @@ export function comHorasDoAno(entrada: PerfilEmLote, ano: number, horas: number)
 /** Uma linha do pedido, com o que vem do lote e o que dele se calcula. */
 export interface LinhaPlurianualCompleta {
   perfilEmLoteId: string;
+  loteId: string;
   lote: string;
   loteDesignacao: string;
   perfil: string;
@@ -623,6 +624,7 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
       const valorHoraComIva = aplicarIva(entrada.valorHora, taxa).comIva;
       return {
         perfilEmLoteId: entrada.id,
+        loteId: lote.id,
         lote: lote.numero,
         loteDesignacao: lote.designacao,
         perfil: entrada.perfil.perfil,
@@ -635,6 +637,13 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
       };
     }),
   );
+}
+
+/** O total a assumir em cada ano, num lote só. */
+export function totaisPorAnoDoLote(config: LotesJSON, loteId: string): number[] {
+  return linhasPlurianuais(config)
+    .filter((linha) => linha.loteId === loteId)
+    .reduce((soma, linha) => soma.map((valor, i) => valor + linha.totais[i]), horasEmBranco());
 }
 
 /** O total a assumir em cada ano, somando todas as linhas. */

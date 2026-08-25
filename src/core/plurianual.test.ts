@@ -8,6 +8,7 @@ import {
   linhasPlurianuais,
   lotesParaJSON,
   precoBaseEntrada,
+  totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   validarEncargosPlurianuais,
   validarLotes,
@@ -215,6 +216,21 @@ describe("no ficheiro e no documento", () => {
     const config = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
 
     expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).not.toContain("plurianuais");
+  });
+
+  it("com dois lotes, a tabela dos anos leva os subtotais de cada um", () => {
+    const base = lotesComPerfis([
+      { numero: "1", perfis: [perfil({ perfil: "Analista" })] },
+      { numero: "2", perfis: [perfil({ perfil: "Tester" })] },
+    ]);
+    const config: LotesJSON = { ...base, encargosPlurianuais: { ativo: true, anoInicio: ESTE_ANO } };
+
+    expect(totaisPorAnoDoLote(config, config.lotes[0].id)[0]).toBeCloseTo(2 * 33 * 61.5, 2);
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("Subtotal do lote 2");
+  });
+
+  it("com um lote só, não há subtotal a repetir o total", () => {
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(comPedido()))).not.toContain("Subtotal do lote");
   });
 
   it("com pedido, o documento leva o fundamento, os anos e as horas de cada ano", () => {

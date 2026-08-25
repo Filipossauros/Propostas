@@ -7,7 +7,13 @@ import { mesesDeAnos } from "./types";
 import type { LotesJSON } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
-  const doc = documentoRegrasEPrecoBase(LOTES_EXEMPLO);
+  // O exemplo leva pedido de encargos plurianuais, que substitui a tabela do
+  // preço base pela dos anos. Estes testes são sobre o documento sem pedido.
+  const SEM_PLURIANUAL: LotesJSON = {
+    ...LOTES_EXEMPLO,
+    encargosPlurianuais: { ...LOTES_EXEMPLO.encargosPlurianuais, ativo: false },
+  };
+  const doc = documentoRegrasEPrecoBase(SEM_PLURIANUAL);
   const texto = documentoParaTexto(doc);
 
   it("tem um único título, o das regras", () => {
@@ -65,6 +71,15 @@ describe("documentoRegrasEPrecoBase", () => {
   it("mantém o preço base e os requisitos como secções próprias", () => {
     expect(texto).toContain("Preço base");
     expect(texto).toContain("Requisitos mínimos de experiência profissional");
+  });
+
+  it("com pedido plurianual, a tabela do preço base dá lugar à dos anos", () => {
+    const comPedido = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+
+    expect(comPedido).toContain("Pedido de encargos plurianuais");
+    expect(comPedido).not.toContain("Preço base (c/ IVA)");
+    // O preço base do procedimento continua a constar, porque é elemento da peça.
+    expect(comPedido).toContain("O preço base do procedimento é de");
   });
 
   it("conserva as matérias das secções que deixaram de ter título próprio", () => {

@@ -5,6 +5,7 @@ import {
   formatarNumero,
   linhasPlurianuais,
   linhasTabelaValores,
+  totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   taxaIva,
   totalLote,
@@ -27,6 +28,7 @@ function TabelaPlurianual({ config }: Props) {
   const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
   const linhas = linhasPlurianuais(config);
   const totais = totaisPorAnoPlurianual(config);
+  const total = totalProcedimento(config);
 
   return (
     <div className="tabela-envolvente">
@@ -73,6 +75,24 @@ function TabelaPlurianual({ config }: Props) {
               ))}
             </tr>
           ))}
+
+          {/* Com um lote só, o subtotal seria o total repetido uma linha acima. */}
+          {config.lotes.length > 1 &&
+            config.lotes.map((lote) => {
+              const subtotal = totaisPorAnoDoLote(config, lote.id);
+              return (
+                <tr key={`subtotal-${lote.id}`} className="linha-subtotal">
+                  <th scope="row" colSpan={5}>
+                    Subtotal do lote {lote.numero}
+                  </th>
+                  {subtotal.map((total, i) => (
+                    <td key={anos[i]} className="numerico">
+                      {formatarMoeda(total)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
         </tbody>
         <tfoot>
           <tr>
@@ -87,12 +107,25 @@ function TabelaPlurianual({ config }: Props) {
           </tr>
         </tfoot>
       </table>
+
+      {/* O preço base do procedimento é elemento da peça, e a tabela dos anos
+          exprime-se toda com IVA: fica aqui, para não desaparecer com ela. */}
+      <p className="ajuda">
+        Preço base total do procedimento: <strong>{formatarMoeda(total.semIva)}</strong> sem IVA,{" "}
+        <strong>{formatarMoeda(total.comIva)}</strong> com IVA.
+      </p>
     </div>
   );
 }
 
 export function TabelaValores({ config }: Props) {
   const linhas = linhasTabelaValores(config);
+
+  // Ou uma, ou outra: as duas tabelas dizem o mesmo preço base por caminhos
+  // diferentes, e apresentá-las juntas obrigava a lê-las uma contra a outra.
+  if (config.encargosPlurianuais.ativo && linhas.length > 0) {
+    return <TabelaPlurianual config={config} />;
+  }
   const taxa = taxaIva(config);
   const total = totalProcedimento(config);
 
@@ -174,8 +207,6 @@ export function TabelaValores({ config }: Props) {
           </tr>
         </tfoot>
       </table>
-
-      {config.encargosPlurianuais.ativo && <TabelaPlurianual config={config} />}
     </div>
   );
 }
