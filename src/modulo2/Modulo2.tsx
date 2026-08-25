@@ -25,7 +25,7 @@ import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { podeCarregarExemplo } from "../ui/exemploProtegido";
+import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
 
@@ -183,8 +183,10 @@ export function Modulo2({
     }
   }
 
-  function carregarExemplo() {
-    if (!podeCarregarExemplo()) return;
+  const podeCarregarExemplo = usePodeCarregarExemplo();
+
+  async function carregarExemplo() {
+    if (!(await podeCarregarExemplo())) return;
     const exemplo = structuredClone(LOTES_EXEMPLO);
     onAlterarConfig(() => exemplo);
     onSubstituirPerfis(structuredClone(PERFIS_EXEMPLO));

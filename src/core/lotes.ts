@@ -32,7 +32,7 @@ import { gerarId } from "./id";
  * partir do nome do projeto, para que as peças, os ficheiros e o pedido de
  * parecer digam todos exatamente a mesma coisa.
  */
-export const PREFIXO_NOME_PROCEDIMENTO = "Aquisição de Serviços de Desenvolvimento e Manutenção ";
+export const PREFIXO_NOME_PROCEDIMENTO = "Aquisição de Serviços de Desenvolvimento e Manutenção do projeto ";
 
 /**
  * O nome do procedimento correspondente a um projeto.

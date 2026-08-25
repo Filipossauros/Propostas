@@ -159,7 +159,7 @@ describe("perfisComCertificacao", () => {
 describe("nomeProcedimentoDe", () => {
   it("é o nome do projeto precedido da fórmula da entidade", () => {
     expect(nomeProcedimentoDe("Portal do Utente")).toBe(
-      "Aquisição de Serviços de Desenvolvimento e Manutenção Portal do Utente",
+      "Aquisição de Serviços de Desenvolvimento e Manutenção do projeto Portal do Utente",
     );
   });
 
@@ -170,7 +170,7 @@ describe("nomeProcedimentoDe", () => {
 
   it("não deixa passar espaço a mais de quem escreveu o nome do projeto", () => {
     expect(nomeProcedimentoDe("  Portal do Utente  ")).toBe(
-      "Aquisição de Serviços de Desenvolvimento e Manutenção Portal do Utente",
+      "Aquisição de Serviços de Desenvolvimento e Manutenção do projeto Portal do Utente",
     );
   });
 });

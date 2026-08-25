@@ -70,7 +70,7 @@ tempos chega a informação de que depende:
 
 O Módulo 1 tem um ponto de partida além do «Novo perfil»: o catálogo de
 perfis-base da entidade (`src/core/perfisNormalizados.ts`), com o conteúdo
-funcional, os requisitos transversais e o preço/hora de referência de cada um.
+funcional e os requisitos transversais de cada um.
 São os perfis iguais em todos os procedimentos; o que varia — os requisitos
 tecnológicos específicos do projeto — acrescenta-se depois, a cada perfil.
 
@@ -87,7 +87,7 @@ para todos os perfis por igual.
 ### O nome do procedimento
 
 Não se escreve: forma-se a partir do nome do projeto, precedido de «Aquisição de
-Serviços de Desenvolvimento e Manutenção». O campo do Módulo 2 mostra-o e não o
+Serviços de Desenvolvimento e Manutenção do projeto». O campo do Módulo 2 mostra-o e não o
 deixa editar, e o nome altera-se alterando o do projeto, no Módulo 1. É uma peça
 que aparece no documento Word, no agrupamento e no pedido de parecer: escrita
 três vezes à mão, mais tarde ou mais cedo ficaria diferente numa delas.
@@ -102,7 +102,9 @@ anterior num campo preenchido é o género de resto que acaba dentro de uma peç
 Carregar exemplos substitui o trabalho em curso por dados fictícios, e o pior não
 é perder o que estava feito — é ficar sem saber se o que está no ecrã é o
 procedimento ou o exemplo. Por isso os botões «Carregar exemplo» pedem uma
-palavra-passe (`src/ui/exemploProtegido.ts`), uma vez por separador aberto.
+palavra-passe (`src/ui/ProtecaoExemplos.tsx`), uma vez por separador aberto. É uma
+caixa da própria página, e não o `prompt()` do navegador, por uma razão simples:
+o `prompt()` mostra a olho nu o que se escreve.
 
 Não é segurança, e não se faz passar por isso: a aplicação corre inteira no
 navegador, sem servidor nenhum, pelo que a palavra-passe está no código que o

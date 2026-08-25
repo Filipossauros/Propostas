@@ -15,7 +15,7 @@ import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { podeCarregarExemplo } from "../ui/exemploProtegido";
+import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { RequisitosEditor } from "./RequisitosEditor";
 import { ListaItensEditor } from "./ListaItensEditor";
 
@@ -146,8 +146,10 @@ export function Modulo1({
     );
   }
 
-  function carregarExemplo() {
-    if (!podeCarregarExemplo()) return;
+  const podeCarregarExemplo = usePodeCarregarExemplo();
+
+  async function carregarExemplo() {
+    if (!(await podeCarregarExemplo())) return;
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
     onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
     setIdEmEdicao(null);
@@ -285,8 +287,8 @@ export function Modulo1({
         </div>
         <p className="ajuda">
           Pode carregar vários ficheiros de uma vez, e cada ficheiro pode conter um ou mais perfis. Os perfis
-          normalizados são os perfis-base da entidade — conteúdo funcional, requisitos transversais e preço/hora
-          de referência —, aos quais se acrescentam depois os requisitos tecnológicos de cada procedimento.
+          normalizados são os perfis-base da entidade — conteúdo funcional e requisitos transversais —, aos quais
+          se acrescentam depois os requisitos tecnológicos de cada procedimento.
         </p>
       </section>
 

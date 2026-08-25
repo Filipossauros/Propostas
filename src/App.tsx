@@ -5,6 +5,7 @@ import { CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistenc
 import { ehListaDePerfisGuardada } from "./core/perfil";
 import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
+import { ProtecaoExemplos } from "./ui/ProtecaoExemplos";
 import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
@@ -86,7 +87,8 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <ProtecaoExemplos>
+      <div className="app">
       <header className="app-cabecalho">
         <div className="marca">
           <h1>Propostas</h1>
@@ -149,7 +151,8 @@ function App() {
           <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
         )}
       </main>
-    </div>
+      </div>
+    </ProtecaoExemplos>
   );
 }
 
