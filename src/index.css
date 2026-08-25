@@ -908,6 +908,44 @@ input.campo-derivado {
   white-space: nowrap;
 }
 
+/* Tabela que não cabe: rola dentro do painel, e não empurra a página. */
+.tabela-larga {
+  overflow-x: auto;
+}
+
+.tabela-plurianual {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.tabela-plurianual th,
+.tabela-plurianual td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borda);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabela-plurianual th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+.tabela-plurianual .numerico {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela-plurianual tfoot td {
+  border-bottom: none;
+  border-top: 2px solid var(--borda-forte);
+  font-weight: 600;
+}
+
 /* Título de painel com uma dica ao lado. */
 .titulo-com-dica {
   display: flex;

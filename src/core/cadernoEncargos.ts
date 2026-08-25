@@ -8,7 +8,17 @@
 import type { LotesJSON, PerfilJSON, PostoTrabalho } from "./types";
 import { LOCAIS_POSTO, regimeTemLocal } from "./types";
 import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
-import { formatarMoeda, formatarNumero, linhasTabelaValores, taxaIva, totalLote, totalProcedimento } from "./lotes";
+import {
+  anosPlurianuais,
+  formatarMoeda,
+  formatarNumero,
+  linhasPlurianuais,
+  linhasTabelaValores,
+  taxaIva,
+  totaisPorAnoPlurianual,
+  totalLote,
+  totalProcedimento,
+} from "./lotes";
 import { celula, type BlocoDocumento, type Documento } from "./documento";
 
 const DIREITA = "direita" as const;
@@ -150,10 +160,73 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
 }
 
 /** Preço base e requisitos por lote e perfil. */
+/**
+ * Pedido de autorização para assumir encargos em anos económicos futuros.
+ *
+ * Só sai quando o procedimento o leva. A tabela repete a do Módulo 2 linha por
+ * linha, com os anos já resolvidos em datas: quem lê a peça não tem de saber o
+ * que é o «ano n+1».
+ */
+function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
+  const encargos = config.encargosPlurianuais;
+  if (!encargos.ativo) return [];
+
+  const anos = anosPlurianuais(encargos.anoInicio);
+  const linhas = linhasPlurianuais(config).map((linha) => [
+    celula(String(linha.pessoas), DIREITA),
+    celula(linha.perfil),
+    celula(formatarMoeda(linha.valorHoraSemIva), DIREITA),
+    celula(formatarMoeda(linha.valorHoraComIva), DIREITA),
+    celula(linha.lote, DIREITA),
+    ...linha.totais.map((total) => celula(formatarMoeda(total), DIREITA)),
+  ]);
+
+  const totais = totaisPorAnoPlurianual(config);
+  linhas.push([
+    celula("", DIREITA, true),
+    celula("Total a assumir", undefined, true),
+    celula("", DIREITA, true),
+    celula("", DIREITA, true),
+    celula("", DIREITA, true),
+    ...totais.map((total) => celula(formatarMoeda(total), DIREITA, true)),
+  ]);
+
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Pedido de encargos plurianuais" },
+    {
+      tipo: "paragrafo",
+      texto:
+        "A execução do contrato em período superior a 12 meses assegura a estabilidade dos recursos afetos ao " +
+        "projeto, evitando o consumo adicional de horas em transferência de conhecimento e a quebra de ritmo dos " +
+        "desenvolvimentos em curso.",
+    },
+    {
+      tipo: "paragrafo",
+      texto:
+        `Os encargos a assumir repartem-se pelos anos económicos de ${anos[0]} a ${anos[anos.length - 1]}, ` +
+        `seguintes ao do início da execução do contrato, previsto para ${encargos.anoInicio}.`,
+    },
+    {
+      tipo: "tabela",
+      legenda: "Encargos a assumir por ano económico, com IVA incluído.",
+      colunas: [
+        { titulo: "Pessoas", alinhamento: DIREITA, peso: 8 },
+        { titulo: "Perfil", peso: 26 },
+        { titulo: "Rate (€/h) s/ IVA", alinhamento: DIREITA, peso: 12 },
+        { titulo: "Rate (€/h) c/ IVA", alinhamento: DIREITA, peso: 12 },
+        { titulo: "Lotes", alinhamento: DIREITA, peso: 6 },
+        ...anos.map((ano) => ({ titulo: `Total € c/ IVA ${ano}`, alinhamento: DIREITA, peso: 12 })),
+      ],
+      linhas,
+    },
+  ];
+}
+
 function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
   return [
     { tipo: "titulo", nivel: 1, texto: "Preço base" },
     tabelaPrecoBase(config),
+    ...blocosEncargosPlurianuais(config),
     { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
     ...blocosDeRequisitos(config),
   ];

@@ -135,6 +135,22 @@ requisitos do equipamento em branco travam os descarregamentos do Módulo 2, com
 qualquer outra questão por resolver. Só se exige o que a escolha do regime e do
 equipamento tornou aplicável.
 
+### O pedido de encargos plurianuais
+
+Quando a execução do contrato atravessa mais do que um ano económico, a despesa
+dos anos seguintes carece de autorização prévia. A opção nos parâmetros do
+procedimento abre um quadro com uma linha por perfil dentro de cada lote, e os
+totais a assumir em cada um dos três anos económicos seguintes ao do início.
+
+O quadro não guarda quem é o perfil, a que lote pertence nem quantas pessoas
+leva: isso vem sempre do agrupamento. Guarda só o que é editado — os preços e os
+totais —, indexado pelo perfil dentro do lote. É o que faz com que acrescentar um
+perfil ao lote o faça aparecer no pedido, e retirá-lo o faça desaparecer, sem
+ninguém ter de manter as duas coisas em dia.
+
+O ano do início não entra na conta: a despesa desse ano cabe no orçamento em
+vigor. Daí os anos do pedido serem sempre o seguinte e os dois a seguir.
+
 ### O pedido de parecer eAvalia
 
 O Módulo 2 preenche o modelo oficial do pedido de parecer prévio

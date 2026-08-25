@@ -7,12 +7,17 @@ import type {
   InformacaoEavalia,
   Lote,
   LotesJSON,
+  EncargosPlurianuais,
+  LinhaPlurianual,
   PerfilEmLote,
   PerfilJSON,
   PostoTrabalho,
   RespostaEavalia,
 } from "./types";
 import {
+  ANO_MAXIMO,
+  ANO_MINIMO,
+  ANOS_PLURIANUAIS,
   EQUIPAMENTOS_POSTO,
   LOCAIS_POSTO,
   REGIMES_POSTO,
@@ -20,6 +25,7 @@ import {
   requisitosEquipamentoAtualizados,
   SCHEMA_VERSION_ATUAL,
   TAXA_IVA_PADRAO,
+  encargosPlurianuaisIniciais,
   informacaoEavaliaInicial,
   postoTrabalhoInicial,
   regimeTemLocal,
@@ -64,6 +70,7 @@ export function lotesIniciais(): LotesJSON {
     umLotePorConcorrente: false,
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
+    encargosPlurianuais: encargosPlurianuaisIniciais(),
     lotes: [],
   };
 }
@@ -120,6 +127,46 @@ const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> =
  * segue com elas, e uma célula em branco no formulário é uma medida por
  * responder — não é uma resposta.
  */
+/**
+ * O pedido de encargos plurianuais só se valida quando existe.
+ *
+ * Um pedido com todos os anos a zero não é um pedido: é o impresso por
+ * preencher, e a autorização que dele resultasse não cobriria despesa nenhuma.
+ */
+export function validarEncargosPlurianuais(config: LotesJSON): ErroValidacao[] {
+  const encargos = config.encargosPlurianuais;
+  if (!encargos.ativo) return [];
+
+  const erros: ErroValidacao[] = [];
+  const ultimoAno = ANO_MAXIMO - ANOS_PLURIANUAIS;
+  if (!Number.isInteger(encargos.anoInicio) || encargos.anoInicio < ANO_MINIMO || encargos.anoInicio > ultimoAno) {
+    erros.push({
+      campo: "encargosPlurianuais.anoInicio",
+      mensagem: `Encargos plurianuais: indique o ano de início do contrato, entre ${ANO_MINIMO} e ${ultimoAno}.`,
+    });
+  }
+
+  const linhas = linhasPlurianuais(config);
+  for (const linha of linhas) {
+    const valores = [linha.valorHoraSemIva, linha.valorHoraComIva, ...linha.totais];
+    if (valores.some((v) => !Number.isFinite(v) || v < 0)) {
+      erros.push({
+        campo: `encargosPlurianuais.${linha.perfilEmLoteId}`,
+        mensagem: `Encargos plurianuais: os valores do perfil "${linha.perfil}" no lote ${linha.lote} têm de ser positivos.`,
+      });
+    }
+  }
+
+  if (linhas.length > 0 && totaisPorAnoPlurianual(config).every((total) => total === 0)) {
+    erros.push({
+      campo: "encargosPlurianuais.totais",
+      mensagem: "Encargos plurianuais: indique os totais a assumir em, pelo menos, um dos anos.",
+    });
+  }
+
+  return erros;
+}
+
 export function validarEavalia(eavalia: InformacaoEavalia): ErroValidacao[] {
   return MEDIDAS_EAVALIA.filter((m) => eavalia[m.campo] === "").map((m) => ({
     campo: `eavalia.${m.campo}`,
@@ -188,7 +235,12 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
 
   // No fim, e por esta ordem, porque é a ordem por que os painéis aparecem no
   // Módulo 2: quem percorre a lista de erros percorre a página de cima a baixo.
-  return [...erros, ...validarPostoTrabalho(config.postoTrabalho), ...validarEavalia(config.eavalia)];
+  return [
+    ...erros,
+    ...validarPostoTrabalho(config.postoTrabalho),
+    ...validarEavalia(config.eavalia),
+    ...validarEncargosPlurianuais(config),
+  ];
 }
 
 // --------------------------------------------------------------------------
@@ -237,6 +289,9 @@ export function importarLotesJSON(texto: string): LotesJSON {
     umLotePorConcorrente: config.umLotePorConcorrente === true,
     postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
     eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
+    encargosPlurianuais: normalizarEncargosPlurianuais(
+      (registo as { encargosPlurianuais?: unknown }).encargosPlurianuais,
+    ),
     lotes: config.lotes.map((lote) => ({
       ...lote,
       perfis: lote.perfis.map((entrada) => ({
@@ -263,6 +318,7 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
     ...config,
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
+    encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),
   };
 }
 
@@ -317,6 +373,41 @@ function lerEscolha<T extends string>(bruto: unknown, admitidas: readonly T[], o
  * Posto de trabalho vindo de ficheiro. Ficheiros anteriores a este campo não o
  * trazem, e nesses assume-se o valor de partida.
  */
+/**
+ * Pedido plurianual vindo de ficheiro. Ficheiros anteriores a este campo não o
+ * têm, e abrem sem pedido — que é o que eram.
+ */
+function normalizarEncargosPlurianuais(bruto: unknown): EncargosPlurianuais {
+  const partida = encargosPlurianuaisIniciais();
+  if (typeof bruto !== "object" || bruto === null) return partida;
+  const e = bruto as Record<string, unknown>;
+  const guardadas = Array.isArray(e.linhas) ? e.linhas : [];
+
+  return {
+    ativo: e.ativo === true,
+    anoInicio: Number.isInteger(e.anoInicio) ? (e.anoInicio as number) : partida.anoInicio,
+    linhas: guardadas.flatMap((linha) => {
+      if (typeof linha !== "object" || linha === null) return [];
+      const l = linha as Record<string, unknown>;
+      if (typeof l.perfilEmLoteId !== "string" || l.perfilEmLoteId === "") return [];
+      return [
+        {
+          perfilEmLoteId: l.perfilEmLoteId,
+          valorHoraSemIva: numeroOuZero(l.valorHoraSemIva),
+          valorHoraComIva: numeroOuZero(l.valorHoraComIva),
+          totais: Array.from({ length: ANOS_PLURIANUAIS }, (_, i) =>
+            numeroOuZero(Array.isArray(l.totais) ? l.totais[i] : undefined),
+          ),
+        },
+      ];
+    }),
+  };
+}
+
+function numeroOuZero(valor: unknown): number {
+  return typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
+}
+
 function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
   if (typeof bruto !== "object" || bruto === null) return postoTrabalhoInicial();
   const p = bruto as Record<string, unknown>;
@@ -483,6 +574,97 @@ export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
       valores: aplicarIva(precoBaseEntrada(entrada), taxaIva(config)),
     })),
   );
+}
+
+// --------------------------------------------------------------------------
+// Pedido de encargos plurianuais
+// --------------------------------------------------------------------------
+
+/** Os anos económicos do pedido: os três seguintes ao do início do contrato. */
+export function anosPlurianuais(anoInicio: number): number[] {
+  return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => anoInicio + i + 1);
+}
+
+/** Uma linha do pedido, já com o que vem do agrupamento e o que foi editado. */
+export interface LinhaPlurianualCompleta {
+  perfilEmLoteId: string;
+  lote: string;
+  perfil: string;
+  /** N.º de elementos exigido para o perfil no lote. */
+  pessoas: number;
+  valorHoraSemIva: number;
+  valorHoraComIva: number;
+  /** Totais com IVA, um por ano, pela ordem de `anosPlurianuais`. */
+  totais: number[];
+}
+
+function totaisEmBranco(): number[] {
+  return Array.from({ length: ANOS_PLURIANUAIS }, () => 0);
+}
+
+/** Ajusta uma lista de totais guardada ao número de anos de hoje. */
+function totaisDe(guardados: number[] | undefined): number[] {
+  return totaisEmBranco().map((zero, i) => {
+    const valor = guardados?.[i];
+    return Number.isFinite(valor) ? (valor as number) : zero;
+  });
+}
+
+/**
+ * As linhas do pedido, uma por perfil dentro de cada lote.
+ *
+ * O agrupamento manda no lote, no perfil e no n.º de pessoas; o que a pessoa
+ * escreveu manda nos preços e nos totais. Um perfil acrescentado ao lote
+ * aparece aqui com os valores de partida, e um perfil retirado desaparece — sem
+ * ninguém ter de mexer no pedido.
+ */
+export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] {
+  const editadas = new Map(config.encargosPlurianuais.linhas.map((l) => [l.perfilEmLoteId, l]));
+  const taxa = taxaIva(config);
+
+  return linhasTabelaValores(config).map((linha) => {
+    const editada = editadas.get(linha.perfilEmLoteId);
+    return {
+      perfilEmLoteId: linha.perfilEmLoteId,
+      lote: linha.lote,
+      perfil: linha.perfil,
+      pessoas: linha.nMinimoElementos,
+      valorHoraSemIva: editada?.valorHoraSemIva ?? linha.valorHora,
+      valorHoraComIva: editada?.valorHoraComIva ?? aplicarIva(linha.valorHora, taxa).comIva,
+      totais: totaisDe(editada?.totais),
+    };
+  });
+}
+
+/** O total pedido para cada ano, somando todas as linhas. */
+export function totaisPorAnoPlurianual(config: LotesJSON): number[] {
+  return linhasPlurianuais(config).reduce(
+    (soma, linha) => soma.map((valor, i) => valor + linha.totais[i]),
+    totaisEmBranco(),
+  );
+}
+
+/**
+ * Guarda uma alteração a uma linha do pedido.
+ *
+ * A linha só passa a existir no ficheiro quando é editada; até lá, os valores
+ * são os que o agrupamento dita. É por isso que se parte da linha completa e
+ * não de um registo vazio: editar o total de um ano não pode apagar o preço.
+ */
+export function comLinhaPlurianualAlterada(
+  encargos: EncargosPlurianuais,
+  linha: LinhaPlurianualCompleta,
+  alteracao: Partial<Pick<LinhaPlurianual, "valorHoraSemIva" | "valorHoraComIva" | "totais">>,
+): EncargosPlurianuais {
+  const nova: LinhaPlurianual = {
+    perfilEmLoteId: linha.perfilEmLoteId,
+    valorHoraSemIva: linha.valorHoraSemIva,
+    valorHoraComIva: linha.valorHoraComIva,
+    totais: linha.totais,
+    ...alteracao,
+  };
+  const outras = encargos.linhas.filter((l) => l.perfilEmLoteId !== linha.perfilEmLoteId);
+  return { ...encargos, linhas: [...outras, nova] };
 }
 
 /** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */

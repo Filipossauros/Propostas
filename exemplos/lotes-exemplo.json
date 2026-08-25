@@ -13,12 +13,58 @@
     ],
     "outroLocal": "",
     "equipamento": "Equipamentos do Prestador",
-    "requisitosEquipamento": "Computador com mínimo:\nArquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads.\nFrequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz.\n32 GB de memória RAM\nUnidade de disco rígido de estado sólido (SSD) com capacidade mínima de 500 GB.\nWi-Fi 6"
+    "requisitosEquipamento": "Posto de trabalho os seguintes requisitos mínimos:\nArquitetura x86-64, com pelo menos 10 núcleos físicos (Cores) e 12 threads;\nFrequência de relógio base de 1.30 GHz ou superior, com capacidade de Turbo Boost até 4.60 GHz;\n32 GB de memória RAM;\nPlaca de vídeo dedicada com 12 GB de memória de vídeo (VRAM) não compartilhada e suporte a aceleração por hardware para computação paralela e Inteligência Artificial;\nUnidade de armazenamento com capacidade de 1TB NVMe;\nWi-Fi 6."
   },
   "eavalia": {
     "iap": "Já cumpre",
     "chaveMovelDigital": "Não aplicável",
     "idiomas": "Cumpre Parcialmente"
+  },
+  "encargosPlurianuais": {
+    "ativo": true,
+    "anoInicio": 2026,
+    "linhas": [
+      {
+        "perfilEmLoteId": "l1-p1",
+        "valorHoraSemIva": 42,
+        "valorHoraComIva": 51.66,
+        "totais": [
+          109105.92,
+          145474.56,
+          109105.92
+        ]
+      },
+      {
+        "perfilEmLoteId": "l1-p2",
+        "valorHoraSemIva": 38,
+        "valorHoraComIva": 46.74,
+        "totais": [
+          24678.72,
+          32904.96,
+          24678.72
+        ]
+      },
+      {
+        "perfilEmLoteId": "l2-p3",
+        "valorHoraSemIva": 55,
+        "valorHoraComIva": 67.65,
+        "totais": [
+          35719.2,
+          47625.6,
+          35719.2
+        ]
+      },
+      {
+        "perfilEmLoteId": "l2-p4",
+        "valorHoraSemIva": 45,
+        "valorHoraComIva": 55.35,
+        "totais": [
+          58449.6,
+          77932.8,
+          58449.6
+        ]
+      }
+    ]
   },
   "lotes": [
     {

@@ -24,6 +24,7 @@ import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
+import { EncargosPlurianuaisEditor } from "./EncargosPlurianuaisEditor";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { EditorLote } from "./EditorLote";
@@ -332,6 +333,26 @@ export function Modulo2({
             </span>
           </span>
         </label>
+
+        <label className="campo-opcao">
+          <input
+            type="checkbox"
+            checked={config.encargosPlurianuais.ativo}
+            onChange={(e) =>
+              onAlterarConfig((atual) => ({
+                ...atual,
+                encargosPlurianuais: { ...atual.encargosPlurianuais, ativo: e.target.checked },
+              }))
+            }
+          />
+          <span>
+            Procedimento com pedido de encargos plurianuais
+            <span className="meta">
+              A execução estende-se por mais do que um ano económico, e a despesa dos anos seguintes carece de
+              autorização prévia. Abre o quadro do pedido, que sai no documento Word.
+            </span>
+          </span>
+        </label>
       </section>
 
       <section className="painel">
@@ -481,6 +502,23 @@ export function Modulo2({
           onChange={(eavalia) => onAlterarConfig((atual) => ({ ...atual, eavalia }))}
         />
       </section>
+
+      {config.encargosPlurianuais.ativo && (
+        <section className="painel">
+          <header className="painel-cabecalho">
+            <h3>Pedido de Encargos Plurianuais</h3>
+            <p className="painel-nota">
+              Os encargos a assumir em cada ano económico seguinte ao do início do contrato. Sai no documento Word,
+              em tabela própria.
+            </p>
+          </header>
+
+          <EncargosPlurianuaisEditor
+            config={config}
+            onAlterar={(encargosPlurianuais) => onAlterarConfig((atual) => ({ ...atual, encargosPlurianuais }))}
+          />
+        </section>
+      )}
 
       <section className="painel">
         <header className="painel-cabecalho">

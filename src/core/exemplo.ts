@@ -86,6 +86,19 @@ export const LOTES_EXEMPLO: LotesJSON = {
   umLotePorConcorrente: true,
   postoTrabalho: postoTrabalhoInicial(),
   eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" },
+  // Ano fixo, e não o de hoje: o exemplo é também o ficheiro de referência do
+  // repositório, e um valor que muda com o calendário faria o ficheiro mudar
+  // sozinho de uma execução para a outra.
+  encargosPlurianuais: {
+    ativo: true,
+    anoInicio: 2026,
+    linhas: [
+      { perfilEmLoteId: "l1-p1", valorHoraSemIva: 42, valorHoraComIva: 51.66, totais: [109105.92, 145474.56, 109105.92] },
+      { perfilEmLoteId: "l1-p2", valorHoraSemIva: 38, valorHoraComIva: 46.74, totais: [24678.72, 32904.96, 24678.72] },
+      { perfilEmLoteId: "l2-p3", valorHoraSemIva: 55, valorHoraComIva: 67.65, totais: [35719.2, 47625.6, 35719.2] },
+      { perfilEmLoteId: "l2-p4", valorHoraSemIva: 45, valorHoraComIva: 55.35, totais: [58449.6, 77932.8, 58449.6] },
+    ],
+  },
   lotes: [
     {
       id: "lote-1",

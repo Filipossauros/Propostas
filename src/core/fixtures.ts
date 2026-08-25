@@ -13,7 +13,7 @@ import type {
   PerfilJSON,
   Requisito,
 } from "./types";
-import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
+import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, encargosPlurianuaisIniciais, postoTrabalhoInicial } from "./types";
 import { criarPerfilEmLote } from "./lotes";
 
 export function ma(ano: number, mes: number): MesAno {
@@ -113,6 +113,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     taxaIva: TAXA_IVA_PADRAO,
     umLotePorConcorrente: false,
     postoTrabalho: postoTrabalhoInicial(),
+    encargosPlurianuais: encargosPlurianuaisIniciais(),
     // Respondido: o agrupamento das fixtures representa um procedimento
     // completo, e as respostas ao eAvalia são de preenchimento obrigatório.
     eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Não aplicável" },

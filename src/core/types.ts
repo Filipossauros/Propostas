@@ -160,6 +160,47 @@ export interface Lote {
 }
 
 /** Saída do Módulo 2. Também não identifica o procedimento — ver PerfilJSON. */
+// --------------------------------------------------------------------------
+// Pedido de encargos plurianuais
+// --------------------------------------------------------------------------
+
+/**
+ * Anos económicos abrangidos pelo pedido, a contar do seguinte ao do início.
+ *
+ * São três porque é essa a forma do impresso que a entidade submete. O ano do
+ * início não entra: a despesa desse ano cabe no orçamento em vigor, e o que se
+ * pede autorização para assumir é a dos anos seguintes.
+ */
+export const ANOS_PLURIANUAIS = 3;
+
+/**
+ * Os valores de uma linha do pedido, tal como a pessoa os escreveu.
+ *
+ * Guarda-se apenas o que é editado. Quem é o perfil, a que lote pertence e
+ * quantas pessoas leva vem sempre do agrupamento, e não daqui: são a mesma
+ * informação, e duplicá-la seria deixá-la divergir.
+ */
+export interface LinhaPlurianual {
+  /** O perfil dentro do lote a que a linha respeita (`PerfilEmLote.id`). */
+  perfilEmLoteId: string;
+  valorHoraSemIva: number;
+  valorHoraComIva: number;
+  /** Totais com IVA, um por ano económico, do ano n+1 ao n+3. */
+  totais: number[];
+}
+
+export interface EncargosPlurianuais {
+  /** Se o procedimento leva pedido de encargos plurianuais. */
+  ativo: boolean;
+  /** Ano de início do contrato. Os anos do pedido são os três seguintes. */
+  anoInicio: number;
+  linhas: LinhaPlurianual[];
+}
+
+export function encargosPlurianuaisIniciais(anoInicio = new Date().getFullYear()): EncargosPlurianuais {
+  return { ativo: false, anoInicio, linhas: [] };
+}
+
 export interface LotesJSON {
   schemaVersion: string;
   tipo: "lotes";
@@ -188,6 +229,8 @@ export interface LotesJSON {
   postoTrabalho: PostoTrabalho;
   /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */
   eavalia: InformacaoEavalia;
+  /** Pedido de autorização para assumir encargos em anos económicos futuros. */
+  encargosPlurianuais: EncargosPlurianuais;
   lotes: Lote[];
 }
 
