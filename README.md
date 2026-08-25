@@ -66,6 +66,25 @@ tempos chega a informação de que depende:
   crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
   que aí apresente o preço mais baixo.
 
+### Os perfis normalizados
+
+O Módulo 1 tem um ponto de partida além do «Novo perfil»: o catálogo de
+perfis-base da entidade (`src/core/perfisNormalizados.ts`), com o conteúdo
+funcional, os requisitos transversais e o preço/hora de referência de cada um.
+São os perfis iguais em todos os procedimentos; o que varia — os requisitos
+tecnológicos específicos do projeto — acrescenta-se depois, a cada perfil.
+
+O ficheiro é gerado a partir do Excel dos perfis-base, e não reescrito à mão:
+a redação dos requisitos é matéria das peças do procedimento, e o sítio onde se
+altera é o ficheiro de origem. Os identificadores são estáveis (`pn1`, `pn2`, …),
+pelo que voltar a carregar o catálogo atualiza os perfis que já estejam num lote,
+em vez de criar cópias ao lado — a mesma regra da importação de ficheiros JSON.
+
+O preço/hora vive no perfil, e não no lote, porque é do perfil que é
+característico: o mesmo perfil vale o mesmo em todos os lotes onde apareça. Mas é
+sugestão, não decisão: ao entrar num lote passa a ser o preço daquele lote, onde
+continua a poder ser alterado. Um perfil escrito à mão continua a entrar a zero.
+
 ### O posto de trabalho
 
 O documento Word leva uma secção com as condições de execução, em tabela e só

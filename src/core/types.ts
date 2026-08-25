@@ -104,6 +104,18 @@ export interface PerfilJSON {
    */
   certificacoes: Certificacao[];
   requisitos: Requisito[];
+  /**
+   * Preço/hora de referência do perfil, sem IVA, quando o perfil vem de um
+   * catálogo com tabela de preços associada.
+   *
+   * É sugestão, e não valor do procedimento: o preço que conta é o que ficar
+   * no lote, no Módulo 2, onde continua a poder ser alterado. Fica no perfil e
+   * não no lote porque é do perfil que é característico — o mesmo perfil vale o
+   * mesmo em todos os lotes onde apareça.
+   *
+   * Opcional: os perfis escritos à mão não têm tabela de preços por trás.
+   */
+  valorHoraSugerido?: number;
 }
 
 /**

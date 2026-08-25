@@ -31,8 +31,20 @@ export function criarLote(numero: string): Lote {
   return { id: gerarId(), numero, designacao: "", perfis: [] };
 }
 
+/**
+ * Coloca um perfil num lote. O preço/hora parte do valor de referência do
+ * perfil, quando o catálogo o traga — poupa uma transcrição manual da tabela de
+ * preços, sem deixar de ser editável, que é onde a decisão do procedimento se
+ * toma.
+ */
 export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
-  return { id: gerarId(), perfil, horas: 0, valorHora: 0, nMinimoElementos: 1 };
+  return {
+    id: gerarId(),
+    perfil,
+    horas: 0,
+    valorHora: perfil.valorHoraSugerido ?? 0,
+    nMinimoElementos: 1,
+  };
 }
 
 export function lotesIniciais(): LotesJSON {

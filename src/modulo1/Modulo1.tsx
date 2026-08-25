@@ -10,6 +10,8 @@ import {
   validarPerfis,
 } from "../core/perfil";
 import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
+import { formatarMoeda } from "../core/lotes";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
 import { CampoNumero } from "../ui/CampoNumero";
@@ -151,6 +153,28 @@ export function Modulo1({
     setMensagem({ tipo: "sucesso", texto: `${PERFIS_EXEMPLO.length} perfis de exemplo carregados.` });
   }
 
+  /**
+   * Ponto de partida para um procedimento novo: o catálogo de perfis-base da
+   * entidade, com o preço/hora de referência de cada um.
+   *
+   * Junta-se ao que já esteja no catálogo em vez de o substituir — quem já tem
+   * perfis escritos à mão não os perde por querer os normalizados também. Um
+   * perfil normalizado já carregado é reposto na versão do catálogo, pela mesma
+   * regra da importação de ficheiros: o id é que manda.
+   */
+  function carregarNormalizados() {
+    const porId = new Map(perfis.map((p) => [p.id, p]));
+    for (const p of structuredClone(PERFIS_NORMALIZADOS)) porId.set(p.id, p);
+    onAlterarPerfis([...porId.values()]);
+    setIdEmEdicao(null);
+    setMensagem({
+      tipo: "sucesso",
+      texto:
+        `${PERFIS_NORMALIZADOS.length} perfis normalizados carregados, com o preço/hora de referência. ` +
+        "Falta acrescentar a cada um os requisitos tecnológicos específicos do procedimento.",
+    });
+  }
+
   function recomecar() {
     if (!confirm("Apagar todos os perfis em edição e recomeçar do zero?")) return;
     onAlterarPerfis([]);
@@ -214,6 +238,9 @@ export function Modulo1({
                     <strong>{p.perfil || "(perfil sem designação)"}</strong>
                     <span className="meta">
                       {p.requisitos.length} requisito(s) · {p.nBlocos} blocos
+                      {/* Só se mostra: o preço decide-se no lote, e é lá que se altera. */}
+                      {p.valorHoraSugerido !== undefined &&
+                        ` · ${formatarMoeda(p.valorHoraSugerido)}/h de referência`}
                       {numeroLote !== undefined && ` · lote ${numeroLote}`}
                     </span>
                   </button>
@@ -239,6 +266,9 @@ export function Modulo1({
           <button type="button" className="botao-secundario" onClick={() => inputImportarRef.current?.click()}>
             Importar perfis (JSON)
           </button>
+          <button type="button" className="botao-secundario" onClick={carregarNormalizados}>
+            Começar de perfis normalizados
+          </button>
           <input
             ref={inputImportarRef}
             type="file"
@@ -252,7 +282,9 @@ export function Modulo1({
           />
         </div>
         <p className="ajuda">
-          Pode carregar vários ficheiros de uma vez, e cada ficheiro pode conter um ou mais perfis.
+          Pode carregar vários ficheiros de uma vez, e cada ficheiro pode conter um ou mais perfis. Os perfis
+          normalizados são os perfis-base da entidade — conteúdo funcional, requisitos transversais e preço/hora
+          de referência —, aos quais se acrescentam depois os requisitos tecnológicos de cada procedimento.
         </p>
       </section>
 
