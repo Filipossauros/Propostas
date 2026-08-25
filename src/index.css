@@ -481,9 +481,11 @@ button:disabled {
   margin-top: 4px;
 }
 
-/* Campo que a aplicação forma sozinha: mostra-se, não se escreve. */
-.campo-derivado {
+/* Campo que a aplicação forma sozinha: mostra-se, não se escreve — e vê-se
+   que não se escreve, porque não tem o fundo dos campos que se preenchem. */
+input.campo-derivado {
   background: var(--superficie-alt);
+  border-color: var(--borda);
   color: var(--texto-suave);
   cursor: default;
 }
@@ -904,6 +906,49 @@ button:disabled {
 .dica-exigencia {
   color: var(--texto-suave);
   white-space: nowrap;
+}
+
+/* Título de painel com uma dica ao lado. */
+.titulo-com-dica {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Alvo em forma de emblema: um título não leva texto sublinhado ao lado. */
+.dica-ajuda {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 50%;
+  color: var(--texto-suave);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.dica-ajuda:hover {
+  border-color: var(--azul-700);
+  color: var(--azul-700);
+}
+
+/* Lista de regras: alinhada à esquerda, com marcas, e não em duas colunas. */
+.dica-lista strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.dica-lista ul {
+  list-style: disc;
+  padding-left: 18px;
+  gap: 3px;
+}
+
+.dica-lista li {
+  display: list-item;
+  color: var(--texto-suave);
 }
 
 .dica-vazia {

@@ -70,9 +70,7 @@ export function InformacaoEavaliaEditor({ eavalia, onChange }: Props) {
       )}
 
       <p className="ajuda">
-        Preenchem as medidas correspondentes na folha «Alinhamento Tecnológico» do pedido de parecer prévio. A data
-        só acompanha as respostas que assumem um compromisso futuro — quem já cumpre não tem data por que se
-        comprometer. As restantes medidas do formulário vão como já vêm no modelo.
+        Preenchem as medidas correspondentes na folha «Alinhamento Tecnológico» do pedido de parecer prévio.
       </p>
     </>
   );

@@ -3,6 +3,7 @@ import { mesesDeAnos } from "../core/types";
 import { gerarId } from "../core/id";
 import { CampoAnos } from "../ui/CampoAnos";
 import { moverItem, useReordenavel } from "../ui/useReordenavel";
+import { DicaRedacaoRequisitos } from "./DicaRedacaoRequisitos";
 
 interface Props {
   requisitos: Requisito[];
@@ -39,7 +40,10 @@ export function RequisitosEditor({ requisitos, onChange }: Props) {
   return (
     <section className="painel">
       <header className="painel-cabecalho">
-        <h3>Requisitos mínimos de experiência</h3>
+        <div className="titulo-com-dica">
+          <h3>Requisitos mínimos de experiência</h3>
+          <DicaRedacaoRequisitos />
+        </div>
         <p className="painel-nota">A ordem desta lista é a ordem das linhas que constará no formulário.</p>
       </header>
 

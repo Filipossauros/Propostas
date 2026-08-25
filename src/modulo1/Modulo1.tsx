@@ -287,8 +287,8 @@ export function Modulo1({
         </div>
         <p className="ajuda">
           Pode carregar vários ficheiros de uma vez, e cada ficheiro pode conter um ou mais perfis. Os perfis
-          normalizados são os perfis-base da entidade — conteúdo funcional e requisitos transversais —, aos quais
-          se acrescentam depois os requisitos tecnológicos de cada procedimento.
+          normalizados são perfis-base com conteúdo funcional e requisitos transversais de referência, aos quais se
+          devem acrescentar requisitos tecnológicos específicos de cada projeto.
         </p>
       </section>
 
