@@ -1,8 +1,11 @@
 import type { LotesJSON } from "../core/types";
 import {
+  anosPlurianuais,
   formatarMoeda,
   formatarNumero,
+  linhasPlurianuais,
   linhasTabelaValores,
+  totaisPorAnoPlurianual,
   taxaIva,
   totalLote,
   totalProcedimento,
@@ -10,6 +13,82 @@ import {
 
 interface Props {
   config: LotesJSON;
+}
+
+/**
+ * O resumo com o pedido de encargos plurianuais: o que fica a pagar-se em cada
+ * ano económico, e as horas de que resulta.
+ *
+ * É só de leitura, como todo o resumo. As horas escrevem-se nos lotes e o ano
+ * de início nos parâmetros do procedimento; aqui vê-se o efeito das duas coisas
+ * juntas, que é o que o pedido leva.
+ */
+function TabelaPlurianual({ config }: Props) {
+  const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
+  const linhas = linhasPlurianuais(config);
+  const totais = totaisPorAnoPlurianual(config);
+
+  return (
+    <div className="tabela-envolvente">
+      <table className="tabela">
+        <caption className="tabela-legenda">
+          Encargos a assumir por ano económico, com IVA incluído, e horas de que resultam. Um ano sem horas é um ano
+          em que o perfil não é contratado.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" className="numerico">
+              Pessoas
+            </th>
+            <th scope="col">Perfil</th>
+            <th scope="col" className="numerico">
+              Rate (€/h) <span className="cabecalho-nota">s/ IVA</span>
+            </th>
+            <th scope="col" className="numerico">
+              Rate (€/h) <span className="cabecalho-nota">c/ IVA</span>
+            </th>
+            <th scope="col" className="numerico">
+              Lotes
+            </th>
+            {anos.map((ano) => (
+              <th key={ano} scope="col" className="numerico">
+                Total € c/ IVA <span className="cabecalho-nota">{ano}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((l) => (
+            <tr key={l.perfilEmLoteId}>
+              <td className="numerico">{l.pessoas}</td>
+              <td>{l.perfil}</td>
+              <td className="numerico">{formatarMoeda(l.valorHoraSemIva)}</td>
+              <td className="numerico">{formatarMoeda(l.valorHoraComIva)}</td>
+              <td className="numerico">{l.lote}</td>
+              {anos.map((ano, i) => (
+                <td key={ano} className="numerico">
+                  {formatarMoeda(l.totais[i])}
+                  <span className="meta"> {formatarNumero(l.horas[i])} h</span>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colSpan={5}>
+              Total a assumir
+            </th>
+            {totais.map((total, i) => (
+              <td key={anos[i]} className="numerico">
+                <strong>{formatarMoeda(total)}</strong>
+              </td>
+            ))}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
 }
 
 export function TabelaValores({ config }: Props) {
@@ -95,6 +174,8 @@ export function TabelaValores({ config }: Props) {
           </tr>
         </tfoot>
       </table>
+
+      {config.encargosPlurianuais.ativo && <TabelaPlurianual config={config} />}
     </div>
   );
 }

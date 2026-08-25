@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 import type { EspecificacaoFormulario, Lote, LotesJSON, PerfilJSON } from "../core/types";
 import { ErroImportacao, certificacoesDoPerfil, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
+import { anosDeInicioAdmitidos } from "../core/types";
 import {
   criarLote,
   criarPerfilEmLote,
   formulariosParaJSON,
   importarLotesJSON,
   lotesIniciais,
+  anosPlurianuais,
   lotesParaJSON,
   nomeProcedimentoDe,
   perfisEmLotes,
@@ -24,7 +26,6 @@ import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
-import { EncargosPlurianuaisEditor } from "./EncargosPlurianuaisEditor";
 import { DicaRepartirHoras } from "./DicaRepartirHoras";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
@@ -73,6 +74,9 @@ export function Modulo2({
   // esteja gravado, para que um agrupamento antigo — ou um ficheiro de outra
   // pessoa — não traga consigo um nome que já não corresponde ao projeto.
   const config: LotesJSON = { ...configGuardada, nomeProcedimento: nomeProcedimentoDe(nomeProjeto) };
+
+  const anosDeInicio = anosDeInicioAdmitidos();
+  const anosDoContrato = anosPlurianuais(config.encargosPlurianuais.anoInicio);
 
   /** Grava a alteração, e com ela o nome do procedimento que o projeto impõe. */
   function onAlterarConfig(atualizar: (atual: LotesJSON) => LotesJSON) {
@@ -347,13 +351,53 @@ export function Modulo2({
             }
           />
           <span>
-            Procedimento com pedido de encargos plurianuais
+            <strong>Procedimento com pedido de encargos plurianuais</strong>
             <span className="meta">
               A execução estende-se por mais do que um ano económico, e a despesa dos anos seguintes carece de
-              autorização prévia. Abre o quadro do pedido, que sai no documento Word.
+              autorização prévia.
             </span>
           </span>
         </label>
+
+        {config.encargosPlurianuais.ativo && (
+          <div className="campo-dependente">
+            <div className="titulo-com-dica">
+              <span className="rotulo">Anos do contrato</span>
+              <DicaRepartirHoras />
+            </div>
+            <label className="campo-estreito">
+              <span className="rotulo-oculto">Ano de início do contrato</span>
+              {/* Só o ano corrente e o seguinte: sendo uma escolha entre dois,
+                  a lista poupa a explicação que um campo livre exigiria. */}
+              <select
+                value={config.encargosPlurianuais.anoInicio}
+                aria-label="Ano de início do contrato"
+                aria-invalid={!anosDeInicio.includes(config.encargosPlurianuais.anoInicio)}
+                onChange={(e) =>
+                  onAlterarConfig((atual) => ({
+                    ...atual,
+                    encargosPlurianuais: { ...atual.encargosPlurianuais, anoInicio: Number(e.target.value) },
+                  }))
+                }
+              >
+                {anosDeInicio.map((ano) => (
+                  <option key={ano} value={ano}>
+                    {ano}
+                  </option>
+                ))}
+                {!anosDeInicio.includes(config.encargosPlurianuais.anoInicio) && (
+                  <option value={config.encargosPlurianuais.anoInicio}>
+                    {config.encargosPlurianuais.anoInicio} (fora do prazo)
+                  </option>
+                )}
+              </select>
+            </label>
+            <p className="ajuda">
+              Os encargos pedidos respeitam ao ano económico do início dos contratos mais os 2 anos económicos
+              seguintes — {anosDoContrato.join(", ")}. As horas de cada ano escrevem-se nos lotes, perfil a perfil.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="painel">
@@ -446,6 +490,7 @@ export function Modulo2({
               onAlterar={(alteracao) => atualizarLote(lote.id, alteracao)}
               onRemover={() => removerLote(lote.id)}
               onRetirarPerfil={(perfilEmLoteId) => retirarPerfil(lote.id, perfilEmLoteId)}
+              anosPlurianuais={config.encargosPlurianuais.ativo ? anosDoContrato : undefined}
             />
           ))}
         </div>
@@ -503,26 +548,6 @@ export function Modulo2({
           onChange={(eavalia) => onAlterarConfig((atual) => ({ ...atual, eavalia }))}
         />
       </section>
-
-      {config.encargosPlurianuais.ativo && (
-        <section className="painel">
-          <header className="painel-cabecalho">
-            <div className="titulo-com-dica">
-              <h3>Pedido de Encargos Plurianuais</h3>
-              <DicaRepartirHoras />
-            </div>
-            <p className="painel-nota">
-              As horas de cada perfil repartidas pelos anos económicos do contrato, e o encargo que daí resulta para
-              cada ano. Sai no documento Word, em tabela própria.
-            </p>
-          </header>
-
-          <EncargosPlurianuaisEditor
-            config={config}
-            onAlterar={(encargosPlurianuais) => onAlterarConfig((atual) => ({ ...atual, encargosPlurianuais }))}
-          />
-        </section>
-      )}
 
       <section className="painel">
         <header className="painel-cabecalho">

@@ -1,5 +1,5 @@
 import type { Lote, PerfilEmLote } from "../core/types";
-import { formatarMoeda, precoBaseEntrada, totalLote } from "../core/lotes";
+import { comHorasDoAno, formatarMoeda, horasPorAnoDe, precoBaseEntrada, totalLote } from "../core/lotes";
 import { certificacoesDoPerfil } from "../core/perfil";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
@@ -10,9 +10,14 @@ interface Props {
   onAlterar: (alteracao: Partial<Lote>) => void;
   onRemover: () => void;
   onRetirarPerfil: (perfilEmLoteId: string) => void;
+  /**
+   * Anos económicos do contrato, quando o procedimento leva pedido de encargos
+   * plurianuais. Com eles, as horas escrevem-se ano a ano em vez de num total.
+   */
+  anosPlurianuais?: number[];
 }
 
-export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Props) {
+export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPlurianuais: anos }: Props) {
   const reordenavel = useReordenavel((de, para) => onAlterar({ perfis: moverItem(lote.perfis, de, para) }));
 
   function alterarPerfil(perfilEmLoteId: string, alteracao: Partial<PerfilEmLote>) {
@@ -61,11 +66,11 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
           {/* Uma linha por perfil, com os rótulos no cabeçalho: com vários
               perfis por lote, repetir "Horas" e "Preço/hora" em cada bloco
               triplicava a altura do cartão sem acrescentar informação. */}
-          <div className="tabela-edicao-cabecalho grelha-perfil-lote">
+          <div className={anos === undefined ? "tabela-edicao-cabecalho grelha-perfil-lote" : "tabela-edicao-cabecalho grelha-perfil-lote grelha-plurianual"}>
             <span />
             <span>Perfil</span>
             <span>N.º mín.</span>
-            <span>Horas</span>
+            {anos === undefined ? <span>Horas</span> : anos.map((ano) => <span key={ano}>Horas {ano}</span>)}
             <span>Preço/hora</span>
             <span>Preço base s/ IVA</span>
             <span />
@@ -78,7 +83,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
                 className={reordenavel.aArrastar === idx ? "linha-edicao linha-a-arrastar" : "linha-edicao"}
                 {...reordenavel.propsAlvo(idx)}
               >
-                <div className="grelha-perfil-lote">
+                <div className={anos === undefined ? "grelha-perfil-lote" : "grelha-perfil-lote grelha-plurianual"}>
                   <span
                     className="pega"
                     title="Arrastar para reordenar"
@@ -102,15 +107,33 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil }: Prop
                     onChange={(nMinimoElementos) => alterarPerfil(entrada.id, { nMinimoElementos })}
                   />
 
-                  <CampoNumero
-                    valor={entrada.horas}
-                    min={0}
-                    step={1}
-                    sufixo="h"
-                    aria-label={`Horas de ${entrada.perfil.perfil}`}
-                    invalido={!(entrada.horas > 0)}
-                    onChange={(horas) => alterarPerfil(entrada.id, { horas })}
-                  />
+                  {/* Com pedido plurianual, as horas escrevem-se ano a ano e o
+                      total é a soma: assim não há um total que discorde dos
+                      anos, que seria a mesma peça a dizer dois números. */}
+                  {anos === undefined ? (
+                    <CampoNumero
+                      valor={entrada.horas}
+                      min={0}
+                      step={1}
+                      sufixo="h"
+                      aria-label={`Horas de ${entrada.perfil.perfil}`}
+                      invalido={!(entrada.horas > 0)}
+                      onChange={(horas) => alterarPerfil(entrada.id, { horas })}
+                    />
+                  ) : (
+                    anos.map((ano, i) => (
+                      <CampoNumero
+                        key={ano}
+                        valor={horasPorAnoDe(entrada)[i]}
+                        min={0}
+                        step={1}
+                        sufixo="h"
+                        aria-label={`Horas de ${ano} de ${entrada.perfil.perfil}`}
+                        invalido={!(horasPorAnoDe(entrada)[i] >= 0)}
+                        onChange={(horas) => alterarPerfil(entrada.id, comHorasDoAno(entrada, i, horas))}
+                      />
+                    ))
+                  )}
 
                   <CampoNumero
                     valor={entrada.valorHora}

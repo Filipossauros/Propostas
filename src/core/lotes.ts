@@ -8,16 +8,14 @@ import type {
   Lote,
   LotesJSON,
   EncargosPlurianuais,
-  LinhaPlurianual,
   PerfilEmLote,
   PerfilJSON,
   PostoTrabalho,
   RespostaEavalia,
 } from "./types";
 import {
-  ANO_MAXIMO,
-  ANO_MINIMO,
   ANOS_PLURIANUAIS,
+  anosDeInicioAdmitidos,
   EQUIPAMENTOS_POSTO,
   LOCAIS_POSTO,
   REGIMES_POSTO,
@@ -57,7 +55,7 @@ export function criarLote(numero: string): Lote {
 }
 
 export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
-  return { id: gerarId(), perfil, horas: 0, valorHora: 0, nMinimoElementos: 1 };
+  return { id: gerarId(), perfil, horas: 0, horasPorAno: horasEmBranco(), valorHora: 0, nMinimoElementos: 1 };
 }
 
 export function lotesIniciais(): LotesJSON {
@@ -130,45 +128,27 @@ const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> =
 /**
  * O pedido de encargos plurianuais só se valida quando existe.
  *
- * A regra que importa é a soma: as horas repartidas pelos anos têm de dar as
- * horas contratadas para o perfil. Se não derem, a mesma peça diz dois preços
- * — o do preço base e o da soma dos anos — e é a primeira coisa que alguém
- * pergunta.
+ * As horas já não carecem de conferência: são elas que formam o total do
+ * perfil, pelo que a soma dos anos e o total são o mesmo número por construção.
+ * Resta o ano de início, que tem janela.
  */
-export function validarEncargosPlurianuais(config: LotesJSON): ErroValidacao[] {
+export function validarEncargosPlurianuais(config: LotesJSON, hoje = new Date()): ErroValidacao[] {
   const encargos = config.encargosPlurianuais;
   if (!encargos.ativo) return [];
 
-  const erros: ErroValidacao[] = [];
-  const ultimoAno = ANO_MAXIMO - ANOS_PLURIANUAIS + 1;
-  if (!Number.isInteger(encargos.anoInicio) || encargos.anoInicio < ANO_MINIMO || encargos.anoInicio > ultimoAno) {
-    erros.push({
-      campo: "encargosPlurianuais.anoInicio",
-      mensagem: `Encargos plurianuais: indique o ano de início do contrato, entre ${ANO_MINIMO} e ${ultimoAno}.`,
-    });
-  }
-
-  for (const linha of linhasPlurianuais(config)) {
-    const onde = `o perfil "${linha.perfil}" no lote ${linha.lote}`;
-    if (linha.horas.some((h) => !Number.isFinite(h) || h < 0)) {
-      erros.push({
-        campo: `encargosPlurianuais.${linha.perfilEmLoteId}`,
-        mensagem: `Encargos plurianuais: as horas de ${onde} não podem ser negativas.`,
-      });
-      continue;
-    }
-    const repartidas = linha.horas.reduce((soma, h) => soma + h, 0);
-    if (repartidas !== linha.horasContratadas) {
-      erros.push({
-        campo: `encargosPlurianuais.${linha.perfilEmLoteId}`,
+  const admitidos = anosDeInicioAdmitidos(hoje);
+  if (!admitidos.includes(encargos.anoInicio)) {
+    return [
+      {
+        campo: "encargosPlurianuais.anoInicio",
         mensagem:
-          `Encargos plurianuais: as horas repartidas por ${onde} somam ${formatarNumero(repartidas)}, ` +
-          `e o lote contratou ${formatarNumero(linha.horasContratadas)}.`,
-      });
-    }
+          `Encargos plurianuais: o contrato só pode iniciar-se em ${admitidos[0]} ou ${admitidos[1]} — ` +
+          "não se pede hoje autorização para uma despesa que só começa mais tarde.",
+      },
+    ];
   }
 
-  return erros;
+  return [];
 }
 
 export function validarEavalia(eavalia: InformacaoEavalia): ErroValidacao[] {
@@ -385,31 +365,13 @@ function normalizarEncargosPlurianuais(bruto: unknown): EncargosPlurianuais {
   const partida = encargosPlurianuaisIniciais();
   if (typeof bruto !== "object" || bruto === null) return partida;
   const e = bruto as Record<string, unknown>;
-  const guardadas = Array.isArray(e.linhas) ? e.linhas : [];
 
   return {
     ativo: e.ativo === true,
     anoInicio: Number.isInteger(e.anoInicio) ? (e.anoInicio as number) : partida.anoInicio,
-    linhas: guardadas.flatMap((linha) => {
-      if (typeof linha !== "object" || linha === null) return [];
-      const l = linha as Record<string, unknown>;
-      if (typeof l.perfilEmLoteId !== "string" || l.perfilEmLoteId === "") return [];
-      // Uma linha sem repartição de horas é como se não existisse: as horas
-      // voltam à repartição de partida, calculada a partir do lote.
-      if (!Array.isArray(l.horas)) return [];
-      return [
-        {
-          perfilEmLoteId: l.perfilEmLoteId,
-          horas: Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => numeroOuZero((l.horas as unknown[])[i])),
-        },
-      ];
-    }),
   };
 }
 
-function numeroOuZero(valor: unknown): number {
-  return typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
-}
 
 function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
   if (typeof bruto !== "object" || bruto === null) return postoTrabalhoInicial();
@@ -588,10 +550,55 @@ export function anosPlurianuais(anoInicio: number): number[] {
   return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => anoInicio + i);
 }
 
-/** Uma linha do pedido, já com o que vem do agrupamento e o que foi repartido. */
+function horasEmBranco(): number[] {
+  return Array.from({ length: ANOS_PLURIANUAIS }, () => 0);
+}
+
+/**
+ * Repartição de partida: o total do perfil dividido por igual pelos anos.
+ *
+ * É um palpite, e assume-se como tal — nenhum contrato começa a 1 de janeiro
+ * por acaso. Serve para os campos abrirem com a soma certa quando se liga o
+ * pedido num agrupamento que já tinha horas; a partir daí ajusta-se ano a ano.
+ */
+export function distribuicaoPadrao(horasContratadas: number): number[] {
+  if (!Number.isFinite(horasContratadas) || horasContratadas <= 0) return horasEmBranco();
+  const porAno = Math.floor(horasContratadas / ANOS_PLURIANUAIS);
+  return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) =>
+    // O resto vai todo para o último ano, para a soma bater certo.
+    i === ANOS_PLURIANUAIS - 1 ? horasContratadas - porAno * (ANOS_PLURIANUAIS - 1) : porAno,
+  );
+}
+
+/**
+ * As horas de cada ano de um perfil no lote.
+ *
+ * Enquanto ninguém as tiver repartido, mostram-se as da repartição de partida:
+ * é o que faz com que ligar o pedido num agrupamento já feito não apague o
+ * trabalho de horas que lá estava.
+ */
+export function horasPorAnoDe(entrada: PerfilEmLote): number[] {
+  const guardadas = Array.isArray(entrada.horasPorAno) ? entrada.horasPorAno : [];
+  const normalizadas = horasEmBranco().map((zero, i) =>
+    typeof guardadas[i] === "number" && Number.isFinite(guardadas[i]) ? guardadas[i] : zero,
+  );
+  return normalizadas.some((h) => h !== 0) ? normalizadas : distribuicaoPadrao(entrada.horas);
+}
+
+/**
+ * A alteração a aplicar a um perfil do lote quando se escrevem as horas de um
+ * ano: as horas do ano, e o total que delas resulta.
+ */
+export function comHorasDoAno(entrada: PerfilEmLote, ano: number, horas: number): Partial<PerfilEmLote> {
+  const horasPorAno = horasPorAnoDe(entrada).map((atual, i) => (i === ano ? horas : atual));
+  return { horasPorAno, horas: horasPorAno.reduce((soma, h) => soma + h, 0) };
+}
+
+/** Uma linha do pedido, com o que vem do lote e o que dele se calcula. */
 export interface LinhaPlurianualCompleta {
   perfilEmLoteId: string;
   lote: string;
+  loteDesignacao: string;
   perfil: string;
   /** N.º de elementos exigido para o perfil no lote. */
   pessoas: number;
@@ -606,51 +613,18 @@ export interface LinhaPlurianualCompleta {
   totais: number[];
 }
 
-/**
- * Repartição de partida: o total do lote dividido por igual pelos anos.
- *
- * É um palpite, e assume-se como tal — nenhum contrato começa a 1 de janeiro
- * por acaso. Serve para a tabela abrir com a soma certa, que é o que interessa:
- * a partir daí ajusta-se ano a ano.
- */
-export function distribuicaoPadrao(horasContratadas: number): number[] {
-  if (!Number.isFinite(horasContratadas) || horasContratadas <= 0) {
-    return Array.from({ length: ANOS_PLURIANUAIS }, () => 0);
-  }
-  const porAno = Math.floor(horasContratadas / ANOS_PLURIANUAIS);
-  return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) =>
-    // O resto vai todo para o último ano, para a soma bater certo ao cêntimo.
-    i === ANOS_PLURIANUAIS - 1 ? horasContratadas - porAno * (ANOS_PLURIANUAIS - 1) : porAno,
-  );
-}
-
-/** Ajusta uma repartição guardada ao número de anos de hoje. */
-function horasDe(guardadas: number[] | undefined, horasContratadas: number): number[] {
-  if (guardadas === undefined) return distribuicaoPadrao(horasContratadas);
-  return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => {
-    const valor = guardadas[i];
-    return typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
-  });
-}
-
-/**
- * As linhas do pedido, uma por perfil dentro de cada lote.
- *
- * Tudo vem do agrupamento menos a repartição das horas: um perfil acrescentado
- * ao lote aparece aqui com a repartição de partida, e um perfil retirado
- * desaparece — sem ninguém ter de mexer no pedido.
- */
+/** Uma linha por perfil dentro de cada lote, com as horas repartidas por ano. */
 export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] {
-  const repartidas = new Map(config.encargosPlurianuais.linhas.map((l) => [l.perfilEmLoteId, l]));
   const taxa = taxaIva(config);
 
   return config.lotes.flatMap((lote) =>
     lote.perfis.map((entrada) => {
-      const horas = horasDe(repartidas.get(entrada.id)?.horas, entrada.horas);
+      const horas = horasPorAnoDe(entrada);
       const valorHoraComIva = aplicarIva(entrada.valorHora, taxa).comIva;
       return {
         perfilEmLoteId: entrada.id,
         lote: lote.numero,
+        loteDesignacao: lote.designacao,
         perfil: entrada.perfil.perfil,
         pessoas: entrada.nMinimoElementos,
         valorHoraSemIva: entrada.valorHora,
@@ -663,23 +637,12 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
   );
 }
 
-/** O total pedido para cada ano, somando todas as linhas. */
+/** O total a assumir em cada ano, somando todas as linhas. */
 export function totaisPorAnoPlurianual(config: LotesJSON): number[] {
   return linhasPlurianuais(config).reduce(
     (soma, linha) => soma.map((valor, i) => valor + linha.totais[i]),
-    Array.from({ length: ANOS_PLURIANUAIS }, () => 0),
+    horasEmBranco(),
   );
-}
-
-/** Guarda a repartição de horas de uma linha. */
-export function comHorasPlurianuaisAlteradas(
-  encargos: EncargosPlurianuais,
-  perfilEmLoteId: string,
-  horas: number[],
-): EncargosPlurianuais {
-  const outras = encargos.linhas.filter((l) => l.perfilEmLoteId !== perfilEmLoteId);
-  const nova: LinhaPlurianual = { perfilEmLoteId, horas };
-  return { ...encargos, linhas: [...outras, nova] };
 }
 
 /** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */

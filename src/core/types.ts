@@ -143,8 +143,17 @@ export interface EspecificacaoFormulario {
 export interface PerfilEmLote {
   id: string;
   perfil: PerfilJSON;
-  /** Horas estimadas para o perfil dentro do lote. */
+  /** Horas estimadas para o perfil dentro do lote, no total do contrato. */
   horas: number;
+  /**
+   * Horas em cada ano económico, quando o procedimento leva pedido de encargos
+   * plurianuais. Do ano de início do contrato aos dois seguintes.
+   *
+   * `horas` continua a ser o total e é o que forma o preço base: quem escreve
+   * as horas ano a ano escreve as duas coisas ao mesmo tempo, para não haver um
+   * total que discorde da soma dos anos.
+   */
+  horasPorAno: number[];
   /** Preço/hora unitário considerado para o preço base. */
   valorHora: number;
   /** N.º mínimo de elementos que o concorrente tem de apresentar para este perfil. */
@@ -170,35 +179,32 @@ export interface Lote {
  */
 export const ANOS_PLURIANUAIS = 3;
 
-/**
- * A repartição das horas de um perfil pelos anos económicos do contrato.
- *
- * É a única coisa que este pedido guarda. Quem é o perfil, a que lote pertence,
- * quantas pessoas leva e quanto custa a hora vem tudo do agrupamento — repetir
- * aqui essa informação seria deixá-la divergir, e o valor de cada ano nem é
- * escrito: calcula-se de pessoas × horas do ano × preço/hora.
- *
- * Um ano a zero é uma decisão legítima e frequente: significa que o perfil não
- * é contratado nesse ano, por exemplo por estar coberto por um contrato ainda
- * em vigor.
- */
-export interface LinhaPlurianual {
-  /** O perfil dentro do lote a que a linha respeita (`PerfilEmLote.id`). */
-  perfilEmLoteId: string;
-  /** Horas em cada ano económico, do ano de início aos dois seguintes. */
-  horas: number[];
-}
-
 export interface EncargosPlurianuais {
   /** Se o procedimento leva pedido de encargos plurianuais. */
   ativo: boolean;
-  /** Ano de início do contrato. Os anos do pedido são os três seguintes. */
+  /**
+   * Ano de início do contrato. Os anos do pedido são este e os dois seguintes.
+   *
+   * As horas de cada ano não estão aqui: estão em cada perfil dentro do lote,
+   * que é onde se escrevem e onde formam o preço base.
+   */
   anoInicio: number;
-  linhas: LinhaPlurianual[];
 }
 
 export function encargosPlurianuaisIniciais(anoInicio = new Date().getFullYear()): EncargosPlurianuais {
-  return { ativo: false, anoInicio, linhas: [] };
+  return { ativo: false, anoInicio };
+}
+
+/**
+ * Anos de início admitidos: o corrente e o seguinte.
+ *
+ * Um pedido de encargos plurianuais acompanha a preparação do procedimento; não
+ * se pede hoje autorização para um contrato que só arranca daqui a dois anos,
+ * porque a despesa desse ano ainda não é a que se está a comprometer.
+ */
+export function anosDeInicioAdmitidos(hoje = new Date()): number[] {
+  const ano = hoje.getFullYear();
+  return [ano, ano + 1];
 }
 
 export interface LotesJSON {

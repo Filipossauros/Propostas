@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   anosPlurianuais,
-  comHorasPlurianuaisAlteradas,
+  comHorasDoAno,
   distribuicaoPadrao,
+  horasPorAnoDe,
   importarLotesJSON,
   linhasPlurianuais,
   lotesParaJSON,
+  precoBaseEntrada,
   totaisPorAnoPlurianual,
   validarEncargosPlurianuais,
   validarLotes,
@@ -13,32 +15,47 @@ import {
 import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { lotesComPerfis, perfil } from "./fixtures";
-import type { LotesJSON } from "./types";
-import { encargosPlurianuaisIniciais } from "./types";
+import type { LotesJSON, PerfilEmLote } from "./types";
+import { anosDeInicioAdmitidos } from "./types";
+
+const HOJE = new Date(2026, 7, 25);
+const ESTE_ANO = HOJE.getFullYear();
 
 /**
  * Um agrupamento com dois perfis num lote e o pedido ligado. A fixture dá a
  * cada perfil 100 horas, 2 elementos e 50 €/h, com IVA à taxa padrão.
  */
-function comPedido(alteracoes: Partial<LotesJSON["encargosPlurianuais"]> = {}): LotesJSON {
+function comPedido(anoInicio = ESTE_ANO): LotesJSON {
   const base = lotesComPerfis([{ numero: "1", perfis: [perfil({ perfil: "Analista" }), perfil({ perfil: "Tester" })] }]);
-  return {
-    ...base,
-    encargosPlurianuais: { ...encargosPlurianuaisIniciais(2026), ativo: true, ...alteracoes },
-  };
+  return { ...base, encargosPlurianuais: { ativo: true, anoInicio } };
 }
 
+/** Escreve as horas de um ano no perfil indicado, como faz o editor do lote. */
 function comHoras(config: LotesJSON, indice: number, horas: number[]): LotesJSON {
-  const linha = linhasPlurianuais(config)[indice];
   return {
     ...config,
-    encargosPlurianuais: comHorasPlurianuaisAlteradas(config.encargosPlurianuais, linha.perfilEmLoteId, horas),
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada, i) => {
+        if (i !== indice) return entrada;
+        return horas.reduce<PerfilEmLote>(
+          (atual, valor, ano) => ({ ...atual, ...comHorasDoAno(atual, ano, valor) }),
+          entrada,
+        );
+      }),
+    })),
   };
 }
 
 describe("anosPlurianuais", () => {
   it("são o ano do início e os dois seguintes", () => {
     expect(anosPlurianuais(2026)).toEqual([2026, 2027, 2028]);
+  });
+});
+
+describe("anosDeInicioAdmitidos", () => {
+  it("só o ano corrente e o seguinte", () => {
+    expect(anosDeInicioAdmitidos(HOJE)).toEqual([2026, 2027]);
   });
 });
 
@@ -52,6 +69,40 @@ describe("distribuicaoPadrao", () => {
 
   it("sem horas contratadas não há nada a repartir", () => {
     expect(distribuicaoPadrao(0)).toEqual([0, 0, 0]);
+  });
+});
+
+describe("horasPorAnoDe", () => {
+  it("um perfil com horas mas sem repartição mostra a repartição de partida", () => {
+    const [entrada] = comPedido().lotes[0].perfis;
+
+    expect(entrada.horas).toBe(100);
+    expect(horasPorAnoDe(entrada)).toEqual([33, 33, 34]);
+  });
+
+  it("escrita a repartição, é ela que vale", () => {
+    const config = comHoras(comPedido(), 0, [0, 40, 60]);
+
+    expect(horasPorAnoDe(config.lotes[0].perfis[0])).toEqual([0, 40, 60]);
+  });
+});
+
+describe("comHorasDoAno", () => {
+  it("escrever as horas de um ano refaz o total do perfil", () => {
+    const [entrada] = comPedido().lotes[0].perfis;
+    const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 200) };
+
+    expect(alterada.horasPorAno).toEqual([200, 33, 34]);
+    expect(alterada.horas).toBe(267);
+  });
+
+  it("e com o total refaz-se o preço base, sem ninguém ter de o repetir", () => {
+    const [entrada] = comPedido().lotes[0].perfis;
+    const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 0) };
+
+    // 2 elementos × 67 horas × 50 €/h
+    expect(alterada.horas).toBe(67);
+    expect(precoBaseEntrada(alterada)).toBe(2 * 67 * 50);
   });
 });
 
@@ -69,13 +120,6 @@ describe("linhasPlurianuais", () => {
     expect(primeira.valorHoraComIva).toBeCloseTo(61.5, 2);
   });
 
-  it("por repartir, as horas vêm divididas por igual pelos três anos", () => {
-    const [primeira] = linhasPlurianuais(comPedido());
-
-    expect(primeira.horasContratadas).toBe(100);
-    expect(primeira.horas).toEqual([33, 33, 34]);
-  });
-
   it("o valor de cada ano é pessoas × horas do ano × preço/hora com IVA", () => {
     const [primeira] = linhasPlurianuais(comHoras(comPedido(), 0, [100, 0, 0]));
 
@@ -87,45 +131,17 @@ describe("linhasPlurianuais", () => {
     const config = comHoras(comPedido(), 0, [0, 50, 50]);
 
     expect(linhasPlurianuais(config)[0].horas).toEqual([0, 50, 50]);
-    expect(validarEncargosPlurianuais(config)).toEqual([]);
+    expect(validarLotes(config)).toEqual([]);
   });
 
   it("um perfil retirado do lote leva consigo a sua linha", () => {
-    const config = comHoras(comPedido(), 0, [100, 0, 0]);
+    const config = comPedido();
     const semPerfil: LotesJSON = {
       ...config,
       lotes: [{ ...config.lotes[0], perfis: config.lotes[0].perfis.slice(1) }],
     };
 
     expect(linhasPlurianuais(semPerfil).map((l) => l.perfil)).toEqual(["Tester"]);
-  });
-
-  it("alterar as horas do lote refaz a repartição de quem ainda não a tocou", () => {
-    const config = comPedido();
-    const maisHoras: LotesJSON = {
-      ...config,
-      lotes: [
-        {
-          ...config.lotes[0],
-          perfis: config.lotes[0].perfis.map((p) => ({ ...p, horas: 300 })),
-        },
-      ],
-    };
-
-    expect(linhasPlurianuais(maisHoras)[0].horas).toEqual([100, 100, 100]);
-  });
-});
-
-describe("comHorasPlurianuaisAlteradas", () => {
-  it("editar duas vezes a mesma linha não a duplica", () => {
-    const config = comPedido();
-    const { perfilEmLoteId } = linhasPlurianuais(config)[0];
-
-    let encargos = comHorasPlurianuaisAlteradas(config.encargosPlurianuais, perfilEmLoteId, [10, 0, 0]);
-    encargos = comHorasPlurianuaisAlteradas(encargos, perfilEmLoteId, [0, 0, 100]);
-
-    expect(encargos.linhas).toHaveLength(1);
-    expect(encargos.linhas[0].horas).toEqual([0, 0, 100]);
   });
 });
 
@@ -143,62 +159,56 @@ describe("totaisPorAnoPlurianual", () => {
 
 describe("validarEncargosPlurianuais", () => {
   it("sem pedido não há nada a validar", () => {
-    expect(validarEncargosPlurianuais(lotesComPerfis([{ numero: "1", perfis: [perfil()] }]))).toEqual([]);
+    expect(validarEncargosPlurianuais(lotesComPerfis([{ numero: "1", perfis: [perfil()] }]), HOJE)).toEqual([]);
   });
 
-  it("a repartição de partida já soma certo", () => {
-    expect(validarEncargosPlurianuais(comPedido())).toEqual([]);
+  it("o ano corrente serve", () => {
+    expect(validarEncargosPlurianuais(comPedido(ESTE_ANO), HOJE)).toEqual([]);
   });
 
-  it("horas a menos são apanhadas, e diz-se quanto falta", () => {
-    const mensagens = validarEncargosPlurianuais(comHoras(comPedido(), 0, [10, 10, 10])).map((e) => e.mensagem);
-
-    expect(mensagens).toContain(
-      'Encargos plurianuais: as horas repartidas por o perfil "Analista" no lote 1 somam 30, e o lote contratou 100.',
-    );
+  it("o ano seguinte também", () => {
+    expect(validarEncargosPlurianuais(comPedido(ESTE_ANO + 1), HOJE)).toEqual([]);
   });
 
-  it("horas a mais também", () => {
-    const mensagens = validarEncargosPlurianuais(comHoras(comPedido(), 0, [100, 100, 100])).map((e) => e.mensagem);
+  it("mas não o de daqui a dois anos: não se pede hoje o que só começa depois", () => {
+    const mensagens = validarEncargosPlurianuais(comPedido(ESTE_ANO + 2), HOJE).map((e) => e.mensagem);
 
-    expect(mensagens.some((m) => m.includes("somam 300"))).toBe(true);
+    expect(mensagens).toEqual([
+      "Encargos plurianuais: o contrato só pode iniciar-se em 2026 ou 2027 — não se pede hoje autorização para " +
+        "uma despesa que só começa mais tarde.",
+    ]);
   });
 
-  it("horas negativas não passam", () => {
-    const mensagens = validarEncargosPlurianuais(comHoras(comPedido(), 0, [-10, 60, 50])).map((e) => e.mensagem);
-
-    expect(mensagens.some((m) => m.includes("não podem ser negativas"))).toBe(true);
+  it("nem um ano já passado", () => {
+    expect(validarEncargosPlurianuais(comPedido(ESTE_ANO - 1), HOJE)).toHaveLength(1);
   });
 
-  it("o ano de início tem de ser um ano", () => {
-    const mensagens = validarEncargosPlurianuais(comPedido({ anoInicio: 12 })).map((e) => e.mensagem);
+  it("um perfil sem horas em ano nenhum não passa, como não passava sem horas nenhumas", () => {
+    const semHoras = comHoras(comPedido(), 0, [0, 0, 0]);
 
-    expect(mensagens.some((m) => m.includes("indique o ano de início"))).toBe(true);
-  });
-
-  it("as questões do pedido entram na lista do Módulo 2", () => {
-    const config = comHoras(comPedido(), 0, [1, 1, 1]);
-
-    expect(validarLotes(config).some((e) => e.campo.startsWith("encargosPlurianuais"))).toBe(true);
+    expect(validarLotes(semHoras).some((e) => e.mensagem.includes("horas"))).toBe(true);
   });
 });
 
 describe("no ficheiro e no documento", () => {
-  it("a repartição sobrevive a passar por JSON", () => {
+  it("a repartição sobrevive a passar por JSON, no lote onde vive", () => {
     const original = comHoras(comPedido(), 0, [0, 40, 60]);
-    const lido = importarLotesJSON(lotesParaJSON(original)).encargosPlurianuais;
+    const lido = importarLotesJSON(lotesParaJSON(original));
 
-    expect(lido.ativo).toBe(true);
-    expect(lido.anoInicio).toBe(2026);
-    expect(lido.linhas[0].horas).toEqual([0, 40, 60]);
+    expect(lido.encargosPlurianuais.ativo).toBe(true);
+    expect(lido.lotes[0].perfis[0].horasPorAno).toEqual([0, 40, 60]);
+    expect(lido.lotes[0].perfis[0].horas).toBe(100);
   });
 
-  it("um ficheiro anterior a este campo abre sem pedido", () => {
+  it("um ficheiro anterior a este campo abre sem pedido e sem repartição", () => {
     const config = lotesComPerfis([{ numero: "1", perfis: [perfil()] }]);
     const semCampo = JSON.parse(lotesParaJSON(config)) as Record<string, unknown>;
     delete semCampo.encargosPlurianuais;
 
-    expect(importarLotesJSON(JSON.stringify(semCampo)).encargosPlurianuais.ativo).toBe(false);
+    const lido = importarLotesJSON(JSON.stringify(semCampo));
+
+    expect(lido.encargosPlurianuais.ativo).toBe(false);
+    expect(lido.lotes[0].perfis[0].horas).toBe(100);
   });
 
   it("sem pedido, o documento não fala dele", () => {
@@ -208,7 +218,7 @@ describe("no ficheiro e no documento", () => {
   });
 
   it("com pedido, o documento leva o fundamento, os anos e as horas de cada ano", () => {
-    const texto = documentoParaTexto(documentoRegrasEPrecoBase(comHoras(comPedido(), 0, [0, 40, 60])));
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(comHoras(comPedido(2026), 0, [0, 40, 60])));
 
     expect(texto).toContain("Pedido de encargos plurianuais");
     expect(texto).toContain("estabilidade dos recursos");

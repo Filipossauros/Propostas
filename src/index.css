@@ -729,6 +729,21 @@ input.campo-derivado {
   text-align: right;
 }
 
+/* Com pedido plurianual, as horas ocupam três colunas em vez de uma. */
+.grelha-plurianual {
+  /* A última coluna leva as três ações lado a lado: mais estreita, partiam-se
+     para uma segunda linha e o cartão crescia sem necessidade. */
+  grid-template-columns: 26px minmax(120px, 1fr) 64px 94px 94px 94px 92px 116px 112px;
+}
+
+.grelha-plurianual > :nth-child(6) {
+  text-align: left;
+}
+
+.grelha-plurianual > :nth-child(8) {
+  text-align: right;
+}
+
 .pega {
   display: grid;
   place-items: center;
@@ -938,6 +953,21 @@ input.campo-derivado {
 .tabela-plurianual .numerico {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Campo que só faz sentido depois de uma opção estar ligada. */
+.campo-dependente {
+  margin: 12px 0 0 30px;
+  padding-left: 14px;
+  border-left: 2px solid var(--borda);
+}
+
+.tabela-legenda {
+  caption-side: top;
+  padding: 14px 0 8px;
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--texto-suave);
 }
 
 /* Célula de ano: as horas escrevem-se, o valor mostra-se por baixo. */

@@ -139,31 +139,26 @@ equipamento tornou aplicável.
 
 Quando a execução do contrato atravessa mais do que um ano económico, a despesa
 dos anos seguintes carece de autorização prévia. A opção nos parâmetros do
-procedimento abre um quadro com uma linha por perfil dentro de cada lote, para o
-ano de início do contrato e os dois seguintes.
+procedimento abre o campo do ano de início — apenas o ano corrente ou o seguinte,
+porque não se pede hoje autorização para uma despesa que só começa depois — e os
+anos do pedido são esse e os dois a seguir.
 
-**O que se edita é só a repartição das horas.** As horas de cada perfil estão
-fixadas no lote; aqui distribuem-se pelos três anos, e o encargo de cada ano
-calcula-se — pessoas × horas do ano × preço/hora com IVA. Preços e totais não se
-escrevem: sairiam diferentes do preço base, e a mesma peça passaria a dizer dois
-números.
+**As horas passam a escrever-se ano a ano, nos lotes.** É a única alteração ao
+que já se fazia: em vez de um total por perfil, três campos, um por ano
+económico. O total do perfil é a soma, e é dele que sai o preço base como sempre
+saiu — não há um número que possa discordar do outro, porque só existe um.
 
 Um ano a zero é uma decisão, não um lapso: significa que o perfil não é
 contratado nesse ano, tipicamente por estar coberto por um contrato ainda em
-vigor. É o caso que motivou a repartição — lançar um plurianual de três anos em
+vigor. É o caso que motiva a repartição — lançar um plurianual de três anos em
 que um perfil só entra no segundo, enquanto os restantes correm nos três. O
-documento Word leva as horas ao lado do valor de cada ano, para que um zero se
-leia como o que é.
+resumo e o documento Word levam as horas ao lado do valor de cada ano, para que
+um zero se leia como o que é.
 
-A soma dos três anos tem de dar as horas do lote, e uma soma que não bata certo é
-questão por resolver como qualquer outra: é o mesmo contrato, visto ano a ano. A
-repartição de partida divide as horas por igual pelos três anos — um palpite que
-ao menos soma certo.
-
-O quadro não guarda quem é o perfil, a que lote pertence nem quantas pessoas
-leva: isso vem sempre do agrupamento, indexado pelo perfil dentro do lote. É o
-que faz com que acrescentar um perfil ao lote o faça aparecer no pedido, e
-retirá-lo o faça desaparecer, sem ninguém ter de manter as duas coisas em dia.
+Sem a opção ligada, tudo fica exatamente como estava: um campo de horas por
+perfil, e um resumo com uma tabela só. Com ela ligada, o resumo ganha a tabela
+dos anos — só de leitura, como o resto do resumo: escreve-se nos lotes e nos
+parâmetros, e aqui vê-se o efeito das duas coisas juntas.
 
 ### O pedido de parecer eAvalia
 

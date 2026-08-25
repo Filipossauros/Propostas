@@ -22,41 +22,7 @@
   },
   "encargosPlurianuais": {
     "ativo": true,
-    "anoInicio": 2026,
-    "linhas": [
-      {
-        "perfilEmLoteId": "l1-p1",
-        "horas": [
-          1760,
-          880,
-          880
-        ]
-      },
-      {
-        "perfilEmLoteId": "l1-p2",
-        "horas": [
-          0,
-          880,
-          880
-        ]
-      },
-      {
-        "perfilEmLoteId": "l2-p3",
-        "horas": [
-          880,
-          440,
-          440
-        ]
-      },
-      {
-        "perfilEmLoteId": "l2-p4",
-        "horas": [
-          880,
-          440,
-          440
-        ]
-      }
-    ]
+    "anoInicio": 2026
   },
   "lotes": [
     {
@@ -115,6 +81,11 @@
             ]
           },
           "horas": 3520,
+          "horasPorAno": [
+            1760,
+            880,
+            880
+          ],
           "valorHora": 42,
           "nMinimoElementos": 2
         },
@@ -164,6 +135,11 @@
             ]
           },
           "horas": 1760,
+          "horasPorAno": [
+            0,
+            880,
+            880
+          ],
           "valorHora": 38,
           "nMinimoElementos": 1
         }
@@ -229,6 +205,11 @@
             ]
           },
           "horas": 1760,
+          "horasPorAno": [
+            880,
+            440,
+            440
+          ],
           "valorHora": 55,
           "nMinimoElementos": 1
         },
@@ -273,6 +254,11 @@
             ]
           },
           "horas": 1760,
+          "horasPorAno": [
+            880,
+            440,
+            440
+          ],
           "valorHora": 45,
           "nMinimoElementos": 2
         }

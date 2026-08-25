@@ -89,27 +89,20 @@ export const LOTES_EXEMPLO: LotesJSON = {
   // Ano fixo, e não o de hoje: o exemplo é também o ficheiro de referência do
   // repositório, e um valor que muda com o calendário faria o ficheiro mudar
   // sozinho de uma execução para a outra.
-  // O contrato começa em 2026 e as horas repartem-se por 2026, 2027 e 2028. O
-  // Programador Front-end leva zero horas no primeiro ano: está coberto por um
-  // contrato ainda em vigor, e só entra a partir do segundo.
-  encargosPlurianuais: {
-    ativo: true,
-    anoInicio: 2026,
-    linhas: [
-      { perfilEmLoteId: "l1-p1", horas: [1760, 880, 880] },
-      { perfilEmLoteId: "l1-p2", horas: [0, 880, 880] },
-      { perfilEmLoteId: "l2-p3", horas: [880, 440, 440] },
-      { perfilEmLoteId: "l2-p4", horas: [880, 440, 440] },
-    ],
-  },
+  // O contrato começa no ano corrente: o pedido de encargos plurianuais só
+  // admite o ano em curso ou o seguinte, e um ano fixo aqui deixaria o exemplo
+  // inválido no ano seguinte.
+  encargosPlurianuais: { ativo: true, anoInicio: new Date().getFullYear() },
   lotes: [
     {
       id: "lote-1",
       numero: "1",
       designacao: "Desenvolvimento aplicacional",
       perfis: [
-        { id: "l1-p1", perfil: PERFIL_EXEMPLO, horas: 3520, valorHora: 42, nMinimoElementos: 2 },
-        { id: "l1-p2", perfil: PERFIL_FRONTEND, horas: 1760, valorHora: 38, nMinimoElementos: 1 },
+        { id: "l1-p1", perfil: PERFIL_EXEMPLO, horas: 3520, horasPorAno: [1760, 880, 880], valorHora: 42, nMinimoElementos: 2 },
+        // Zero horas no primeiro ano: está coberto por um contrato ainda em vigor,
+        // e só entra a partir do segundo.
+        { id: "l1-p2", perfil: PERFIL_FRONTEND, horas: 1760, horasPorAno: [0, 880, 880], valorHora: 38, nMinimoElementos: 1 },
       ],
     },
     {
@@ -117,8 +110,8 @@ export const LOTES_EXEMPLO: LotesJSON = {
       numero: "2",
       designacao: "Integração e dados",
       perfis: [
-        { id: "l2-p3", perfil: PERFIL_INTEGRACAO, horas: 1760, valorHora: 55, nMinimoElementos: 1 },
-        { id: "l2-p4", perfil: PERFIL_DADOS, horas: 1760, valorHora: 45, nMinimoElementos: 2 },
+        { id: "l2-p3", perfil: PERFIL_INTEGRACAO, horas: 1760, horasPorAno: [880, 440, 440], valorHora: 55, nMinimoElementos: 1 },
+        { id: "l2-p4", perfil: PERFIL_DADOS, horas: 1760, horasPorAno: [880, 440, 440], valorHora: 45, nMinimoElementos: 2 },
       ],
     },
   ],
