@@ -293,21 +293,24 @@ export function Modulo2({
         <header className="painel-cabecalho">
           <h3>Parâmetros do procedimento</h3>
         </header>
-        <div className="grelha-campos">
-          <label>
-            <span className="rotulo">Nome do procedimento</span>
-            <input
-              type="text"
-              className="campo-derivado"
-              value={config.nomeProcedimento}
-              readOnly
-              aria-readonly="true"
-              placeholder={`${PREFIXO_NOME_PROCEDIMENTO}…`}
-              title="Formado a partir do nome do projeto. Altere o nome do projeto no Módulo 1."
-            />
-          </label>
+        {/* O nome do procedimento é longo e formado por regra: ocupa a linha
+            toda. Os dois números ficam lado a lado por baixo, cada um com a
+            largura do seu rótulo, para nenhum deles se partir em duas linhas. */}
+        <label>
+          <span className="rotulo">Nome do procedimento</span>
+          <input
+            type="text"
+            className="campo-derivado"
+            value={config.nomeProcedimento}
+            readOnly
+            aria-readonly="true"
+            placeholder={`${PREFIXO_NOME_PROCEDIMENTO}…`}
+            title="Formado a partir do nome do projeto. Altere o nome do projeto no Módulo 1."
+          />
+        </label>
 
-          <label className="campo-estreito">
+        <div className="linha-campos linha-campos-numeros">
+          <label className="campo-numero-rotulado">
             <span className="rotulo" title="Quantos projetos distintos cada candidato poderá declarar por ficheiro">
               N.º de projetos por Excel
             </span>
@@ -321,7 +324,7 @@ export function Modulo2({
             />
           </label>
 
-          <label className="campo-estreito">
+          <label className="campo-numero-rotulado">
             <span className="rotulo">Taxa de IVA</span>
             <CampoNumero
               valor={taxaIva(config)}

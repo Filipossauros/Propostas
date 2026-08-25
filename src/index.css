@@ -416,6 +416,25 @@ textarea {
   min-width: 0;
 }
 
+/* Campo numérico com rótulo mais largo do que o campo: a coluna acompanha o
+   rótulo, para o não partir em duas linhas, e o campo fica estreito à mesma. */
+.campo-numero-rotulado {
+  flex: 0 0 auto;
+}
+
+.campo-numero-rotulado .rotulo {
+  white-space: nowrap;
+}
+
+.campo-numero-rotulado .campo-numero {
+  width: 130px;
+}
+
+.linha-campos-numeros {
+  margin-top: 14px;
+  gap: 20px;
+}
+
 .campo-estreito {
   flex: 0 0 auto;
   width: 130px;
