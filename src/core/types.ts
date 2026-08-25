@@ -165,28 +165,28 @@ export interface Lote {
 // --------------------------------------------------------------------------
 
 /**
- * Anos económicos abrangidos pelo pedido, a contar do seguinte ao do início.
- *
- * São três porque é essa a forma do impresso que a entidade submete. O ano do
- * início não entra: a despesa desse ano cabe no orçamento em vigor, e o que se
- * pede autorização para assumir é a dos anos seguintes.
+ * Anos económicos abrangidos pelo pedido: o do início do contrato e os dois
+ * seguintes.
  */
 export const ANOS_PLURIANUAIS = 3;
 
 /**
- * Os valores de uma linha do pedido, tal como a pessoa os escreveu.
+ * A repartição das horas de um perfil pelos anos económicos do contrato.
  *
- * Guarda-se apenas o que é editado. Quem é o perfil, a que lote pertence e
- * quantas pessoas leva vem sempre do agrupamento, e não daqui: são a mesma
- * informação, e duplicá-la seria deixá-la divergir.
+ * É a única coisa que este pedido guarda. Quem é o perfil, a que lote pertence,
+ * quantas pessoas leva e quanto custa a hora vem tudo do agrupamento — repetir
+ * aqui essa informação seria deixá-la divergir, e o valor de cada ano nem é
+ * escrito: calcula-se de pessoas × horas do ano × preço/hora.
+ *
+ * Um ano a zero é uma decisão legítima e frequente: significa que o perfil não
+ * é contratado nesse ano, por exemplo por estar coberto por um contrato ainda
+ * em vigor.
  */
 export interface LinhaPlurianual {
   /** O perfil dentro do lote a que a linha respeita (`PerfilEmLote.id`). */
   perfilEmLoteId: string;
-  valorHoraSemIva: number;
-  valorHoraComIva: number;
-  /** Totais com IVA, um por ano económico, do ano n+1 ao n+3. */
-  totais: number[];
+  /** Horas em cada ano económico, do ano de início aos dois seguintes. */
+  horas: number[];
 }
 
 export interface EncargosPlurianuais {

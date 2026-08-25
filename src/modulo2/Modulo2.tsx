@@ -25,6 +25,7 @@ import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
 import { PostoTrabalhoEditor } from "./PostoTrabalhoEditor";
 import { EncargosPlurianuaisEditor } from "./EncargosPlurianuaisEditor";
+import { DicaRepartirHoras } from "./DicaRepartirHoras";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { EditorLote } from "./EditorLote";
@@ -506,10 +507,13 @@ export function Modulo2({
       {config.encargosPlurianuais.ativo && (
         <section className="painel">
           <header className="painel-cabecalho">
-            <h3>Pedido de Encargos Plurianuais</h3>
+            <div className="titulo-com-dica">
+              <h3>Pedido de Encargos Plurianuais</h3>
+              <DicaRepartirHoras />
+            </div>
             <p className="painel-nota">
-              Os encargos a assumir em cada ano económico seguinte ao do início do contrato. Sai no documento Word,
-              em tabela própria.
+              As horas de cada perfil repartidas pelos anos económicos do contrato, e o encargo que daí resulta para
+              cada ano. Sai no documento Word, em tabela própria.
             </p>
           </header>
 

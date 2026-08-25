@@ -26,42 +26,34 @@
     "linhas": [
       {
         "perfilEmLoteId": "l1-p1",
-        "valorHoraSemIva": 42,
-        "valorHoraComIva": 51.66,
-        "totais": [
-          109105.92,
-          145474.56,
-          109105.92
+        "horas": [
+          1760,
+          880,
+          880
         ]
       },
       {
         "perfilEmLoteId": "l1-p2",
-        "valorHoraSemIva": 38,
-        "valorHoraComIva": 46.74,
-        "totais": [
-          24678.72,
-          32904.96,
-          24678.72
+        "horas": [
+          0,
+          880,
+          880
         ]
       },
       {
         "perfilEmLoteId": "l2-p3",
-        "valorHoraSemIva": 55,
-        "valorHoraComIva": 67.65,
-        "totais": [
-          35719.2,
-          47625.6,
-          35719.2
+        "horas": [
+          880,
+          440,
+          440
         ]
       },
       {
         "perfilEmLoteId": "l2-p4",
-        "valorHoraSemIva": 45,
-        "valorHoraComIva": 55.35,
-        "totais": [
-          58449.6,
-          77932.8,
-          58449.6
+        "horas": [
+          880,
+          440,
+          440
         ]
       }
     ]

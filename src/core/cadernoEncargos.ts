@@ -178,7 +178,11 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     celula(formatarMoeda(linha.valorHoraSemIva), DIREITA),
     celula(formatarMoeda(linha.valorHoraComIva), DIREITA),
     celula(linha.lote, DIREITA),
-    ...linha.totais.map((total) => celula(formatarMoeda(total), DIREITA)),
+    // O valor de cada ano leva consigo as horas de que resulta: sem elas, um
+    // ano a zero parece um lapso em vez da decisão que é.
+    ...linha.totais.map((total, i) =>
+      celula(`${formatarMoeda(total)} (${formatarNumero(linha.horas[i])} h)`, DIREITA),
+    ),
   ]);
 
   const totais = totaisPorAnoPlurianual(config);
@@ -203,19 +207,26 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     {
       tipo: "paragrafo",
       texto:
-        `Os encargos a assumir repartem-se pelos anos económicos de ${anos[0]} a ${anos[anos.length - 1]}, ` +
-        `seguintes ao do início da execução do contrato, previsto para ${encargos.anoInicio}.`,
+        `Os encargos a assumir respeitam ao ano económico do início do contrato, ${anos[0]}, e aos dois anos ` +
+        `económicos seguintes, ${anos[1]} e ${anos[2]}.`,
+    },
+    {
+      tipo: "paragrafo",
+      texto:
+        "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de " +
+        "cada ano o produto do número de elementos pelas horas desse ano e pelo preço unitário por hora. Um " +
+        "perfil ao qual não sejam afetas horas num determinado ano não é contratado nesse ano.",
     },
     {
       tipo: "tabela",
-      legenda: "Encargos a assumir por ano económico, com IVA incluído.",
+      legenda: "Encargos a assumir por ano económico, com IVA incluído, e horas de que resultam.",
       colunas: [
         { titulo: "Pessoas", alinhamento: DIREITA, peso: 8 },
-        { titulo: "Perfil", peso: 26 },
-        { titulo: "Rate (€/h) s/ IVA", alinhamento: DIREITA, peso: 12 },
-        { titulo: "Rate (€/h) c/ IVA", alinhamento: DIREITA, peso: 12 },
+        { titulo: "Perfil", peso: 24 },
+        { titulo: "Rate (€/h) s/ IVA", alinhamento: DIREITA, peso: 11 },
+        { titulo: "Rate (€/h) c/ IVA", alinhamento: DIREITA, peso: 11 },
         { titulo: "Lotes", alinhamento: DIREITA, peso: 6 },
-        ...anos.map((ano) => ({ titulo: `Total € c/ IVA ${ano}`, alinhamento: DIREITA, peso: 12 })),
+        ...anos.map((ano) => ({ titulo: `Total € c/ IVA ${ano}`, alinhamento: DIREITA, peso: 13 })),
       ],
       linhas,
     },

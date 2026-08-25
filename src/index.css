@@ -940,6 +940,29 @@ input.campo-derivado {
   font-variant-numeric: tabular-nums;
 }
 
+/* Célula de ano: as horas escrevem-se, o valor mostra-se por baixo. */
+.celula-ano {
+  min-width: 130px;
+}
+
+.valor-do-ano {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--texto-suave);
+}
+
+/* Aviso colado ao número a que respeita, sem o empurrar para outra linha. */
+.aviso-inline {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--vermelho);
+}
+
 .tabela-plurianual tfoot td {
   border-bottom: none;
   border-top: 2px solid var(--borda-forte);
