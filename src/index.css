@@ -621,6 +621,18 @@ input.campo-derivado {
   color: var(--vermelho);
 }
 
+/* Recomeçar apaga trabalho, e é o único botão do cabeçalho que o faz: leva um
+   tom de vermelho para não se confundir com o «Carregar exemplo» ao lado. */
+.botao-recomecar {
+  border-color: var(--vermelho-fundo);
+  background: var(--vermelho-fundo);
+  color: var(--vermelho);
+}
+
+.botao-recomecar:not(:disabled):hover {
+  border-color: var(--vermelho);
+}
+
 .botao-icone {
   display: grid;
   place-items: center;

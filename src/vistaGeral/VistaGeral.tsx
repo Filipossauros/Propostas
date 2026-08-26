@@ -108,10 +108,29 @@ export function VistaGeral() {
     descarregarBlob(blob, `${nomeSeguro(orcamento.unidade, "Unidade")}_Vista_Geral.json`);
   }
 
+  /**
+   * Repõe a vista do zero.
+   *
+   * Pergunta antes, e diz o que leva com ela: os nomes dos elementos internos
+   * foram escritos à mão, um a um, e não voltam de nenhum ficheiro importado.
+   */
+  function recomecar() {
+    if (!confirm("Apagar a Vista Geral, incluindo os elementos internos registados, e recomeçar do zero?")) return;
+    setOrcamento(orcamentoInicial());
+    setMensagem({ tipo: "sucesso", texto: "Vista Geral reposta." });
+  }
+
   return (
     <>
       <div className="modulo-cabecalho modulo-cabecalho-unidade">
-        <h2>Vista Geral</h2>
+        <div className="modulo-titulo-linha">
+          <h2>Vista Geral</h2>
+          <div className="acoes-linha">
+            <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar} disabled={semDados}>
+              Recomeçar
+            </button>
+          </div>
+        </div>
         <p>
           Os agrupamentos da unidade lado a lado: quantas pessoas e quanto dinheiro em cada projeto, e que fatia da
           equipa cada um ocupa.

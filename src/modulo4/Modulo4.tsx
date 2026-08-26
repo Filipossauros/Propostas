@@ -114,7 +114,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
         <div className="modulo-titulo-linha">
           <h2>Módulo 4 · Ordenação das propostas</h2>
           <div className="acoes-linha">
-            <button type="button" className="botao-discreto" onClick={recomecar}>
+            <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar}>
               Recomeçar
             </button>
           </div>

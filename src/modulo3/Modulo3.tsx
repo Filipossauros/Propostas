@@ -246,7 +246,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo
             </button>
-            <button type="button" className="botao-discreto" onClick={recomecar}>
+            <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar}>
               Recomeçar
             </button>
           </div>
