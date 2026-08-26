@@ -16,7 +16,7 @@ describe("PERFIS_NORMALIZADOS", () => {
       "Analista Funcional",
       "Gestor de Projeto",
       "UX Designer",
-      "Consultor Especialista da Plataforma ATLAS",
+      "Consultor ATLAS – The Enterprise Cartographer",
     ]);
   });
 
@@ -45,26 +45,30 @@ describe("PERFIS_NORMALIZADOS", () => {
     expect(new Set(internos).size).toBe(internos.length);
   });
 
-  it("só o perfil da plataforma ATLAS exige formação, e é a do fornecedor", () => {
+  it("só o perfil ATLAS exige formação, e é a do fabricante da solução", () => {
     const comFormacao = PERFIS_NORMALIZADOS.filter((p) => p.certificacoes.length > 0);
 
-    expect(comFormacao.map((p) => p.perfil)).toEqual(["Consultor Especialista da Plataforma ATLAS"]);
+    expect(comFormacao.map((p) => p.perfil)).toEqual(["Consultor ATLAS – The Enterprise Cartographer"]);
     expect(comFormacao[0].certificacoes[0].designacao).toBe(
-      "Formação comprovada ou certificada pelo fornecedor da solução de arquitetura empresarial ATLAS, " +
-        "na versão X ou superior",
+      "Formação comprovada ou certificada pelo fabricante da solução “ATLAS – The Enterprise Cartographer”, " +
+        "na versão 23.0.0 ou superior",
     );
   });
 
-  it("o perfil da plataforma ATLAS traz o que lhe foi definido", () => {
-    const atlas = PERFIS_NORMALIZADOS.find((p) => p.perfil === "Consultor Especialista da Plataforma ATLAS")!;
+  it("o perfil ATLAS traz o que lhe foi definido", () => {
+    const atlas = PERFIS_NORMALIZADOS.find((p) => p.perfil === "Consultor ATLAS – The Enterprise Cartographer")!;
 
     expect(atlas.requisitos.map((r) => [r.designacao, r.mesesMinimos])).toEqual([
       ["Modelação de processos de negócio, designadamente em notação BPMN ou equivalente", 12],
-      ["Configuração da solução de arquitetura empresarial ATLAS, na versão X ou superior", 12],
+      ["Configuração da solução “ATLAS – The Enterprise Cartographer”, na versão 23.0.0 ou superior", 12],
     ]);
     expect(atlas.conteudoFuncional).toHaveLength(6);
-    expect(atlas.conteudoFuncional[0].designacao).toBe("Mapeamento de conceitos arquiteturais na solução ATLAS");
-    expect(atlas.conteudoFuncional[5].designacao).toBe("Configuração de repositórios na solução ATLAS");
+    expect(atlas.conteudoFuncional[0].designacao).toBe(
+      "Mapeamento de conceitos arquiteturais na solução “ATLAS – The Enterprise Cartographer”",
+    );
+    expect(atlas.conteudoFuncional[5].designacao).toBe(
+      "Configuração de repositórios na solução “ATLAS – The Enterprise Cartographer”",
+    );
   });
 
   it("o requisito nuclear de cada perfil segue a escala padronizada", () => {
@@ -76,7 +80,7 @@ describe("PERFIS_NORMALIZADOS", () => {
     expect(maisExigente["Gestor de Projeto"]).toBe(60);
     expect(maisExigente["Tester"]).toBe(36);
     expect(maisExigente["Frontend"]).toBe(24);
-    expect(maisExigente["Consultor Especialista da Plataforma ATLAS"]).toBe(12);
+    expect(maisExigente["Consultor ATLAS – The Enterprise Cartographer"]).toBe(12);
   });
 });
 

@@ -216,21 +216,21 @@ const BASE: Base[] = [
   },
   {
     numero: 11,
-    nome: "Consultor Especialista da Plataforma ATLAS",
+    nome: "Consultor ATLAS – The Enterprise Cartographer",
     atividades: [
-      "Mapeamento de conceitos arquiteturais na solução ATLAS",
-      "Configuração do metamodelo na solução ATLAS",
-      "Configuração e otimização de queries na solução ATLAS",
-      "Configuração de Blueprints na solução ATLAS",
-      "Configuração de fluxos de trabalho com recurso a IA na solução ATLAS",
-      "Configuração de repositórios na solução ATLAS",
+      "Mapeamento de conceitos arquiteturais na solução “ATLAS – The Enterprise Cartographer”",
+      "Configuração do metamodelo na solução “ATLAS – The Enterprise Cartographer”",
+      "Configuração e otimização de queries na solução “ATLAS – The Enterprise Cartographer”",
+      "Configuração de Blueprints na solução “ATLAS – The Enterprise Cartographer”",
+      "Configuração de fluxos de trabalho com recurso a IA na solução “ATLAS – The Enterprise Cartographer”",
+      "Configuração de repositórios na solução “ATLAS – The Enterprise Cartographer”",
     ],
     requisitos: [
       ["Modelação de processos de negócio, designadamente em notação BPMN ou equivalente", 12],
-      ["Configuração da solução de arquitetura empresarial ATLAS, na versão X ou superior", 12],
+      ["Configuração da solução “ATLAS – The Enterprise Cartographer”, na versão 23.0.0 ou superior", 12],
     ],
     formacoes: [
-      "Formação comprovada ou certificada pelo fornecedor da solução de arquitetura empresarial ATLAS, na versão X ou superior",
+      "Formação comprovada ou certificada pelo fabricante da solução “ATLAS – The Enterprise Cartographer”, na versão 23.0.0 ou superior",
     ],
   },
 ];
