@@ -664,6 +664,55 @@ export function totaisPorAnoPlurianual(config: LotesJSON): number[] {
   );
 }
 
+/** O total sem IVA a assumir em cada ano do pedido, pela ordem de `anosPlurianuais`. */
+export function totaisPorAnoSemIva(config: LotesJSON): number[] {
+  return config.lotes
+    .flatMap((lote) => lote.perfis)
+    .reduce((soma, entrada) => {
+      const horas = horasPorAnoDe(entrada);
+      return soma.map((valor, i) => valor + entrada.nMinimoElementos * horas[i] * entrada.valorHora);
+    }, horasEmBranco());
+}
+
+// --------------------------------------------------------------------------
+// Limiar de valor
+// --------------------------------------------------------------------------
+
+/**
+ * O valor a partir do qual o procedimento deixa de caber na competência
+ * habitual e passa a exigir autorização de outra entidade.
+ *
+ * Afere-se sem IVA, que é a base dos limiares do Código dos Contratos
+ * Públicos. Não é uma regra de validação: nada aqui está errado, e o
+ * procedimento pode seguir — o que falta é uma autorização que se obtém fora
+ * desta aplicação, e que de outro modo passaria despercebida.
+ */
+export const LIMIAR_VALOR_SEM_IVA = 499_999;
+
+export interface AnoAcimaDoLimiar {
+  ano: number;
+  semIva: number;
+}
+
+/**
+ * Os anos económicos do pedido plurianual cujo valor excede o limiar.
+ *
+ * Só faz sentido com o pedido ativo: sem ele não há repartição por anos, e o
+ * que conta é o preço base do procedimento inteiro.
+ */
+export function anosAcimaDoLimiar(config: LotesJSON): AnoAcimaDoLimiar[] {
+  if (!config.encargosPlurianuais.ativo) return [];
+  const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
+  return totaisPorAnoSemIva(config)
+    .map((semIva, i) => ({ ano: anos[i], semIva }))
+    .filter((ano) => ano.semIva > LIMIAR_VALOR_SEM_IVA);
+}
+
+/** Se o preço base do procedimento, sem IVA, excede o limiar. */
+export function precoBaseAcimaDoLimiar(config: LotesJSON): boolean {
+  return totalProcedimento(config).semIva > LIMIAR_VALOR_SEM_IVA;
+}
+
 /** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */
 export function taxaIva(config: LotesJSON): number {
   return Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO;

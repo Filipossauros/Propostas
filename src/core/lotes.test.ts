@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  LIMIAR_VALOR_SEM_IVA,
+  anosAcimaDoLimiar,
+  criarLote,
+  criarPerfilEmLote,
   importarLotesJSON,
   linhasTabelaValores,
   lotesIniciais,
@@ -7,6 +11,9 @@ import {
   nomeProcedimentoDe,
   normalizarLotesGuardados,
   perfisComCertificacao,
+  precoBaseAcimaDoLimiar,
+  totaisPorAnoPlurianual,
+  totaisPorAnoSemIva,
   validarEavalia,
   validarPostoTrabalho,
   totalLote,
@@ -298,5 +305,76 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
       "eavalia.chaveMovelDigital",
       "eavalia.idiomas",
     ]);
+  });
+});
+
+describe("limiar de valor", () => {
+  function comValores(valorHora: number, horasPorAno: number[]): LotesJSON {
+    const config = lotesIniciais();
+    const lote = criarLote("1");
+    const entrada = criarPerfilEmLote(perfil());
+    lote.perfis = [
+      {
+        ...entrada,
+        nMinimoElementos: 1,
+        valorHora,
+        horasPorAno,
+        horas: horasPorAno.reduce((soma, h) => soma + h, 0),
+      },
+    ];
+    config.lotes = [lote];
+    return config;
+  }
+
+  it("sem o pedido plurianual, não aponta anos nenhuns", () => {
+    const config = comValores(100, [6000, 6000, 6000]);
+    expect(config.encargosPlurianuais.ativo).toBe(false);
+    expect(anosAcimaDoLimiar(config)).toEqual([]);
+  });
+
+  it("com o pedido ativo, aponta só os anos que excedem o limiar", () => {
+    const config = comValores(100, [6000, 4000, 5000]);
+    config.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+
+    // 600 000 € | 400 000 € | 500 000 €, sem IVA.
+    expect(anosAcimaDoLimiar(config)).toEqual([
+      { ano: 2027, semIva: 600_000 },
+      { ano: 2029, semIva: 500_000 },
+    ]);
+  });
+
+  it("o limiar é excedido, e não apenas atingido", () => {
+    const config = comValores(1, [LIMIAR_VALOR_SEM_IVA, 0, 0]);
+    config.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+    expect(anosAcimaDoLimiar(config)).toEqual([]);
+
+    const acima = comValores(1, [LIMIAR_VALOR_SEM_IVA + 1, 0, 0]);
+    acima.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+    expect(anosAcimaDoLimiar(acima).map((a) => a.ano)).toEqual([2027]);
+  });
+
+  it("o n.º mínimo de elementos multiplica o valor do ano", () => {
+    const config = comValores(100, [3000, 0, 0]);
+    config.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+    expect(anosAcimaDoLimiar(config)).toEqual([]);
+
+    config.lotes[0].perfis[0].nMinimoElementos = 2;
+    expect(anosAcimaDoLimiar(config)).toEqual([{ ano: 2027, semIva: 600_000 }]);
+  });
+
+  it("o preço base do procedimento tem o seu próprio alerta, sem IVA", () => {
+    const config = comValores(100, [2000, 2000, 2000]);
+    expect(totalProcedimento(config).semIva).toBe(600_000);
+    expect(precoBaseAcimaDoLimiar(config)).toBe(true);
+
+    const abaixo = comValores(100, [1000, 1000, 1000]);
+    expect(precoBaseAcimaDoLimiar(abaixo)).toBe(false);
+  });
+
+  it("os totais por ano sem IVA não trazem IVA nenhum", () => {
+    const config = comValores(100, [1000, 0, 0]);
+    config.taxaIva = 23;
+    expect(totaisPorAnoSemIva(config)).toEqual([100_000, 0, 0]);
+    expect(totaisPorAnoPlurianual(config)[0]).toBeCloseTo(123_000, 5);
   });
 });

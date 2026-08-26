@@ -1,10 +1,13 @@
 import type { LotesJSON } from "../core/types";
 import {
+  LIMIAR_VALOR_SEM_IVA,
+  anosAcimaDoLimiar,
   anosPlurianuais,
   formatarMoeda,
   formatarNumero,
   linhasPlurianuais,
   linhasTabelaValores,
+  precoBaseAcimaDoLimiar,
   totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   taxaIva,
@@ -14,6 +17,52 @@ import {
 
 interface Props {
   config: LotesJSON;
+}
+
+const listaDeAnos = new Intl.ListFormat("pt-PT", { style: "long", type: "conjunction" });
+
+/**
+ * Chamada de atenção para o valor do procedimento.
+ *
+ * Âmbar, e não vermelho: nada está errado — há é uma autorização a obter fora
+ * desta aplicação, e o momento de dar por isso é aqui, antes de o procedimento
+ * sair, e não depois.
+ *
+ * Com o pedido de encargos plurianuais ativo, o que conta é o valor de cada ano
+ * económico, um a um: é por ano que se afere a competência para assumir o
+ * compromisso. Sem o pedido, conta o preço base do procedimento inteiro.
+ */
+function AlertaLimiar({ config }: Props) {
+  const total = totalProcedimento(config);
+  const anos = anosAcimaDoLimiar(config);
+  const totalExcede = precoBaseAcimaDoLimiar(config);
+
+  if (!totalExcede && anos.length === 0) return null;
+
+  return (
+    <div className="aviso-limiar" role="status">
+      <strong>Valor acima de {formatarMoeda(LIMIAR_VALOR_SEM_IVA)} sem IVA</strong>
+
+      {anos.length > 0 && (
+        <p>
+          {anos.length === 1 ? "O ano económico de " : "Os anos económicos de "}
+          {listaDeAnos.format(anos.map((ano) => `${ano.ano} (${formatarMoeda(ano.semIva)})`))}
+          {anos.length === 1 ? " excede o limiar" : " excedem o limiar"}, sem IVA.
+        </p>
+      )}
+
+      {totalExcede && (
+        <p>
+          O preço base do procedimento é <strong>{formatarMoeda(total.semIva)}</strong> sem IVA.
+        </p>
+      )}
+
+      <p className="aviso-limiar-nota">
+        Confirme a competência para autorizar a despesa e, havendo encargos plurianuais, para assumir o compromisso,
+        antes de lançar o procedimento.
+      </p>
+    </div>
+  );
 }
 
 /**
@@ -118,19 +167,24 @@ function TabelaPlurianual({ config }: Props) {
 }
 
 export function TabelaValores({ config }: Props) {
-  const linhas = linhasTabelaValores(config);
-
-  // Ou uma, ou outra: as duas tabelas dizem o mesmo preço base por caminhos
-  // diferentes, e apresentá-las juntas obrigava a lê-las uma contra a outra.
-  if (config.encargosPlurianuais.ativo && linhas.length > 0) {
-    return <TabelaPlurianual config={config} />;
-  }
-  const taxa = taxaIva(config);
-  const total = totalProcedimento(config);
-
-  if (linhas.length === 0) {
+  if (linhasTabelaValores(config).length === 0) {
     return <p className="estado-vazio">Atribua perfis aos lotes para ver a tabela.</p>;
   }
+
+  return (
+    <>
+      <AlertaLimiar config={config} />
+      {/* Ou uma, ou outra: as duas tabelas dizem o mesmo preço base por caminhos
+          diferentes, e apresentá-las juntas obrigava a lê-las uma contra a outra. */}
+      {config.encargosPlurianuais.ativo ? <TabelaPlurianual config={config} /> : <TabelaPrecoBase config={config} />}
+    </>
+  );
+}
+
+function TabelaPrecoBase({ config }: Props) {
+  const linhas = linhasTabelaValores(config);
+  const taxa = taxaIva(config);
+  const total = totalProcedimento(config);
 
   return (
     <div className="tabela-envolvente">

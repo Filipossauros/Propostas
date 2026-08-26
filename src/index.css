@@ -1487,6 +1487,45 @@ input.campo-derivado {
   font-variant-numeric: tabular-nums;
 }
 
+/* Chamada de atenção do Módulo 2 para o valor do procedimento. Fica antes da
+   tabela, e não depois: quem abre o resumo tem de dar por ela sem rolar. */
+.aviso-limiar {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--ambar);
+  border-radius: var(--raio-pequeno);
+  background: var(--ambar-fundo);
+}
+
+.aviso-limiar strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ambar);
+}
+
+.aviso-limiar p {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+}
+
+.aviso-limiar p strong {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: inherit;
+}
+
+/* O que fazer a seguir, dito à parte do valor que o motiva. */
+.aviso-limiar-nota {
+  margin-top: 8px;
+  color: var(--texto-suave);
+}
+
 /* Chamada de atenção do Módulo 3 para os perfis que exigem certificação.
    Âmbar, e não vermelho: nada está errado — há é matéria a verificar fora
    desta aplicação, que de outro modo não apareceria em lado nenhum. */
