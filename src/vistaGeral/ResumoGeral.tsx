@@ -7,6 +7,7 @@ import {
   valorDoProjeto,
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
+import { DicaNota } from "../ui/DicaNota";
 
 interface Props {
   orcamento: OrcamentoUnidade;
@@ -42,10 +43,22 @@ export function ResumoGeral({ orcamento }: Props) {
               Total Pessoas
             </th>
             <th scope="col" className="numerico">
-              % na unidade
+              <span className="cabecalho-com-dica">
+                % na unidade
+                <DicaNota rotulo="Como se calcula o peso na unidade">
+                  O peso na unidade é calculado tendo por base o total de elementos (internos e externos) por
+                  projeto. Este peso não tem em consideração o valor por projeto, uma vez que apenas são
+                  contabilizados custos de FSE.
+                </DicaNota>
+              </span>
             </th>
             <th scope="col" className="numerico">
-              Valor por projeto
+              <span className="cabecalho-com-dica">
+                Valor por projeto
+                <DicaNota rotulo="O que entra no valor por projeto">
+                  Apenas são contabilizados custos de FSE. Custos com pessoal interno não são apurados nesta tabela.
+                </DicaNota>
+              </span>
             </th>
           </tr>
         </thead>

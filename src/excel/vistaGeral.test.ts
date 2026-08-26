@@ -104,7 +104,7 @@ describe("gerarWorkbookVistaGeral", () => {
       const { detalhe } = folhas(comDoisProjetos());
       const cabecalho = linhasDaFolha(detalhe).find((l) => l[0] === "Projeto")!;
 
-      expect(cabecalho.slice(0, 5)).toEqual(["Projeto", "Pessoas", "Perfil", "Rate (€/h) c/ IVA", "Lotes"]);
+      expect(cabecalho.slice(0, 5)).toEqual(["Projeto", "Lotes", "Perfil", "Pessoas", "Rate (€/h) c/ IVA"]);
       expect(cabecalho.some((t) => t.includes("s/ IVA"))).toBe(false);
       expect(cabecalho.some((t) => t === "Total Pessoas" || t === "% na unidade")).toBe(false);
       // 2027 a 2030: o primeiro projeto começa em 2027, o segundo em 2028.
@@ -122,7 +122,9 @@ describe("gerarWorkbookVistaGeral", () => {
 
       expect(doSClinico).toHaveLength(2);
       expect(doSClinico.map((l) => l[2])).toEqual(["Programador", "Ana Silva (interno)"]);
-      expect(doSClinico.map((l) => l[1])).toEqual(["2", "1"]);
+      // A coluna «Pessoas» é agora a quarta; o lote fica em branco no interno.
+      expect(doSClinico.map((l) => l[3])).toEqual(["2", "1"]);
+      expect(doSClinico.map((l) => l[1])).toEqual(["1", ""]);
     });
 
     it("os valores dos anos são números, e caem nos anos do projeto", () => {
@@ -139,8 +141,8 @@ describe("gerarWorkbookVistaGeral", () => {
     it("a rate que sai é a que tem IVA", () => {
       const { detalhe } = folhas(comDoisProjetos());
       const linha = linhaCom(detalhe, "SClínico");
-      expect(Number(detalhe.getCell(linha, 4).value)).toBeCloseTo(123, 6);
-      expect(detalhe.getCell(linha, 4).numFmt).toContain("€");
+      expect(Number(detalhe.getCell(linha, 5).value)).toBeCloseTo(123, 6);
+      expect(detalhe.getCell(linha, 5).numFmt).toContain("€");
     });
 
     it("fecha com o total da unidade por ano", () => {

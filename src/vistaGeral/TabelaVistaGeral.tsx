@@ -84,14 +84,14 @@ export function TabelaVistaGeral({
           <tr>
             <th scope="col">Projeto</th>
             <th scope="col" className="numerico">
-              Pessoas
+              Lotes
             </th>
             <th scope="col">Perfil</th>
             <th scope="col" className="numerico">
-              Rate (€/h) <span className="cabecalho-nota">c/ IVA</span>
+              Pessoas
             </th>
             <th scope="col" className="numerico">
-              Lotes
+              Rate (€/h) <span className="cabecalho-nota">c/ IVA</span>
             </th>
             {anos.map((ano) => (
               <th key={ano} scope="col" className="numerico">
@@ -179,7 +179,7 @@ function LinhasDoProjeto({
   );
 
   // As linhas do meio, por ordem: primeiro os perfis, depois quem é da casa.
-  const linhas: Array<{ chave: string; celulas: React.ReactNode; acoes: React.ReactNode }> = [
+  const linhas: Array<{ chave: string; celulas: React.ReactNode; acoes: React.ReactNode; interno?: boolean }> = [
     ...projeto.entradas.map((entrada) => ({
       chave: entrada.id,
       acoes: (
@@ -194,10 +194,10 @@ function LinhasDoProjeto({
       ),
       celulas: (
         <>
-          <td className="numerico">{entrada.pessoas}</td>
-          <td>{entrada.perfil}</td>
-          <td className="numerico">{formatarMoeda(entrada.valorHoraComIva)}</td>
           <td className="numerico">{entrada.lote}</td>
+          <td>{entrada.perfil}</td>
+          <td className="numerico">{entrada.pessoas}</td>
+          <td className="numerico">{formatarMoeda(entrada.valorHoraComIva)}</td>
           {anos.map((ano) => {
             const valor = valorDaEntradaNoAno(projeto, entrada, ano);
             return (
@@ -221,15 +221,16 @@ function LinhasDoProjeto({
           ×
         </button>
       ),
+      interno: true,
       celulas: (
         <>
-          <td className="numerico">1</td>
-          <td>
-            {interno.nome} <span className="meta">interno</span>
-          </td>
           <td className="numerico">
             <span className="meta">—</span>
           </td>
+          <td>
+            {interno.nome} <span className="etiqueta-interno">interno</span>
+          </td>
+          <td className="numerico">1</td>
           <td className="numerico">
             <span className="meta">—</span>
           </td>
@@ -255,7 +256,16 @@ function LinhasDoProjeto({
   return (
     <tbody className="grupo-projeto">
       {linhas.map((linha, i) => (
-        <tr key={linha.chave} className={linha.chave === "acrescentar" ? "linha-acrescentar" : undefined}>
+        <tr
+          key={linha.chave}
+          className={
+            linha.chave === "acrescentar"
+              ? "linha-acrescentar"
+              : linha.interno === true
+                ? "linha-interno-registado"
+                : undefined
+          }
+        >
           {i === 0 && celulaDoProjeto}
           {linha.celulas}
           <td className="celula-acoes">{linha.acoes}</td>

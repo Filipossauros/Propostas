@@ -35,6 +35,10 @@
   --unidade-500: #1f7d77;
   --unidade-100: #e2f1ef;
 
+  /* Quem é da casa lê-se a azul, destacado das linhas de perfil contratado. */
+  --interno-texto: #1f4e78;
+  --interno-fundo: #eaf2fa;
+
   --raio: 10px;
   --raio-pequeno: 6px;
   --sombra: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
@@ -74,6 +78,9 @@
     --unidade-700: #7fd3cb;
     --unidade-500: #4bb3aa;
     --unidade-100: #143331;
+
+    --interno-texto: #8ec5f0;
+    --interno-fundo: #16324a;
 
     --sombra: 0 1px 2px rgb(0 0 0 / 30%), 0 1px 3px rgb(0 0 0 / 20%);
   }
@@ -1745,9 +1752,9 @@ input.campo-derivado {
   font-weight: 400;
 }
 
-/* Quadro do resumo: estreito, para caber num relance sem rolar. */
+/* Quadro do resumo: ocupa a largura do container, como a tabela de detalhe. */
 .tabela-resumo-unidade {
-  max-width: 720px;
+  width: 100%;
 }
 
 /* A barra fica atrás do número, na própria célula: dá a comparação entre
@@ -1790,8 +1797,55 @@ input.campo-derivado {
   background: var(--superficie-alt);
 }
 
+.grupo-projeto:nth-of-type(even) .linha-interno-registado td {
+  background: var(--interno-fundo);
+}
+
 .grupo-projeto:nth-of-type(even) .coluna-projeto {
   background: var(--fundo);
+}
+
+/* Elemento interno: a azul, para se distinguir de relance das linhas de perfil
+   contratado, que são o que sai a concurso. */
+.linha-interno-registado td {
+  background: var(--interno-fundo);
+  color: var(--interno-texto);
+}
+
+.linha-interno-registado .meta {
+  color: var(--interno-texto);
+  opacity: 0.7;
+}
+
+.etiqueta-interno {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--interno-texto);
+  color: var(--interno-fundo);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Cabeçalho numérico com uma dica ao lado: o rótulo e o emblema numa linha,
+   ainda alinhados à direita como os números da coluna. */
+.cabecalho-com-dica {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Nas últimas colunas, uma dica ancorada à esquerda sairia fora do painel. */
+.dica-conteudo-direita {
+  left: auto;
+  right: 0;
+  text-align: left;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--texto);
 }
 
 .linha-acrescentar td {

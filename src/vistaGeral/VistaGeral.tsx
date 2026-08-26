@@ -178,9 +178,7 @@ export function VistaGeral() {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Resumo geral</h3>
-          <p className="painel-nota">
-            Um projeto por linha: quantas pessoas leva, que fatia da unidade ocupa e quanto vale.
-          </p>
+          <p className="painel-nota">Resumo de todos os projetos na unidade.</p>
         </header>
 
         <ResumoGeral orcamento={orcamento} />
@@ -189,10 +187,7 @@ export function VistaGeral() {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Projetos, pessoas e valores</h3>
-          <p className="painel-nota">
-            O detalhe de cada projeto, perfil a perfil. É aqui que se registam os elementos internos e se apaga o que
-            não pertence à vista.
-          </p>
+          <p className="painel-nota">Detalhe de cada projeto, perfil a perfil.</p>
         </header>
 
         <TabelaVistaGeral

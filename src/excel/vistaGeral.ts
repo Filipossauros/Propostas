@@ -66,17 +66,17 @@ function moeda(valor: number | null): Celula {
 function linhasDoProjeto(projeto: ProjetoVistaGeral, anos: number[]): Celula[][] {
   const doMeio: Celula[][] = [
     ...projeto.entradas.map((entrada) => [
-      { valor: entrada.pessoas },
-      texto(entrada.perfil),
-      moeda(entrada.valorHoraComIva),
       { valor: entrada.lote },
+      texto(entrada.perfil),
+      { valor: entrada.pessoas },
+      moeda(entrada.valorHoraComIva),
       ...anos.map((ano) => moeda(valorDaEntradaNoAno(projeto, entrada, ano))),
     ]),
     ...projeto.internos.map((interno) => [
-      { valor: 1 },
-      texto(`${interno.nome} (interno)`, true),
-      moeda(null),
       { valor: null },
+      texto(`${interno.nome} (interno)`, true),
+      { valor: 1 },
+      moeda(null),
       ...anos.map(() => moeda(null)),
     ]),
   ];
@@ -88,8 +88,8 @@ function linhasDoProjeto(projeto: ProjetoVistaGeral, anos: number[]): Celula[][]
           [
             { valor: null },
             texto("(sem perfis nem elementos internos)", true),
-            moeda(null),
             { valor: null },
+            moeda(null),
             ...anos.map(() => moeda(null)),
           ],
         ];
@@ -115,18 +115,18 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
 
   const titulos = [
     "Projeto",
-    "Pessoas",
-    "Perfil",
-    "Rate (€/h) c/ IVA",
     "Lotes",
+    "Perfil",
+    "Pessoas",
+    "Rate (€/h) c/ IVA",
     ...anos.map((ano) => `Total € c/ IVA\n(11 meses)\n${ano}`),
   ];
   folha.columns = [
     { width: 30 },
-    { width: 9 },
-    { width: 36 },
-    { width: 16 },
     { width: 8 },
+    { width: 36 },
+    { width: 9 },
+    { width: 16 },
     ...anos.map(() => ({ width: 18 })),
   ];
 
@@ -191,8 +191,9 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
     folha,
     linha++,
     titulos.length,
-    "A percentagem é a fatia das pessoas da unidade que o projeto ocupa, contando os elementos exigidos nos " +
-      "perfis e os elementos internos registados. Valores com IVA incluído.",
+    "O peso na unidade é calculado tendo por base o total de elementos (internos e externos) por projeto. " +
+      "Este peso não tem em consideração o valor por projeto, uma vez que apenas são contabilizados custos de FSE. " +
+      "No valor por projeto apenas são contabilizados custos de FSE: custos com pessoal interno não são apurados.",
   );
   linha++;
 
