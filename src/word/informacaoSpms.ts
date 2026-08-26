@@ -395,6 +395,12 @@ const OPCOES_DE_PROCEDIMENTO: Array<{ opcao: string; sim: boolean; sufixo?: stri
 
 const VAZIA = "\u25a1";
 
+/** O que fica por fazer depois da autorização — igual nas duas informações. */
+const REMESSA =
+  "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
+  "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no anexo " +
+  "técnico da presente informação.";
+
 /**
  * Uma linha de escolha da conclusão: a opção, e o NÃO/SIM já assinalado.
  *
@@ -543,13 +549,6 @@ export function corpoDaInformacao(
       ),
     );
     for (const opcao of OPCOES_DE_PROCEDIMENTO) p.push(escolha(opcao));
-    p.push(
-      paragrafo(
-        "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
-          "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o anexo técnico " +
-          "e formulários de declaração de experiência profissional.",
-      ),
-    );
   } else {
     p.push(
       paragrafo(
@@ -557,14 +556,11 @@ export function corpoDaInformacao(
           "obter a autorização para assunção de encargos plurianuais nos termos constantes no quadro supra.",
       ),
     );
-    p.push(
-      paragrafo(
-        "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
-          "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no " +
-          "anexo técnico da presente informação.",
-      ),
-    );
   }
+  // A frase de fecho é a mesma nas duas: o que segue para a Direção de
+  // Administração Geral é o mesmo processo, seja o que o precede um pedido ou
+  // uma manifestação.
+  p.push(paragrafo(REMESSA));
   p.push(vazio(240));
   p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240 }));
   p.push(herdado(assinatura));

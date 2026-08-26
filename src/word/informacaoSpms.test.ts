@@ -278,6 +278,16 @@ describe("gerarManifestacaoNecessidadesBlob", () => {
     expect(texto).not.toContain("obter a autorização para assunção de encargos plurianuais");
   });
 
+  it("fecha com a mesma frase de remessa do pedido", async () => {
+    const remessa =
+      "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
+      "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no anexo " +
+      "técnico da presente informação.";
+
+    expect(await textoDaManifestacao(semPlurianual())).toContain(remessa);
+    expect(await textoDoDocumento(exemplo())).toContain(remessa);
+  });
+
   it("leva o anexo técnico completo, como o pedido", async () => {
     const texto = await textoDaManifestacao(semPlurianual());
 
