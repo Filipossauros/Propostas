@@ -700,9 +700,16 @@ export function anosAcimaDoLimiar(config: LotesJSON): AnoAcimaDoLimiar[] {
     .filter((ano) => ano.semIva > LIMIAR_VALOR_SEM_IVA);
 }
 
-/** Se o preço base do procedimento, sem IVA, excede o limiar. */
+/**
+ * Se o preço base do procedimento, sem IVA, excede o limiar.
+ *
+ * Só se afere com o pedido plurianual ativo. O limiar diz respeito à
+ * competência para assumir encargos em anos económicos futuros: sem pedido, a
+ * despesa cabe num ano, e o aviso chamava a atenção para uma autorização que
+ * não é precisa.
+ */
 export function precoBaseAcimaDoLimiar(config: LotesJSON): boolean {
-  return totalProcedimento(config).semIva > LIMIAR_VALOR_SEM_IVA;
+  return config.encargosPlurianuais.ativo && totalProcedimento(config).semIva > LIMIAR_VALOR_SEM_IVA;
 }
 
 /** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */

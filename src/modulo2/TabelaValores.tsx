@@ -28,9 +28,13 @@ const listaDeAnos = new Intl.ListFormat("pt-PT", { style: "long", type: "conjunc
  * desta aplicação, e o momento de dar por isso é aqui, antes de o procedimento
  * sair, e não depois.
  *
- * Com o pedido de encargos plurianuais ativo, o que conta é o valor de cada ano
- * económico, um a um: é por ano que se afere a competência para assumir o
- * compromisso. Sem o pedido, conta o preço base do procedimento inteiro.
+ * Só aparece com o pedido de encargos plurianuais ativo: o limiar é o da
+ * competência para assumir encargos em anos económicos futuros, e sem pedido
+ * não há compromisso futuro a autorizar.
+ *
+ * Com o pedido, mostra os anos económicos que o excedem — é por ano que a
+ * competência se afere — e, quando também o preço base do procedimento o
+ * excede, di-lo, porque é esse o valor que instrui o processo.
  */
 function AlertaLimiar({ config }: Props) {
   const total = totalProcedimento(config);

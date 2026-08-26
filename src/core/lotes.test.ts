@@ -364,11 +364,23 @@ describe("limiar de valor", () => {
 
   it("o preço base do procedimento tem o seu próprio alerta, sem IVA", () => {
     const config = comValores(100, [2000, 2000, 2000]);
+    config.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
     expect(totalProcedimento(config).semIva).toBe(600_000);
     expect(precoBaseAcimaDoLimiar(config)).toBe(true);
 
     const abaixo = comValores(100, [1000, 1000, 1000]);
+    abaixo.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
     expect(precoBaseAcimaDoLimiar(abaixo)).toBe(false);
+  });
+
+  it("sem o pedido plurianual não há alerta nenhum, por alto que seja o preço base", () => {
+    // O limiar é o da competência para assumir encargos futuros: sem pedido,
+    // a despesa cabe num ano e não há compromisso futuro a autorizar.
+    const config = comValores(100, [2000, 2000, 2000]);
+    expect(config.encargosPlurianuais.ativo).toBe(false);
+    expect(totalProcedimento(config).semIva).toBe(600_000);
+    expect(precoBaseAcimaDoLimiar(config)).toBe(false);
+    expect(anosAcimaDoLimiar(config)).toEqual([]);
   });
 
   it("os totais por ano sem IVA não trazem IVA nenhum", () => {

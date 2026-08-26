@@ -401,8 +401,16 @@ const REMESSA =
   "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no anexo " +
   "técnico da presente informação.";
 
+/** O avanço das linhas de escolha: um tabulador do Word, 1,25 cm. */
+const TABULACAO = 709;
+
 /**
  * Uma linha de escolha da conclusão: a opção, e o NÃO/SIM já assinalado.
+ *
+ * Avançada um tabulador em relação ao texto corrido, para se ler como resposta
+ * à pergunta que a antecede e não como mais um parágrafo. O avanço vale também
+ * para as linhas seguintes de uma opção que não caiba numa só, ou a segunda
+ * linha voltaria à margem e desfazia o bloco.
  *
  * Alinhada à esquerda e não justificada — justificar esticaria os espaços entre
  * «NÃO», a caixa e o «SIM» até a linha deixar de se ler como um par de opções.
@@ -417,7 +425,7 @@ function escolha({ opcao, sim, sufixo }: { opcao: string; sim: boolean; sufixo?:
       marca(sim),
       ...(sufixo === undefined ? [] : [run(`   ${sufixo}`)]),
     ],
-    { jc: "left", antes: 60, depois: 60 },
+    { jc: "left", antes: 60, depois: 60, ind: TABULACAO },
   );
 }
 
