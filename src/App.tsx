@@ -10,8 +10,9 @@ import { Modulo1 } from "./modulo1/Modulo1";
 import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
+import { VistaGeral } from "./vistaGeral/VistaGeral";
 
-type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4";
+type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4" | "vistaGeral";
 
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
   { chave: "modulo1", numero: "1", titulo: "Perfis", descricao: "Requisitos e formulário" },
@@ -19,6 +20,20 @@ const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: strin
   { chave: "modulo3", numero: "3", titulo: "Avaliação", descricao: "Apuramento das declarações" },
   { chave: "modulo4", numero: "4", titulo: "Ordenação", descricao: "Preço e classificação" },
 ];
+
+/**
+ * A Vista Geral não é o quinto passo de nada.
+ *
+ * Os quatro módulos são um caminho: perfis, lotes, avaliação, ordenação, sempre
+ * do mesmo procedimento. Esta olha para muitos procedimentos ao mesmo tempo, e
+ * por isso fica à parte — separada por uma barra, e com cor própria, para não se
+ * ler como o passo a seguir à ordenação.
+ */
+const ABA_VISTA_GERAL: { chave: Aba; titulo: string; descricao: string } = {
+  chave: "vistaGeral",
+  titulo: "Vista Geral",
+  descricao: "Orçamento e pessoas da unidade",
+};
 
 function ehLotesGuardado(valor: unknown): valor is LotesJSON {
   if (typeof valor !== "object" || valor === null) return false;
@@ -111,6 +126,23 @@ function App() {
               </span>
             </button>
           ))}
+
+          <span className="abas-barra" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={aba === ABA_VISTA_GERAL.chave ? "aba aba-unidade aba-ativa" : "aba aba-unidade"}
+            aria-current={aba === ABA_VISTA_GERAL.chave ? "page" : undefined}
+            onClick={() => setAba(ABA_VISTA_GERAL.chave)}
+          >
+            <span className="aba-numero" aria-hidden="true">
+              Σ
+            </span>
+            <span className="aba-texto">
+              <span className="aba-titulo">{ABA_VISTA_GERAL.titulo}</span>
+              <span className="aba-descricao">{ABA_VISTA_GERAL.descricao}</span>
+            </span>
+          </button>
         </nav>
       </header>
 
@@ -150,6 +182,8 @@ function App() {
         {aba === "modulo4" && (
           <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
         )}
+
+        {aba === "vistaGeral" && <VistaGeral />}
       </main>
       </div>
     </ProtecaoExemplos>

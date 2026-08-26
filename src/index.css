@@ -28,6 +28,13 @@
   --ambar: #8a5a00;
   --ambar-fundo: #fdf3e3;
 
+  /* A Vista Geral olha para muitos procedimentos ao mesmo tempo, e não para o
+     que se está a preparar: tem família de cor própria para não se ler como o
+     passo a seguir aos quatro módulos. */
+  --unidade-700: #175c58;
+  --unidade-500: #1f7d77;
+  --unidade-100: #e2f1ef;
+
   --raio: 10px;
   --raio-pequeno: 6px;
   --sombra: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
@@ -63,6 +70,10 @@
     --vermelho-fundo: #33191a;
     --ambar: #e0b563;
     --ambar-fundo: #2e2410;
+
+    --unidade-700: #7fd3cb;
+    --unidade-500: #4bb3aa;
+    --unidade-100: #143331;
 
     --sombra: 0 1px 2px rgb(0 0 0 / 30%), 0 1px 3px rgb(0 0 0 / 20%);
   }
@@ -167,6 +178,37 @@ body {
 
 .aba.aba-ativa .aba-descricao {
   color: var(--texto-suave);
+}
+
+/* A barra que separa os quatro módulos da vista da unidade. */
+.abas-barra {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 6px;
+  background: var(--borda-forte);
+}
+
+.aba.aba-unidade .aba-numero {
+  background: var(--unidade-100);
+  color: var(--unidade-700);
+}
+
+.aba.aba-unidade:hover {
+  border-color: var(--unidade-500);
+}
+
+.aba.aba-unidade.aba-ativa {
+  border-color: var(--unidade-500);
+  background: var(--unidade-100);
+}
+
+.aba.aba-unidade.aba-ativa .aba-numero {
+  background: var(--unidade-700);
+  color: var(--superficie);
+}
+
+.modulo-cabecalho-unidade h2 {
+  color: var(--unidade-700);
 }
 
 /* ----------------------------------------------------------------- Módulos */
@@ -1659,4 +1701,113 @@ input.campo-derivado {
   .campo-estreito {
     width: 110px;
   }
+}
+
+/* ------------------------------------------------------- Vista Geral (unidade) */
+
+.campo-unidade {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 420px;
+  margin-bottom: 14px;
+}
+
+.campo-unidade span {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* A tabela cresce com o número de anos: rola dentro do seu envolvente, e não
+   empurra a página para o lado. */
+.tabela-unidade {
+  min-width: 100%;
+}
+
+.tabela-unidade .celula-projeto {
+  min-width: 190px;
+  text-align: left;
+  vertical-align: top;
+  background: var(--unidade-100);
+}
+
+.tabela-unidade .coluna-projeto {
+  background: var(--superficie-alt);
+}
+
+.projeto-nome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.celula-projeto .meta {
+  display: block;
+  margin: 2px 0 6px;
+  font-weight: 400;
+}
+
+/* Os lotes vivem na célula do projeto, e não numa coluna própria: é ali que se
+   apaga um lote inteiro, com os perfis todos que lhe pertencem. */
+.lista-lotes {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-lotes li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.lista-lotes .botao-icone,
+.projeto-nome .botao-icone,
+.celula-acoes .botao-icone {
+  width: 22px;
+  height: 22px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.95rem;
+}
+
+.celula-acoes {
+  width: 40px;
+  text-align: center;
+}
+
+/* Uma banda por projeto: o que se procura de relance é onde acaba um e começa
+   o seguinte, e não a linha a linha. */
+.grupo-projeto:nth-of-type(even) td {
+  background: var(--superficie-alt);
+}
+
+.grupo-projeto:nth-of-type(even) .coluna-projeto {
+  background: var(--fundo);
+}
+
+.linha-acrescentar td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.linha-interno {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.linha-interno input {
+  flex: 1;
+  max-width: 320px;
 }
