@@ -13,7 +13,6 @@ import {
   pessoasDaUnidade,
   pessoasDoProjeto,
   projetoDeAgrupamento,
-  semEntrada,
   semInterno,
   semProjeto,
   totaisPorAnoDaUnidade,
@@ -236,30 +235,6 @@ describe("anos do orçamento", () => {
 });
 
 describe("remoções", () => {
-  function comDoisLotes() {
-    return comProjeto(
-      orcamentoInicial(),
-      projetoDeAgrupamento(
-        agrupamento({
-          nomeProjeto: "A",
-          lotes: [
-            { numero: "1", perfil: "Programador", pessoas: 2, valorHora: 100, horasPorAno: [1000, 0, 0] },
-            { numero: "1", perfil: "Analista", pessoas: 1, valorHora: 50, horasPorAno: [500, 0, 0] },
-            { numero: "2", perfil: "Arquiteto", pessoas: 4, valorHora: 60, horasPorAno: [200, 0, 0] },
-          ],
-        }),
-      ),
-    );
-  }
-
-  it("apagar um perfil deixa os outros do mesmo lote", () => {
-    const orcamento = comDoisLotes();
-    const projeto = orcamento.projetos[0];
-    const depois = semEntrada(orcamento, projeto.id, projeto.entradas[0].id);
-
-    expect(depois.projetos[0].entradas.map((e) => e.perfil)).toEqual(["Analista", "Arquiteto"]);
-  });
-
   it("apagar um elemento interno desconta-o do total de pessoas", () => {
     let orcamento = comProjeto(orcamentoInicial(), projetoSimples("A", 1));
     const id = orcamento.projetos[0].id;

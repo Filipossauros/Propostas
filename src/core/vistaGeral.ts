@@ -147,13 +147,6 @@ export function semProjeto(orcamento: OrcamentoUnidade, projetoId: string): Orca
   return { ...orcamento, projetos: orcamento.projetos.filter((p) => p.id !== projetoId) };
 }
 
-export function semEntrada(orcamento: OrcamentoUnidade, projetoId: string, entradaId: string): OrcamentoUnidade {
-  return alterarProjeto(orcamento, projetoId, (projeto) => ({
-    ...projeto,
-    entradas: projeto.entradas.filter((e) => e.id !== entradaId),
-  }));
-}
-
 export function semInterno(orcamento: OrcamentoUnidade, projetoId: string, internoId: string): OrcamentoUnidade {
   return alterarProjeto(orcamento, projetoId, (projeto) => ({
     ...projeto,

@@ -956,6 +956,11 @@ input.campo-derivado {
   box-shadow: var(--sombra);
   font-size: 0.82rem;
 
+  /* Sem isto, uma dica dentro de um cabeçalho numérico herda-lhe o `nowrap`:
+     o texto sai da caixa, e a tabela ganha uma barra de scroll lateral com a
+     largura da frase inteira. */
+  white-space: normal;
+
   /* Escondida por visibilidade, e não por display, para continuar a existir
      na árvore de acessibilidade e ser alcançável por aria-describedby. */
   visibility: hidden;

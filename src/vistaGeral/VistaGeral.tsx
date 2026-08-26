@@ -10,7 +10,6 @@ import {
   orcamentoInicial,
   orcamentoParaJSON,
   projetoDeAgrupamento,
-  semEntrada,
   semInterno,
   semProjeto,
   type OrcamentoUnidade,
@@ -193,7 +192,6 @@ export function VistaGeral() {
         <TabelaVistaGeral
           orcamento={orcamento}
           onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
-          onRemoverEntrada={(projetoId, entradaId) => setOrcamento((atual) => semEntrada(atual, projetoId, entradaId))}
           onRemoverInterno={(projetoId, internoId) => setOrcamento((atual) => semInterno(atual, projetoId, internoId))}
           onAcrescentarInterno={(projetoId, nome) => setOrcamento((atual) => comInterno(atual, projetoId, nome))}
         />

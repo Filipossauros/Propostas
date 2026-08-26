@@ -11,7 +11,6 @@ import {
 interface Props {
   orcamento: OrcamentoUnidade;
   onRemoverProjeto: (projetoId: string) => void;
-  onRemoverEntrada: (projetoId: string, entradaId: string) => void;
   onRemoverInterno: (projetoId: string, internoId: string) => void;
   onAcrescentarInterno: (projetoId: string, nome: string) => void;
 }
@@ -57,7 +56,6 @@ function CampoInterno({ onAcrescentar }: { onAcrescentar: (nome: string) => void
 export function TabelaVistaGeral({
   orcamento,
   onRemoverProjeto,
-  onRemoverEntrada,
   onRemoverInterno,
   onAcrescentarInterno,
 }: Props) {
@@ -112,7 +110,6 @@ export function TabelaVistaGeral({
             anos={anos}
             colunasDaLinha={colunasDaLinha}
             onRemoverProjeto={onRemoverProjeto}
-            onRemoverEntrada={onRemoverEntrada}
             onRemoverInterno={onRemoverInterno}
             onAcrescentarInterno={onAcrescentarInterno}
           />
@@ -154,7 +151,6 @@ function LinhasDoProjeto({
   anos,
   colunasDaLinha,
   onRemoverProjeto,
-  onRemoverEntrada,
   onRemoverInterno,
   onAcrescentarInterno,
 }: PropsProjeto) {
@@ -182,16 +178,9 @@ function LinhasDoProjeto({
   const linhas: Array<{ chave: string; celulas: React.ReactNode; acoes: React.ReactNode; interno?: boolean }> = [
     ...projeto.entradas.map((entrada) => ({
       chave: entrada.id,
-      acoes: (
-        <button
-          type="button"
-          className="botao-icone botao-perigo"
-          aria-label={`Remover ${entrada.perfil} do lote ${entrada.lote} de ${projeto.nome}`}
-          onClick={() => onRemoverEntrada(projeto.id, entrada.id)}
-        >
-          ×
-        </button>
-      ),
+      // Um perfil vem do agrupamento e não se apaga aqui: o que se retira da
+      // vista é o projeto inteiro, ou quem é da casa.
+      acoes: null,
       celulas: (
         <>
           <td className="numerico">{entrada.lote}</td>
