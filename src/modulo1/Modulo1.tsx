@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { PerfilJSON } from "../core/types";
-import { ATIVIDADE_FIXA } from "../core/types";
+import { ATIVIDADE_FIXA, ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES } from "../core/types";
 import {
   ErroImportacao,
   duplicarPerfil,
@@ -315,17 +315,16 @@ export function Modulo1({
           />
 
           <ListaItensEditor
-            titulo="Certificações"
+            titulo={ROTULO_CERTIFICACOES}
             nota={
-              "Opcional. Uma certificação por linha. Saem no documento Word, em tabela própria; não aparecem em " +
-              "nenhum formulário Excel, porque a certificação é verificada fora desta ferramenta, contra as peças " +
-              "da proposta."
+              "Opcional. Uma por linha. Saem no documento Word, em tabela própria; não aparecem em nenhum " +
+              "formulário Excel, porque se verificam fora desta ferramenta, contra as peças da proposta."
             }
-            nomeItem="certificação"
-            rotuloColuna="Designação da certificação"
+            nomeItem="formação ou certificação"
+            rotuloColuna={`Designação da ${ROTULO_CERTIFICACAO.toLowerCase()}`}
             placeholder="ex.: Oracle Certified Professional, Java SE Programmer"
-            textoVazio="Este perfil não exige certificações."
-            rotuloAdicionar="+ Adicionar certificação"
+            textoVazio="Este perfil não exige formação nem certificação."
+            rotuloAdicionar="+ Adicionar formação ou certificação"
             itens={emEdicao.certificacoes}
             onChange={(certificacoes) => alterarEmEdicao({ certificacoes })}
           />
@@ -376,7 +375,7 @@ export function Modulo1({
         </div>
         <p className="ajuda">
           O Excel é o registo de quem prepara o procedimento: uma folha por perfil, com os requisitos, as
-          certificações e o conteúdo funcional que aqui ficaram escritos. Não é o formulário que os concorrentes
+          formações ou certificações e o conteúdo funcional que aqui ficaram escritos. Não é o formulário que os concorrentes
           preenchem — esse sai do Módulo 2, já com os lotes. O JSON leva todos os perfis, para os retomar depois.
         </p>
       </section>

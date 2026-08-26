@@ -62,8 +62,18 @@ export const ATIVIDADE_FIXA =
   "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito " +
   "funcional do perfil";
 
-/** Uma certificação exigida a cada elemento proposto para o perfil. */
+/** Uma formação ou certificação exigida a cada elemento proposto para o perfil. */
 export type Certificacao = ItemPerfil;
+
+/**
+ * Como se chamam, na interface e nos documentos.
+ *
+ * O campo no modelo continua a chamar-se `certificacoes`: mudar-lhe o nome
+ * obrigaria a converter todos os ficheiros já gerados, e o que a entidade lê é
+ * o rótulo, não a chave.
+ */
+export const ROTULO_CERTIFICACOES = "Formações / Certificações";
+export const ROTULO_CERTIFICACAO = "Formação / Certificação";
 
 export function anosDeMeses(meses: number): number {
   return meses / MESES_POR_ANO;

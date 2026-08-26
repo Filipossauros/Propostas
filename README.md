@@ -97,11 +97,13 @@ com a cláusula de fecho não descreve trabalho nenhum.
 
 O Módulo 1 tem um ponto de partida além do «Novo perfil»: o catálogo de
 perfis-base da entidade (`src/core/perfisNormalizados.ts`), com o conteúdo
-funcional e os requisitos transversais de cada um.
+funcional, os requisitos transversais e — onde as haja — as formações ou
+certificações exigidas.
 São os perfis iguais em todos os procedimentos; o que varia — os requisitos
 tecnológicos específicos do projeto — acrescenta-se depois, a cada perfil.
 
-O ficheiro é gerado a partir do Excel dos perfis-base, e não reescrito à mão:
+O ficheiro é gerado a partir do Excel dos perfis-base (versão v3, com a folha
+das formações/certificações), e não reescrito à mão:
 a redação dos requisitos é matéria das peças do procedimento, e o sítio onde se
 altera é o ficheiro de origem. Os identificadores são estáveis (`pn1`, `pn2`, …),
 pelo que voltar a carregar o catálogo atualiza os perfis que já estejam num lote,

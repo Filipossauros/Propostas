@@ -5,7 +5,7 @@ import { perfilInicial, validarPerfis } from "./perfil";
 import { MESES_POR_ANO } from "./types";
 
 describe("PERFIS_NORMALIZADOS", () => {
-  it("traz os nove perfis do catálogo, sem o perfil 9, que não existe", () => {
+  it("traz os dez perfis do catálogo, sem o perfil 9, que não existe", () => {
     expect(PERFIS_NORMALIZADOS.map((p) => p.perfil)).toEqual([
       "Arquiteto de Sistemas",
       "Fullstack",
@@ -16,6 +16,7 @@ describe("PERFIS_NORMALIZADOS", () => {
       "Analista Funcional",
       "Gestor de Projeto",
       "UX Designer",
+      "Consultor Especialista da Plataforma ATLAS",
     ]);
   });
 
@@ -44,8 +45,26 @@ describe("PERFIS_NORMALIZADOS", () => {
     expect(new Set(internos).size).toBe(internos.length);
   });
 
-  it("nenhum exige certificação — isso é matéria de cada procedimento", () => {
-    expect(PERFIS_NORMALIZADOS.every((p) => p.certificacoes.length === 0)).toBe(true);
+  it("só o perfil da plataforma ATLAS exige formação, e é a do fornecedor", () => {
+    const comFormacao = PERFIS_NORMALIZADOS.filter((p) => p.certificacoes.length > 0);
+
+    expect(comFormacao.map((p) => p.perfil)).toEqual(["Consultor Especialista da Plataforma ATLAS"]);
+    expect(comFormacao[0].certificacoes[0].designacao).toBe(
+      "Formação comprovada ou certificada pelo fornecedor da solução de arquitetura empresarial ATLAS, " +
+        "na versão X ou superior",
+    );
+  });
+
+  it("o perfil da plataforma ATLAS traz o que lhe foi definido", () => {
+    const atlas = PERFIS_NORMALIZADOS.find((p) => p.perfil === "Consultor Especialista da Plataforma ATLAS")!;
+
+    expect(atlas.requisitos.map((r) => [r.designacao, r.mesesMinimos])).toEqual([
+      ["Modelação de processos de negócio, designadamente em notação BPMN ou equivalente", 12],
+      ["Configuração da solução de arquitetura empresarial ATLAS, na versão X ou superior", 12],
+    ]);
+    expect(atlas.conteudoFuncional).toHaveLength(6);
+    expect(atlas.conteudoFuncional[0].designacao).toBe("Mapeamento de conceitos arquiteturais na solução ATLAS");
+    expect(atlas.conteudoFuncional[5].designacao).toBe("Configuração de repositórios na solução ATLAS");
   });
 
   it("o requisito nuclear de cada perfil segue a escala padronizada", () => {
@@ -57,6 +76,7 @@ describe("PERFIS_NORMALIZADOS", () => {
     expect(maisExigente["Gestor de Projeto"]).toBe(60);
     expect(maisExigente["Tester"]).toBe(36);
     expect(maisExigente["Frontend"]).toBe(24);
+    expect(maisExigente["Consultor Especialista da Plataforma ATLAS"]).toBe(12);
   });
 });
 

@@ -284,7 +284,7 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
     "Este relatório sinaliza o cumprimento dos requisitos mínimos de experiência, e nada mais. " +
     "A adjudicação decide-se pelo preço, que não consta do formulário de declaração: por isso um concorrente " +
     "admitido em mais do que um lote é aqui assinalado como impedimento potencial, e não como impedido. " +
-    "As certificações eventualmente exigidas também não são apuradas: verificam-se nas peças da proposta.";
+    "As formações e certificações eventualmente exigidas também não são apuradas: verificam-se nas peças da proposta.";
   nota.fill = fillSolido(COR_NOTA_BG);
   nota.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
   nota.alignment = { horizontal: "left", vertical: "middle", wrapText: true };

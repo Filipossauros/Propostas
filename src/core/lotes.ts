@@ -468,7 +468,7 @@ export function perfisComCertificacao(config: LotesJSON): PerfilComCertificacao[
  */
 export const AVISO_CERTIFICACAO =
   "Além dos requisitos mínimos verificados, este(s) perfil(is) requer(em) ainda a apresentação de uma " +
-  "certificação. Deve ser validada a apresentação da mesma nas peças da proposta.";
+  "formação ou certificação. Deve ser validada a apresentação da mesma nas peças da proposta.";
 
 /** Número do lote a que cada perfil está atribuído, indexado pelo id do perfil. */
 export function lotePorPerfilId(config: LotesJSON): Record<string, string> {

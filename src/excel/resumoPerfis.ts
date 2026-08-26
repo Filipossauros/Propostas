@@ -9,7 +9,7 @@
 
 import ExcelJS from "exceljs";
 import type { PerfilJSON } from "../core/types";
-import { anosDeMeses } from "../core/types";
+import { ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES, anosDeMeses } from "../core/types";
 import { certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "../core/perfil";
 import {
   COR_BRANCO,
@@ -144,11 +144,11 @@ function folhaDoPerfil(livro: ExcelJS.Workbook, perfil: PerfilJSON, nome: string
   linha++;
 
   const certificacoes = certificacoesDoPerfil(perfil);
-  subcabecalho(folha, linha++, "Certificações exigidas");
+  subcabecalho(folha, linha++, `${ROTULO_CERTIFICACOES} exigidas`);
   if (certificacoes.length === 0) {
-    nota(folha, linha++, "Este perfil não exige certificação.");
+    nota(folha, linha++, "Este perfil não exige formação nem certificação.");
   } else {
-    cabecalhoLargo(folha, linha++, "Certificação");
+    cabecalhoLargo(folha, linha++, ROTULO_CERTIFICACAO);
     certificacoes.forEach((certificacao, i) => {
       linhaLarga(folha, linha++, certificacao, i % 2 === 1);
     });

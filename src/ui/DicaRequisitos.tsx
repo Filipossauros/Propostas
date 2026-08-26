@@ -1,6 +1,6 @@
 import { useId } from "react";
 import type { Requisito } from "../core/types";
-import { anosDeMeses } from "../core/types";
+import { ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES, anosDeMeses } from "../core/types";
 
 interface Props {
   requisitos: Requisito[];
@@ -26,7 +26,7 @@ export function DicaRequisitos({ requisitos, certificacoes = [] }: Props) {
           percorre a lista de perfis tem de dar por ela sem ter de abrir cada uma. */}
       <button type="button" className="dica-alvo" aria-describedby={id}>
         {requisitos.length} requisito(s)
-        {exigidas.length > 0 && ` + ${exigidas.length === 1 ? "certificação" : "certificações"}`}
+        {exigidas.length > 0 && ` + ${exigidas.length === 1 ? "formação/certificação" : "formações/certificações"}`}
       </button>
 
       <span role="tooltip" id={id} className="dica-conteudo">
@@ -47,7 +47,7 @@ export function DicaRequisitos({ requisitos, certificacoes = [] }: Props) {
 
         {exigidas.length > 0 && (
           <span className="dica-certificacoes">
-            <strong>{exigidas.length === 1 ? "Certificação exigida" : "Certificações exigidas"}</strong>
+            <strong>{exigidas.length === 1 ? `${ROTULO_CERTIFICACAO} exigida` : `${ROTULO_CERTIFICACOES} exigidas`}</strong>
             {exigidas.join("; ")}
           </span>
         )}

@@ -3,7 +3,7 @@ import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
 import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
-import { ATIVIDADE_FIXA, mesesDeAnos } from "./types";
+import { ATIVIDADE_FIXA, ROTULO_CERTIFICACOES, mesesDeAnos } from "./types";
 import type { LotesJSON } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
@@ -142,7 +142,7 @@ describe("certificações do perfil", () => {
       { numero: "1", perfis: [perfil({ certificacoes: certificacoes(...designacoes) })] },
     ]);
     return documentoRegrasEPrecoBase(config).blocos.find(
-      (b) => b.tipo === "tabela" && b.colunas[0].titulo === "Certificações",
+      (b) => b.tipo === "tabela" && b.colunas[0].titulo === ROTULO_CERTIFICACOES,
     );
   }
 
@@ -168,7 +168,7 @@ describe("certificações do perfil", () => {
     const indice = (titulo: string) =>
       blocos.findIndex((b) => b.tipo === "tabela" && b.colunas[0].titulo === titulo);
 
-    expect(indice("Certificações")).toBeGreaterThan(indice("Requisito"));
+    expect(indice(ROTULO_CERTIFICACOES)).toBeGreaterThan(indice("Requisito"));
   });
 });
 

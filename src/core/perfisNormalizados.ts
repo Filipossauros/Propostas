@@ -1,18 +1,19 @@
 // Catálogo de perfis normalizados.
 //
-// São os perfis-base da entidade: conteúdo funcional e requisitos mínimos
-// transversais, iguais em todos os procedimentos, aos quais depois se
-// acrescentam os requisitos tecnológicos específicos de cada projeto.
+// São os perfis-base da entidade: conteúdo funcional, requisitos mínimos
+// transversais e formações ou certificações exigidas, iguais em todos os
+// procedimentos, aos quais depois se acrescentam os requisitos tecnológicos
+// específicos de cada projeto.
 //
 // Não trazem preço: o preço/hora é decisão de cada procedimento e escreve-se à
 // mão no Módulo 2, ao colocar o perfil no lote.
 //
-// GERADO a partir de Perfis_Base_Requisitos_Transversais_REVISTO_v2.xlsx — o
-// texto é transcrição, não reescrita. Alterações à redação fazem-se no ficheiro
-// de origem e voltam a passar por aqui.
+// GERADO a partir de Perfis_Base_Requisitos_Transversais_v3.xlsx — o texto é
+// transcrição, não reescrita. Alterações à redação fazem-se no ficheiro de
+// origem e voltam a passar por aqui.
 
 import type { PerfilJSON } from "./types";
-import { SCHEMA_VERSION_ATUAL } from "./types";
+import { ATIVIDADE_FIXA, SCHEMA_VERSION_ATUAL } from "./types";
 
 interface Base {
   /** Número do perfil no Anexo Técnico. Não há perfil 9. */
@@ -21,6 +22,8 @@ interface Base {
   atividades: string[];
   /** Cada requisito com a experiência mínima em meses. */
   requisitos: Array<[string, number]>;
+  /** Formações ou certificações exigidas. A maioria dos perfis não exige nenhuma. */
+  formacoes: string[];
 }
 
 const BASE: Base[] = [
@@ -36,12 +39,14 @@ const BASE: Base[] = [
       "Elaboração de documentação técnica de arquitetura",
       "Apoio técnico às equipas de desenvolvimento",
       "Realização de ações de formação sobre as soluções desenvolvidas",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção de arquitetura de soluções em projetos de desenvolvimento de software", 72],
       ["Conceção de soluções de integração", 24],
       ["Elaboração de padrões, normas ou guias técnicos de desenvolvimento de software", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 2,
@@ -54,6 +59,7 @@ const BASE: Base[] = [
       "Elaboração de documentação técnica",
       "Apoio técnico às equipas de desenvolvimento",
       "Realização de ações de formação sobre as soluções desenvolvidas",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de software com intervenção na camada de interface (frontend)", 36],
@@ -61,6 +67,7 @@ const BASE: Base[] = [
       ["Implementação de testes automatizados de software", 24],
       ["Modelação de dados", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 3,
@@ -74,6 +81,7 @@ const BASE: Base[] = [
       "Configuração e manutenção de processos de integração e entrega contínuas (CI/CD)",
       "Elaboração de documentação técnica",
       "Apoio técnico às equipas de desenvolvimento",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de serviços aplicacionais (backend)", 24],
@@ -83,6 +91,7 @@ const BASE: Base[] = [
       ["Implementação de mecanismos de segurança aplicacional, designadamente de autenticação, de autorização ou de cifra de dados", 24],
       ["Configuração de processos de integração e entrega contínuas (CI/CD)", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 4,
@@ -96,6 +105,7 @@ const BASE: Base[] = [
       "Conceção, implementação e execução de testes automatizados de interface",
       "Elaboração de documentação técnica",
       "Realização de ações de formação sobre as soluções desenvolvidas",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Desenvolvimento de interfaces de utilizador de aplicações web (frontend)", 24],
@@ -103,6 +113,7 @@ const BASE: Base[] = [
       ["Integração de interfaces de utilizador com serviços aplicacionais (backend)", 24],
       ["Desenvolvimento de interfaces em conformidade com a norma EN 301 549, com as WCAG 2.1 no nível AA, ou com norma equivalente", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 5,
@@ -113,11 +124,13 @@ const BASE: Base[] = [
       "Implementação e automatização de mecanismos de recolha de métricas e de alertas",
       "Elaboração de documentação técnica",
       "Realização de ações de formação sobre as soluções administradas",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Monitorização do funcionamento ou do desempenho de soluções aplicacionais", 24],
       ["Implementação de mecanismos automáticos de recolha de métricas, de alertas ou de painéis de monitorização", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 6,
@@ -131,12 +144,14 @@ const BASE: Base[] = [
       "Execução de testes de segurança sobre fluxos de autenticação e de autorização",
       "Configuração e manutenção de ambientes de teste",
       "Elaboração de documentação de testes, designadamente casos de teste, relatórios de execução e autos de aceitação",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção e execução de testes de software", 36],
       ["Automatização de testes e respetiva integração em processos de integração contínua (CI/CD)", 24],
       ["Elaboração de documentação de testes, designadamente casos de teste, relatórios de execução ou autos de aceitação", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 7,
@@ -148,6 +163,7 @@ const BASE: Base[] = [
       "Definição de modelos de dados",
       "Elaboração de casos de uso ou de histórias de utilizador e dos respetivos critérios de aceitação",
       "Apoio às equipas de desenvolvimento e de teste na interpretação dos requisitos",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Análise funcional de sistemas de informação, incluindo o levantamento de requisitos", 36],
@@ -155,6 +171,7 @@ const BASE: Base[] = [
       ["Elaboração de casos de uso ou de histórias de utilizador (user stories)", 24],
       ["Definição de modelos de dados", 24],
     ],
+    formacoes: [],
   },
   {
     numero: 8,
@@ -168,12 +185,14 @@ const BASE: Base[] = [
       "Criação e priorização do backlog do produto",
       "Definição e melhoria dos processos de qualidade do projeto",
       "Elaboração da documentação de gestão do projeto",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Gestão de projetos de sistemas de informação", 60],
       ["Coordenação de equipas afetas a projetos de sistemas de informação, compostas por três ou mais elementos", 24],
       ["Gestão de projetos de sistemas de informação no setor da saúde", 12],
     ],
+    formacoes: [],
   },
   {
     numero: 10,
@@ -185,12 +204,33 @@ const BASE: Base[] = [
       "Realização de testes de usabilidade e incorporação dos respetivos resultados",
       "Elaboração e manutenção de sistemas de design (design systems) e de bibliotecas de componentes",
       "Elaboração de documentação de suporte ao desenvolvimento das interfaces",
+      "Outras atividades de natureza análoga às descritas, compreendidas no objeto do contrato e no âmbito funcional do perfil",
     ],
     requisitos: [
       ["Conceção de soluções de experiência de utilização (UX) e de interface (UI)", 24],
       ["Conceção de soluções em conformidade com a norma EN 301 549, com as WCAG 2.1 no nível AA, ou com norma equivalente", 24],
       ["Elaboração de protótipos de alta fidelidade", 24],
       ["Realização de testes de usabilidade com utilizadores", 12],
+    ],
+    formacoes: [],
+  },
+  {
+    numero: 11,
+    nome: "Consultor Especialista da Plataforma ATLAS",
+    atividades: [
+      "Mapeamento de conceitos arquiteturais na solução ATLAS",
+      "Configuração do metamodelo na solução ATLAS",
+      "Configuração e otimização de queries na solução ATLAS",
+      "Configuração de Blueprints na solução ATLAS",
+      "Configuração de fluxos de trabalho com recurso a IA na solução ATLAS",
+      "Configuração de repositórios na solução ATLAS",
+    ],
+    requisitos: [
+      ["Modelação de processos de negócio, designadamente em notação BPMN ou equivalente", 12],
+      ["Configuração da solução de arquitetura empresarial ATLAS, na versão X ou superior", 12],
+    ],
+    formacoes: [
+      "Formação comprovada ou certificada pelo fornecedor da solução de arquitetura empresarial ATLAS, na versão X ou superior",
     ],
   },
 ];
@@ -209,9 +249,12 @@ export const PERFIS_NORMALIZADOS: PerfilJSON[] = BASE.map((base) => {
     tipo: "perfil",
     id,
     perfil: base.nome,
-    conteudoFuncional: base.atividades.map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
-    // Nenhum dos perfis-base exige certificação: é matéria de cada procedimento.
-    certificacoes: [],
+    // A atividade de fecho é acrescentada onde o conteúdo funcional sai, e não
+    // se guarda aqui — ver ATIVIDADE_FIXA.
+    conteudoFuncional: base.atividades
+      .filter((a) => a !== ATIVIDADE_FIXA)
+      .map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
+    certificacoes: base.formacoes.map((designacao, i) => ({ id: `${id}-c${i + 1}`, designacao })),
     requisitos: base.requisitos.map(([designacao, mesesMinimos], i) => ({
       id: `${id}-r${i + 1}`,
       designacao,

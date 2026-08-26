@@ -6,7 +6,7 @@
 // são feitas depois, na redação do procedimento.
 
 import type { LotesJSON, PerfilJSON, PostoTrabalho } from "./types";
-import { LOCAIS_POSTO, regimeTemLocal } from "./types";
+import { LOCAIS_POSTO, ROTULO_CERTIFICACOES, regimeTemLocal } from "./types";
 import { agruparPorExigencia, certificacoesDoPerfil, conteudoFuncionalDoPerfil } from "./perfil";
 import {
   anosPlurianuais,
@@ -113,7 +113,7 @@ function tabelaCertificacoes(perfil: PerfilJSON): BlocoDocumento[] {
   return [
     {
       tipo: "tabela",
-      colunas: [{ titulo: "Certificações", peso: 100 }],
+      colunas: [{ titulo: ROTULO_CERTIFICACOES, peso: 100 }],
       linhas: exigidas.map((certificacao) => [celula(certificacao)]),
     },
   ];

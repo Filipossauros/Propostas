@@ -111,7 +111,7 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
     ...erros,
     ...validarRequisitos(perfil.requisitos),
     ...validarItens(perfil.conteudoFuncional, "conteudoFuncional", "atividade"),
-    ...validarItens(perfil.certificacoes, "certificacoes", "certificação"),
+    ...validarItens(perfil.certificacoes, "certificacoes", "formação ou certificação"),
   ];
 }
 

@@ -42,7 +42,7 @@ describe("gerarWorkbookResumoPerfis", () => {
     expect(texto).toContain(ATIVIDADE_FIXA);
   });
 
-  it("leva as certificações — ao contrário do formulário, que as não pode levar", () => {
+  it("leva as formações e certificações — ao contrário do formulário, que as não pode levar", () => {
     const p = perfil({ perfil: "Arquiteto", certificacoes: certificacoes("TOGAF") });
     const texto = textoDaFolha(gerarWorkbookResumoPerfis([p], "Projeto"), "Arquiteto");
 
@@ -53,7 +53,7 @@ describe("gerarWorkbookResumoPerfis", () => {
     const p = perfil({ perfil: "Tester", certificacoes: [] });
 
     expect(textoDaFolha(gerarWorkbookResumoPerfis([p], "Projeto"), "Tester")).toContain(
-      "Este perfil não exige certificação.",
+      "Este perfil não exige formação nem certificação.",
     );
   });
 
