@@ -50,108 +50,135 @@ function linhasDaFolha(folha: ExcelJS.Worksheet): string[][] {
   return linhas;
 }
 
+function folhas(orcamento: OrcamentoUnidade) {
+  const livro = gerarWorkbookVistaGeral(orcamento);
+  return { livro, resumo: livro.worksheets[0], detalhe: livro.worksheets[1] };
+}
+
 describe("gerarWorkbookVistaGeral", () => {
-  it("tem uma folha só, com o nome da unidade no título", () => {
-    const livro = gerarWorkbookVistaGeral(comDoisProjetos());
-    expect(livro.worksheets).toHaveLength(1);
-    expect(livro.worksheets[0].name).toBe("Vista geral");
+  it("tem duas folhas, o resumo primeiro", () => {
+    const { livro } = folhas(comDoisProjetos());
+    expect(livro.worksheets.map((f) => f.name)).toEqual(["Resumo geral", "Detalhe por projeto"]);
     expect(livro.title).toBe("Vista geral — Unidade de Sistemas");
   });
 
-  it("leva as colunas pedidas, com os anos absolutos do orçamento", () => {
-    const folha = gerarWorkbookVistaGeral(comDoisProjetos()).worksheets[0];
-    const cabecalho = linhasDaFolha(folha).find((l) => l[0] === "Projeto")!;
+  describe("folha do resumo", () => {
+    it("leva as três colunas do projeto, e mais nenhuma", () => {
+      const { resumo } = folhas(comDoisProjetos());
+      const cabecalho = linhasDaFolha(resumo).find((l) => l[0] === "Projeto")!;
+      expect(cabecalho).toEqual(["Projeto", "Total Pessoas", "% na unidade", "Valor por projeto"]);
+    });
 
-    expect(cabecalho.slice(0, 6)).toEqual([
-      "Projeto",
-      "Pessoas",
-      "Perfil",
-      "Rate (€/h) s/ IVA",
-      "Rate (€/h) c/ IVA",
-      "Lotes",
-    ]);
-    // 2027 a 2030: o primeiro projeto começa em 2027, o segundo em 2028.
-    expect(cabecalho.filter((t) => t.startsWith("Total € c/ IVA"))).toEqual([
-      "Total € c/ IVA\n(11 meses)\n2027",
-      "Total € c/ IVA\n(11 meses)\n2028",
-      "Total € c/ IVA\n(11 meses)\n2029",
-      "Total € c/ IVA\n(11 meses)\n2030",
-    ]);
-    expect(cabecalho.slice(-4)).toEqual(["Total Pessoas", "% na unidade", "Valor por projeto", "Lotes do projeto"]);
+    it("um projeto por linha, com as pessoas e a fatia da unidade", () => {
+      const { resumo } = folhas(comDoisProjetos());
+      const linhas = linhasDaFolha(resumo);
+
+      // 3 pessoas no SClínico (2 do perfil + 1 interno) e 1 no RSE, em 4.
+      const sclinico = linhas.find((l) => l[0] === "SClínico")!;
+      expect(Number(sclinico[1])).toBe(3);
+      expect(Number(sclinico[2])).toBeCloseTo(75, 6);
+
+      const rse = linhas.find((l) => l[0] === "RSE")!;
+      expect(Number(rse[1])).toBe(1);
+      expect(Number(rse[2])).toBeCloseTo(25, 6);
+    });
+
+    it("fecha com o total da unidade", () => {
+      const { resumo } = folhas(comDoisProjetos());
+      const total = linhasDaFolha(resumo).find((l) => l[0] === "Total da unidade")!;
+      expect(Number(total[1])).toBe(4);
+      expect(Number(total[2])).toBe(100);
+    });
+
+    it("os números saem com formato, e não como texto", () => {
+      const { resumo } = folhas(comDoisProjetos());
+      const linha = linhaCom(resumo, "SClínico");
+      expect(typeof resumo.getCell(linha, 2).value).toBe("number");
+      expect(resumo.getCell(linha, 3).numFmt).toContain("%");
+      expect(resumo.getCell(linha, 4).numFmt).toContain("€");
+    });
   });
 
-  it("uma linha por perfil e por elemento interno, com o projeto em cada uma", () => {
-    const folha = gerarWorkbookVistaGeral(comDoisProjetos()).worksheets[0];
-    const linhas = linhasDaFolha(folha);
+  describe("folha do detalhe", () => {
+    it("leva as colunas pedidas, sem a rate sem IVA e sem as do projeto", () => {
+      const { detalhe } = folhas(comDoisProjetos());
+      const cabecalho = linhasDaFolha(detalhe).find((l) => l[0] === "Projeto")!;
 
-    const doSClinico = linhas.filter((l) => l[0] === "SClínico");
-    expect(doSClinico).toHaveLength(2);
-    expect(doSClinico.map((l) => l[2])).toEqual(["Programador", "Ana Silva (interno)"]);
-    // O total de pessoas do projeto repete-se em cada linha: 2 do perfil + 1 interno.
-    expect(doSClinico.map((l) => l[l.length - 4])).toEqual(["3", "3"]);
+      expect(cabecalho.slice(0, 5)).toEqual(["Projeto", "Pessoas", "Perfil", "Rate (€/h) c/ IVA", "Lotes"]);
+      expect(cabecalho.some((t) => t.includes("s/ IVA"))).toBe(false);
+      expect(cabecalho.some((t) => t === "Total Pessoas" || t === "% na unidade")).toBe(false);
+      // 2027 a 2030: o primeiro projeto começa em 2027, o segundo em 2028.
+      expect(cabecalho.filter((t) => t.startsWith("Total € c/ IVA"))).toEqual([
+        "Total € c/ IVA\n(11 meses)\n2027",
+        "Total € c/ IVA\n(11 meses)\n2028",
+        "Total € c/ IVA\n(11 meses)\n2029",
+        "Total € c/ IVA\n(11 meses)\n2030",
+      ]);
+    });
+
+    it("uma linha por perfil e por elemento interno, com o projeto em cada uma", () => {
+      const { detalhe } = folhas(comDoisProjetos());
+      const doSClinico = linhasDaFolha(detalhe).filter((l) => l[0] === "SClínico");
+
+      expect(doSClinico).toHaveLength(2);
+      expect(doSClinico.map((l) => l[2])).toEqual(["Programador", "Ana Silva (interno)"]);
+      expect(doSClinico.map((l) => l[1])).toEqual(["2", "1"]);
+    });
+
+    it("os valores dos anos são números, e caem nos anos do projeto", () => {
+      const { detalhe } = folhas(comDoisProjetos());
+      const linha = linhasDaFolha(detalhe).find((l) => l[0] === "SClínico" && l[2] === "Programador")!;
+
+      // Colunas 6 a 9 são 2027, 2028, 2029 e 2030. O projeto começa em 2027.
+      expect(Number(linha[5])).toBeCloseTo(246_000, 5);
+      expect(Number(linha[6])).toBeCloseTo(123_000, 5);
+      expect(Number(linha[7])).toBe(0);
+      expect(linha[8]).toBe("");
+    });
+
+    it("a rate que sai é a que tem IVA", () => {
+      const { detalhe } = folhas(comDoisProjetos());
+      const linha = linhaCom(detalhe, "SClínico");
+      expect(Number(detalhe.getCell(linha, 4).value)).toBeCloseTo(123, 6);
+      expect(detalhe.getCell(linha, 4).numFmt).toContain("€");
+    });
+
+    it("fecha com o total da unidade por ano", () => {
+      const orcamento = comDoisProjetos();
+      const { detalhe } = folhas(orcamento);
+      const total = linhasDaFolha(detalhe).find((l) => l[0] === "Total da unidade")!;
+
+      const soma = [5, 6, 7, 8].reduce((s, i) => s + Number(total[i] || 0), 0);
+      expect(soma).toBeGreaterThan(0);
+    });
   });
 
-  it("os valores dos anos são números, e caem nos anos do projeto", () => {
-    const folha = gerarWorkbookVistaGeral(comDoisProjetos()).worksheets[0];
-    const linhaSClinico = linhasDaFolha(folha).find((l) => l[0] === "SClínico" && l[2] === "Programador")!;
+  it("um orçamento vazio dá duas folhas legíveis, sem linhas", () => {
+    const { resumo, detalhe } = folhas(orcamentoInicial());
 
-    // Colunas 7 a 10 são 2027, 2028, 2029 e 2030. O projeto começa em 2027.
-    expect(Number(linhaSClinico[6])).toBeCloseTo(246_000, 5);
-    expect(Number(linhaSClinico[7])).toBeCloseTo(123_000, 5);
-    expect(Number(linhaSClinico[8])).toBe(0);
-    expect(linhaSClinico[9]).toBe("");
-  });
-
-  it("fecha com o total da unidade", () => {
-    const orcamento = comDoisProjetos();
-    const folha = gerarWorkbookVistaGeral(orcamento).worksheets[0];
-    const total = linhasDaFolha(folha).find((l) => l[0] === "Total da unidade")!;
-
-    // 4 pessoas: 2 + 1 interno no SClínico, 1 no RSE.
-    expect(Number(total[total.length - 4])).toBe(4);
-    expect(Number(total[total.length - 3])).toBe(100);
-    expect(Number(total[total.length - 2])).toBeCloseTo(
-      Number(total[6]) + Number(total[7]) + Number(total[8]) + Number(total[9]),
-      5,
-    );
-  });
-
-  it("os euros e a percentagem saem com formato de número, e não como texto", () => {
-    const folha = gerarWorkbookVistaGeral(comDoisProjetos()).worksheets[0];
-    let linha = 0;
-    for (let n = 1; n <= folha.rowCount; n++) {
-      if (folha.getCell(n, 1).value === "SClínico") {
-        linha = n;
-        break;
-      }
-    }
-    expect(linha).toBeGreaterThan(0);
-
-    expect(folha.getCell(linha, 7).numFmt).toContain("€");
-    expect(typeof folha.getCell(linha, 7).value).toBe("number");
-    // Com quatro anos: 11 é o total de pessoas, 12 a percentagem, 13 o valor do projeto.
-    expect(folha.getCell(linha, 12).numFmt).toContain("%");
-    expect(typeof folha.getCell(linha, 12).value).toBe("number");
-    expect(folha.getCell(linha, 13).numFmt).toContain("€");
-  });
-
-  it("um orçamento vazio dá uma folha legível, sem anos e sem linhas", () => {
-    const folha = gerarWorkbookVistaGeral(orcamentoInicial()).worksheets[0];
-    const linhas = linhasDaFolha(folha);
-
-    const cabecalho = linhas.find((l) => l[0] === "Projeto")!;
+    expect(linhasDaFolha(resumo).find((l) => l[0] === "Total da unidade")).toBeDefined();
+    const cabecalho = linhasDaFolha(detalhe).find((l) => l[0] === "Projeto")!;
     expect(cabecalho.filter((t) => t.startsWith("Total € c/ IVA"))).toEqual([]);
-    expect(linhas.find((l) => l[0] === "Total da unidade")).toBeDefined();
   });
 
-  it("um projeto sem perfis continua a ocupar uma linha, com as suas pessoas", () => {
+  it("um projeto sem perfis continua a ocupar uma linha em cada folha", () => {
     let orcamento = comProjeto(orcamentoInicial(), projetoDeAgrupamento(agrupamento("Vazio", 2027, [])));
     orcamento = comInterno(orcamento, orcamento.projetos[0].id, "Ana Silva");
+    const { resumo, detalhe } = folhas(orcamento);
 
-    const linhas = linhasDaFolha(gerarWorkbookVistaGeral(orcamento).worksheets[0]);
-    const doVazio = linhas.filter((l) => l[0] === "Vazio");
-    expect(doVazio).toHaveLength(1);
-    expect(doVazio[0][2]).toBe("Ana Silva (interno)");
-    expect(Number(doVazio[0][doVazio[0].length - 4])).toBe(1);
+    const noResumo = linhasDaFolha(resumo).find((l) => l[0] === "Vazio")!;
+    expect(Number(noResumo[1])).toBe(1);
+
+    const noDetalhe = linhasDaFolha(detalhe).filter((l) => l[0] === "Vazio");
+    expect(noDetalhe).toHaveLength(1);
+    expect(noDetalhe[0][2]).toBe("Ana Silva (interno)");
   });
 });
+
+/** O número da linha cuja primeira célula tem este texto. */
+function linhaCom(folha: ExcelJS.Worksheet, texto: string): number {
+  for (let n = 1; n <= folha.rowCount; n++) {
+    if (folha.getCell(n, 1).value === texto) return n;
+  }
+  throw new Error(`sem linha para "${texto}"`);
+}

@@ -1,8 +1,9 @@
 // A vista geral da unidade, em Excel.
 //
-// A mesma tabela do ecrã, com o mesmo vocabulário visual dos outros ficheiros
-// gerados: faixa azul no topo, cabeçalho claro, bandas alternadas. Sem campos
-// amarelos — aqui não há nada a preencher, isto é uma leitura.
+// Duas folhas, como os dois quadros do ecrã: o resumo geral, que se lê de
+// relance, e o detalhe por projeto, que se filtra e cruza. Mesmo vocabulário
+// visual dos outros ficheiros gerados: faixa azul no topo, cabeçalho claro,
+// bandas alternadas. Sem campos amarelos — aqui não há nada a preencher.
 //
 // Sem células unidas, ao contrário do ecrã: uma folha destas acaba sempre a ser
 // filtrada e cruzada em tabela dinâmica, e células unidas partem as duas coisas.
@@ -12,7 +13,6 @@
 import ExcelJS from "exceljs";
 import {
   anosDoOrcamento,
-  lotesDoProjeto,
   percentagemNaUnidade,
   pessoasDaUnidade,
   pessoasDoProjeto,
@@ -63,21 +63,11 @@ function moeda(valor: number | null): Celula {
  * as pessoas internas e a fatia da unidade que ocupa não deixam de existir por
  * o contrato ter saído da vista.
  */
-function linhasDoProjeto(orcamento: OrcamentoUnidade, projeto: ProjetoVistaGeral, anos: number[]): Celula[][] {
-  const lotes = lotesDoProjeto(projeto);
-  const doProjeto: Celula[] = [
-    texto(projeto.nome),
-    // Repetidos por linha, tal como o nome: ver a nota acima sobre filtros.
-    { valor: pessoasDoProjeto(projeto) },
-    { valor: percentagemNaUnidade(orcamento, projeto), formato: PERCENTAGEM },
-    moeda(valorDoProjeto(projeto)),
-  ];
-
+function linhasDoProjeto(projeto: ProjetoVistaGeral, anos: number[]): Celula[][] {
   const doMeio: Celula[][] = [
     ...projeto.entradas.map((entrada) => [
       { valor: entrada.pessoas },
       texto(entrada.perfil),
-      moeda(entrada.valorHoraSemIva),
       moeda(entrada.valorHoraComIva),
       { valor: entrada.lote },
       ...anos.map((ano) => moeda(valorDaEntradaNoAno(projeto, entrada, ano))),
@@ -86,16 +76,26 @@ function linhasDoProjeto(orcamento: OrcamentoUnidade, projeto: ProjetoVistaGeral
       { valor: 1 },
       texto(`${interno.nome} (interno)`, true),
       moeda(null),
-      moeda(null),
       { valor: null },
       ...anos.map(() => moeda(null)),
     ]),
   ];
 
-  const linhas = doMeio.length > 0 ? doMeio : [[{ valor: null }, texto("(sem perfis nem elementos internos)", true),
-    moeda(null), moeda(null), { valor: null }, ...anos.map(() => moeda(null))]];
+  const linhas =
+    doMeio.length > 0
+      ? doMeio
+      : [
+          [
+            { valor: null },
+            texto("(sem perfis nem elementos internos)", true),
+            moeda(null),
+            { valor: null },
+            ...anos.map(() => moeda(null)),
+          ],
+        ];
 
-  return linhas.map((meio) => [doProjeto[0], ...meio, doProjeto[1], doProjeto[2], doProjeto[3], { valor: lotes.join(", ") }]);
+  // O nome do projeto repete-se em cada linha: ver a nota do topo sobre filtros.
+  return linhas.map((meio) => [texto(projeto.nome), ...meio]);
 }
 
 export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Workbook {
@@ -105,8 +105,10 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
   const unidade = orcamento.unidade.trim();
   livro.title = unidade === "" ? "Vista geral" : `Vista geral — ${unidade}`;
 
+  folhaDoResumo(livro, orcamento);
+
   const anos = anosDoOrcamento(orcamento);
-  const folha = livro.addWorksheet("Vista geral", {
+  const folha = livro.addWorksheet("Detalhe por projeto", {
     views: [{ showGridLines: false }],
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
@@ -115,27 +117,17 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
     "Projeto",
     "Pessoas",
     "Perfil",
-    "Rate (€/h) s/ IVA",
     "Rate (€/h) c/ IVA",
     "Lotes",
     ...anos.map((ano) => `Total € c/ IVA\n(11 meses)\n${ano}`),
-    "Total Pessoas",
-    "% na unidade",
-    "Valor por projeto",
-    "Lotes do projeto",
   ];
   folha.columns = [
     { width: 30 },
     { width: 9 },
-    { width: 34 },
-    { width: 15 },
-    { width: 15 },
+    { width: 36 },
+    { width: 16 },
     { width: 8 },
     ...anos.map(() => ({ width: 18 })),
-    { width: 13 },
-    { width: 13 },
-    { width: 18 },
-    { width: 16 },
   ];
 
   let linha = 1;
@@ -144,8 +136,8 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
     folha,
     linha++,
     titulos.length,
-    "Cada elemento interno conta uma pessoa, ao lado dos elementos exigidos em cada perfil. " +
-      "A percentagem é a fatia das pessoas da unidade que o projeto ocupa. Valores com IVA incluído.",
+    "Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos " +
+      "elementos exigidos em cada perfil. Valores com IVA incluído.",
   );
   linha++;
 
@@ -154,7 +146,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
 
   let banda = false;
   for (const projeto of orcamento.projetos) {
-    for (const celulas of linhasDoProjeto(orcamento, projeto, anos)) {
+    for (const celulas of linhasDoProjeto(projeto, anos)) {
       escreverLinha(folha, linha++, celulas, banda);
     }
     // Alterna por projeto, e não por linha: o que se procura distinguir de
@@ -164,7 +156,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
 
   const primeiraLinha = linhaCabecalho + 1;
   const ultimaLinha = linha - 1;
-  totais(folha, linha, anos, orcamento, titulos.length);
+  totais(folha, linha, orcamento, titulos.length);
 
   // O cabeçalho e a coluna do projeto ficam à vista ao rolar: com uma dezena de
   // projetos, sem eles não se sabe que ano é cada coluna nem de quem é a linha.
@@ -176,6 +168,60 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
     };
   }
   return livro;
+}
+
+/**
+ * A folha do resumo: um projeto por linha, e só o que se compara entre eles.
+ *
+ * Vem primeiro no livro porque é a que responde à pergunta de quem o abre —
+ * onde está a equipa. O detalhe fica na folha seguinte, para quem quiser ver
+ * de que é feita cada linha.
+ */
+function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): void {
+  const folha = livro.addWorksheet("Resumo geral", {
+    views: [{ showGridLines: false }],
+    pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+  const titulos = ["Projeto", "Total Pessoas", "% na unidade", "Valor por projeto"];
+  folha.columns = [{ width: 40 }, { width: 15 }, { width: 15 }, { width: 20 }];
+
+  let linha = 1;
+  faixa(folha, linha++, titulos.length, livro.title ?? "Resumo geral");
+  nota(
+    folha,
+    linha++,
+    titulos.length,
+    "A percentagem é a fatia das pessoas da unidade que o projeto ocupa, contando os elementos exigidos nos " +
+      "perfis e os elementos internos registados. Valores com IVA incluído.",
+  );
+  linha++;
+
+  const linhaCabecalho = linha;
+  cabecalho(folha, linha++, titulos);
+
+  orcamento.projetos.forEach((projeto, i) => {
+    escreverLinha(
+      folha,
+      linha++,
+      [
+        texto(projeto.nome),
+        { valor: pessoasDoProjeto(projeto) },
+        { valor: percentagemNaUnidade(orcamento, projeto), formato: PERCENTAGEM },
+        moeda(valorDoProjeto(projeto)),
+      ],
+      i % 2 === 1,
+    );
+  });
+
+  const pessoas = pessoasDaUnidade(orcamento);
+  faixaDeTotais(folha, linha, titulos.length, [
+    { coluna: 1, valor: "Total da unidade" },
+    { coluna: 2, valor: pessoas },
+    { coluna: 3, valor: pessoas === 0 ? 0 : 100, formato: PERCENTAGEM },
+    { coluna: 4, valor: valorDaUnidade(orcamento), formato: MOEDA },
+  ]);
+
+  folha.views = [{ state: "frozen", ySplit: linhaCabecalho, showGridLines: false }];
 }
 
 function faixa(folha: ExcelJS.Worksheet, linha: number, nColunas: number, valor: string): void {
@@ -227,24 +273,22 @@ function escreverLinha(folha: ExcelJS.Worksheet, linha: number, celulas: Celula[
   folha.getRow(linha).height = 20;
 }
 
-function totais(
-  folha: ExcelJS.Worksheet,
-  linha: number,
-  anos: number[],
-  orcamento: OrcamentoUnidade,
-  nColunas: number,
-): void {
-  const pessoas = pessoasDaUnidade(orcamento);
-  folha.mergeCells(linha, 1, linha, 6);
-
-  const valores: Array<{ coluna: number; valor: string | number; formato?: string }> = [
+function totais(folha: ExcelJS.Worksheet, linha: number, orcamento: OrcamentoUnidade, nColunas: number): void {
+  // O rótulo ocupa as colunas do projeto e do perfil, que não somam nada.
+  folha.mergeCells(linha, 1, linha, 5);
+  faixaDeTotais(folha, linha, nColunas, [
     { coluna: 1, valor: "Total da unidade" },
-    ...totaisPorAnoDaUnidade(orcamento).map((total, i) => ({ coluna: 7 + i, valor: total, formato: MOEDA })),
-    { coluna: 7 + anos.length, valor: pessoas },
-    { coluna: 8 + anos.length, valor: pessoas === 0 ? 0 : 100, formato: PERCENTAGEM },
-    { coluna: 9 + anos.length, valor: valorDaUnidade(orcamento), formato: MOEDA },
-  ];
+    ...totaisPorAnoDaUnidade(orcamento).map((total, i) => ({ coluna: 6 + i, valor: total, formato: MOEDA })),
+  ]);
+}
 
+interface ValorDeTotal {
+  coluna: number;
+  valor: string | number;
+  formato?: string;
+}
+
+function faixaDeTotais(folha: ExcelJS.Worksheet, linha: number, nColunas: number, valores: ValorDeTotal[]): void {
   // A faixa cobre a linha toda, mesmo as colunas sem número.
   for (let coluna = 1; coluna <= nColunas; coluna++) {
     const celula = folha.getCell(linha, coluna);

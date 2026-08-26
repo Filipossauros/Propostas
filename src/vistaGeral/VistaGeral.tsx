@@ -12,13 +12,13 @@ import {
   projetoDeAgrupamento,
   semEntrada,
   semInterno,
-  semLote,
   semProjeto,
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
 import { gerarVistaGeralBlob } from "../excel/vistaGeral";
 import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { ResumoGeral } from "./ResumoGeral";
 import { TabelaVistaGeral } from "./TabelaVistaGeral";
 
 /**
@@ -99,7 +99,7 @@ export function VistaGeral() {
 
   function descarregarJSON() {
     const blob = new Blob([orcamentoParaJSON(orcamento)], { type: "application/json" });
-    descarregarBlob(blob, `${nomeSeguro(orcamento.unidade, "Unidade")}_Orcamento.json`);
+    descarregarBlob(blob, `${nomeSeguro(orcamento.unidade, "Unidade")}_Vista_Geral.json`);
   }
 
   return (
@@ -150,7 +150,7 @@ export function VistaGeral() {
           />
 
           <button type="button" className="botao-secundario" onClick={() => inputOrcamentoRef.current?.click()}>
-            Carregar orçamento (JSON)
+            Carregar Vista Geral (JSON)
           </button>
           <input
             ref={inputOrcamentoRef}
@@ -164,35 +164,62 @@ export function VistaGeral() {
             }}
           />
 
-          <button type="button" className="botao-secundario" disabled={semDados} onClick={() => void descarregarExcel()}>
-            Descarregar vista geral (Excel)
-          </button>
-          <button type="button" className="botao-secundario" disabled={semDados} onClick={descarregarJSON}>
-            Descarregar orçamento (JSON)
-          </button>
         </div>
 
         {/* Dito onde se decide guardar, e não escondido numa nota de rodapé: quem
             fecha o separador sem descarregar perde o trabalho todo. */}
         <p className="ajuda">
           Esta vista não fica guardada no navegador — traz nomes de pessoas da equipa, e esta aplicação não guarda
-          nomes de pessoas. Para a conservar, descarregue o orçamento em JSON e volte a carregá-lo da próxima vez.
+          nomes de pessoas. Para a conservar, descarregue a Vista Geral em JSON, ao fundo da página, e volte a
+          carregá-la da próxima vez.
         </p>
       </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
+          <h3>Resumo geral</h3>
+          <p className="painel-nota">
+            Um projeto por linha: quantas pessoas leva, que fatia da unidade ocupa e quanto vale.
+          </p>
+        </header>
+
+        <ResumoGeral orcamento={orcamento} />
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
           <h3>Projetos, pessoas e valores</h3>
+          <p className="painel-nota">
+            O detalhe de cada projeto, perfil a perfil. É aqui que se registam os elementos internos e se apaga o que
+            não pertence à vista.
+          </p>
         </header>
 
         <TabelaVistaGeral
           orcamento={orcamento}
           onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
-          onRemoverLote={(projetoId, lote) => setOrcamento((atual) => semLote(atual, projetoId, lote))}
           onRemoverEntrada={(projetoId, entradaId) => setOrcamento((atual) => semEntrada(atual, projetoId, entradaId))}
           onRemoverInterno={(projetoId, internoId) => setOrcamento((atual) => semInterno(atual, projetoId, internoId))}
           onAcrescentarInterno={(projetoId, nome) => setOrcamento((atual) => comInterno(atual, projetoId, nome))}
         />
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Ficheiros</h3>
+        </header>
+        <div className="acoes">
+          <button type="button" className="botao-principal" disabled={semDados} onClick={() => void descarregarExcel()}>
+            Descarregar Vista Geral (Excel)
+          </button>
+          <button type="button" className="botao-secundario" disabled={semDados} onClick={descarregarJSON}>
+            Descarregar Vista Geral (JSON)
+          </button>
+        </div>
+        <p className="ajuda">
+          O Excel leva as duas tabelas, uma por folha: o resumo geral e o detalhe por projeto. O JSON é o que volta a
+          carregar-se aqui, com tudo como está — incluindo os elementos internos.
+        </p>
       </section>
     </>
   );

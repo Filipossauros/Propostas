@@ -26,8 +26,8 @@ const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: strin
  *
  * Os quatro módulos são um caminho: perfis, lotes, avaliação, ordenação, sempre
  * do mesmo procedimento. Esta olha para muitos procedimentos ao mesmo tempo, e
- * por isso fica à parte — separada por uma barra, e com cor própria, para não se
- * ler como o passo a seguir à ordenação.
+ * por isso fica à parte — numa linha própria, por baixo dos quatro, e com cor
+ * própria, para não se ler como o passo a seguir à ordenação.
  */
 const ABA_VISTA_GERAL: { chave: Aba; titulo: string; descricao: string } = {
   chave: "vistaGeral",
@@ -127,7 +127,8 @@ function App() {
             </button>
           ))}
 
-          <span className="abas-barra" aria-hidden="true" />
+          {/* Força a vista para uma linha própria, por baixo dos quatro módulos. */}
+          <span className="abas-quebra" aria-hidden="true" />
 
           <button
             type="button"

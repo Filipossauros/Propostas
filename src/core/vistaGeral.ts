@@ -147,14 +147,6 @@ export function semProjeto(orcamento: OrcamentoUnidade, projetoId: string): Orca
   return { ...orcamento, projetos: orcamento.projetos.filter((p) => p.id !== projetoId) };
 }
 
-/** Retira um lote inteiro de um projeto: todos os perfis que lhe pertencem. */
-export function semLote(orcamento: OrcamentoUnidade, projetoId: string, lote: string): OrcamentoUnidade {
-  return alterarProjeto(orcamento, projetoId, (projeto) => ({
-    ...projeto,
-    entradas: projeto.entradas.filter((e) => e.lote !== lote),
-  }));
-}
-
 export function semEntrada(orcamento: OrcamentoUnidade, projetoId: string, entradaId: string): OrcamentoUnidade {
   return alterarProjeto(orcamento, projetoId, (projeto) => ({
     ...projeto,

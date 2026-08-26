@@ -15,7 +15,6 @@ import {
   projetoDeAgrupamento,
   semEntrada,
   semInterno,
-  semLote,
   semProjeto,
   totaisPorAnoDaUnidade,
   valorDaEntradaNoAno,
@@ -252,15 +251,6 @@ describe("remoções", () => {
       ),
     );
   }
-
-  it("apagar um lote leva os perfis todos desse lote", () => {
-    const orcamento = comDoisLotes();
-    const id = orcamento.projetos[0].id;
-    const depois = semLote(orcamento, id, "1");
-
-    expect(depois.projetos[0].entradas.map((e) => e.perfil)).toEqual(["Arquiteto"]);
-    expect(pessoasDoProjeto(depois.projetos[0])).toBe(4);
-  });
 
   it("apagar um perfil deixa os outros do mesmo lote", () => {
     const orcamento = comDoisLotes();

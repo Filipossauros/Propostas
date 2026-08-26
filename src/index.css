@@ -180,12 +180,10 @@ body {
   color: var(--texto-suave);
 }
 
-/* A barra que separa os quatro módulos da vista da unidade. */
-.abas-barra {
-  width: 1px;
-  align-self: stretch;
-  margin: 2px 6px;
-  background: var(--borda-forte);
+/* A vista da unidade fica numa linha própria, por baixo dos quatro módulos. */
+.abas-quebra {
+  flex-basis: 100%;
+  height: 0;
 }
 
 .aba.aba-unidade .aba-numero {
@@ -1728,7 +1726,6 @@ input.campo-derivado {
   min-width: 190px;
   text-align: left;
   vertical-align: top;
-  background: var(--unidade-100);
 }
 
 .tabela-unidade .coluna-projeto {
@@ -1744,34 +1741,35 @@ input.campo-derivado {
 
 .celula-projeto .meta {
   display: block;
-  margin: 2px 0 6px;
+  margin: 2px 0 0;
   font-weight: 400;
 }
 
-/* Os lotes vivem na célula do projeto, e não numa coluna própria: é ali que se
-   apaga um lote inteiro, com os perfis todos que lhe pertencem. */
-.lista-lotes {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
+/* Quadro do resumo: estreito, para caber num relance sem rolar. */
+.tabela-resumo-unidade {
+  max-width: 720px;
 }
 
-.lista-lotes li {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 1px 2px 1px 8px;
-  border: 1px solid var(--borda);
+/* A barra fica atrás do número, na própria célula: dá a comparação entre
+   projetos que a coluna de números obrigaria a fazer de cabeça. */
+.barra-percentagem {
+  display: inline-block;
+  width: 74px;
+  height: 6px;
+  margin-right: 8px;
   border-radius: 999px;
-  background: var(--superficie);
-  font-size: 0.78rem;
-  font-weight: 500;
+  background: var(--superficie-alt);
+  overflow: hidden;
+  vertical-align: middle;
 }
 
-.lista-lotes .botao-icone,
+.barra-percentagem span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--unidade-500);
+}
+
 .projeto-nome .botao-icone,
 .celula-acoes .botao-icone {
   width: 22px;

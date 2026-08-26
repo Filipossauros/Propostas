@@ -1,15 +1,9 @@
 import { useState } from "react";
-import { formatarMoeda, formatarNumero } from "../core/lotes";
+import { formatarMoeda } from "../core/lotes";
 import {
   anosDoOrcamento,
-  lotesDoProjeto,
-  percentagemNaUnidade,
-  pessoasDaUnidade,
-  pessoasDoProjeto,
   totaisPorAnoDaUnidade,
   valorDaEntradaNoAno,
-  valorDaUnidade,
-  valorDoProjeto,
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
 } from "../core/vistaGeral";
@@ -17,7 +11,6 @@ import {
 interface Props {
   orcamento: OrcamentoUnidade;
   onRemoverProjeto: (projetoId: string) => void;
-  onRemoverLote: (projetoId: string, lote: string) => void;
   onRemoverEntrada: (projetoId: string, entradaId: string) => void;
   onRemoverInterno: (projetoId: string, internoId: string) => void;
   onAcrescentarInterno: (projetoId: string, nome: string) => void;
@@ -64,7 +57,6 @@ function CampoInterno({ onAcrescentar }: { onAcrescentar: (nome: string) => void
 export function TabelaVistaGeral({
   orcamento,
   onRemoverProjeto,
-  onRemoverLote,
   onRemoverEntrada,
   onRemoverInterno,
   onAcrescentarInterno,
@@ -76,17 +68,16 @@ export function TabelaVistaGeral({
   }
 
   const totaisAnos = totaisPorAnoDaUnidade(orcamento);
-  const pessoas = pessoasDaUnidade(orcamento);
 
-  /** Da coluna «Pessoas» à última dos anos: o que uma linha ocupa entre as do projeto. */
-  const colunasDaLinha = 5 + anos.length;
+  /** Da coluna «Pessoas» à última dos anos: o que uma linha ocupa à direita do projeto. */
+  const colunasDaLinha = 4 + anos.length;
 
   return (
     <div className="tabela-envolvente">
       <table className="tabela tabela-unidade">
         <caption className="tabela-legenda">
-          Cada elemento interno conta uma pessoa, ao lado dos elementos exigidos em cada perfil. A percentagem é a
-          fatia das pessoas da unidade que o projeto ocupa.
+          Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos elementos
+          exigidos em cada perfil.
         </caption>
 
         <thead>
@@ -96,9 +87,6 @@ export function TabelaVistaGeral({
               Pessoas
             </th>
             <th scope="col">Perfil</th>
-            <th scope="col" className="numerico">
-              Rate (€/h) <span className="cabecalho-nota">s/ IVA</span>
-            </th>
             <th scope="col" className="numerico">
               Rate (€/h) <span className="cabecalho-nota">c/ IVA</span>
             </th>
@@ -111,15 +99,6 @@ export function TabelaVistaGeral({
                 <span className="cabecalho-nota">{ano}</span>
               </th>
             ))}
-            <th scope="col" className="numerico coluna-projeto">
-              Total Pessoas
-            </th>
-            <th scope="col" className="numerico coluna-projeto">
-              % na unidade
-            </th>
-            <th scope="col" className="numerico coluna-projeto">
-              Valor por projeto
-            </th>
             <th scope="col">
               <span className="rotulo-oculto">Ações</span>
             </th>
@@ -129,12 +108,10 @@ export function TabelaVistaGeral({
         {orcamento.projetos.map((projeto) => (
           <LinhasDoProjeto
             key={projeto.id}
-            orcamento={orcamento}
             projeto={projeto}
             anos={anos}
             colunasDaLinha={colunasDaLinha}
             onRemoverProjeto={onRemoverProjeto}
-            onRemoverLote={onRemoverLote}
             onRemoverEntrada={onRemoverEntrada}
             onRemoverInterno={onRemoverInterno}
             onAcrescentarInterno={onAcrescentarInterno}
@@ -143,7 +120,7 @@ export function TabelaVistaGeral({
 
         <tfoot>
           <tr>
-            <th scope="row" colSpan={6}>
+            <th scope="row" colSpan={5}>
               Total da unidade
             </th>
             {totaisAnos.map((total, i) => (
@@ -151,13 +128,6 @@ export function TabelaVistaGeral({
                 <strong>{formatarMoeda(total)}</strong>
               </td>
             ))}
-            <td className="numerico coluna-projeto">
-              <strong>{pessoas}</strong>
-            </td>
-            <td className="numerico coluna-projeto">{pessoas === 0 ? "—" : "100,0 %"}</td>
-            <td className="numerico coluna-projeto">
-              <strong>{formatarMoeda(valorDaUnidade(orcamento))}</strong>
-            </td>
             <td />
           </tr>
         </tfoot>
@@ -167,7 +137,6 @@ export function TabelaVistaGeral({
 }
 
 interface PropsProjeto extends Omit<Props, "orcamento"> {
-  orcamento: OrcamentoUnidade;
   projeto: ProjetoVistaGeral;
   anos: number[];
   colunasDaLinha: number;
@@ -176,74 +145,37 @@ interface PropsProjeto extends Omit<Props, "orcamento"> {
 /**
  * Um `tbody` por projeto.
  *
- * As células do projeto — nome, total de pessoas, percentagem e valor —
- * escrevem-se uma vez e abrangem as linhas todas: ver o mesmo nome repetido em
- * cada perfil tornaria impossível dizer, de relance, onde acaba um projeto e
- * começa o seguinte.
+ * O nome do projeto escreve-se uma vez e abrange as linhas todas: vê-lo
+ * repetido em cada perfil tornaria impossível dizer, de relance, onde acaba um
+ * projeto e começa o seguinte.
  */
 function LinhasDoProjeto({
-  orcamento,
   projeto,
   anos,
   colunasDaLinha,
   onRemoverProjeto,
-  onRemoverLote,
   onRemoverEntrada,
   onRemoverInterno,
   onAcrescentarInterno,
 }: PropsProjeto) {
-  const lotes = lotesDoProjeto(projeto);
   // A última linha é sempre a de acrescentar um elemento interno.
   const nLinhas = projeto.entradas.length + projeto.internos.length + 1;
 
-  const celulasDoProjeto = (
-    <>
-      <th scope="rowgroup" rowSpan={nLinhas} className="celula-projeto">
-        <div className="projeto-nome">
-          <strong>{projeto.nome}</strong>
-          <button
-            type="button"
-            className="botao-icone botao-perigo"
-            aria-label={`Remover o projeto ${projeto.nome}`}
-            onClick={() => onRemoverProjeto(projeto.id)}
-          >
-            ×
-          </button>
-        </div>
-        <p className="meta">A partir de {projeto.anoInicio}</p>
-        {lotes.length > 0 && (
-          <ul className="lista-lotes">
-            {lotes.map((lote) => (
-              <li key={lote}>
-                <span>Lote {lote}</span>
-                <button
-                  type="button"
-                  className="botao-icone botao-perigo"
-                  aria-label={`Remover o lote ${lote} de ${projeto.nome}`}
-                  onClick={() => onRemoverLote(projeto.id, lote)}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </th>
-    </>
-  );
-
-  const celulasDoResumo = (
-    <>
-      <td rowSpan={nLinhas} className="numerico coluna-projeto">
-        <strong>{pessoasDoProjeto(projeto)}</strong>
-      </td>
-      <td rowSpan={nLinhas} className="numerico coluna-projeto">
-        {formatarNumero(Math.round(percentagemNaUnidade(orcamento, projeto) * 10) / 10)} %
-      </td>
-      <td rowSpan={nLinhas} className="numerico coluna-projeto">
-        <strong>{formatarMoeda(valorDoProjeto(projeto))}</strong>
-      </td>
-    </>
+  const celulaDoProjeto = (
+    <th scope="rowgroup" rowSpan={nLinhas} className="celula-projeto">
+      <div className="projeto-nome">
+        <strong>{projeto.nome}</strong>
+        <button
+          type="button"
+          className="botao-icone botao-perigo"
+          aria-label={`Remover o projeto ${projeto.nome}`}
+          onClick={() => onRemoverProjeto(projeto.id)}
+        >
+          ×
+        </button>
+      </div>
+      <p className="meta">A partir de {projeto.anoInicio}</p>
+    </th>
   );
 
   // As linhas do meio, por ordem: primeiro os perfis, depois quem é da casa.
@@ -264,7 +196,6 @@ function LinhasDoProjeto({
         <>
           <td className="numerico">{entrada.pessoas}</td>
           <td>{entrada.perfil}</td>
-          <td className="numerico">{formatarMoeda(entrada.valorHoraSemIva)}</td>
           <td className="numerico">{formatarMoeda(entrada.valorHoraComIva)}</td>
           <td className="numerico">{entrada.lote}</td>
           {anos.map((ano) => {
@@ -302,9 +233,6 @@ function LinhasDoProjeto({
           <td className="numerico">
             <span className="meta">—</span>
           </td>
-          <td className="numerico">
-            <span className="meta">—</span>
-          </td>
           {anos.map((ano) => (
             <td key={ano} className="numerico">
               <span className="meta">—</span>
@@ -328,9 +256,8 @@ function LinhasDoProjeto({
     <tbody className="grupo-projeto">
       {linhas.map((linha, i) => (
         <tr key={linha.chave} className={linha.chave === "acrescentar" ? "linha-acrescentar" : undefined}>
-          {i === 0 && celulasDoProjeto}
+          {i === 0 && celulaDoProjeto}
           {linha.celulas}
-          {i === 0 && celulasDoResumo}
           <td className="celula-acoes">{linha.acoes}</td>
         </tr>
       ))}
