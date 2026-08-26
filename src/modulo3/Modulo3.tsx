@@ -10,12 +10,11 @@ import {
   type DeclaracaoAtribuida,
   type ResultadoProcedimento,
 } from "../core/avaliacaoProcedimento";
-import { resultadosParaJSON } from "../core/resultadosJSON";
-import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { extrairTextoPdfNormalizado } from "../pdf/extrairTextoPdf";
 import { extrairValoresDeclarados } from "../pdf/extrairValores";
 import { compararComPdf } from "../pdf/comparar";
-import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
+import { descarregarPacote } from "../ui/pacote";
+import { ficheirosDaAvaliacao, nomeDoPacoteDeAvaliacao } from "../saidas/pacotes";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { ReconciliacaoConcorrentes } from "./ReconciliacaoConcorrentes";
@@ -216,22 +215,16 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
     }
   }
 
-  function descarregarResultadosJSON() {
-    if (config === null || resultado === null) return;
-    descarregarBlob(
-      new Blob([resultadosParaJSON(resultado, config)], { type: "application/json" }),
-      nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.json"),
-    );
-  }
-
   async function exportar() {
     if (config === null || resultado === null) return;
     setAExportar(true);
     try {
-      descarregarBlob(
-        await gerarResultadosBlob(resultado, config),
-        nomeComProjeto(config.nomeProjeto, "Resultados_Avaliacao.xlsx"),
+      await descarregarPacote(
+        nomeDoPacoteDeAvaliacao(config.nomeProjeto),
+        await ficheirosDaAvaliacao(resultado, config),
       );
+    } catch {
+      setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote da análise." });
     } finally {
       setAExportar(false);
     }
@@ -475,15 +468,13 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             </header>
             <div className="acoes">
               <button type="button" className="botao-principal" onClick={() => void exportar()} disabled={aExportar}>
-                {aExportar ? "A gerar…" : "Descarregar relatório Excel"}
-              </button>
-              <button type="button" className="botao-secundario" onClick={descarregarResultadosJSON}>
-                Descarregar resultados (JSON)
+                {aExportar ? "A gerar…" : "Descarregar análise de propostas (ZIP)"}
               </button>
             </div>
             <p className="ajuda">
-              O JSON leva o apuramento inteiro e é o que o Módulo 4 lê para ordenar as propostas. Como o relatório
-              Excel, contém dados pessoais dos elementos propostos: guarde-o com o mesmo cuidado.
+              Um ZIP com o relatório Excel e o JSON dos resultados. O JSON leva o apuramento inteiro e é o que o
+              Módulo 4 lê para ordenar as propostas. Como o relatório Excel, contém dados pessoais dos elementos
+              propostos: guarde-o com o mesmo cuidado.
             </p>
           </section>
 

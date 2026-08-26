@@ -6,14 +6,13 @@ import {
   duplicarPerfil,
   importarPerfisJSON,
   perfilInicial,
-  perfisParaJSON,
   validarNomeProjeto,
   validarPerfis,
 } from "../core/perfil";
 import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
-import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
-import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
+import { descarregarPacote } from "../ui/pacote";
+import { ficheirosDosPerfis, nomeDoPacoteDePerfis } from "../saidas/pacotes";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { RequisitosEditor } from "./RequisitosEditor";
@@ -89,25 +88,16 @@ export function Modulo1({
    * formulário que os concorrentes preenchem — esse sai do Módulo 2, já com os
    * lotes e o n.º de projetos que o procedimento fixou.
    */
-  async function gerarExcel() {
+  async function descarregarPerfis() {
     setMensagem(null);
     setAGerar(true);
     try {
-      descarregarBlob(
-        await gerarResumoPerfisBlob(perfis, nomeProjeto),
-        nomeComProjeto(nomeProjeto, "Perfis.xlsx"),
-      );
+      await descarregarPacote(nomeDoPacoteDePerfis(nomeProjeto), await ficheirosDosPerfis(perfis, nomeProjeto));
+    } catch {
+      setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote dos perfis." });
     } finally {
       setAGerar(false);
     }
-  }
-
-  function descarregarJSON() {
-    setMensagem(null);
-    descarregarBlob(
-      new Blob([perfisParaJSON(perfis, nomeProjeto)], { type: "application/json" }),
-      nomeComProjeto(nomeProjeto, "Perfis.json"),
-    );
   }
 
   async function importarJSON(ficheiros: FileList) {
@@ -366,17 +356,20 @@ export function Modulo1({
           <h3>Saídas</h3>
         </header>
         <div className="acoes">
-          <button type="button" className="botao-principal" onClick={gerarExcel} disabled={aGerar || !podeExportar}>
-            {aGerar ? "A gerar…" : "Descarregar perfis (Excel)"}
-          </button>
-          <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
-            Descarregar perfis (JSON)
+          <button
+            type="button"
+            className="botao-principal"
+            onClick={() => void descarregarPerfis()}
+            disabled={aGerar || !podeExportar}
+          >
+            {aGerar ? "A gerar…" : "Descarregar perfis (ZIP)"}
           </button>
         </div>
         <p className="ajuda">
-          O Excel é o registo de quem prepara o procedimento: uma folha por perfil, com os requisitos, as
-          formações ou certificações e o conteúdo funcional que aqui ficaram escritos. Não é o formulário que os concorrentes
-          preenchem — esse sai do Módulo 2, já com os lotes. O JSON leva todos os perfis, para os retomar depois.
+          Um ZIP com o Excel e o JSON dos perfis. O Excel é o registo de quem prepara o procedimento: uma folha por
+          perfil, com os requisitos, as formações ou certificações e o conteúdo funcional que aqui ficaram escritos.
+          Não é o formulário que os concorrentes preenchem — esse sai do Módulo 2, já com os lotes. O JSON leva todos
+          os perfis, para os retomar depois.
         </p>
       </section>
 

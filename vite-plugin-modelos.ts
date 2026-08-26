@@ -1,21 +1,23 @@
 import { readFile } from 'node:fs/promises'
 import type { Plugin } from 'vite'
 
+const EXTENSOES = ['.xlsx', '.docx']
+
 /**
- * Permite `import modelo from "./x.xlsx?base64"`, devolvendo o ficheiro
- * embutido no pacote como texto base64.
+ * Permite `import modelo from "./x.xlsx?base64"` (ou `.docx`), devolvendo o
+ * ficheiro embutido no pacote como texto base64.
  *
  * É embutido, e não servido como recurso: a aplicação não faz uma única
  * chamada de rede, e um `fetch` — mesmo de um ficheiro do próprio pacote —
  * seria uma, além de falhar quando o `dist/` é aberto a partir do disco.
  */
-export function xlsxEmBase64(): Plugin {
+export function modeloEmBase64(): Plugin {
   return {
-    name: 'xlsx-em-base64',
+    name: 'modelo-em-base64',
     enforce: 'pre',
     async load(id) {
       const [caminho, query] = id.split('?')
-      if (query !== 'base64' || !caminho.endsWith('.xlsx')) return null
+      if (query !== 'base64' || !EXTENSOES.some((e) => caminho.endsWith(e))) return null
       const dados = await readFile(caminho)
       return `export default ${JSON.stringify(dados.toString('base64'))};`
     },

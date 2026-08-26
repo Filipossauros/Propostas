@@ -4,6 +4,7 @@
 // `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
 
 import type {
+  EspecificacaoFormulario,
   InformacaoEavalia,
   Lote,
   LotesJSON,
@@ -400,6 +401,22 @@ function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
 }
 
 /** Todos os perfis atribuídos a lotes, na ordem em que aparecem. */
+/**
+ * A especificação do formulário de declaração de um perfil dentro de um lote.
+ *
+ * Vive aqui, e não no ecrã do Módulo 2, porque é preciso em dois sítios: no
+ * botão que gera os formulários e no pacote das peças do procedimento.
+ */
+export function especificacao(perfil: PerfilJSON, nBlocos: number, lote?: Lote): EspecificacaoFormulario {
+  return {
+    perfil: perfil.perfil,
+    nBlocos,
+    requisitos: perfil.requisitos,
+    lote: lote?.numero,
+    loteDesignacao: lote?.designacao,
+  };
+}
+
 export function perfisEmLotes(config: LotesJSON): PerfilJSON[] {
   return config.lotes.flatMap((lote) => lote.perfis.map((entrada) => entrada.perfil));
 }

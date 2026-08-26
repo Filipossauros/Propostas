@@ -62,7 +62,7 @@ export function TabelaVistaGeral({
   const anos = anosDoOrcamento(orcamento);
 
   if (orcamento.projetos.length === 0) {
-    return <p className="estado-vazio">Importe agrupamentos (JSON) do Módulo 2 para começar a vista.</p>;
+    return <p className="estado-vazio">Importe os JSON de lotes do Módulo 2 para começar a vista.</p>;
   }
 
   const totaisAnos = totaisPorAnoDaUnidade(orcamento);

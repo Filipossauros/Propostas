@@ -12,14 +12,13 @@ import {
   jaTemProjeto,
   nomeDoProjeto,
   orcamentoInicial,
-  orcamentoParaJSON,
   projetoDeAgrupamento,
   semInterno,
   semProjeto,
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
-import { gerarVistaGeralBlob } from "../excel/vistaGeral";
-import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
+import { descarregarPacote } from "../ui/pacote";
+import { ficheirosDaVistaGeral, nomeDoPacoteDaVistaGeral } from "../saidas/pacotes";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { ResumoGeral } from "./ResumoGeral";
 import { TabelaVistaGeral } from "./TabelaVistaGeral";
@@ -93,19 +92,13 @@ export function VistaGeral() {
     }
   }
 
-  async function descarregarExcel() {
+  async function descarregarVistaGeral() {
     setMensagem(null);
     try {
-      const blob = await gerarVistaGeralBlob(orcamento);
-      descarregarBlob(blob, `${nomeSeguro(orcamento.unidade, "Unidade")}_Vista_Geral.xlsx`);
+      await descarregarPacote(nomeDoPacoteDaVistaGeral(orcamento), await ficheirosDaVistaGeral(orcamento));
     } catch {
-      setMensagem({ tipo: "erro", texto: "Não foi possível gerar o Excel." });
+      setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote da Vista Geral." });
     }
-  }
-
-  function descarregarJSON() {
-    const blob = new Blob([orcamentoParaJSON(orcamento)], { type: "application/json" });
-    descarregarBlob(blob, `${nomeSeguro(orcamento.unidade, "Unidade")}_Vista_Geral.json`);
   }
 
   /**
@@ -143,7 +136,7 @@ export function VistaGeral() {
         <header className="painel-cabecalho">
           <h3>Orçamento da unidade</h3>
           <p className="painel-nota">
-            Carregue os JSON de agrupamento gerados no Módulo 2 — um por projeto, ou vários de uma vez. Reimportar um
+            Carregue os JSON de lotes gerados no Módulo 2 — um por projeto, ou vários de uma vez. Reimportar um
             projeto atualiza-o, em vez de o duplicar.
           </p>
         </header>
@@ -160,7 +153,7 @@ export function VistaGeral() {
 
         <div className="acoes">
           <button type="button" className="botao-principal" onClick={() => inputAgrupamentosRef.current?.click()}>
-            Importar agrupamentos (JSON)
+            Importar lotes (JSON)
           </button>
           <input
             ref={inputAgrupamentosRef}
@@ -228,15 +221,18 @@ export function VistaGeral() {
           <h3>Ficheiros</h3>
         </header>
         <div className="acoes">
-          <button type="button" className="botao-principal" disabled={semDados} onClick={() => void descarregarExcel()}>
-            Descarregar Vista Geral (Excel)
-          </button>
-          <button type="button" className="botao-secundario" disabled={semDados} onClick={descarregarJSON}>
-            Descarregar Vista Geral (JSON)
+          <button
+            type="button"
+            className="botao-principal"
+            disabled={semDados}
+            onClick={() => void descarregarVistaGeral()}
+          >
+            Descarregar Vista Geral (ZIP)
           </button>
         </div>
         <p className="ajuda">
-          O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por projeto.
+          Um ZIP com o Excel e o JSON. O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por
+          projeto. O nome do ficheiro leva os anos de início dos projetos carregados.
         </p>
       </section>
     </>

@@ -168,7 +168,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
  * linha, com os anos já resolvidos em datas: quem lê a peça não tem de saber o
  * que é o «ano n+1».
  */
-function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
+export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
   const encargos = config.encargosPlurianuais;
   if (!encargos.ativo) return [];
 
@@ -255,18 +255,16 @@ function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
   ];
 }
 
-function blocosPrecoBaseERequisitos(config: LotesJSON): BlocoDocumento[] {
-  // Ou uma tabela, ou outra: com pedido plurianual, a repartição por anos é o
-  // preço base, e as duas juntas obrigavam a lê-las uma contra a outra.
-  const precoBase: BlocoDocumento[] = config.encargosPlurianuais.ativo
+/**
+ * O preço base do procedimento: ou a repartição por anos, ou a tabela simples.
+ *
+ * Ou uma, ou outra: com pedido plurianual, a repartição por anos é o preço
+ * base, e as duas juntas obrigavam a lê-las uma contra a outra.
+ */
+function blocosPrecoBase(config: LotesJSON): BlocoDocumento[] {
+  return config.encargosPlurianuais.ativo
     ? blocosEncargosPlurianuais(config)
     : [{ tipo: "titulo", nivel: 1, texto: "Preço base" }, tabelaPrecoBase(config)];
-
-  return [
-    ...precoBase,
-    { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
-    ...blocosDeRequisitos(config),
-  ];
 }
 
 // --------------------------------------------------------------------------
@@ -387,6 +385,56 @@ function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
 }
 
 /**
+ * O anexo técnico: o que se contrata e como se prova.
+ *
+ * Vive à parte do preço base porque é a parte que segue igual nos dois
+ * documentos Word — o desta aplicação, onde é o corpo, e o do modelo formal da
+ * organização, onde entra debaixo do «IV – Anexo Técnico».
+ */
+export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Requisitos mínimos de experiência profissional" },
+    ...blocosDeRequisitos(config),
+
+    ...blocosPostoTrabalho(config),
+
+    ...blocosUmLotePorConcorrente(config),
+
+    { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
+    {
+      // Uma só numeração para todas as regras, sem secções pelo meio: as
+      // remissões entre normas ("nos termos do n.º 2") só são inequívocas se
+      // a sequência correr de fio a pavio. As causas de exclusão vão numa
+      // única regra, com alíneas em (i)/(ii)/(iii), para não quebrar a série.
+      tipo: "lista",
+      numerada: true,
+      itens: [
+        "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o formulário de declaração de experiência profissional, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
+        "O formulário é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica qualificada, não sendo admissível a sua substituição por assinatura do representante do concorrente.",
+        `${descricaoBlocos(config)} Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do formulário quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
+        "Em cada bloco de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
+        "O formulário não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
+        "O formulário de declaração de experiência profissional deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido formulário deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica qualificada.",
+        "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
+        "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do formulário de declaração de experiência profissional; (ii) a falta de assinatura do PDF do formulário de declaração de experiência profissional, mediante assinatura eletrónica qualificada pelo próprio titular da experiência; ou (iii) a alteração da estrutura do formulário disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
+        "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a dedicação não tenha sido integral ao longo do período do projeto.",
+        "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
+        "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
+        "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
+        "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
+        "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo bloco.",
+        "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
+        "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
+        "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo bloco. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
+        "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o formulário é preenchido: experiência ainda por decorrer não é experiência adquirida.",
+        "Quando o bloco de projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada, nesse bloco, a experiência em todos os requisitos.",
+        "Os requisitos mínimos exprimem-se em meses inteiros, não havendo lugar a arredondamento.",
+      ],
+    },
+  ];
+}
+
+/**
  * Documento único do procedimento: preço base, requisitos e regras.
  *
  * Um só título — o das regras — e todo o resto em secções debaixo dele. As
@@ -396,44 +444,6 @@ function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
 export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
   return {
     titulo: "Regras de comprovação e apuramento da experiência profissional",
-    blocos: [
-      ...blocosPrecoBaseERequisitos(config),
-
-      ...blocosPostoTrabalho(config),
-
-      ...blocosUmLotePorConcorrente(config),
-
-      { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
-      {
-        // Uma só numeração para todas as regras, sem secções pelo meio: as
-        // remissões entre normas ("nos termos do n.º 2") só são inequívocas se
-        // a sequência correr de fio a pavio. As causas de exclusão vão numa
-        // única regra, com alíneas em (i)/(ii)/(iii), para não quebrar a série.
-        tipo: "lista",
-        numerada: true,
-        itens: [
-          "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o formulário de declaração de experiência profissional, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
-          "O formulário é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica qualificada, não sendo admissível a sua substituição por assinatura do representante do concorrente.",
-          `${descricaoBlocos(config)} Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do formulário quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
-          "Em cada bloco de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
-          "O formulário não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
-          "O formulário de declaração de experiência profissional deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido formulário deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica qualificada.",
-          "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
-          "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do formulário de declaração de experiência profissional; (ii) a falta de assinatura do PDF do formulário de declaração de experiência profissional, mediante assinatura eletrónica qualificada pelo próprio titular da experiência; ou (iii) a alteração da estrutura do formulário disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
-          "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a dedicação não tenha sido integral ao longo do período do projeto.",
-          "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
-          "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
-          "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
-          "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
-          "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo bloco.",
-          "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
-          "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
-          "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo bloco. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
-          "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o formulário é preenchido: experiência ainda por decorrer não é experiência adquirida.",
-          "Quando o bloco de projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada, nesse bloco, a experiência em todos os requisitos.",
-          "Os requisitos mínimos exprimem-se em meses inteiros, não havendo lugar a arredondamento.",
-        ],
-      },
-    ],
+    blocos: [...blocosPrecoBase(config), ...blocosAnexoTecnico(config)],
   };
 }

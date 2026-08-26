@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { EspecificacaoFormulario, Lote, LotesJSON, PerfilJSON } from "../core/types";
+import type { Lote, LotesJSON, PerfilJSON } from "../core/types";
 import { ErroImportacao, certificacoesDoPerfil, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
 import { anosDeInicioAdmitidos } from "../core/types";
 import {
@@ -8,19 +8,16 @@ import {
   importarLotesJSON,
   lotesIniciais,
   anosPlurianuais,
-  lotesParaJSON,
   nomeProcedimentoDe,
   perfisEmLotes,
   PREFIXO_NOME_PROCEDIMENTO,
   taxaIva,
   validarLotes,
 } from "../core/lotes";
-import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
-import { gerarDocxBlob } from "../word/gerarDocx";
 import { LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
-import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
-import { ErroModeloEavalia, gerarEavaliaBlob } from "../excel/eavalia";
-import { descarregarBlob, nomeComProjeto, nomeSeguro } from "../ui/descarregar";
+import { ErroModeloEavalia } from "../excel/eavalia";
+import { descarregarPacote } from "../ui/pacote";
+import { ficheirosDasPecas, nomeDoPacoteDePecas } from "../saidas/pacotes";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { InformacaoEavaliaEditor } from "./InformacaoEavaliaEditor";
@@ -45,17 +42,6 @@ interface Props {
   onAcrescentarPerfis: (perfis: PerfilJSON[]) => void;
   /** Substitui o catálogo inteiro (usado ao carregar o exemplo). */
   onSubstituirPerfis: (perfis: PerfilJSON[]) => void;
-}
-
-/** Especificação do formulário de um perfil dentro de um lote. */
-function especificacao(perfil: PerfilJSON, nBlocos: number, lote?: Lote): EspecificacaoFormulario {
-  return {
-    perfil: perfil.perfil,
-    nBlocos,
-    requisitos: perfil.requisitos,
-    lote: lote?.numero,
-    loteDesignacao: lote?.designacao,
-  };
 }
 
 export function Modulo2({
@@ -199,55 +185,27 @@ export function Modulo2({
     setMensagem({ tipo: "sucesso", texto: "Agrupamento de exemplo carregado." });
   }
 
-  function descarregarJSON() {
-    descarregarBlob(
-      new Blob([lotesParaJSON(configExportavel)], { type: "application/json" }),
-      nomeComProjeto(nomeProjeto, "Lotes.json"),
-    );
-  }
-
-  async function descarregarWord() {
-    descarregarBlob(
-      await gerarDocxBlob([documentoRegrasEPrecoBase(configExportavel)]),
-      nomeComProjeto(nomeProjeto, "Requisitos_e_regras.docx"),
-    );
-  }
-
   /**
-   * O pedido de parecer prévio eAvalia, preenchido sobre o modelo oficial.
+   * Todas as peças do procedimento num pacote só.
    *
-   * O modelo é de terceiros e sai tal e qual, com sete células escritas: o
-   * nome do projeto, as três respostas de alinhamento tecnológico e as datas
-   * que as acompanham.
+   * Os dois documentos Word, o pedido eAvalia, o JSON dos lotes, um formulário
+   * de declaração por lote e — numa pasta à parte — os ficheiros dos perfis do
+   * Módulo 1. Andam sempre juntos: seguem para a mesma pasta partilhada e
+   * instruem o mesmo processo.
    */
-  async function descarregarEavalia() {
+  async function descarregarPecas() {
     setMensagem(null);
+    setAGerar(true);
     try {
-      descarregarBlob(
-        await gerarEavaliaBlob(configExportavel),
-        `Pedido_PPP_eavalia_${nomeSeguro(nomeProjeto, "Projeto")}.xlsx`,
+      await descarregarPacote(
+        nomeDoPacoteDePecas(nomeProjeto),
+        await ficheirosDasPecas(configExportavel, perfis, nomeProjeto),
       );
     } catch (erro) {
       setMensagem({
         tipo: "erro",
-        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar o pedido eAvalia.",
+        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar as peças do procedimento.",
       });
-    }
-  }
-
-  /**
-   * Um ficheiro Excel por lote, com uma folha por perfil desse lote e o nome
-   * do próprio lote. Cada lote é entregue aos seus concorrentes em separado —
-   * um ficheiro só, com todos os lotes, daria a cada um os perfis dos outros.
-   */
-  async function descarregarFormulariosExcel() {
-    setAGerar(true);
-    try {
-      for (const lote of lotesComPerfis) {
-        const especificacoes = lote.perfis.map((entrada) => especificacao(entrada.perfil, config.nBlocos, lote));
-        const resto = `${nomeSeguro(lote.designacao, `Lote ${lote.numero}`)}.xlsx`;
-        descarregarBlob(await gerarDeclaracaoExcelBlob(especificacoes), nomeComProjeto(nomeProjeto, resto));
-      }
     } finally {
       setAGerar(false);
     }
@@ -435,7 +393,7 @@ export function Modulo2({
             }}
           />
           <button type="button" className="botao-secundario" onClick={() => inputLotesRef.current?.click()}>
-            Importar agrupamento (JSON)
+            Importar lotes (JSON)
           </button>
           <input
             ref={inputLotesRef}
@@ -561,58 +519,27 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Anexo Técnico</h3>
+          <h3>Peças do procedimento</h3>
         </header>
         <div className="acoes">
-          <button type="button" className="botao-principal" onClick={descarregarWord} disabled={!podeExportar}>
-            Descarregar documento Word
-          </button>
-          <button type="button" className="botao-secundario" onClick={descarregarJSON} disabled={!podeExportar}>
-            Descarregar agrupamento (JSON)
-          </button>
           <button
             type="button"
-            className="botao-secundario"
-            onClick={() => void descarregarEavalia()}
-            disabled={!podeExportar}
+            className="botao-principal"
+            onClick={() => void descarregarPecas()}
+            disabled={aGerar || !podeExportar}
           >
-            Descarregar pedido eAvalia (Excel)
+            {aGerar ? "A gerar…" : "Descarregar peças do procedimento (ZIP)"}
           </button>
         </div>
         <p className="ajuda">
-          O documento Word reúne, com tabelas formatadas, os requisitos e o preço base para o caderno de encargos e as
-          regras de comprovação e apuramento para o programa do concurso. O pedido eAvalia é o modelo oficial do
-          parecer prévio, preenchido com o nome do projeto e com as respostas da secção anterior.
+          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, o pedido de
+          assunção de encargos plurianuais no modelo formal da organização, o pedido de parecer prévio eAvalia, o
+          JSON dos lotes, um formulário de declaração de experiência por lote — e, na pasta «Perfis», o Excel e o
+          JSON do Módulo 1.
         </p>
-      </section>
-
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Formulários de Declaração</h3>
-          <p className="painel-nota">
-            Um ficheiro Excel por lote, com o nome do lote e uma folha por perfil. É o que os concorrentes preenchem.
-          </p>
-        </header>
-        <div className="acoes">
-          <button
-            type="button"
-            className="botao-secundario"
-            onClick={descarregarFormulariosExcel}
-            disabled={aGerar || !podeExportar || lotesComPerfis.length === 0}
-          >
-            {aGerar
-              ? "A gerar…"
-              : `Descarregar formulários (Excel, ${lotesComPerfis.length} ficheiro${lotesComPerfis.length === 1 ? "" : "s"})`}
-          </button>
-        </div>
-        {lotesComPerfis.length > 1 && (
-          <p className="ajuda">
-            São {lotesComPerfis.length} descarregamentos seguidos, um por lote — o navegador pode pedir autorização
-            para descarregar vários ficheiros.
-          </p>
-        )}
         {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
       </section>
+
     </div>
   );
 }

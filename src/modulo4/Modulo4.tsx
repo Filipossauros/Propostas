@@ -10,8 +10,8 @@ import {
   propostasAdmitidas,
   type PrecosPropostos,
 } from "../core/ordenacao";
-import { gerarResultadosBlob } from "../excel/exportarResultados";
-import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
+import { descarregarPacote } from "../ui/pacote";
+import { ficheirosDaOrdenacao, nomeDoPacoteDeOrdenacao } from "../saidas/pacotes";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { TabelaOrdenacao } from "./TabelaOrdenacao";
 
@@ -50,6 +50,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
   // impossível de preencher.
   const [precosEscritos, setPrecosEscritos] = useState<Record<string, string>>({});
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  const [aExportar, setAExportar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // O que veio de ficheiro tem precedência sobre o que veio do Módulo 3: se o
@@ -98,12 +99,23 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
     setMensagem({ tipo: "sucesso", texto: "Ordenação reposta." });
   }
 
+  /**
+   * O pacote da ordenação: o que o Módulo 3 já entregava, mais o relatório que
+   * traz a ordenação. Quem decide precisa dos três lado a lado.
+   */
   async function exportar() {
     if (apuramento === null || ordenacao === null) return;
-    descarregarBlob(
-      await gerarResultadosBlob(apuramento.resultado, apuramento.config, ordenacao),
-      nomeComProjeto(apuramento.config.nomeProjeto, "Resultados_e_Ordenacao.xlsx"),
-    );
+    setAExportar(true);
+    try {
+      await descarregarPacote(
+        nomeDoPacoteDeOrdenacao(apuramento.config.nomeProjeto),
+        await ficheirosDaOrdenacao(apuramento.resultado, apuramento.config, ordenacao),
+      );
+    } catch {
+      setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote da ordenação." });
+    } finally {
+      setAExportar(false);
+    }
   }
 
   const semPreco = ordenacao?.lotes.reduce((soma, l) => soma + l.precosEmFalta, 0) ?? 0;
@@ -252,11 +264,17 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
             <header className="painel-cabecalho">
               <h3>Exportação</h3>
               <p className="painel-nota">
-                O relatório do Módulo 3 por inteiro, mais duas folhas: a ordenação de cada lote e os vencedores.
+                Um ZIP com os ficheiros da análise do Módulo 3 e o relatório da ordenação, que leva o do Módulo 3 por
+                inteiro mais duas folhas: a ordenação de cada lote e os vencedores.
               </p>
             </header>
-            <button type="button" className="botao-principal" onClick={() => void exportar()}>
-              Descarregar resultados e ordenação (Excel)
+            <button
+              type="button"
+              className="botao-principal"
+              onClick={() => void exportar()}
+              disabled={aExportar}
+            >
+              {aExportar ? "A gerar…" : "Descarregar ordenação de propostas (ZIP)"}
             </button>
           </section>
         </>

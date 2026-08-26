@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { xlsxEmBase64 } from './vite-plugin-xlsx.ts'
+import { modeloEmBase64 } from './vite-plugin-modelos.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,5 +8,5 @@ export default defineConfig({
   // ficheiros (princípio 1) — funciona tanto na raiz de um domínio como
   // num subcaminho (ex.: GitHub Pages) ou aberta localmente a partir do disco.
   base: './',
-  plugins: [react(), xlsxEmBase64()],
+  plugins: [react(), modeloEmBase64()],
 })
