@@ -150,8 +150,14 @@ export function validarPerfis(perfis: PerfilJSON[]): ErroValidacao[] {
 }
 
 /** Serializa todos os perfis num ficheiro único. */
-export function perfisParaJSON(perfis: PerfilJSON[], nomeProjeto: string): string {
-  const ficheiro: PerfisJSON = { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "perfis", nomeProjeto, perfis };
+export function perfisParaJSON(perfis: PerfilJSON[], nomeProjeto: string, descricaoProjeto: string): string {
+  const ficheiro: PerfisJSON = {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "perfis",
+    nomeProjeto,
+    descricaoProjeto,
+    perfis,
+  };
   return JSON.stringify(ficheiro, null, 2);
 }
 
@@ -162,6 +168,17 @@ export function perfisParaJSON(perfis: PerfilJSON[], nomeProjeto: string): strin
 export function validarNomeProjeto(nomeProjeto: string): ErroValidacao[] {
   return nomeProjeto.trim() === ""
     ? [{ campo: "nomeProjeto", mensagem: "Indique o nome do projeto." }]
+    : [];
+}
+
+/**
+ * A descrição do projeto é obrigatória pela mesma razão que o nome: entra no
+ * pedido de encargos plurianuais, e por preencher deixaria o documento com um
+ * espaço a vermelho para completar à mão depois de gerado.
+ */
+export function validarDescricaoProjeto(descricaoProjeto: string): ErroValidacao[] {
+  return descricaoProjeto.trim() === ""
+    ? [{ campo: "descricaoProjeto", mensagem: "Descreva o projeto." }]
     : [];
 }
 
@@ -253,6 +270,8 @@ export interface PerfisImportados {
   perfis: PerfilJSON[];
   /** Vazio nos ficheiros de perfil isolado, que ainda não o traziam. */
   nomeProjeto: string;
+  /** Vazio nos ficheiros gerados antes de o campo existir. */
+  descricaoProjeto: string;
 }
 
 /**
@@ -270,6 +289,7 @@ export function importarPerfisJSON(texto: string): PerfisImportados {
     }
     return {
       nomeProjeto: typeof bruto.nomeProjeto === "string" ? bruto.nomeProjeto : "",
+      descricaoProjeto: typeof bruto.descricaoProjeto === "string" ? bruto.descricaoProjeto : "",
       perfis: bruto.perfis.map((p) => {
         if (typeof p !== "object" || p === null || Array.isArray(p)) {
           throw new ErroImportacao("O ficheiro de perfis contém uma entrada que não é um perfil.");
@@ -280,7 +300,7 @@ export function importarPerfisJSON(texto: string): PerfisImportados {
   }
 
   if (bruto.tipo === "perfil") {
-    return { nomeProjeto: "", perfis: [normalizarPerfil(bruto)] };
+    return { nomeProjeto: "", descricaoProjeto: "", perfis: [normalizarPerfil(bruto)] };
   }
 
   throw new ErroImportacao(

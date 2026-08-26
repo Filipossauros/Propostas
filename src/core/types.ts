@@ -141,6 +141,8 @@ export interface PerfisJSON {
   tipo: "perfis";
   /** Nome do projeto a que os perfis pertencem — ver `LotesJSON.nomeProjeto`. */
   nomeProjeto: string;
+  /** Descrição do projeto — ver `LotesJSON.descricaoProjeto`. */
+  descricaoProjeto: string;
   perfis: PerfilJSON[];
 }
 
@@ -242,6 +244,19 @@ export interface LotesJSON {
    * descarregados.
    */
   nomeProjeto: string;
+  /**
+   * O que o projeto se propõe fazer, em uma ou duas frases.
+   *
+   * Escreve-se uma vez, no Módulo 1, e segue com o projeto: vai em cada
+   * ficheiro exportado e é o que preenche, no pedido de encargos plurianuais,
+   * a frase «Este projeto visa …». Sem ela o pedido saía com um espaço a
+   * vermelho para alguém preencher à mão fora da aplicação — que é justamente
+   * o que se quer evitar.
+   *
+   * Continua a ser uma frase e não um parágrafo: entra a meio de uma frase do
+   * documento, e um texto longo dava um período impossível de ler.
+   */
+  descricaoProjeto: string;
   /**
    * Nome do procedimento, apenas para registo. Só o nome — o número ainda não
    * é conhecido nesta fase (à semelhança do perfil e do próprio agrupamento).

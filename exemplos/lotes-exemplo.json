@@ -2,6 +2,7 @@
   "schemaVersion": "2.0",
   "tipo": "lotes",
   "nomeProjeto": "Modernização dos Sistemas de Informação",
+  "descricaoProjeto": "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, assegurando a continuidade do serviço durante a migração",
   "nomeProcedimento": "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   "taxaIva": 23,
   "nBlocos": 15,

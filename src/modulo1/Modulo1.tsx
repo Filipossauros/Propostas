@@ -6,10 +6,11 @@ import {
   duplicarPerfil,
   importarPerfisJSON,
   perfilInicial,
+  validarDescricaoProjeto,
   validarNomeProjeto,
   validarPerfis,
 } from "../core/perfil";
-import { NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import { DESCRICAO_PROJETO_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDosPerfis, nomeDoPacoteDePerfis } from "../saidas/pacotes";
@@ -25,6 +26,10 @@ interface Props {
   onAlterarNomeProjeto: (nome: string) => void;
   /** Aceita o nome vindo de um ficheiro importado, se ainda não houver um definido. */
   onAdotarNomeProjeto: (nome: string) => void;
+  descricaoProjeto: string;
+  onAlterarDescricaoProjeto: (descricao: string) => void;
+  /** Aceita a descrição vinda de um ficheiro importado, se ainda não houver uma. */
+  onAdotarDescricaoProjeto: (descricao: string) => void;
   /** Número do lote a que cada perfil já está atribuído, indexado pelo id do perfil. */
   lotePorPerfilId: Record<string, string>;
   onIrParaLotes: () => void;
@@ -36,6 +41,9 @@ export function Modulo1({
   nomeProjeto,
   onAlterarNomeProjeto,
   onAdotarNomeProjeto,
+  descricaoProjeto,
+  onAlterarDescricaoProjeto,
+  onAdotarDescricaoProjeto,
   lotePorPerfilId,
   onIrParaLotes,
 }: Props) {
@@ -44,7 +52,11 @@ export function Modulo1({
   const [aGerar, setAGerar] = useState(false);
   const inputImportarRef = useRef<HTMLInputElement>(null);
 
-  const erros = [...validarNomeProjeto(nomeProjeto), ...validarPerfis(perfis)];
+  const erros = [
+    ...validarNomeProjeto(nomeProjeto),
+    ...validarDescricaoProjeto(descricaoProjeto),
+    ...validarPerfis(perfis),
+  ];
   const podeExportar = erros.length === 0;
 
   // O perfil em edição é sempre um dos do catálogo: se o id guardado deixar de
@@ -92,7 +104,10 @@ export function Modulo1({
     setMensagem(null);
     setAGerar(true);
     try {
-      await descarregarPacote(nomeDoPacoteDePerfis(nomeProjeto), await ficheirosDosPerfis(perfis, nomeProjeto));
+      await descarregarPacote(
+        nomeDoPacoteDePerfis(nomeProjeto),
+        await ficheirosDosPerfis(perfis, nomeProjeto, descricaoProjeto),
+      );
     } catch {
       setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote dos perfis." });
     } finally {
@@ -104,18 +119,21 @@ export function Modulo1({
     const carregados: PerfilJSON[] = [];
     const falhados: string[] = [];
     let nomeDeFicheiro = "";
+    let descricaoDeFicheiro = "";
 
     for (const ficheiro of Array.from(ficheiros)) {
       try {
         const importado = importarPerfisJSON(await ficheiro.text());
         carregados.push(...importado.perfis);
         if (nomeDeFicheiro === "") nomeDeFicheiro = importado.nomeProjeto;
+        if (descricaoDeFicheiro === "") descricaoDeFicheiro = importado.descricaoProjeto;
       } catch (erro) {
         falhados.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
     }
 
     onAdotarNomeProjeto(nomeDeFicheiro);
+    onAdotarDescricaoProjeto(descricaoDeFicheiro);
 
     if (carregados.length > 0) {
       // Um perfil reimportado substitui a versão em memória; os restantes juntam-se.
@@ -137,6 +155,7 @@ export function Modulo1({
     if (!(await podeCarregarExemplo())) return;
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
     onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
+    onAlterarDescricaoProjeto(DESCRICAO_PROJETO_EXEMPLO);
     setIdEmEdicao(null);
     setMensagem({ tipo: "sucesso", texto: `${PERFIS_EXEMPLO.length} perfis de exemplo carregados.` });
   }
@@ -164,14 +183,15 @@ export function Modulo1({
   }
 
   function recomecar() {
-    if (!confirm("Apagar todos os perfis em edição e o nome do projeto, e recomeçar do zero?")) return;
+    if (!confirm("Apagar todos os perfis em edição e a identificação do projeto, e recomeçar do zero?")) return;
     onAlterarPerfis([]);
     // O nome do projeto vai com eles: sem dados, a aplicação apresenta-se como
     // se fosse a primeira vez — e o nome de um projeto anterior num campo
     // preenchido é o género de resto que acaba dentro de uma peça.
     onAlterarNomeProjeto("");
+    onAlterarDescricaoProjeto("");
     setIdEmEdicao(null);
-    setMensagem({ tipo: "sucesso", texto: "Perfis e nome do projeto repostos." });
+    setMensagem({ tipo: "sucesso", texto: "Perfis e identificação do projeto repostos." });
   }
 
   return (
@@ -205,6 +225,21 @@ export function Modulo1({
           />
         </label>
         <p className="ajuda">Identifica o projeto e dá nome a todos os ficheiros descarregados, nos dois módulos.</p>
+
+        <label className="campo-largo">
+          <span className="rotulo">Descrição do projeto</span>
+          <textarea
+            rows={3}
+            value={descricaoProjeto}
+            placeholder="ex.: substituir as aplicações de gestão clínica por uma plataforma única e interoperável"
+            onChange={(e) => onAlterarDescricaoProjeto(e.target.value)}
+            aria-invalid={descricaoProjeto.trim() === ""}
+          />
+        </label>
+        <p className="ajuda">
+          O que o projeto se propõe fazer. Completa a frase «Este projeto visa …» no pedido de assunção de encargos
+          plurianuais, pelo que uma ou duas frases bastam.
+        </p>
       </section>
 
       <section className="painel">

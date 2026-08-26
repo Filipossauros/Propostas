@@ -76,10 +76,15 @@ const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
 
 export const NOME_PROJETO_EXEMPLO = "Modernização dos Sistemas de Informação";
 
+export const DESCRICAO_PROJETO_EXEMPLO =
+  "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, " +
+  "assegurando a continuidade do serviço durante a migração";
+
 export const LOTES_EXEMPLO: LotesJSON = {
   schemaVersion: SCHEMA_VERSION_ATUAL,
   tipo: "lotes",
   nomeProjeto: NOME_PROJETO_EXEMPLO,
+  descricaoProjeto: DESCRICAO_PROJETO_EXEMPLO,
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
   nBlocos: N_BLOCOS_PADRAO,

@@ -395,6 +395,7 @@ select {
 }
 
 input:focus-visible,
+textarea:focus-visible,
 select:focus-visible,
 button:focus-visible,
 summary:focus-visible {
@@ -403,7 +404,8 @@ summary:focus-visible {
   border-color: var(--azul-500);
 }
 
-input[aria-invalid="true"] {
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
   border-color: var(--vermelho);
 }
 

@@ -4,7 +4,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../src/core/exemplo.ts";
+import {
+  DESCRICAO_PROJETO_EXEMPLO,
+  LOTES_EXEMPLO,
+  NOME_PROJETO_EXEMPLO,
+  PERFIS_EXEMPLO,
+} from "../src/core/exemplo.ts";
 import { SCHEMA_VERSION_ATUAL } from "../src/core/types.ts";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,6 +20,7 @@ const perfisExemplo = {
   schemaVersion: SCHEMA_VERSION_ATUAL,
   tipo: "perfis",
   nomeProjeto: NOME_PROJETO_EXEMPLO,
+  descricaoProjeto: DESCRICAO_PROJETO_EXEMPLO,
   perfis: PERFIS_EXEMPLO,
 };
 

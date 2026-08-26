@@ -2,6 +2,7 @@
   "schemaVersion": "2.0",
   "tipo": "perfis",
   "nomeProjeto": "Modernização dos Sistemas de Informação",
+  "descricaoProjeto": "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, assegurando a continuidade do serviço durante a migração",
   "perfis": [
     {
       "schemaVersion": "2.0",

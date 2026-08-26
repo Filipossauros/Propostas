@@ -355,6 +355,11 @@ function ultimaTabela(xml: string): string {
 /** O corpo completo do documento, em XML. */
 export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): string {
   const projeto = config.nomeProjeto.trim() === "" ? "(projeto sem nome)" : config.nomeProjeto.trim();
+  // O assunto identifica o procedimento, e não o projeto: é o procedimento que
+  // dá entrada no circuito de decisão. Sem nome de procedimento — que é
+  // derivado do do projeto — cai no do projeto, que é o que há.
+  const procedimento = config.nomeProcedimento.trim() === "" ? projeto : config.nomeProcedimento.trim();
+  const descricao = config.descricaoProjeto.trim();
   const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
   const total = totalProcedimento(config);
 
@@ -369,7 +374,7 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   p.push(
     tabelaIdentificacao(
       dataPorExtenso(quando),
-      `Pedido de Assunção de Encargos Plurianuais para o projeto ${projeto}.`,
+      `Pedido de Assunção de Encargos Plurianuais para ${procedimento}.`,
     ),
   );
 
@@ -377,7 +382,7 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   p.push(
     paragrafo(
       "O Regulamento Interno aprovado por Deliberação do Conselho de Administração da SPMS, E.P.E. em " +
-        "14/08/2019, clarifica as várias atribuições que estão adstritas à Direção de Arquitetura, Negócio e " +
+        "25/09/2025, clarifica as várias atribuições que estão adstritas à Direção de Arquitetura, Negócio e " +
         "Análise de Dados bem como à Coordenação de Planeamento, Arquitetura, Conformidade e Engenharia.",
     ),
   );
@@ -386,7 +391,7 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
       run("Assim, no âmbito destas atribuições insere-se o Projeto "),
       run(projeto, { negrito: true }),
       run(". Este projeto visa "),
-      marcador("descrição do projeto"),
+      descricao === "" ? marcador("descrição do projeto") : run(descricao),
       run("."),
     ]),
   );
@@ -447,8 +452,8 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   p.push(
     paragrafo(
       "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
-        "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o anexo técnico e " +
-        "formulários de declaração de experiência profissional.",
+        "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no " +
+        "anexo técnico da presente informação.",
     ),
   );
   p.push(vazio(240));

@@ -52,11 +52,35 @@ describe("gerarPedidoPlurianualBlob", () => {
   });
 
   it("preenche a data de geração, o assunto e o nome do projeto", async () => {
-    const texto = await textoDoDocumento(exemplo({ nomeProjeto: "SClínico" }));
+    const texto = await textoDoDocumento(
+      exemplo({ nomeProjeto: "SClínico", nomeProcedimento: "Aquisição de Serviços de Manutenção do SClínico" }),
+    );
 
     expect(texto).toContain("26 de agosto de 2026");
-    expect(texto).toContain("Pedido de Assunção de Encargos Plurianuais para o projeto SClínico.");
+    // O assunto identifica o procedimento, que é o que dá entrada no circuito.
+    expect(texto).toContain(
+      "Pedido de Assunção de Encargos Plurianuais para Aquisição de Serviços de Manutenção do SClínico.",
+    );
     expect(texto).toContain("insere-se o Projeto SClínico");
+  });
+
+  it("sem nome de procedimento, o assunto cai no nome do projeto", async () => {
+    const texto = await textoDoDocumento(exemplo({ nomeProjeto: "SClínico", nomeProcedimento: "" }));
+
+    expect(texto).toContain("Pedido de Assunção de Encargos Plurianuais para SClínico.");
+  });
+
+  it("escreve a descrição do projeto onde antes ficava o marcador", async () => {
+    const texto = await textoDoDocumento(exemplo({ descricaoProjeto: "unificar os registos clínicos" }));
+
+    expect(texto).toContain("Este projeto visa unificar os registos clínicos.");
+    expect(texto).not.toContain("[descrição do projeto]");
+  });
+
+  it("sem descrição, deixa o marcador a vermelho em vez de uma frase truncada", async () => {
+    const xml = await xmlDoDocumento(exemplo({ descricaoProjeto: "   " }));
+
+    expect(xml).toContain("[descrição do projeto]");
   });
 
   it("leva os três anos económicos e o preço base do procedimento", async () => {
@@ -81,7 +105,7 @@ describe("gerarPedidoPlurianualBlob", () => {
   it("assinala a vermelho o que a aplicação não sabe", async () => {
     const xml = await xmlDoDocumento(exemplo());
 
-    for (const marca of ["[n.º do documento]", "[descrição do projeto]", "[está / não está]"]) {
+    for (const marca of ["[n.º do documento]", "[está / não está]"]) {
       expect(xml).toContain(marca);
     }
     expect(xml).toContain('<w:color w:val="C00000"/>');

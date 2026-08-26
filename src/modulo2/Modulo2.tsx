@@ -1,6 +1,12 @@
 import { useRef, useState } from "react";
 import type { Lote, LotesJSON, PerfilJSON } from "../core/types";
-import { ErroImportacao, certificacoesDoPerfil, importarPerfisJSON, validarNomeProjeto } from "../core/perfil";
+import {
+  ErroImportacao,
+  certificacoesDoPerfil,
+  importarPerfisJSON,
+  validarDescricaoProjeto,
+  validarNomeProjeto,
+} from "../core/perfil";
 import { anosDeInicioAdmitidos } from "../core/types";
 import {
   criarLote,
@@ -14,7 +20,7 @@ import {
   taxaIva,
   validarLotes,
 } from "../core/lotes";
-import { LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import { DESCRICAO_PROJETO_EXEMPLO, LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
 import { ErroModeloEavalia } from "../excel/eavalia";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDasPecas, nomeDoPacoteDePecas } from "../saidas/pacotes";
@@ -38,6 +44,11 @@ interface Props {
   onDefinirNomeProjeto: (nome: string) => void;
   /** Aceita o nome vindo de um ficheiro importado, se ainda não houver um definido. */
   onAdotarNomeProjeto: (nome: string) => void;
+  /** Descrição do projeto, escrita no Módulo 1 — aqui só é carimbada nos ficheiros. */
+  descricaoProjeto: string;
+  onDefinirDescricaoProjeto: (descricao: string) => void;
+  /** Aceita a descrição vinda de um ficheiro importado, se ainda não houver uma. */
+  onAdotarDescricaoProjeto: (descricao: string) => void;
   /** Junta perfis ao catálogo do Módulo 1, substituindo os que já existam. */
   onAcrescentarPerfis: (perfis: PerfilJSON[]) => void;
   /** Substitui o catálogo inteiro (usado ao carregar o exemplo). */
@@ -51,6 +62,9 @@ export function Modulo2({
   nomeProjeto,
   onDefinirNomeProjeto,
   onAdotarNomeProjeto,
+  descricaoProjeto,
+  onDefinirDescricaoProjeto,
+  onAdotarDescricaoProjeto,
   onAcrescentarPerfis,
   onSubstituirPerfis,
 }: Props) {
@@ -79,9 +93,13 @@ export function Modulo2({
   // O nome do projeto é definido no Módulo 1 e vive numa só variável na
   // aplicação; aqui só é carimbado nos ficheiros no momento de os gerar, para
   // não haver duas cópias a divergir.
-  const configExportavel: LotesJSON = { ...config, nomeProjeto };
+  const configExportavel: LotesJSON = { ...config, nomeProjeto, descricaoProjeto };
 
-  const erros = [...validarNomeProjeto(nomeProjeto), ...validarLotes(config)];
+  const erros = [
+    ...validarNomeProjeto(nomeProjeto),
+    ...validarDescricaoProjeto(descricaoProjeto),
+    ...validarLotes(config),
+  ];
   const podeExportar = erros.length === 0;
 
   // "Por atribuir" é derivado, não é estado próprio: são os perfis do catálogo
@@ -128,18 +146,21 @@ export function Modulo2({
     const carregados: PerfilJSON[] = [];
     const falhados: string[] = [];
     let nomeDeFicheiro = "";
+    let descricaoDeFicheiro = "";
 
     for (const ficheiro of Array.from(ficheiros)) {
       try {
         const importado = importarPerfisJSON(await ficheiro.text());
         carregados.push(...importado.perfis);
         if (nomeDeFicheiro === "") nomeDeFicheiro = importado.nomeProjeto;
+        if (descricaoDeFicheiro === "") descricaoDeFicheiro = importado.descricaoProjeto;
       } catch (erro) {
         falhados.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
     }
 
     onAdotarNomeProjeto(nomeDeFicheiro);
+    onAdotarDescricaoProjeto(descricaoDeFicheiro);
     return { perfis: carregados, falhados };
   }
 
@@ -162,6 +183,7 @@ export function Modulo2({
       const importado = importarLotesJSON(await ficheiro.text());
       onAlterarConfig(() => importado);
       onAdotarNomeProjeto(importado.nomeProjeto);
+      onAdotarDescricaoProjeto(importado.descricaoProjeto);
       // Os perfis vêm dentro do ficheiro de lotes: passam a fazer parte do
       // catálogo, para poderem ser corrigidos no Módulo 1 como os restantes.
       onAcrescentarPerfis(perfisEmLotes(importado));
@@ -182,6 +204,7 @@ export function Modulo2({
     onAlterarConfig(() => exemplo);
     onSubstituirPerfis(structuredClone(PERFIS_EXEMPLO));
     onDefinirNomeProjeto(NOME_PROJETO_EXEMPLO);
+    onDefinirDescricaoProjeto(DESCRICAO_PROJETO_EXEMPLO);
     setMensagem({ tipo: "sucesso", texto: "Agrupamento de exemplo carregado." });
   }
 

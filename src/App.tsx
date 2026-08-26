@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import { CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistencia";
+import { CHAVE_DESCRICAO_PROJETO, CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistencia";
 import { ehListaDePerfisGuardada } from "./core/perfil";
 import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
@@ -35,6 +35,10 @@ const ABA_VISTA_GERAL: { chave: Aba; titulo: string; descricao: string } = {
   descricao: "Orçamento e pessoas da unidade",
 };
 
+function ehTexto(valor: unknown): valor is string {
+  return typeof valor === "string";
+}
+
 function ehLotesGuardado(valor: unknown): valor is LotesJSON {
   if (typeof valor !== "object" || valor === null) return false;
   const l = valor as Partial<LotesJSON>;
@@ -64,7 +68,12 @@ function App() {
   const [nomeProjeto, setNomeProjeto] = useEstadoPersistente<string>(
     CHAVE_NOME_PROJETO,
     () => "",
-    (v): v is string => typeof v === "string",
+    ehTexto,
+  );
+  const [descricaoProjeto, setDescricaoProjeto] = useEstadoPersistente<string>(
+    CHAVE_DESCRICAO_PROJETO,
+    () => "",
+    ehTexto,
   );
 
   /**
@@ -94,6 +103,11 @@ function App() {
    */
   function adotarNomeProjeto(doFicheiro: string) {
     if (doFicheiro.trim() !== "" && nomeProjeto.trim() === "") setNomeProjeto(doFicheiro);
+  }
+
+  /** A descrição do projeto viaja nos mesmos ficheiros, e pela mesma regra. */
+  function adotarDescricaoProjeto(doFicheiro: string) {
+    if (doFicheiro.trim() !== "" && descricaoProjeto.trim() === "") setDescricaoProjeto(doFicheiro);
   }
 
   function irPara(destino: Aba) {
@@ -155,6 +169,9 @@ function App() {
             nomeProjeto={nomeProjeto}
             onAlterarNomeProjeto={setNomeProjeto}
             onAdotarNomeProjeto={adotarNomeProjeto}
+            descricaoProjeto={descricaoProjeto}
+            onAlterarDescricaoProjeto={setDescricaoProjeto}
+            onAdotarDescricaoProjeto={adotarDescricaoProjeto}
             lotePorPerfilId={lotePorPerfilId(lotes)}
             onIrParaLotes={() => irPara("modulo2")}
           />
@@ -167,6 +184,9 @@ function App() {
             nomeProjeto={nomeProjeto}
             onDefinirNomeProjeto={setNomeProjeto}
             onAdotarNomeProjeto={adotarNomeProjeto}
+            descricaoProjeto={descricaoProjeto}
+            onDefinirDescricaoProjeto={setDescricaoProjeto}
+            onAdotarDescricaoProjeto={adotarDescricaoProjeto}
             onAcrescentarPerfis={acrescentarPerfis}
             onSubstituirPerfis={aplicarPerfis}
           />

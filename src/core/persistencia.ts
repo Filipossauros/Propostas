@@ -20,6 +20,8 @@ export const CHAVE_PERFIS = `${PREFIXO}perfis`;
 export const CHAVE_LOTES = `${PREFIXO}lotes`;
 /** Nome do projeto, comum aos dois módulos e a todos os ficheiros gerados. */
 export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
+/** Descrição do projeto, escrita no Módulo 1 e usada no pedido de encargos. */
+export const CHAVE_DESCRICAO_PROJETO = `${PREFIXO}descricaoProjeto`;
 /** Orçamento da unidade da Vista Geral, com os elementos internos registados. */
 export const CHAVE_VISTA_GERAL = `${PREFIXO}vistaGeral`;
 

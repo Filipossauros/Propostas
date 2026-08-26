@@ -29,7 +29,9 @@ describe("dados de exemplo", () => {
   });
 
   it("os ficheiros de exemplo são reimportáveis pela própria aplicação", () => {
-    expect(importarPerfisJSON(perfisParaJSON(PERFIS_EXEMPLO, "Projeto X")).perfis).toEqual(PERFIS_EXEMPLO);
+    expect(
+      importarPerfisJSON(perfisParaJSON(PERFIS_EXEMPLO, "Projeto X", "Uma descrição")).perfis,
+    ).toEqual(PERFIS_EXEMPLO);
     expect(importarLotesJSON(lotesParaJSON(LOTES_EXEMPLO))).toEqual(LOTES_EXEMPLO);
   });
 

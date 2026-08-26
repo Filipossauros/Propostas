@@ -65,6 +65,7 @@ export function lotesIniciais(): LotesJSON {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "lotes",
     nomeProjeto: "",
+    descricaoProjeto: "",
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: N_BLOCOS_PADRAO,
@@ -280,6 +281,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
     nBlocos: Number.isInteger(config.nBlocos) && config.nBlocos > 0 ? config.nBlocos : N_BLOCOS_PADRAO,
     nomeProjeto: config.nomeProjeto ?? "",
+    descricaoProjeto: config.descricaoProjeto ?? "",
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
     postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
@@ -311,6 +313,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
 export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
   return {
     ...config,
+    descricaoProjeto: config.descricaoProjeto ?? "",
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),

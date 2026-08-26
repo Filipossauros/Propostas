@@ -34,11 +34,15 @@ function comoJSON(texto: string): Blob {
 // Módulo 1 — perfis
 // --------------------------------------------------------------------------
 
-export async function ficheirosDosPerfis(perfis: PerfilJSON[], nomeProjeto: string): Promise<FicheiroDoPacote[]> {
+export async function ficheirosDosPerfis(
+  perfis: PerfilJSON[],
+  nomeProjeto: string,
+  descricaoProjeto: string,
+): Promise<FicheiroDoPacote[]> {
   const base = nomeSeguro(nomeProjeto, "Projeto");
   return [
     { nome: `${base}_Perfis.xlsx`, conteudo: await gerarResumoPerfisBlob(perfis, nomeProjeto) },
-    { nome: `${base}_Perfis.json`, conteudo: comoJSON(perfisParaJSON(perfis, nomeProjeto)) },
+    { nome: `${base}_Perfis.json`, conteudo: comoJSON(perfisParaJSON(perfis, nomeProjeto, descricaoProjeto)) },
   ];
 }
 
@@ -89,7 +93,7 @@ export async function ficheirosDasPecas(
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta("Formularios de Declaracao", formularios),
-    ...emPasta("Perfis", await ficheirosDosPerfis(perfis, nomeProjeto)),
+    ...emPasta("Perfis", await ficheirosDosPerfis(perfis, nomeProjeto, config.descricaoProjeto)),
   ];
 }
 

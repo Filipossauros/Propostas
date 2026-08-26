@@ -93,7 +93,7 @@ describe("duplicarPerfil", () => {
 describe("importação/exportação de perfis", () => {
   it("repõe o estado completo (ida e volta), com vários perfis e o nome do projeto", () => {
     const originais = [perfil({ perfil: "A" }), perfil({ perfil: "B" })];
-    const importado = importarPerfisJSON(perfisParaJSON(originais, "Projeto X"));
+    const importado = importarPerfisJSON(perfisParaJSON(originais, "Projeto X", "Uma descrição"));
 
     expect(importado.perfis).toEqual(originais);
     expect(importado.nomeProjeto).toBe("Projeto X");
@@ -133,7 +133,7 @@ describe("importação/exportação de perfis", () => {
 
 describe("lerTipoConfiguracao", () => {
   it("distingue perfis de lotes", () => {
-    expect(lerTipoConfiguracao(perfisParaJSON([perfil()], "Projeto X"))).toBe("perfis");
+    expect(lerTipoConfiguracao(perfisParaJSON([perfil()], "Projeto X", "Uma descrição"))).toBe("perfis");
     expect(lerTipoConfiguracao(lotesParaJSON(lotesComPerfis([{ numero: "1", perfis: [perfil()] }])))).toBe("lotes");
   });
 });
@@ -166,7 +166,7 @@ describe("atividade de fecho do conteúdo funcional", () => {
 
   it("um ficheiro que a trazia guardada não a leva duas vezes", () => {
     const guardado = perfil({ conteudoFuncional: itens("Levantamento de requisitos", ATIVIDADE_FIXA) });
-    const [lido] = importarPerfisJSON(perfisParaJSON([guardado], "Projeto")).perfis;
+    const [lido] = importarPerfisJSON(perfisParaJSON([guardado], "Projeto", "Uma descrição")).perfis;
 
     expect(lido.conteudoFuncional.map((i) => i.designacao)).toEqual(["Levantamento de requisitos"]);
     expect(conteudoFuncionalDoPerfil(lido)).toEqual(["Levantamento de requisitos", ATIVIDADE_FIXA]);
@@ -174,7 +174,7 @@ describe("atividade de fecho do conteúdo funcional", () => {
 
   it("e um perfil que só a tenha continua a precisar de uma atividade própria", () => {
     const so = perfil({ conteudoFuncional: itens(ATIVIDADE_FIXA) });
-    const [lido] = importarPerfisJSON(perfisParaJSON([so], "Projeto")).perfis;
+    const [lido] = importarPerfisJSON(perfisParaJSON([so], "Projeto", "Uma descrição")).perfis;
 
     expect(validarPerfil(lido).map((e) => e.campo)).toContain("conteudoFuncional");
   });
