@@ -15,7 +15,7 @@ import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { resultadosParaJSON } from "../core/resultadosJSON";
 import { anosDoOrcamento, orcamentoParaJSON } from "../core/vistaGeral";
 import { gerarDocxBlob } from "../word/gerarDocx";
-import { gerarPedidoPlurianualBlob } from "../word/pedidoPlurianual";
+import { gerarManifestacaoNecessidadesBlob, gerarPedidoPlurianualBlob } from "../word/informacaoSpms";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { gerarEavaliaBlob } from "../excel/eavalia";
@@ -55,6 +55,26 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
 // --------------------------------------------------------------------------
 
 /**
+ * A informação formal da organização que este procedimento pede.
+ *
+ * Com encargos plurianuais é o pedido para os assumir; sem eles a despesa cabe
+ * num ano só, não há nada a pedir à tutela, e o que segue é a manifestação de
+ * necessidades. Sai sempre uma, e nunca as duas: são a mesma informação vista
+ * de dois sítios, e juntas obrigavam quem recebe o processo a escolher.
+ */
+async function informacaoDoProcedimento(config: LotesJSON, base: string, quando: Date): Promise<FicheiroDoPacote> {
+  return config.encargosPlurianuais.ativo
+    ? {
+        nome: `${base}_Pedido_de_Encargos_Plurianuais.docx`,
+        conteudo: await gerarPedidoPlurianualBlob(config, quando),
+      }
+    : {
+        nome: `${base}_Manifestacao_de_Necessidades.docx`,
+        conteudo: await gerarManifestacaoNecessidadesBlob(config, quando),
+      };
+}
+
+/**
  * Tudo o que sai do procedimento: os dois documentos Word, o JSON dos lotes, o
  * pedido eAvalia, um formulário de declaração por lote — e, numa pasta à parte,
  * os ficheiros dos perfis do Módulo 1.
@@ -86,10 +106,7 @@ export async function ficheirosDasPecas(
       nome: `${base}_Requisitos_e_regras.docx`,
       conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(config)]),
     },
-    {
-      nome: `${base}_Pedido_de_Encargos_Plurianuais.docx`,
-      conteudo: await gerarPedidoPlurianualBlob(config, quando),
-    },
+    await informacaoDoProcedimento(config, base, quando),
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta("Formularios de Declaracao", formularios),

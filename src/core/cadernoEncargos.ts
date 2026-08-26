@@ -24,7 +24,11 @@ import { celula, type BlocoDocumento, type Documento } from "./documento";
 
 const DIREITA = "direita" as const;
 
-function tabelaPrecoBase(config: LotesJSON): BlocoDocumento {
+/**
+ * O preço base por lote e perfil — a mesma tabela que o Módulo 2 apresenta no
+ * «Resumo do procedimento» quando não há pedido plurianual, da mesma fonte.
+ */
+export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { tipo: "tabela" }> {
   const taxa = taxaIva(config);
   const linhas = linhasTabelaValores(config).map((l) => [
     celula(l.lote),

@@ -211,7 +211,8 @@ export function Modulo2({
   /**
    * Todas as peças do procedimento num pacote só.
    *
-   * Os dois documentos Word, o pedido eAvalia, o JSON dos lotes, um formulário
+   * Os dois documentos Word — o das regras, e a informação formal que o
+   * procedimento pede —, o pedido eAvalia, o JSON dos lotes, um formulário
    * de declaração por lote e — numa pasta à parte — os ficheiros dos perfis do
    * Módulo 1. Andam sempre juntos: seguem para a mesma pasta partilhada e
    * instruem o mesmo processo.
@@ -555,10 +556,12 @@ export function Modulo2({
           </button>
         </div>
         <p className="ajuda">
-          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, o pedido de
-          assunção de encargos plurianuais no modelo formal da organização, o pedido de parecer prévio eAvalia, o
-          JSON dos lotes, um formulário de declaração de experiência por lote — e, na pasta «Perfis», o Excel e o
-          JSON do Módulo 1.
+          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras,{" "}
+          {config.encargosPlurianuais.ativo
+            ? "o pedido de assunção de encargos plurianuais"
+            : "a manifestação de necessidades"}{" "}
+          no modelo formal da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
+          declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 1.
         </p>
         {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
       </section>

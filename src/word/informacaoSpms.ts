@@ -1,4 +1,12 @@
-// Pedido de assunção de encargos plurianuais, no modelo formal da organização.
+// As informações da organização, no seu modelo formal: o pedido de assunção de
+// encargos plurianuais e a manifestação de necessidades.
+//
+// São a mesma informação vista de dois sítios, e por isso o mesmo documento com
+// duas variantes: o enquadramento, o anexo técnico e o bloco de assinatura são
+// comuns; o que muda é o assunto, o que a análise mostra do preço base e o que
+// a conclusão pede. Qual dos dois sai decide-se pelo procedimento — com
+// encargos plurianuais é um pedido de autorização para os assumir; sem eles, a
+// despesa cabe no ano e o que há a fazer é manifestar a necessidade.
 //
 // Ao contrário do documento gerado em `gerarDocx.ts`, que nasce de uma folha em
 // branco, este parte de um modelo Word fornecido pela organização — com o
@@ -13,7 +21,7 @@
 import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
 import type { LotesJSON } from "../core/types";
-import { blocosAnexoTecnico, blocosEncargosPlurianuais } from "../core/cadernoEncargos";
+import { blocosAnexoTecnico, blocosEncargosPlurianuais, tabelaPrecoBase } from "../core/cadernoEncargos";
 import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 
@@ -315,8 +323,12 @@ export function dataPorExtenso(quando: Date): string {
  *
  * A tabela é reconstruída em vez de aproveitada: os três campos do modelo eram
  * `w:sdt` e o que aqui se quer é texto que se leia igual em qualquer leitor.
+ *
+ * A manifestação de necessidades leva ainda o n.º de orçamento, entre o n.º do
+ * documento e o assunto: é o cabimento a que a despesa vai, e a aplicação não
+ * o sabe.
  */
-function tabelaIdentificacao(data: string, assunto: string): string {
+function tabelaIdentificacao(data: string, assunto: string, comOrcamento: boolean): string {
   const campo = (rotulo: string, valor: string[]): string =>
     paragrafo([run(rotulo, { sz: TABELA }), tabulador(TABELA), ...valor], { jc: "left" });
 
@@ -334,7 +346,16 @@ function tabelaIdentificacao(data: string, assunto: string): string {
     "<w:tr>" +
     `<w:tc><w:tcPr><w:tcW w:w="4455" w:type="dxa"/></w:tcPr>${campo("N.º:", [marcador("n.º do documento")])}</w:tc>` +
     `<w:tc><w:tcPr><w:tcW w:w="4901" w:type="dxa"/></w:tcPr>${campo("Data:", [run(data, { negrito: true, sz: TABELA })])}</w:tc>` +
-    "</w:tr><w:tr>" +
+    "</w:tr>" +
+    (comOrcamento
+      ? "<w:tr>" +
+        `<w:tc><w:tcPr><w:tcW w:w="4455" w:type="dxa"/></w:tcPr>` +
+        campo("N.º orçamento:", [marcador("n.º de orçamento")]) +
+        "</w:tc>" +
+        `<w:tc><w:tcPr><w:tcW w:w="4901" w:type="dxa"/></w:tcPr>${vazio()}</w:tc>` +
+        "</w:tr>"
+      : "") +
+    "<w:tr>" +
     `<w:tc><w:tcPr><w:tcW w:w="${LARGURA}" w:type="dxa"/><w:gridSpan w:val="2"/></w:tcPr>` +
     campo("Assunto:", [run(assunto, { negrito: true, sz: TABELA })]) +
     "</w:tc></w:tr></w:tbl>"
@@ -352,8 +373,56 @@ function ultimaTabela(xml: string): string {
   return xml.slice(i, xml.indexOf("</w:tbl>", i) + "</w:tbl>".length);
 }
 
+/**
+ * Qual das duas informações se está a escrever.
+ *
+ * `plurianual` pede autorização para assumir encargos em anos futuros;
+ * `manifestacao` dá conta de uma necessidade cuja despesa cabe num ano só.
+ */
+export type Variante = "plurianual" | "manifestacao";
+
+/** As duas frases da conclusão da manifestação que fixam o tipo de procedimento. */
+const OPCOES_DE_PROCEDIMENTO: Array<{ opcao: string; sim: boolean; sufixo?: string }> = [
+  { opcao: "Concurso Público", sim: true },
+  {
+    opcao:
+      "Acordo Quadro para Prestação de Serviços de Consultadoria em Tecnologias de Informação e " +
+      "Comunicação (TIC)",
+    sim: false,
+    sufixo: "Identifique o lote ____",
+  },
+];
+
+const VAZIA = "\u25a1";
+
+/**
+ * Uma linha de escolha da conclusão: a opção, e o NÃO/SIM já assinalado.
+ *
+ * Alinhada à esquerda e não justificada — justificar esticaria os espaços entre
+ * «NÃO», a caixa e o «SIM» até a linha deixar de se ler como um par de opções.
+ */
+function escolha({ opcao, sim, sufixo }: { opcao: string; sim: boolean; sufixo?: string }): string {
+  const marca = (assinalado: boolean) => run(assinalado ? "X" : VAZIA, { negrito: true });
+  return paragrafo(
+    [
+      run(`${opcao}   NÃO   `),
+      marca(!sim),
+      run("   SIM   "),
+      marca(sim),
+      ...(sufixo === undefined ? [] : [run(`   ${sufixo}`)]),
+    ],
+    { jc: "left", antes: 60, depois: 60 },
+  );
+}
+
 /** O corpo completo do documento, em XML. */
-export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): string {
+export function corpoDaInformacao(
+  config: LotesJSON,
+  modelo: string,
+  quando: Date,
+  variante: Variante = "plurianual",
+): string {
+  const manifestacao = variante === "manifestacao";
   const projeto = config.nomeProjeto.trim() === "" ? "(projeto sem nome)" : config.nomeProjeto.trim();
   // O assunto identifica o procedimento, e não o projeto: é o procedimento que
   // dá entrada no circuito de decisão. Sem nome de procedimento — que é
@@ -374,7 +443,10 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   p.push(
     tabelaIdentificacao(
       dataPorExtenso(quando),
-      `Pedido de Assunção de Encargos Plurianuais para ${procedimento}.`,
+      manifestacao
+        ? `Manifestação de necessidades para ${procedimento}.`
+        : `Pedido de Assunção de Encargos Plurianuais para ${procedimento}.`,
+      manifestacao,
     ),
   );
 
@@ -404,37 +476,57 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   );
 
   p.push(titulo("II – Análise"));
-  p.push(titulo("2.1. Encargos com o projeto planeados para o ano corrente/transato", 2));
-  p.push(paragrafo("Para assegurar estes serviços foram desenvolvidos os seguintes procedimentos:"));
-  p.push(
-    paragrafo(
-      [marcador("tabela dos procedimentos do ano corrente/transato: n.º de procedimento, objeto, adjudicatário e valor")],
-      { jc: "left" },
-    ),
-  );
 
-  p.push(
-    titulo(`2.2. Encargos previstos através da assunção de encargos plurianuais ${anos[0]} e anos subsequentes`, 2),
-  );
+  if (manifestacao) {
+    // Sem encargos plurianuais não há histórico de procedimentos a enquadrar: a
+    // análise é só o que se vai gastar, e passa a ser o ponto 2.1.
+    p.push(titulo("2.1. Encargos previstos", 2));
+    p.push(
+      paragrafo(
+        "Para realizar os objetivos preconizados e face à inexistência de recursos internos na SPMS que possam " +
+          "desenvolver as atividades importa adquirir serviços na área dos sistemas de informação, através de " +
+          "Bolsa de Horas nos termos que se expõem. Os valores hora apresentados foram apurados através do valor " +
+          "médio das propostas obtidas no último concurso público realizado pela SPMS, E.P.E. para adquirir " +
+          "serviços desta natureza.",
+      ),
+    );
+    p.push(tabelaDoBloco(tabelaPrecoBase(config)));
+  } else {
+    p.push(titulo("2.1. Encargos com o projeto planeados para o ano corrente/transato", 2));
+    p.push(paragrafo("Para assegurar estes serviços foram desenvolvidos os seguintes procedimentos:"));
+    p.push(
+      paragrafo(
+        [
+          marcador(
+            "tabela dos procedimentos do ano corrente/transato: n.º de procedimento, objeto, adjudicatário e valor",
+          ),
+        ],
+        { jc: "left" },
+      ),
+    );
+    p.push(
+      titulo(`2.2. Encargos previstos através da assunção de encargos plurianuais ${anos[0]} e anos subsequentes`, 2),
+    );
 
-  // Os parágrafos de enquadramento e a tabela são os mesmos que a aplicação
-  // produz no seu próprio Word: uma fonte só, para não divergirem.
-  const plurianuais = blocosEncargosPlurianuais(config);
-  for (const bloco of plurianuais) {
-    if (bloco.tipo === "paragrafo" && bloco.texto.startsWith("O preço base")) continue;
-    if (bloco.tipo === "titulo") continue;
-    if (bloco.tipo === "tabela") {
-      p.push(
-        paragrafo(
-          "Os valores hora apresentados foram apurados através do valor médio das propostas obtidas no último " +
-            "concurso público realizado pela SPMS, E.P.E. para adquirir serviços desta natureza.",
-        ),
-      );
-      p.push(tabelaPlurianual(bloco));
-      continue;
+    // Os parágrafos de enquadramento e a tabela são os mesmos que a aplicação
+    // produz no seu próprio Word: uma fonte só, para não divergirem.
+    for (const bloco of blocosEncargosPlurianuais(config)) {
+      if (bloco.tipo === "paragrafo" && bloco.texto.startsWith("O preço base")) continue;
+      if (bloco.tipo === "titulo") continue;
+      if (bloco.tipo === "tabela") {
+        p.push(
+          paragrafo(
+            "Os valores hora apresentados foram apurados através do valor médio das propostas obtidas no último " +
+              "concurso público realizado pela SPMS, E.P.E. para adquirir serviços desta natureza.",
+          ),
+        );
+        p.push(tabelaPlurianual(bloco));
+        continue;
+      }
+      p.push(renderizarNoCorpo(bloco));
     }
-    p.push(renderizarNoCorpo(bloco));
   }
+
   p.push(
     paragrafo(
       `O preço base do procedimento é de ${formatarMoeda(total.semIva)}, sem IVA, correspondendo a ` +
@@ -443,19 +535,36 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   );
 
   p.push(titulo("III – Conclusão"));
-  p.push(
-    paragrafo(
-      "Atentos os factos supra elencados, torna-se necessário desencadear os procedimentos necessários para " +
-        "obter a autorização para assunção de encargos plurianuais nos termos constantes no quadro supra.",
-    ),
-  );
-  p.push(
-    paragrafo(
-      "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
-        "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no " +
-        "anexo técnico da presente informação.",
-    ),
-  );
+  if (manifestacao) {
+    p.push(
+      paragrafo(
+        "Assim solicita-se autorização para proceder à aquisição da prestação de serviços nos termos supra " +
+          "expostos, ao abrigo de:",
+      ),
+    );
+    for (const opcao of OPCOES_DE_PROCEDIMENTO) p.push(escolha(opcao));
+    p.push(
+      paragrafo(
+        "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
+          "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o anexo técnico " +
+          "e formulários de declaração de experiência profissional.",
+      ),
+    );
+  } else {
+    p.push(
+      paragrafo(
+        "Atentos os factos supra elencados, torna-se necessário desencadear os procedimentos necessários para " +
+          "obter a autorização para assunção de encargos plurianuais nos termos constantes no quadro supra.",
+      ),
+    );
+    p.push(
+      paragrafo(
+        "Caso seja superiormente autorizado deverá a presente informação ser remetida à Direção de Administração " +
+          "Geral, por forma a instruir os respetivos processos inerentes à contratação, mediante o disposto no " +
+          "anexo técnico da presente informação.",
+      ),
+    );
+  }
   p.push(vazio(240));
   p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240 }));
   p.push(herdado(assinatura));
@@ -467,7 +576,7 @@ export function corpoDoPedido(config: LotesJSON, modelo: string, quando: Date): 
   return p.join("");
 }
 
-/** No corpo do pedido os parágrafos saem tal e qual; os títulos ficam de fora. */
+/** No corpo da informação os parágrafos saem tal e qual; os títulos ficam de fora. */
 function renderizarNoCorpo(bloco: BlocoDocumento): string {
   return bloco.tipo === "paragrafo" ? paragrafo(bloco.texto) : renderizar(bloco);
 }
@@ -478,12 +587,12 @@ function renderizarNoCorpo(bloco: BlocoDocumento): string {
 
 const CAMINHO_DOCUMENTO = "word/document.xml";
 
-export async function gerarPedidoPlurianualBlob(config: LotesJSON, quando = new Date()): Promise<Blob> {
+async function gerarInformacaoBlob(config: LotesJSON, quando: Date, variante: Variante): Promise<Blob> {
   const zip = await JSZip.loadAsync(modeloBase64, { base64: true });
   const modelo = await zip.file(CAMINHO_DOCUMENTO)!.async("string");
 
   const sect = entre(modelo, "<w:sectPr", "</w:sectPr>");
-  const corpo = corpoDoPedido(config, modelo, quando) + sect;
+  const corpo = corpoDaInformacao(config, modelo, quando, variante) + sect;
   const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
   const fim = modelo.lastIndexOf("</w:body>");
 
@@ -492,4 +601,12 @@ export async function gerarPedidoPlurianualBlob(config: LotesJSON, quando = new 
     type: "blob",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
+}
+
+export function gerarPedidoPlurianualBlob(config: LotesJSON, quando = new Date()): Promise<Blob> {
+  return gerarInformacaoBlob(config, quando, "plurianual");
+}
+
+export function gerarManifestacaoNecessidadesBlob(config: LotesJSON, quando = new Date()): Promise<Blob> {
+  return gerarInformacaoBlob(config, quando, "manifestacao");
 }
