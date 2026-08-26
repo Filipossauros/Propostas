@@ -2,10 +2,16 @@
 //
 // ATENÇÃO — desvio deliberado ao princípio "sem persistência" do plano original,
 // pedido explicitamente para não se perder trabalho entre sessões. O que é
-// guardado está limitado ao trabalho de CONFIGURAÇÃO da entidade adjudicante
-// (perfis do Módulo 1 e lotes do Módulo 2). Os dados das declarações carregadas
-// no Módulo 3 — que contêm dados pessoais de candidatos — NUNCA são guardados:
-// continuam a viver apenas em memória e desaparecem ao fechar o separador.
+// guardado está limitado ao trabalho da entidade adjudicante: perfis do Módulo
+// 1, lotes do Módulo 2 e a Vista Geral da unidade. Os dados das declarações
+// carregadas no Módulo 3 — que contêm dados pessoais de CANDIDATOS — NUNCA são
+// guardados: continuam a viver apenas em memória e desaparecem ao fechar o
+// separador.
+//
+// A Vista Geral traz nomes de pessoas da equipa, registados à mão por quem a
+// preenche. Ficam neste navegador, e só nele — como tudo o resto, nada sai do
+// posto de trabalho. Apagar um projeto apaga também os nomes que lhe estavam
+// afetos.
 
 const PREFIXO = "propostas.v2.";
 
@@ -14,6 +20,8 @@ export const CHAVE_PERFIS = `${PREFIXO}perfis`;
 export const CHAVE_LOTES = `${PREFIXO}lotes`;
 /** Nome do projeto, comum aos dois módulos e a todos os ficheiros gerados. */
 export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
+/** Orçamento da unidade da Vista Geral, com os elementos internos registados. */
+export const CHAVE_VISTA_GERAL = `${PREFIXO}vistaGeral`;
 
 function armazenamentoDisponivel(): boolean {
   try {

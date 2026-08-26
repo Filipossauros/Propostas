@@ -3,10 +3,12 @@ import {
   anosDoOrcamento,
   comInterno,
   comProjeto,
+  ehOrcamentoGuardado,
   importarOrcamentoJSON,
   jaTemProjeto,
   lotesDoProjeto,
   nomeDoProjeto,
+  normalizarOrcamento,
   orcamentoInicial,
   orcamentoParaJSON,
   percentagemNaUnidade,
@@ -293,5 +295,38 @@ describe("orçamento em JSON", () => {
     expect(orcamento.projetos[0].entradas).toEqual([]);
     expect(orcamento.projetos[0].internos).toEqual([]);
     expect(pessoasDoProjeto(orcamento.projetos[0])).toBe(0);
+  });
+});
+
+describe("orçamento guardado no navegador", () => {
+  it("reconhece o que esta versão gravou", () => {
+    const orcamento = comProjeto(orcamentoInicial(), projetoSimples("A", 2));
+    expect(ehOrcamentoGuardado(JSON.parse(orcamentoParaJSON(orcamento)))).toBe(true);
+  });
+
+  it("recusa o que veio de outra versão, ou de outro tipo de ficheiro", () => {
+    expect(ehOrcamentoGuardado({ schemaVersion: "1.0", tipo: "orcamentoUnidade", projetos: [] })).toBe(false);
+    expect(ehOrcamentoGuardado({ schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "lotes", lotes: [] })).toBe(false);
+    expect(ehOrcamentoGuardado(null)).toBe(false);
+    expect(ehOrcamentoGuardado("nada")).toBe(false);
+  });
+
+  it("o que se recupera do navegador é igual ao que se carrega de ficheiro", () => {
+    let orcamento = comProjeto(orcamentoInicial(), projetoSimples("A", 2, 2028));
+    orcamento = comInterno(orcamento, orcamento.projetos[0].id, "Ana Silva");
+
+    const gravado = JSON.parse(orcamentoParaJSON(orcamento)) as object;
+    const doNavegador = normalizarOrcamento(gravado);
+    const doFicheiro = importarOrcamentoJSON(orcamentoParaJSON(orcamento));
+
+    expect(doNavegador).toEqual(doFicheiro);
+    expect(pessoasDaUnidade(doNavegador)).toBe(3);
+  });
+
+  it("um orçamento guardado a que falte um campo é reposto, não deitado fora", () => {
+    const orcamento = normalizarOrcamento({ tipo: "orcamentoUnidade", projetos: [{ nome: "A" }] });
+    expect(orcamento.unidade).toBe("");
+    expect(orcamento.projetos.map((p) => p.nome)).toEqual(["A"]);
+    expect(orcamento.projetos[0].entradas).toEqual([]);
   });
 });

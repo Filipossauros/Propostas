@@ -1,10 +1,14 @@
 import { useRef, useState } from "react";
 import { importarLotesJSON } from "../core/lotes";
+import { CHAVE_VISTA_GERAL } from "../core/persistencia";
+import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { ErroImportacao } from "../core/perfil";
 import {
   comInterno,
   comProjeto,
+  ehOrcamentoGuardado,
   importarOrcamentoJSON,
+  normalizarOrcamento,
   jaTemProjeto,
   nomeDoProjeto,
   orcamentoInicial,
@@ -24,13 +28,16 @@ import { TabelaVistaGeral } from "./TabelaVistaGeral";
  * Vista Geral — o orçamento da unidade.
  *
  * Ao contrário dos quatro módulos, não prepara nem avalia procedimento nenhum:
- * junta os que já estão preparados. E, ao contrário deles, não guarda nada no
- * navegador — traz nomes de pessoas da equipa, e o compromisso desta aplicação
- * é não guardar nomes de pessoas. Quem quiser conservar o trabalho descarrega o
- * JSON do orçamento e volta a carregá-lo da próxima vez.
+ * junta os que já estão preparados. Como eles, fica guardada neste navegador —
+ * mudar de separador não pode apagar o trabalho de juntar uma unidade inteira.
  */
 export function VistaGeral() {
-  const [orcamento, setOrcamento] = useState<OrcamentoUnidade>(orcamentoInicial);
+  const [orcamento, setOrcamento] = useEstadoPersistente<OrcamentoUnidade>(
+    CHAVE_VISTA_GERAL,
+    orcamentoInicial,
+    ehOrcamentoGuardado,
+    normalizarOrcamento,
+  );
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const inputAgrupamentosRef = useRef<HTMLInputElement>(null);
   const inputOrcamentoRef = useRef<HTMLInputElement>(null);
@@ -165,12 +172,12 @@ export function VistaGeral() {
 
         </div>
 
-        {/* Dito onde se decide guardar, e não escondido numa nota de rodapé: quem
-            fecha o separador sem descarregar perde o trabalho todo. */}
+        {/* A vista traz nomes de pessoas da equipa: quem a preenche tem de saber
+            onde ficam, e que ficam só aqui. */}
         <p className="ajuda">
-          Esta vista não fica guardada no navegador — traz nomes de pessoas da equipa, e esta aplicação não guarda
-          nomes de pessoas. Para a conservar, descarregue a Vista Geral em JSON, ao fundo da página, e volte a
-          carregá-la da próxima vez.
+          Esta vista fica guardada neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto
+          de trabalho. Apagar um projeto apaga também os nomes que lhe estavam afetos. Para a levar para outro posto,
+          descarregue a Vista Geral em JSON, ao fundo da página.
         </p>
       </section>
 
@@ -210,8 +217,7 @@ export function VistaGeral() {
           </button>
         </div>
         <p className="ajuda">
-          O Excel leva as duas tabelas, uma por folha: o resumo geral e o detalhe por projeto. O JSON é o que volta a
-          carregar-se aqui, com tudo como está — incluindo os elementos internos.
+          O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por projeto.
         </p>
       </section>
     </>

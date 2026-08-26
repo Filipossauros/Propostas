@@ -5,9 +5,10 @@
 // responde à pergunta que nenhum deles responde — onde é que a unidade está a
 // pôr as pessoas e o dinheiro.
 //
-// Nada disto se guarda no navegador. A vista traz nomes de pessoas da equipa, e
-// esta aplicação não guarda nomes de pessoas: quem quiser conservar o trabalho
-// descarrega o JSON do orçamento e volta a carregá-lo. Ver `persistencia.ts`.
+// A vista fica guardada neste navegador, como o resto do trabalho de
+// configuração — sair do separador não a pode apagar. Traz nomes de pessoas da
+// equipa, registados à mão, que ficam só neste posto de trabalho: nada sai
+// daqui. Ver `persistencia.ts`.
 
 import type { LotesJSON } from "./types";
 import { ANOS_PLURIANUAIS, SCHEMA_VERSION_ATUAL } from "./types";
@@ -304,11 +305,30 @@ export function importarOrcamentoJSON(texto: string): OrcamentoUnidade {
     throw new ErroImportacao("O ficheiro não contém uma lista de projetos.");
   }
 
+  return normalizarOrcamento(registo);
+}
+
+/** Se o que está guardado no navegador é um orçamento desta versão da aplicação. */
+export function ehOrcamentoGuardado(valor: unknown): valor is OrcamentoUnidade {
+  if (typeof valor !== "object" || valor === null) return false;
+  const o = valor as Partial<OrcamentoUnidade>;
+  return o.tipo === "orcamentoUnidade" && o.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(o.projetos);
+}
+
+/**
+ * Põe em dia um orçamento que estava guardado, no navegador ou num ficheiro.
+ *
+ * É o mesmo trabalho nos dois casos: o que ficou gravado traz o modelo do dia
+ * em que foi gravado, e a aplicação entretanto andou. Fazê-lo num sítio só é o
+ * que garante que carregar de ficheiro e recuperar do navegador dão o mesmo.
+ */
+export function normalizarOrcamento(bruto: object): OrcamentoUnidade {
+  const registo = bruto as Record<string, unknown>;
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "orcamentoUnidade",
     unidade: typeof registo.unidade === "string" ? registo.unidade : "",
-    projetos: (registo.projetos as unknown[]).map((p) => normalizarProjeto(p)),
+    projetos: Array.isArray(registo.projetos) ? registo.projetos.map((p) => normalizarProjeto(p)) : [],
   };
 }
 
