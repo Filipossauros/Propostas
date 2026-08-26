@@ -5,7 +5,6 @@ import { anosDeInicioAdmitidos } from "../core/types";
 import {
   criarLote,
   criarPerfilEmLote,
-  formulariosParaJSON,
   importarLotesJSON,
   lotesIniciais,
   anosPlurianuais,
@@ -252,13 +251,6 @@ export function Modulo2({
     } finally {
       setAGerar(false);
     }
-  }
-
-  function descarregarFormulariosJSON() {
-    descarregarBlob(
-      new Blob([formulariosParaJSON(configExportavel)], { type: "application/json" }),
-      nomeComProjeto(nomeProjeto, "Formularios_Declaracao.json"),
-    );
   }
 
   function recomecar() {
@@ -598,8 +590,7 @@ export function Modulo2({
         <header className="painel-cabecalho">
           <h3>Formulários de Declaração</h3>
           <p className="painel-nota">
-            Um ficheiro Excel por lote, com o nome do lote e uma folha por perfil. O JSON reúne todos os lotes num
-            ficheiro só.
+            Um ficheiro Excel por lote, com o nome do lote e uma folha por perfil. É o que os concorrentes preenchem.
           </p>
         </header>
         <div className="acoes">
@@ -612,14 +603,6 @@ export function Modulo2({
             {aGerar
               ? "A gerar…"
               : `Descarregar formulários (Excel, ${lotesComPerfis.length} ficheiro${lotesComPerfis.length === 1 ? "" : "s"})`}
-          </button>
-          <button
-            type="button"
-            className="botao-secundario"
-            onClick={descarregarFormulariosJSON}
-            disabled={!podeExportar || lotesComPerfis.length === 0}
-          >
-            Descarregar formulários (JSON)
           </button>
         </div>
         {lotesComPerfis.length > 1 && (

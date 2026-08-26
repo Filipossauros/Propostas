@@ -404,34 +404,6 @@ export function perfisEmLotes(config: LotesJSON): PerfilJSON[] {
   return config.lotes.flatMap((lote) => lote.perfis.map((entrada) => entrada.perfil));
 }
 
-/**
- * Ficheiro único com os formulários de declaração de todos os perfis atribuídos
- * a lotes, e a informação de lote que os acompanha. É o par em JSON do ficheiro
- * Excel dos formulários — mesma matéria, formato legível por outra aplicação.
- */
-export function formulariosParaJSON(config: LotesJSON): string {
-  const ficheiro = {
-    schemaVersion: SCHEMA_VERSION_ATUAL,
-    tipo: "formularios" as const,
-    nomeProjeto: config.nomeProjeto,
-    nomeProcedimento: config.nomeProcedimento,
-    formularios: config.lotes.flatMap((lote) =>
-      lote.perfis.map((entrada) => ({
-        lote: lote.numero,
-        loteDesignacao: lote.designacao,
-        perfil: entrada.perfil.perfil,
-        nBlocos: config.nBlocos,
-        nMinimoElementos: entrada.nMinimoElementos,
-        horas: entrada.horas,
-        valorHora: entrada.valorHora,
-        precoBase: precoBaseEntrada(entrada),
-        requisitos: entrada.perfil.requisitos,
-      })),
-    ),
-  };
-  return JSON.stringify(ficheiro, null, 2);
-}
-
 /** Um perfil do agrupamento que exige certificação, com o lote onde está. */
 export interface PerfilComCertificacao {
   loteNumero: string;
