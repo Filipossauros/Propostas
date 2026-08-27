@@ -85,9 +85,9 @@ export function nomeDoProjeto(config: LotesJSON): string {
  * Lê um agrupamento como um projeto da vista.
  *
  * As horas por ano existem sempre — com pedido plurianual porque foram
- * escritas, sem ele porque `horasPorAnoDe` reparte o total. É o que permite à
- * tabela ter as mesmas colunas para todos os projetos, venham eles de um pedido
- * plurianual ou não.
+ * escritas ano a ano, sem ele porque o contrato cabe num ano económico e as
+ * horas caem todas no de início. É o que permite à tabela ter as mesmas
+ * colunas para todos os projetos, venham eles de um pedido plurianual ou não.
  */
 export function projetoDeAgrupamento(config: LotesJSON): ProjetoVistaGeral {
   const taxa = taxaIva(config);
@@ -106,7 +106,9 @@ export function projetoDeAgrupamento(config: LotesJSON): ProjetoVistaGeral {
           pessoas: entrada.nMinimoElementos,
           valorHoraSemIva: entrada.valorHora,
           valorHoraComIva,
-          totaisPorAno: horasPorAnoDe(entrada).map((horas) => entrada.nMinimoElementos * horas * valorHoraComIva),
+          totaisPorAno: horasPorAnoDe(entrada, config.encargosPlurianuais.ativo).map(
+            (horas) => entrada.nMinimoElementos * horas * valorHoraComIva,
+          ),
         };
       }),
     ),

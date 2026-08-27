@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   anosPlurianuais,
   comHorasDoAno,
-  distribuicaoPadrao,
   horasPorAnoDe,
   importarLotesJSON,
   linhasPlurianuais,
@@ -23,12 +22,32 @@ const HOJE = new Date(2026, 7, 25);
 const ESTE_ANO = HOJE.getFullYear();
 
 /**
+ * Reparte as mesmas horas por todos os perfis do agrupamento.
+ *
+ * Com o pedido ligado, as horas dos anos são um modelo à parte do total anual:
+ * um agrupamento plurianual só está completo depois de as ter escritas, e é o
+ * que esta função faz às fixtures.
+ */
+function repartidoPorTodos(config: LotesJSON, horas: number[]): LotesJSON {
+  return {
+    ...config,
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada) =>
+        horas.reduce<PerfilEmLote>((atual, valor, ano) => ({ ...atual, ...comHorasDoAno(atual, ano, valor) }), entrada),
+      ),
+    })),
+  };
+}
+
+/**
  * Um agrupamento com dois perfis num lote e o pedido ligado. A fixture dá a
- * cada perfil 100 horas, 2 elementos e 50 €/h, com IVA à taxa padrão.
+ * cada perfil 100 horas repartidas em 33/33/34, 2 elementos e 50 €/h, com IVA
+ * à taxa padrão.
  */
 function comPedido(anoInicio = ESTE_ANO): LotesJSON {
   const base = lotesComPerfis([{ numero: "1", perfis: [perfil({ perfil: "Analista" }), perfil({ perfil: "Tester" })] }]);
-  return { ...base, encargosPlurianuais: { ativo: true, anoInicio } };
+  return repartidoPorTodos({ ...base, encargosPlurianuais: { ativo: true, anoInicio } }, [33, 33, 34]);
 }
 
 /** Escreve as horas de um ano no perfil indicado, como faz o editor do lote. */
@@ -60,50 +79,46 @@ describe("anosDeInicioAdmitidos", () => {
   });
 });
 
-describe("distribuicaoPadrao", () => {
-  it("divide por igual, e a soma bate certo", () => {
-    expect(distribuicaoPadrao(300)).toEqual([100, 100, 100]);
-    const resto = distribuicaoPadrao(100);
-    expect(resto).toEqual([33, 33, 34]);
-    expect(resto.reduce((a, b) => a + b, 0)).toBe(100);
-  });
-
-  it("sem horas contratadas não há nada a repartir", () => {
-    expect(distribuicaoPadrao(0)).toEqual([0, 0, 0]);
-  });
-});
-
 describe("horasPorAnoDe", () => {
-  it("um perfil com horas mas sem repartição mostra a repartição de partida", () => {
-    const [entrada] = comPedido().lotes[0].perfis;
-
-    expect(entrada.horas).toBe(100);
-    expect(horasPorAnoDe(entrada)).toEqual([33, 33, 34]);
-  });
-
-  it("escrita a repartição, é ela que vale", () => {
+  it("com pedido, são as que lá estiverem escritas", () => {
     const config = comHoras(comPedido(), 0, [0, 40, 60]);
 
-    expect(horasPorAnoDe(config.lotes[0].perfis[0])).toEqual([0, 40, 60]);
+    expect(horasPorAnoDe(config.lotes[0].perfis[0], true)).toEqual([0, 40, 60]);
+  });
+
+  it("um perfil sem repartição escrita não a inventa a partir do total anual", () => {
+    const base = lotesComPerfis([{ numero: "1", perfis: [perfil({ perfil: "Analista" })] }]);
+    const [entrada] = base.lotes[0].perfis;
+
+    expect(entrada.horas).toBe(100);
+    expect(horasPorAnoDe(entrada, true)).toEqual([0, 0, 0]);
+  });
+
+  it("sem pedido, o contrato cabe no ano de início e as horas caem lá todas", () => {
+    const config = comHoras(comPedido(), 0, [0, 40, 60]);
+    const [entrada] = config.lotes[0].perfis;
+
+    expect(horasPorAnoDe(entrada, false)).toEqual([100, 0, 0]);
   });
 });
 
 describe("comHorasDoAno", () => {
-  it("escrever as horas de um ano refaz o total do perfil", () => {
+  it("escrever as horas de um ano só mexe nesse ano", () => {
     const [entrada] = comPedido().lotes[0].perfis;
     const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 200) };
 
     expect(alterada.horasPorAno).toEqual([200, 33, 34]);
-    expect(alterada.horas).toBe(267);
   });
 
-  it("e com o total refaz-se o preço base, sem ninguém ter de o repetir", () => {
+  it("e não mexe no total do modelo anual, que é outro modelo", () => {
     const [entrada] = comPedido().lotes[0].perfis;
-    const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 0) };
+    const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 200) };
 
-    // 2 elementos × 67 horas × 50 €/h
-    expect(alterada.horas).toBe(67);
-    expect(precoBaseEntrada(alterada)).toBe(2 * 67 * 50);
+    expect(alterada.horas).toBe(100);
+    // Com pedido, o preço base sai da soma dos anos — 200 + 33 + 34; sem ele,
+    // do total anual, que ficou onde estava.
+    expect(precoBaseEntrada(alterada, true)).toBe(2 * 267 * 50);
+    expect(precoBaseEntrada(alterada, false)).toBe(2 * 100 * 50);
   });
 });
 
@@ -223,7 +238,10 @@ describe("no ficheiro e no documento", () => {
       { numero: "1", perfis: [perfil({ perfil: "Analista" })] },
       { numero: "2", perfis: [perfil({ perfil: "Tester" })] },
     ]);
-    const config: LotesJSON = { ...base, encargosPlurianuais: { ativo: true, anoInicio: ESTE_ANO } };
+    const config = repartidoPorTodos(
+      { ...base, encargosPlurianuais: { ativo: true, anoInicio: ESTE_ANO } },
+      [33, 33, 34],
+    );
 
     expect(totaisPorAnoDoLote(config, config.lotes[0].id)[0]).toBeCloseTo(2 * 33 * 61.5, 2);
     expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("Subtotal do lote 2");

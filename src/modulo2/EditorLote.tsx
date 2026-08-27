@@ -1,12 +1,5 @@
 import type { Lote, PerfilEmLote } from "../core/types";
-import {
-  comHorasDoAno,
-  comHorasTotais,
-  formatarMoeda,
-  horasPorAnoDe,
-  precoBaseEntrada,
-  totalLote,
-} from "../core/lotes";
+import { comHorasDoAno, formatarMoeda, horasPorAnoDe, precoBaseEntrada, totalLote } from "../core/lotes";
 import { certificacoesDoPerfil } from "../core/perfil";
 import { DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteisDoAno } from "../core/horasUteis";
 import { CampoNumero } from "../ui/CampoNumero";
@@ -59,12 +52,8 @@ export function EditorLote({
     onAlterar({
       perfis: lote.perfis.map((entrada) =>
         anos === undefined
-          ? { ...entrada, ...comHorasTotais(horasUteisDoAno(anoDeReferencia).horas) }
-          : {
-              ...entrada,
-              horasPorAno: anos.map((ano) => horasUteisDoAno(ano).horas),
-              horas: anos.reduce((soma, ano) => soma + horasUteisDoAno(ano).horas, 0),
-            },
+          ? { ...entrada, horas: horasUteisDoAno(anoDeReferencia).horas }
+          : { ...entrada, horasPorAno: anos.map((ano) => horasUteisDoAno(ano).horas) },
       ),
     });
   }
@@ -168,18 +157,18 @@ export function EditorLote({
                       sufixo="h"
                       aria-label={`Horas de ${entrada.perfil.perfil}`}
                       invalido={!(entrada.horas > 0)}
-                      onChange={(horas) => alterarPerfil(entrada.id, comHorasTotais(horas))}
+                      onChange={(horas) => alterarPerfil(entrada.id, { horas })}
                     />
                   ) : (
                     anos.map((ano, i) => (
                       <CampoNumero
                         key={ano}
-                        valor={horasPorAnoDe(entrada)[i]}
+                        valor={horasPorAnoDe(entrada, true)[i]}
                         min={0}
                         step={1}
                         sufixo="h"
                         aria-label={`Horas de ${ano} de ${entrada.perfil.perfil}`}
-                        invalido={!(horasPorAnoDe(entrada)[i] >= 0)}
+                        invalido={!(horasPorAnoDe(entrada, true)[i] >= 0)}
                         onChange={(horas) => alterarPerfil(entrada.id, comHorasDoAno(entrada, i, horas))}
                       />
                     ))
@@ -195,7 +184,7 @@ export function EditorLote({
                     onChange={(valorHora) => alterarPerfil(entrada.id, { valorHora })}
                   />
 
-                  <strong className="valor-calculado">{formatarMoeda(precoBaseEntrada(entrada))}</strong>
+                  <strong className="valor-calculado">{formatarMoeda(precoBaseEntrada(entrada, anos !== undefined))}</strong>
 
                   <div className="acoes-linha">
                     <button
@@ -237,7 +226,7 @@ export function EditorLote({
 
       <footer className="cartao-lote-rodape">
         <span>Preço base do lote (sem IVA)</span>
-        <strong>{formatarMoeda(totalLote(lote, 0).semIva)}</strong>
+        <strong>{formatarMoeda(totalLote(lote, 0, anos !== undefined).semIva)}</strong>
       </footer>
     </article>
   );

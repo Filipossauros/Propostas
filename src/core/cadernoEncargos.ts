@@ -41,7 +41,7 @@ export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { ti
   ]);
 
   for (const lote of config.lotes) {
-    const total = totalLote(lote, taxa);
+    const total = totalLote(lote, taxa, config.encargosPlurianuais.ativo);
     linhas.push([
       celula(lote.numero, undefined, true),
       celula(`Subtotal do lote ${lote.numero}`, undefined, true),

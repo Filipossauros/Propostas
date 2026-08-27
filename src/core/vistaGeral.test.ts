@@ -120,7 +120,9 @@ describe("leitura de um agrupamento", () => {
     expect(entrada.totaisPorAno[2]).toBe(0);
   });
 
-  it("um agrupamento sem pedido plurianual reparte as horas na mesma", () => {
+  it("um agrupamento sem pedido plurianual cabe todo no ano de início", () => {
+    // O contrato dura um ano económico: reparti-lo por três dava por
+    // comprometidos anos em que não há compromisso nenhum.
     const config = agrupamento({
       nomeProjeto: "Sem pedido",
       lotes: [{ numero: "1", perfil: "Programador", pessoas: 1, valorHora: 10, horasPorAno: [0, 0, 0] }],
@@ -129,7 +131,21 @@ describe("leitura de um agrupamento", () => {
     config.lotes[0].perfis[0].horas = 300;
 
     const projeto = projetoDeAgrupamento(config);
-    expect(projeto.entradas[0].totaisPorAno.map((v) => Math.round(v))).toEqual([1230, 1230, 1230]);
+    expect(projeto.entradas[0].totaisPorAno.map((v) => Math.round(v))).toEqual([3690, 0, 0]);
+  });
+
+  it("e uma repartição por anos que lá tenha ficado não o ressuscita", () => {
+    // Um agrupamento que já teve pedido plurianual guarda os anos escritos.
+    // Desligado o pedido, é o total anual que manda — e não a soma dos anos.
+    const config = agrupamento({
+      nomeProjeto: "Pedido desligado",
+      lotes: [{ numero: "1", perfil: "Programador", pessoas: 1, valorHora: 10, horasPorAno: [100, 100, 100] }],
+    });
+    config.encargosPlurianuais = { ativo: false, anoInicio: 2027 };
+    config.lotes[0].perfis[0].horas = 300;
+
+    const projeto = projetoDeAgrupamento(config);
+    expect(projeto.entradas[0].totaisPorAno.map((v) => Math.round(v))).toEqual([3690, 0, 0]);
   });
 });
 

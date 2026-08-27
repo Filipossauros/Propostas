@@ -3,9 +3,9 @@ import {
   LIMIAR_VALOR_SEM_IVA,
   anosAcimaDoLimiar,
   comHorasDoAno,
-  comHorasTotais,
   criarLote,
   criarPerfilEmLote,
+  horasContratadas,
   horasPorAnoDe,
   precoBaseEntrada,
   importarLotesJSON,
@@ -93,7 +93,7 @@ describe("preço base", () => {
 
   it("soma por lote e por procedimento", () => {
     const config = lotesExemplo();
-    expect(totalLote(config.lotes[0], 23).semIva).toBe(10000);
+    expect(totalLote(config.lotes[0], 23, false).semIva).toBe(10000);
     expect(totalProcedimento(config).semIva).toBe(20000);
   });
 });
@@ -311,56 +311,106 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
   });
 });
 
-describe("horas e repartição por anos", () => {
+describe("horas: dois modelos independentes", () => {
   function entrada(alteracoes: Partial<PerfilEmLote> = {}): PerfilEmLote {
     return { ...criarPerfilEmLote(perfil()), nMinimoElementos: 2, valorHora: 42, ...alteracoes };
   }
 
-  it("escrever as horas de um ano refaz o total", () => {
-    let e = entrada();
-    e = { ...e, ...comHorasDoAno(e, 0, 1000) };
-    e = { ...e, ...comHorasDoAno(e, 1, 500) };
-    e = { ...e, ...comHorasDoAno(e, 2, 250) };
+  /** Um perfil com os dois modelos preenchidos com números diferentes. */
+  function comOsDois(): PerfilEmLote {
+    let e = entrada({ horas: 1840 });
+    e = { ...e, ...comHorasDoAno(e, 0, 1840) };
+    e = { ...e, ...comHorasDoAno(e, 1, 1848) };
+    e = { ...e, ...comHorasDoAno(e, 2, 1824) };
+    return e;
+  }
 
-    expect(e.horasPorAno).toEqual([1000, 500, 250]);
-    expect(e.horas).toBe(1750);
+  it("com pedido, as horas contratadas são a soma dos anos", () => {
+    expect(horasContratadas(comOsDois(), true)).toBe(1840 + 1848 + 1824);
   });
 
-  it("escrever o total reparte-o pelos anos, em vez de deixar lá a repartição antiga", () => {
-    // Sem isto, desligar o pedido plurianual, corrigir o total e voltar a
-    // ligá-lo repunha os anos antigos por cima do número acabado de escrever —
-    // e as peças saíam com o preço base feito de um e a tabela dos anos do outro.
-    let e = entrada();
-    e = { ...e, ...comHorasDoAno(e, 0, 1000) };
-    e = { ...e, ...comHorasDoAno(e, 1, 500) };
-    e = { ...e, ...comHorasDoAno(e, 2, 250) };
-
-    const depois = { ...e, ...comHorasTotais(800) };
-    expect(depois.horas).toBe(800);
-    expect(depois.horasPorAno!.reduce((soma, h) => soma + h, 0)).toBe(800);
-    expect(horasPorAnoDe(depois).reduce((soma, h) => soma + h, 0)).toBe(800);
+  it("sem pedido, são o total do ano, e nunca a soma dos três", () => {
+    // É o defeito que isto resolve: desligar o pedido dava por contratado um
+    // ano de 5512 h, três vezes maior do que o contrato que se prepara.
+    expect(horasContratadas(comOsDois(), false)).toBe(1840);
   });
 
-  it("o total e a repartição nunca discordam, seja qual for a ordem das edições", () => {
-    const passos: Array<(e: PerfilEmLote) => PerfilEmLote> = [
-      (e) => ({ ...e, ...comHorasTotais(1840) }),
-      (e) => ({ ...e, ...comHorasDoAno(e, 1, 600) }),
-      (e) => ({ ...e, ...comHorasTotais(900) }),
-      (e) => ({ ...e, ...comHorasDoAno(e, 2, 0) }),
-      (e) => ({ ...e, ...comHorasTotais(0) }),
-    ];
+  it("o preço base segue o modelo em vigor, e muda com ele", () => {
+    const e = comOsDois();
 
-    let e = entrada();
-    for (const passo of passos) {
-      e = passo(e);
-      expect(horasPorAnoDe(e).reduce((soma, h) => soma + h, 0)).toBe(e.horas);
-      // E o preço base é sempre o do total que está no campo.
-      expect(precoBaseEntrada(e)).toBe(2 * e.horas * 42);
+    expect(precoBaseEntrada(e, true)).toBe(2 * 5512 * 42);
+    expect(precoBaseEntrada(e, false)).toBe(2 * 1840 * 42);
+    expect(precoBaseEntrada(e, true)).not.toBe(precoBaseEntrada(e, false));
+  });
+
+  it("escrever num modelo não toca no outro, em nenhum sentido", () => {
+    let e = comOsDois();
+
+    e = { ...e, horas: 800 };
+    expect(horasPorAnoDe(e, true)).toEqual([1840, 1848, 1824]);
+    expect(horasContratadas(e, true)).toBe(5512);
+
+    e = { ...e, ...comHorasDoAno(e, 0, 10) };
+    expect(e.horas).toBe(800);
+    expect(horasContratadas(e, false)).toBe(800);
+  });
+
+  it("ir e voltar entre os modelos devolve exatamente o que lá estava", () => {
+    const e = comOsDois();
+    const antes = { anual: horasContratadas(e, false), anos: horasPorAnoDe(e, true) };
+
+    // Ligar, desligar e voltar a ligar não é editar nada: nada pode mudar.
+    expect({ anual: horasContratadas(e, false), anos: horasPorAnoDe(e, true) }).toEqual(antes);
+  });
+
+  it("sem pedido, as horas do ano de início são o contrato todo", () => {
+    // A Vista Geral tem colunas por ano mesmo para um agrupamento anual: o
+    // contrato cabe num ano económico, e é no primeiro que ele está.
+    expect(horasPorAnoDe(entrada({ horas: 1840 }), false)).toEqual([1840, 0, 0]);
+  });
+
+  it("um perfil novo não traz horas de modelo nenhum", () => {
+    const nova = entrada();
+    expect(horasContratadas(nova, true)).toBe(0);
+    expect(horasContratadas(nova, false)).toBe(0);
+  });
+
+  describe("o que ficou gravado antes de os modelos se separarem", () => {
+    function antigo(ativo: boolean): LotesJSON {
+      const config = lotesIniciais();
+      config.encargosPlurianuais = { ativo, anoInicio: 2027 };
+      const lote = criarLote("1");
+      lote.perfis = [entrada({ horas: 1760, horasPorAno: [0, 0, 0] })];
+      lote.designacao = "Desenvolvimento";
+      config.lotes = [lote];
+      return config;
     }
-  });
 
-  it("zero horas não deixa resto nenhum espalhado pelos anos", () => {
-    expect(comHorasTotais(0).horasPorAno).toEqual([0, 0, 0]);
+    it("com o pedido ligado, os anos por escrever são repartidos ao abrir", () => {
+      // A aplicação repartia-os ao mostrá-los, e nunca os gravava. Deixados a
+      // zero, o trabalho de horas desaparecia ao abrir o ficheiro.
+      const posto = normalizarLotesGuardados(antigo(true));
+      const [e] = posto.lotes[0].perfis;
+
+      expect(horasPorAnoDe(e, true)).toEqual([586, 586, 588]);
+      expect(horasContratadas(e, true)).toBe(1760);
+    });
+
+    it("uma repartição já escrita não é tocada", () => {
+      const config = antigo(true);
+      config.lotes[0].perfis[0].horasPorAno = [1000, 500, 250];
+
+      expect(horasPorAnoDe(normalizarLotesGuardados(config).lotes[0].perfis[0], true)).toEqual([1000, 500, 250]);
+    });
+
+    it("sem pedido, os anos ficam a zero: não são o modelo em vigor", () => {
+      expect(normalizarLotesGuardados(antigo(false)).lotes[0].perfis[0].horasPorAno).toEqual([0, 0, 0]);
+    });
+
+    it("e a mesma reposição vale para um ficheiro importado", () => {
+      const lido = importarLotesJSON(lotesParaJSON(antigo(true)));
+      expect(horasPorAnoDe(lido.lotes[0].perfis[0], true)).toEqual([586, 586, 588]);
+    });
   });
 });
 

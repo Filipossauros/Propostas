@@ -169,15 +169,20 @@ export interface EspecificacaoFormulario {
 export interface PerfilEmLote {
   id: string;
   perfil: PerfilJSON;
-  /** Horas estimadas para o perfil dentro do lote, no total do contrato. */
+  /**
+   * Horas do perfil num contrato que cabe num ano económico — o modelo sem
+   * pedido de encargos plurianuais.
+   */
   horas: number;
   /**
    * Horas em cada ano económico, quando o procedimento leva pedido de encargos
    * plurianuais. Do ano de início do contrato aos dois seguintes.
    *
-   * `horas` continua a ser o total e é o que forma o preço base: quem escreve
-   * as horas ano a ano escreve as duas coisas ao mesmo tempo, para não haver um
-   * total que discorde da soma dos anos.
+   * Os dois campos são dois modelos, e não duas vistas do mesmo: um contrato de
+   * um ano e um de três não têm as mesmas horas, e somar os três anos para dar
+   * o total do de um ano dava um contrato três vezes maior. Cada um guarda o
+   * seu número, e ligar ou desligar o pedido não estraga o outro — ver
+   * `horasContratadas`, que escolhe o que vale.
    */
   horasPorAno: number[];
   /** Preço/hora unitário considerado para o preço base. */

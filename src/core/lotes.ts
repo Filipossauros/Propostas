@@ -206,10 +206,15 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
       const nome = entrada.perfil.perfil || `perfil ${idxPerfil + 1}`;
       const prefixo = `Lote ${numero || idxLote + 1}, ${nome}`;
 
-      if (!Number.isFinite(entrada.horas) || entrada.horas <= 0) {
+      // As horas que contam são as do modelo em vigor: com pedido plurianual,
+      // a soma dos anos; sem ele, o total do ano. Validar o outro daria por
+      // resolvido — ou por resolver — um campo que nem está no ecrã.
+      if (horasContratadas(entrada, config.encargosPlurianuais.ativo) <= 0) {
         erros.push({
           campo: `lotes[${idxLote}].perfis[${idxPerfil}].horas`,
-          mensagem: `${prefixo}: indique um n.º de horas maior que zero.`,
+          mensagem: config.encargosPlurianuais.ativo
+            ? `${prefixo}: reparta as horas pelos anos económicos; a soma tem de ser maior que zero.`
+            : `${prefixo}: indique um n.º de horas maior que zero.`,
         });
       }
       if (!Number.isFinite(entrada.valorHora) || entrada.valorHora <= 0) {
@@ -276,7 +281,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
   // A taxa de IVA, o nome do procedimento e a identidade do perfil foram
   // acrescentados depois: ficheiros anteriores não os têm.
   const config = bruto as unknown as LotesJSON;
-  return {
+  return comRepartricaoPostaEmDia({
     ...config,
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
     nBlocos: Number.isInteger(config.nBlocos) && config.nBlocos > 0 ? config.nBlocos : N_BLOCOS_PADRAO,
@@ -299,7 +304,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
         },
       })),
     })),
-  };
+  });
 }
 
 /**
@@ -311,13 +316,13 @@ export function importarLotesJSON(texto: string): LotesJSON {
  * para o resto da aplicação poder contar com o modelo atual.
  */
 export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
-  return {
+  return comRepartricaoPostaEmDia({
     ...config,
     descricaoProjeto: config.descricaoProjeto ?? "",
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),
-  };
+  });
 }
 
 /** As respostas admitidas pela lista de validação do formulário eAvalia. */
@@ -522,12 +527,33 @@ export interface LinhaTabelaValores {
   valores: Valores;
 }
 
+/**
+ * As horas contratadas para um perfil, no modelo que o procedimento segue.
+ *
+ * Os dois modelos não se misturam. Sem pedido plurianual o contrato cabe num
+ * ano económico e as horas são um número só; com pedido, estende-se por três e
+ * as horas escrevem-se ano a ano. Passar de um modelo ao outro é mudar de
+ * pergunta, não converter uma resposta: somar os três anos para dar o total de
+ * um contrato de um ano dava um contrato três vezes maior do que o que se está
+ * a preparar.
+ *
+ * Por isso cada modelo guarda o seu número, e desligar o pedido não estraga o
+ * que lá estava — quem voltar a ligá-lo encontra os anos como os deixou.
+ */
+export function horasContratadas(entrada: PerfilEmLote, plurianual: boolean): number {
+  return plurianual
+    ? horasPorAnoDe(entrada, true).reduce((soma, h) => soma + h, 0)
+    : (Number.isFinite(entrada.horas) ? entrada.horas : 0);
+}
+
 /** Preço base de um perfil dentro de um lote, sem IVA: n.º mínimo de elementos × horas × preço/hora. */
-export function precoBaseEntrada(entrada: PerfilEmLote): number {
-  return entrada.nMinimoElementos * entrada.horas * entrada.valorHora;
+export function precoBaseEntrada(entrada: PerfilEmLote, plurianual: boolean): number {
+  return entrada.nMinimoElementos * horasContratadas(entrada, plurianual) * entrada.valorHora;
 }
 
 export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
+  const plurianual = config.encargosPlurianuais.ativo;
+
   return config.lotes.flatMap((lote) =>
     lote.perfis.map((entrada) => ({
       loteId: lote.id,
@@ -536,9 +562,9 @@ export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
       loteDesignacao: lote.designacao,
       perfil: entrada.perfil.perfil,
       nMinimoElementos: entrada.nMinimoElementos,
-      horas: entrada.horas,
+      horas: horasContratadas(entrada, plurianual),
       valorHora: entrada.valorHora,
-      valores: aplicarIva(precoBaseEntrada(entrada), taxaIva(config)),
+      valores: aplicarIva(precoBaseEntrada(entrada, plurianual), taxaIva(config)),
     })),
   );
 }
@@ -557,56 +583,72 @@ function horasEmBranco(): number[] {
 }
 
 /**
- * Repartição de partida: o total do perfil dividido por igual pelos anos.
+ * Reparte um total pelos anos, por igual, com o resto no último.
  *
- * É um palpite, e assume-se como tal — nenhum contrato começa a 1 de janeiro
- * por acaso. Serve para os campos abrirem com a soma certa quando se liga o
- * pedido num agrupamento que já tinha horas; a partir daí ajusta-se ano a ano.
+ * Só serve para pôr em dia o que foi gravado antes de os dois modelos se
+ * separarem: nessa altura um agrupamento plurianual podia ter o total escrito
+ * e os anos por escrever, e era a aplicação que os repartia ao mostrá-los.
+ * Deixados a zero, esse trabalho perdia-se ao abrir o ficheiro.
  */
-export function distribuicaoPadrao(horasContratadas: number): number[] {
-  if (!Number.isFinite(horasContratadas) || horasContratadas <= 0) return horasEmBranco();
-  const porAno = Math.floor(horasContratadas / ANOS_PLURIANUAIS);
+function distribuicaoPadrao(total: number): number[] {
+  if (!Number.isFinite(total) || total <= 0) return horasEmBranco();
+  const porAno = Math.floor(total / ANOS_PLURIANUAIS);
   return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) =>
-    // O resto vai todo para o último ano, para a soma bater certo.
-    i === ANOS_PLURIANUAIS - 1 ? horasContratadas - porAno * (ANOS_PLURIANUAIS - 1) : porAno,
+    i === ANOS_PLURIANUAIS - 1 ? total - porAno * (ANOS_PLURIANUAIS - 1) : porAno,
   );
+}
+
+/**
+ * Escreve a repartição por anos que a aplicação antes calculava sozinha.
+ *
+ * Corre uma vez, sobre o que vem de ficheiro ou do navegador. Um agrupamento
+ * já repartido não é tocado — e um sem pedido plurianual também não, que aí os
+ * anos não são o modelo em vigor.
+ */
+function comRepartricaoPostaEmDia(config: LotesJSON): LotesJSON {
+  if (!config.encargosPlurianuais?.ativo) return config;
+
+  return {
+    ...config,
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada) => {
+        const escritas = horasPorAnoDe(entrada, true);
+        if (escritas.some((h) => h !== 0)) return entrada;
+        return { ...entrada, horasPorAno: distribuicaoPadrao(entrada.horas) };
+      }),
+    })),
+  };
 }
 
 /**
  * As horas de cada ano de um perfil no lote.
  *
- * Enquanto ninguém as tiver repartido, mostram-se as da repartição de partida:
- * é o que faz com que ligar o pedido num agrupamento já feito não apague o
- * trabalho de horas que lá estava.
+ * Com pedido plurianual são as que lá estiverem escritas. Sem ele o contrato
+ * cabe num ano económico, e é no primeiro que as horas caem por inteiro — é o
+ * que faz a Vista Geral e o quadro dos anos lerem um agrupamento anual sem o
+ * inventarem repartido por três.
  */
-export function horasPorAnoDe(entrada: PerfilEmLote): number[] {
+export function horasPorAnoDe(entrada: PerfilEmLote, plurianual: boolean): number[] {
+  if (!plurianual) {
+    return horasEmBranco().map((zero, i) => (i === 0 ? horasContratadas(entrada, false) : zero));
+  }
+
   const guardadas = Array.isArray(entrada.horasPorAno) ? entrada.horasPorAno : [];
-  const normalizadas = horasEmBranco().map((zero, i) =>
+  return horasEmBranco().map((zero, i) =>
     typeof guardadas[i] === "number" && Number.isFinite(guardadas[i]) ? guardadas[i] : zero,
   );
-  return normalizadas.some((h) => h !== 0) ? normalizadas : distribuicaoPadrao(entrada.horas);
 }
 
 /**
  * A alteração a aplicar a um perfil do lote quando se escrevem as horas de um
- * ano: as horas do ano, e o total que delas resulta.
+ * ano.
+ *
+ * Só toca no ano escrito. O total do modelo anual fica onde estava: são dois
+ * modelos independentes — ver `horasContratadas`.
  */
 export function comHorasDoAno(entrada: PerfilEmLote, ano: number, horas: number): Partial<PerfilEmLote> {
-  const horasPorAno = horasPorAnoDe(entrada).map((atual, i) => (i === ano ? horas : atual));
-  return { horasPorAno, horas: horasPorAno.reduce((soma, h) => soma + h, 0) };
-}
-
-/**
- * A alteração a aplicar quando se escreve o total de horas, sem pedido
- * plurianual: o total, e a repartição que dele resulta.
- *
- * A repartição tem de vir atrás. Escrever só o total deixava lá a repartição
- * anterior, que somava outra coisa — e bastava voltar a ligar o pedido para o
- * número acabado de escrever desaparecer, substituído pelos anos antigos.
- * Foram os dois a sair no mesmo agrupamento, cada peça com o seu.
- */
-export function comHorasTotais(horas: number): Partial<PerfilEmLote> {
-  return { horas, horasPorAno: distribuicaoPadrao(horas) };
+  return { horasPorAno: horasPorAnoDe(entrada, true).map((atual, i) => (i === ano ? horas : atual)) };
 }
 
 /** Uma linha do pedido, com o que vem do lote e o que dele se calcula. */
@@ -635,7 +677,7 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
 
   return config.lotes.flatMap((lote) =>
     lote.perfis.map((entrada) => {
-      const horas = horasPorAnoDe(entrada);
+      const horas = horasPorAnoDe(entrada, true);
       const valorHoraComIva = aplicarIva(entrada.valorHora, taxa).comIva;
       return {
         perfilEmLoteId: entrada.id,
@@ -646,7 +688,7 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
         pessoas: entrada.nMinimoElementos,
         valorHoraSemIva: entrada.valorHora,
         valorHoraComIva,
-        horasContratadas: entrada.horas,
+        horasContratadas: horasContratadas(entrada, true),
         horas,
         totais: horas.map((h) => entrada.nMinimoElementos * h * valorHoraComIva),
       };
@@ -674,7 +716,7 @@ export function totaisPorAnoSemIva(config: LotesJSON): number[] {
   return config.lotes
     .flatMap((lote) => lote.perfis)
     .reduce((soma, entrada) => {
-      const horas = horasPorAnoDe(entrada);
+      const horas = horasPorAnoDe(entrada, true);
       return soma.map((valor, i) => valor + entrada.nMinimoElementos * horas[i] * entrada.valorHora);
     }, horasEmBranco());
 }
@@ -720,16 +762,17 @@ export function taxaIva(config: LotesJSON): number {
   return Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO;
 }
 
-export function totalLote(lote: Lote, taxa: number): Valores {
+export function totalLote(lote: Lote, taxa: number, plurianual: boolean): Valores {
   return aplicarIva(
-    lote.perfis.reduce((soma, e) => soma + precoBaseEntrada(e), 0),
+    lote.perfis.reduce((soma, e) => soma + precoBaseEntrada(e, plurianual), 0),
     taxa,
   );
 }
 
 export function totalProcedimento(config: LotesJSON): Valores {
+  const plurianual = config.encargosPlurianuais.ativo;
   return aplicarIva(
-    config.lotes.reduce((soma, lote) => soma + totalLote(lote, 0).semIva, 0),
+    config.lotes.reduce((soma, lote) => soma + totalLote(lote, 0, plurianual).semIva, 0),
     taxaIva(config),
   );
 }

@@ -231,7 +231,7 @@ function TabelaPrecoBase({ config }: Props) {
 
           {config.lotes.length > 1 &&
             config.lotes.map((lote) => {
-              const subtotal = totalLote(lote, taxa);
+              const subtotal = totalLote(lote, taxa, config.encargosPlurianuais.ativo);
               return (
                 <tr key={`subtotal-${lote.id}`} className="linha-subtotal">
                   <th scope="row" colSpan={5}>

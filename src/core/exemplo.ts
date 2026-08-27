@@ -104,7 +104,10 @@ export const LOTES_EXEMPLO: LotesJSON = {
       numero: "1",
       designacao: "Desenvolvimento aplicacional",
       perfis: [
-        { id: "l1-p1", perfil: PERFIL_EXEMPLO, horas: 3520, horasPorAno: [1760, 880, 880], valorHora: 42, nMinimoElementos: 2 },
+        // `horas` é o modelo sem pedido plurianual — um ano de contrato —, e
+        // `horasPorAno` o modelo com ele. São dois modelos, e não um total e a
+        // sua repartição: por isso as horas de um ano inteiro dos dois lados.
+        { id: "l1-p1", perfil: PERFIL_EXEMPLO, horas: 1760, horasPorAno: [1760, 880, 880], valorHora: 42, nMinimoElementos: 2 },
         // Zero horas no primeiro ano: está coberto por um contrato ainda em vigor,
         // e só entra a partir do segundo.
         { id: "l1-p2", perfil: PERFIL_FRONTEND, horas: 1760, horasPorAno: [0, 880, 880], valorHora: 38, nMinimoElementos: 1 },
