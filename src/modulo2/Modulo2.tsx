@@ -483,6 +483,7 @@ export function Modulo2({
               onRemover={() => removerLote(lote.id)}
               onRetirarPerfil={(perfilEmLoteId) => retirarPerfil(lote.id, perfilEmLoteId)}
               anosPlurianuais={config.encargosPlurianuais.ativo ? anosDoContrato : undefined}
+              anoDeReferencia={config.encargosPlurianuais.anoInicio}
             />
           ))}
         </div>

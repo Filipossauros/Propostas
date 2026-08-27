@@ -596,6 +596,19 @@ export function comHorasDoAno(entrada: PerfilEmLote, ano: number, horas: number)
   return { horasPorAno, horas: horasPorAno.reduce((soma, h) => soma + h, 0) };
 }
 
+/**
+ * A alteração a aplicar quando se escreve o total de horas, sem pedido
+ * plurianual: o total, e a repartição que dele resulta.
+ *
+ * A repartição tem de vir atrás. Escrever só o total deixava lá a repartição
+ * anterior, que somava outra coisa — e bastava voltar a ligar o pedido para o
+ * número acabado de escrever desaparecer, substituído pelos anos antigos.
+ * Foram os dois a sair no mesmo agrupamento, cada peça com o seu.
+ */
+export function comHorasTotais(horas: number): Partial<PerfilEmLote> {
+  return { horas, horasPorAno: distribuicaoPadrao(horas) };
+}
+
 /** Uma linha do pedido, com o que vem do lote e o que dele se calcula. */
 export interface LinhaPlurianualCompleta {
   perfilEmLoteId: string;

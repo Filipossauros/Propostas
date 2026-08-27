@@ -988,6 +988,15 @@ input.campo-derivado {
   opacity: 1;
 }
 
+/* A barra de ações do cartão do lote: fica entre o cabeçalho e a tabela de
+   perfis, encostada à esquerda como os rótulos das colunas. */
+.cartao-lote-acoes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0 0 10px;
+}
+
 .dica-conteudo ul {
   list-style: none;
   margin: 0;

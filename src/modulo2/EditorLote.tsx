@@ -1,7 +1,16 @@
 import type { Lote, PerfilEmLote } from "../core/types";
-import { comHorasDoAno, formatarMoeda, horasPorAnoDe, precoBaseEntrada, totalLote } from "../core/lotes";
+import {
+  comHorasDoAno,
+  comHorasTotais,
+  formatarMoeda,
+  horasPorAnoDe,
+  precoBaseEntrada,
+  totalLote,
+} from "../core/lotes";
 import { certificacoesDoPerfil } from "../core/perfil";
+import { DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteisDoAno } from "../core/horasUteis";
 import { CampoNumero } from "../ui/CampoNumero";
+import { DicaNota } from "../ui/DicaNota";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
 import { moverItem, useReordenavel } from "../ui/useReordenavel";
 
@@ -15,9 +24,18 @@ interface Props {
    * plurianuais. Com eles, as horas escrevem-se ano a ano em vez de num total.
    */
   anosPlurianuais?: number[];
+  /** Ano a que as horas úteis se referem quando não há repartição por anos. */
+  anoDeReferencia: number;
 }
 
-export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPlurianuais: anos }: Props) {
+export function EditorLote({
+  lote,
+  onAlterar,
+  onRemover,
+  onRetirarPerfil,
+  anosPlurianuais: anos,
+  anoDeReferencia,
+}: Props) {
   const reordenavel = useReordenavel((de, para) => onAlterar({ perfis: moverItem(lote.perfis, de, para) }));
 
   function alterarPerfil(perfilEmLoteId: string, alteracao: Partial<PerfilEmLote>) {
@@ -28,6 +46,27 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPl
 
   function mover(idx: number, direcao: -1 | 1) {
     onAlterar({ perfis: moverItem(lote.perfis, idx, idx + direcao) });
+  }
+
+  /**
+   * Enche as horas de todos os perfis do lote com as horas úteis do ano.
+   *
+   * É um ponto de partida, e não uma imposição: um perfil que só entre a meio
+   * do contrato, ou a tempo parcial, corrige-se a seguir no seu campo. O que
+   * isto poupa é ir contar dias a um calendário para os pôr todos iguais.
+   */
+  function preencherHorasUteis() {
+    onAlterar({
+      perfis: lote.perfis.map((entrada) =>
+        anos === undefined
+          ? { ...entrada, ...comHorasTotais(horasUteisDoAno(anoDeReferencia).horas) }
+          : {
+              ...entrada,
+              horasPorAno: anos.map((ano) => horasUteisDoAno(ano).horas),
+              horas: anos.reduce((soma, ano) => soma + horasUteisDoAno(ano).horas, 0),
+            },
+      ),
+    });
   }
 
   return (
@@ -58,6 +97,17 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPl
           Remover lote
         </button>
       </header>
+
+      {lote.perfis.length > 0 && (
+        <div className="cartao-lote-acoes">
+          <button type="button" className="botao-discreto" onClick={preencherHorasUteis}>
+            Preencher com as horas úteis
+          </button>
+          <DicaNota rotulo="Como se contam as horas úteis" ancora="esquerda">
+            <ExplicacaoHorasUteis anos={anos ?? [anoDeReferencia]} />
+          </DicaNota>
+        </div>
+      )}
 
       {lote.perfis.length === 0 ? (
         <p className="estado-vazio estado-vazio-encaixado">Sem perfis atribuídos a este lote.</p>
@@ -118,7 +168,7 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPl
                       sufixo="h"
                       aria-label={`Horas de ${entrada.perfil.perfil}`}
                       invalido={!(entrada.horas > 0)}
-                      onChange={(horas) => alterarPerfil(entrada.id, { horas })}
+                      onChange={(horas) => alterarPerfil(entrada.id, comHorasTotais(horas))}
                     />
                   ) : (
                     anos.map((ano, i) => (
@@ -190,5 +240,41 @@ export function EditorLote({ lote, onAlterar, onRemover, onRetirarPerfil, anosPl
         <strong>{formatarMoeda(totalLote(lote, 0).semIva)}</strong>
       </footer>
     </article>
+  );
+}
+
+/**
+ * O cálculo por extenso, ano a ano.
+ *
+ * As contas aparecem porque quem assina a peça responde por elas: um número
+ * que sai de um botão sem se saber de onde vem obriga a refazê-lo à mão para
+ * confiar nele, e então mais valia escrevê-lo à mão.
+ */
+function ExplicacaoHorasUteis({ anos }: { anos: number[] }) {
+  return (
+    <>
+      <p>
+        Dias de semana do ano, menos os feriados nacionais que caiam em dia útil, menos {DIAS_DE_FERIAS} dias de
+        férias, vezes {HORAS_POR_DIA} horas por dia.
+      </p>
+      <ul>
+        {anos.map((ano) => {
+          const c = horasUteisDoAno(ano);
+          return (
+            <li key={ano}>
+              <span>
+                {ano}: ({c.diasDeSemana} dias de semana − {c.feriados} feriados − {c.ferias} férias) ×{" "}
+                {c.horasPorDia} h
+              </span>
+              <strong>{c.horas} h</strong>
+            </li>
+          );
+        })}
+      </ul>
+      <p>
+        Ficam de fora os feriados municipais, que dependem do concelho da prestação, e o Carnaval, que é tolerância
+        de ponto e não feriado obrigatório. Corrija as horas à mão se os quiser descontar.
+      </p>
+    </>
   );
 }

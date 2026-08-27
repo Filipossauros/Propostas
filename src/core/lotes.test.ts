@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   LIMIAR_VALOR_SEM_IVA,
   anosAcimaDoLimiar,
+  comHorasDoAno,
+  comHorasTotais,
   criarLote,
   criarPerfilEmLote,
+  horasPorAnoDe,
+  precoBaseEntrada,
   importarLotesJSON,
   linhasTabelaValores,
   lotesIniciais,
@@ -27,7 +31,7 @@ import {
   postoTrabalhoInicial,
 } from "./types";
 import { certificacoes, lotesComPerfis, perfil } from "./fixtures";
-import type { LotesJSON } from "./types";
+import type { LotesJSON, PerfilEmLote } from "./types";
 
 function lotesExemplo(): LotesJSON {
   return lotesComPerfis([
@@ -304,6 +308,59 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
       "eavalia.chaveMovelDigital",
       "eavalia.idiomas",
     ]);
+  });
+});
+
+describe("horas e repartição por anos", () => {
+  function entrada(alteracoes: Partial<PerfilEmLote> = {}): PerfilEmLote {
+    return { ...criarPerfilEmLote(perfil()), nMinimoElementos: 2, valorHora: 42, ...alteracoes };
+  }
+
+  it("escrever as horas de um ano refaz o total", () => {
+    let e = entrada();
+    e = { ...e, ...comHorasDoAno(e, 0, 1000) };
+    e = { ...e, ...comHorasDoAno(e, 1, 500) };
+    e = { ...e, ...comHorasDoAno(e, 2, 250) };
+
+    expect(e.horasPorAno).toEqual([1000, 500, 250]);
+    expect(e.horas).toBe(1750);
+  });
+
+  it("escrever o total reparte-o pelos anos, em vez de deixar lá a repartição antiga", () => {
+    // Sem isto, desligar o pedido plurianual, corrigir o total e voltar a
+    // ligá-lo repunha os anos antigos por cima do número acabado de escrever —
+    // e as peças saíam com o preço base feito de um e a tabela dos anos do outro.
+    let e = entrada();
+    e = { ...e, ...comHorasDoAno(e, 0, 1000) };
+    e = { ...e, ...comHorasDoAno(e, 1, 500) };
+    e = { ...e, ...comHorasDoAno(e, 2, 250) };
+
+    const depois = { ...e, ...comHorasTotais(800) };
+    expect(depois.horas).toBe(800);
+    expect(depois.horasPorAno!.reduce((soma, h) => soma + h, 0)).toBe(800);
+    expect(horasPorAnoDe(depois).reduce((soma, h) => soma + h, 0)).toBe(800);
+  });
+
+  it("o total e a repartição nunca discordam, seja qual for a ordem das edições", () => {
+    const passos: Array<(e: PerfilEmLote) => PerfilEmLote> = [
+      (e) => ({ ...e, ...comHorasTotais(1840) }),
+      (e) => ({ ...e, ...comHorasDoAno(e, 1, 600) }),
+      (e) => ({ ...e, ...comHorasTotais(900) }),
+      (e) => ({ ...e, ...comHorasDoAno(e, 2, 0) }),
+      (e) => ({ ...e, ...comHorasTotais(0) }),
+    ];
+
+    let e = entrada();
+    for (const passo of passos) {
+      e = passo(e);
+      expect(horasPorAnoDe(e).reduce((soma, h) => soma + h, 0)).toBe(e.horas);
+      // E o preço base é sempre o do total que está no campo.
+      expect(precoBaseEntrada(e)).toBe(2 * e.horas * 42);
+    }
+  });
+
+  it("zero horas não deixa resto nenhum espalhado pelos anos", () => {
+    expect(comHorasTotais(0).horasPorAno).toEqual([0, 0, 0]);
   });
 });
 
