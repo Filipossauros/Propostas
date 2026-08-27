@@ -3,6 +3,7 @@ import { formatarMoeda } from "../core/lotes";
 import {
   anosDoOrcamento,
   totaisPorAnoDaUnidade,
+  totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
@@ -66,6 +67,7 @@ export function TabelaVistaGeral({
   }
 
   const totaisAnos = totaisPorAnoDaUnidade(orcamento);
+  const totaisAnosSemIva = totaisPorAnoDaUnidadeSemIva(orcamento);
 
   /** Da coluna «Pessoas» à última dos anos: o que uma linha ocupa à direita do projeto. */
   const colunasDaLinha = 4 + anos.length;
@@ -122,7 +124,11 @@ export function TabelaVistaGeral({
             </th>
             {totaisAnos.map((total, i) => (
               <td key={anos[i]} className="numerico">
+                {/* As duas versões só aqui: é este o valor que instrui o
+                    processo, e é aqui que a pergunta se faz. Em cada linha
+                    dobrava a altura da tabela para nada. */}
                 <strong>{formatarMoeda(total)}</strong>
+                <span className="total-sem-iva">{formatarMoeda(totaisAnosSemIva[i])} s/ IVA</span>
               </td>
             ))}
             <td />

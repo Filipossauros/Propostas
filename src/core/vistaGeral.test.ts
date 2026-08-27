@@ -18,6 +18,7 @@ import {
   semInterno,
   semProjeto,
   totaisPorAnoDaUnidade,
+  totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
   valorDaUnidade,
   valorDoProjeto,
@@ -229,6 +230,11 @@ describe("anos do orçamento", () => {
     expect(totais[0]).toBeCloseTo(valorDoProjetoNoAno(a, 2027), 6);
     expect(totais[1]).toBeCloseTo(valorDoProjetoNoAno(a, 2028) + valorDoProjetoNoAno(b, 2028), 6);
     expect(totais.reduce((s, v) => s + v, 0)).toBeCloseTo(valorDaUnidade(orcamento), 6);
+
+    // E os mesmos anos sem IVA: a taxa do exemplo é de 23%.
+    const semIva = totaisPorAnoDaUnidadeSemIva(orcamento);
+    expect(semIva).toHaveLength(totais.length);
+    totais.forEach((total, i) => expect(semIva[i]).toBeCloseTo(total / 1.23, 6));
   });
 
   it("sem projetos, não há anos nenhuns", () => {

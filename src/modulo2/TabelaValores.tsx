@@ -7,7 +7,6 @@ import {
   formatarNumero,
   linhasPlurianuais,
   linhasTabelaValores,
-  precoBaseAcimaDoLimiar,
   totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   taxaIva,
@@ -28,38 +27,34 @@ const listaDeAnos = new Intl.ListFormat("pt-PT", { style: "long", type: "conjunc
  * desta aplicação, e o momento de dar por isso é aqui, antes de o procedimento
  * sair, e não depois.
  *
- * Só aparece com o pedido de encargos plurianuais ativo: o limiar é o da
- * competência para assumir encargos em anos económicos futuros, e sem pedido
- * não há compromisso futuro a autorizar.
+ * Dispara só quando um ano económico excede o limiar, e nunca pelo acumulado
+ * do procedimento: o limiar é o da competência para assumir o encargo de cada
+ * ano, e um procedimento que some 1,5 M€ em três anos de 500 mil não excede
+ * competência nenhuma. Sem pedido plurianual não há anos a aferir, e o alerta
+ * não aparece de todo.
  *
- * Com o pedido, mostra os anos económicos que o excedem — é por ano que a
- * competência se afere — e, quando também o preço base do procedimento o
- * excede, di-lo, porque é esse o valor que instrui o processo.
+ * Aparecendo, diz também qual é o preço base do procedimento: é esse o valor
+ * que instrui o processo, e quem confirma a competência precisa dos dois.
  */
 function AlertaLimiar({ config }: Props) {
   const total = totalProcedimento(config);
   const anos = anosAcimaDoLimiar(config);
-  const totalExcede = precoBaseAcimaDoLimiar(config);
 
-  if (!totalExcede && anos.length === 0) return null;
+  if (anos.length === 0) return null;
 
   return (
     <div className="aviso-limiar" role="status">
       <strong>Valor acima de {formatarMoeda(LIMIAR_VALOR_SEM_IVA)} sem IVA</strong>
 
-      {anos.length > 0 && (
-        <p>
-          {anos.length === 1 ? "O ano económico de " : "Os anos económicos de "}
-          {listaDeAnos.format(anos.map((ano) => `${ano.ano} (${formatarMoeda(ano.semIva)})`))}
-          {anos.length === 1 ? " excede o limiar" : " excedem o limiar"}, sem IVA.
-        </p>
-      )}
+      <p>
+        {anos.length === 1 ? "O ano económico de " : "Os anos económicos de "}
+        {listaDeAnos.format(anos.map((ano) => `${ano.ano} (${formatarMoeda(ano.semIva)})`))}
+        {anos.length === 1 ? " excede o limiar" : " excedem o limiar"}, sem IVA.
+      </p>
 
-      {totalExcede && (
-        <p>
-          O preço base do procedimento é <strong>{formatarMoeda(total.semIva)}</strong> sem IVA.
-        </p>
-      )}
+      <p>
+        O preço base do procedimento é <strong>{formatarMoeda(total.semIva)}</strong> sem IVA.
+      </p>
 
       <p className="aviso-limiar-nota">
         Confirme a competência para autorizar a despesa e, havendo encargos plurianuais, para assumir o compromisso,

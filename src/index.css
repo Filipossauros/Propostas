@@ -1824,6 +1824,16 @@ input.campo-derivado {
   background: var(--fundo);
 }
 
+/* O total da unidade leva as duas versões, uma por linha: o valor com IVA é o
+   que a coluna anuncia, e o sem IVA vai por baixo, mais discreto. */
+.total-sem-iva {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+
 /* No resumo, a coluna dos internos leva a mesma cor das linhas de interno da
    tabela de detalhe: é a mesma gente, contada de outra maneira. */
 .tabela-resumo-unidade .celula-interna {

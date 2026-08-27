@@ -689,8 +689,10 @@ export interface AnoAcimaDoLimiar {
 /**
  * Os anos económicos do pedido plurianual cujo valor excede o limiar.
  *
- * Só faz sentido com o pedido ativo: sem ele não há repartição por anos, e o
- * que conta é o preço base do procedimento inteiro.
+ * É por ano, e nunca pelo acumulado do procedimento: o limiar é o da
+ * competência para assumir o encargo de cada ano económico, e um procedimento
+ * que some 1,5 M€ em três anos de 500 mil não excede competência nenhuma.
+ * Sem o pedido não há repartição por anos, e não há nada a aferir.
  */
 export function anosAcimaDoLimiar(config: LotesJSON): AnoAcimaDoLimiar[] {
   if (!config.encargosPlurianuais.ativo) return [];
@@ -698,18 +700,6 @@ export function anosAcimaDoLimiar(config: LotesJSON): AnoAcimaDoLimiar[] {
   return totaisPorAnoSemIva(config)
     .map((semIva, i) => ({ ano: anos[i], semIva }))
     .filter((ano) => ano.semIva > LIMIAR_VALOR_SEM_IVA);
-}
-
-/**
- * Se o preço base do procedimento, sem IVA, excede o limiar.
- *
- * Só se afere com o pedido plurianual ativo. O limiar diz respeito à
- * competência para assumir encargos em anos económicos futuros: sem pedido, a
- * despesa cabe num ano, e o aviso chamava a atenção para uma autorização que
- * não é precisa.
- */
-export function precoBaseAcimaDoLimiar(config: LotesJSON): boolean {
-  return config.encargosPlurianuais.ativo && totalProcedimento(config).semIva > LIMIAR_VALOR_SEM_IVA;
 }
 
 /** Taxa de IVA da configuração, tolerando ficheiros anteriores que não a tinham. */

@@ -11,7 +11,6 @@ import {
   nomeProcedimentoDe,
   normalizarLotesGuardados,
   perfisComCertificacao,
-  precoBaseAcimaDoLimiar,
   totaisPorAnoPlurianual,
   totaisPorAnoSemIva,
   validarEavalia,
@@ -362,24 +361,26 @@ describe("limiar de valor", () => {
     expect(anosAcimaDoLimiar(config)).toEqual([{ ano: 2027, semIva: 600_000 }]);
   });
 
-  it("o preço base do procedimento tem o seu próprio alerta, sem IVA", () => {
-    const config = comValores(100, [2000, 2000, 2000]);
-    config.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
-    expect(totalProcedimento(config).semIva).toBe(600_000);
-    expect(precoBaseAcimaDoLimiar(config)).toBe(true);
+  it("o acumulado do procedimento não conta: só o valor de cada ano", () => {
+    // 1,2 M€ no total, concentrados: 600 mil no primeiro ano, acima do limiar.
+    const concentrado = comValores(100, [6000, 3000, 3000]);
+    concentrado.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+    expect(totalProcedimento(concentrado).semIva).toBe(1_200_000);
+    expect(anosAcimaDoLimiar(concentrado).map((a) => a.ano)).toEqual([2027]);
 
-    const abaixo = comValores(100, [1000, 1000, 1000]);
-    abaixo.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
-    expect(precoBaseAcimaDoLimiar(abaixo)).toBe(false);
+    // O mesmo 1,2 M€, repartido por igual: 400 mil por ano, e nenhum excede.
+    const repartido = comValores(100, [4000, 4000, 4000]);
+    repartido.encargosPlurianuais = { ativo: true, anoInicio: 2027 };
+    expect(totalProcedimento(repartido).semIva).toBe(1_200_000);
+    expect(anosAcimaDoLimiar(repartido)).toEqual([]);
   });
 
   it("sem o pedido plurianual não há alerta nenhum, por alto que seja o preço base", () => {
     // O limiar é o da competência para assumir encargos futuros: sem pedido,
     // a despesa cabe num ano e não há compromisso futuro a autorizar.
-    const config = comValores(100, [2000, 2000, 2000]);
+    const config = comValores(100, [6000, 6000, 6000]);
     expect(config.encargosPlurianuais.ativo).toBe(false);
-    expect(totalProcedimento(config).semIva).toBe(600_000);
-    expect(precoBaseAcimaDoLimiar(config)).toBe(false);
+    expect(totalProcedimento(config).semIva).toBe(1_800_000);
     expect(anosAcimaDoLimiar(config)).toEqual([]);
   });
 

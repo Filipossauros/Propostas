@@ -21,6 +21,7 @@ import {
   pessoasDaUnidade,
   pessoasDoProjeto,
   totaisPorAnoDaUnidade,
+  totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
@@ -158,7 +159,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
 
   const primeiraLinha = linhaCabecalho + 1;
   const ultimaLinha = linha - 1;
-  totais(folha, linha, orcamento, titulos.length);
+  totais(folha, linha++, orcamento, titulos.length);
 
   // O cabeçalho e a coluna do projeto ficam à vista ao rolar: com uma dezena de
   // projetos, sem eles não se sabe que ano é cada coluna nem de quem é a linha.
@@ -279,13 +280,27 @@ function escreverLinha(folha: ExcelJS.Worksheet, linha: number, celulas: Celula[
   folha.getRow(linha).height = 20;
 }
 
+/**
+ * O total da unidade, em duas linhas: com IVA e sem IVA.
+ *
+ * A tabela toda se exprime com IVA, que é o que se compara entre projetos. O
+ * valor sem IVA é o que instrui o processo, e aparece só aqui — em cada linha
+ * dobrava a altura da folha para responder a uma pergunta que só se faz no fim.
+ */
 function totais(folha: ExcelJS.Worksheet, linha: number, orcamento: OrcamentoUnidade, nColunas: number): void {
-  // O rótulo ocupa as colunas do projeto e do perfil, que não somam nada.
-  folha.mergeCells(linha, 1, linha, 5);
-  faixaDeTotais(folha, linha, nColunas, [
-    { coluna: 1, valor: "Total da unidade" },
-    ...totaisPorAnoDaUnidade(orcamento).map((total, i) => ({ coluna: 6 + i, valor: total, formato: MOEDA })),
-  ]);
+  const linhas: Array<{ rotulo: string; valores: number[] }> = [
+    { rotulo: "Total da unidade (c/ IVA)", valores: totaisPorAnoDaUnidade(orcamento) },
+    { rotulo: "Total da unidade (s/ IVA)", valores: totaisPorAnoDaUnidadeSemIva(orcamento) },
+  ];
+
+  linhas.forEach((l, i) => {
+    // O rótulo ocupa as colunas do projeto e do perfil, que não somam nada.
+    folha.mergeCells(linha + i, 1, linha + i, 5);
+    faixaDeTotais(folha, linha + i, nColunas, [
+      { coluna: 1, valor: l.rotulo },
+      ...l.valores.map((total, j) => ({ coluna: 6 + j, valor: total, formato: MOEDA })),
+    ]);
+  });
 }
 
 interface ValorDeTotal {

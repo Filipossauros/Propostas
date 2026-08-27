@@ -150,13 +150,28 @@ describe("gerarWorkbookVistaGeral", () => {
       expect(detalhe.getCell(linha, 5).numFmt).toContain("€");
     });
 
-    it("fecha com o total da unidade por ano", () => {
+    it("fecha com o total da unidade por ano, com IVA e sem IVA", () => {
       const orcamento = comDoisProjetos();
       const { detalhe } = folhas(orcamento);
-      const total = linhasDaFolha(detalhe).find((l) => l[0] === "Total da unidade")!;
+      const linhas = linhasDaFolha(detalhe);
 
-      const soma = [5, 6, 7, 8].reduce((s, i) => s + Number(total[i] || 0), 0);
-      expect(soma).toBeGreaterThan(0);
+      const comIva = linhas.find((l) => l[0] === "Total da unidade (c/ IVA)")!;
+      const semIva = linhas.find((l) => l[0] === "Total da unidade (s/ IVA)")!;
+      // O sem IVA vem logo a seguir, e não a meio da tabela.
+      expect(linhas.indexOf(semIva)).toBe(linhas.indexOf(comIva) + 1);
+
+      const soma = (linha: string[]) => [5, 6, 7, 8].reduce((s, i) => s + Number(linha[i] || 0), 0);
+      expect(soma(comIva)).toBeGreaterThan(0);
+      // A taxa do exemplo é de 23%: o sem IVA é o com IVA a dividir por 1,23.
+      expect(soma(semIva)).toBeCloseTo(soma(comIva) / 1.23, 5);
+    });
+
+    it("só o total leva as duas versões; as linhas dos perfis continuam com uma", () => {
+      const { detalhe } = folhas(comDoisProjetos());
+      const linhas = linhasDaFolha(detalhe);
+
+      expect(linhas.filter((l) => l[0].startsWith("Total da unidade"))).toHaveLength(2);
+      expect(linhas.filter((l) => l.some((c) => c.includes("s/ IVA")))).toHaveLength(1);
     });
   });
 

@@ -214,6 +214,25 @@ export function valorDoProjetoNoAno(projeto: ProjetoVistaGeral, ano: number): nu
   return projeto.entradas.reduce((soma, e) => soma + (e.totaisPorAno[indice] ?? 0), 0);
 }
 
+/**
+ * O valor sem IVA correspondente a um total com IVA de uma entrada.
+ *
+ * A vista guarda os totais já com IVA — é o que a tabela mostra —, mas guarda
+ * também as duas rates de onde vieram. Desfazer o IVA pela razão entre elas dá
+ * de volta o mesmo produto que lhe deu origem, sem ter de andar com a taxa de
+ * cada procedimento atrás, que podia até ser outra em cada um.
+ */
+export function semIvaDaEntrada(entrada: EntradaVistaGeral, comIva: number): number {
+  return entrada.valorHoraComIva === 0 ? 0 : (comIva / entrada.valorHoraComIva) * entrada.valorHoraSemIva;
+}
+
+/** O valor sem IVA de um projeto num ano concreto — zero fora dos seus anos. */
+export function valorDoProjetoNoAnoSemIva(projeto: ProjetoVistaGeral, ano: number): number {
+  const indice = ano - projeto.anoInicio;
+  if (indice < 0 || indice >= ANOS_PLURIANUAIS) return 0;
+  return projeto.entradas.reduce((soma, e) => soma + semIvaDaEntrada(e, e.totaisPorAno[indice] ?? 0), 0);
+}
+
 /** O valor com IVA de uma entrada num ano concreto do orçamento. */
 export function valorDaEntradaNoAno(projeto: ProjetoVistaGeral, entrada: EntradaVistaGeral, ano: number): number | null {
   const indice = ano - projeto.anoInicio;
@@ -286,10 +305,23 @@ export function lotesDoProjeto(projeto: ProjetoVistaGeral): string[] {
   return vistos;
 }
 
-/** O total da unidade em cada ano, pela ordem de `anosDoOrcamento`. */
+/** O total da unidade em cada ano, com IVA, pela ordem de `anosDoOrcamento`. */
 export function totaisPorAnoDaUnidade(orcamento: OrcamentoUnidade): number[] {
   return anosDoOrcamento(orcamento).map((ano) =>
     orcamento.projetos.reduce((soma, p) => soma + valorDoProjetoNoAno(p, ano), 0),
+  );
+}
+
+/**
+ * O mesmo, sem IVA.
+ *
+ * Só o total da unidade o mostra: é o valor que instrui o processo, e cada
+ * linha da tabela a levar as duas versões dobrava a altura de tudo para
+ * responder a uma pergunta que só se faz no fim.
+ */
+export function totaisPorAnoDaUnidadeSemIva(orcamento: OrcamentoUnidade): number[] {
+  return anosDoOrcamento(orcamento).map((ano) =>
+    orcamento.projetos.reduce((soma, p) => soma + valorDoProjetoNoAnoSemIva(p, ano), 0),
   );
 }
 
