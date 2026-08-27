@@ -13,13 +13,15 @@
 import ExcelJS from "exceljs";
 import {
   anosDoOrcamento,
+  externosDaUnidade,
+  externosDoProjeto,
+  internosDaUnidade,
+  internosDoProjeto,
   percentagemNaUnidade,
   pessoasDaUnidade,
   pessoasDoProjeto,
   totaisPorAnoDaUnidade,
   valorDaEntradaNoAno,
-  valorDaUnidade,
-  valorDoProjeto,
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
 } from "../core/vistaGeral";
@@ -182,8 +184,8 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
     views: [{ showGridLines: false }],
     pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
-  const titulos = ["Projeto", "Total Pessoas", "% na unidade", "Valor por projeto"];
-  folha.columns = [{ width: 40 }, { width: 15 }, { width: 15 }, { width: 20 }];
+  const titulos = ["Projeto", "Elementos externos", "Elementos internos", "Total", "% na unidade"];
+  folha.columns = [{ width: 40 }, { width: 20 }, { width: 20 }, { width: 12 }, { width: 15 }];
 
   let linha = 1;
   faixa(folha, linha++, titulos.length, livro.title ?? "Resumo geral");
@@ -191,9 +193,10 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
     folha,
     linha++,
     titulos.length,
-    "O peso na unidade é calculado tendo por base o total de elementos (internos e externos) por projeto. " +
-      "Este peso não tem em consideração o valor por projeto, uma vez que apenas são contabilizados custos de FSE. " +
-      "No valor por projeto apenas são contabilizados custos de FSE: custos com pessoal interno não são apurados.",
+    "Os elementos externos são os exigidos aos concorrentes nos perfis; os internos são as pessoas da unidade " +
+      "afetas ao projeto. O peso na unidade é calculado tendo por base o total de elementos (internos e externos) " +
+      "por projeto, e não tem em consideração o valor por projeto, uma vez que apenas são contabilizados custos " +
+      "de FSE.",
   );
   linha++;
 
@@ -206,9 +209,10 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
       linha++,
       [
         texto(projeto.nome),
+        { valor: externosDoProjeto(projeto) },
+        { valor: internosDoProjeto(projeto) },
         { valor: pessoasDoProjeto(projeto) },
         { valor: percentagemNaUnidade(orcamento, projeto), formato: PERCENTAGEM },
-        moeda(valorDoProjeto(projeto)),
       ],
       i % 2 === 1,
     );
@@ -217,9 +221,10 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
   const pessoas = pessoasDaUnidade(orcamento);
   faixaDeTotais(folha, linha, titulos.length, [
     { coluna: 1, valor: "Total da unidade" },
-    { coluna: 2, valor: pessoas },
-    { coluna: 3, valor: pessoas === 0 ? 0 : 100, formato: PERCENTAGEM },
-    { coluna: 4, valor: valorDaUnidade(orcamento), formato: MOEDA },
+    { coluna: 2, valor: externosDaUnidade(orcamento) },
+    { coluna: 3, valor: internosDaUnidade(orcamento) },
+    { coluna: 4, valor: pessoas },
+    { coluna: 5, valor: pessoas === 0 ? 0 : 100, formato: PERCENTAGEM },
   ]);
 
   folha.views = [{ state: "frozen", ySplit: linhaCabecalho, showGridLines: false }];

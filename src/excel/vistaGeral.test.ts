@@ -63,39 +63,44 @@ describe("gerarWorkbookVistaGeral", () => {
   });
 
   describe("folha do resumo", () => {
-    it("leva as três colunas do projeto, e mais nenhuma", () => {
+    it("é só sobre pessoas: sem coluna de valor", () => {
       const { resumo } = folhas(comDoisProjetos());
       const cabecalho = linhasDaFolha(resumo).find((l) => l[0] === "Projeto")!;
-      expect(cabecalho).toEqual(["Projeto", "Total Pessoas", "% na unidade", "Valor por projeto"]);
+
+      expect(cabecalho).toEqual(["Projeto", "Elementos externos", "Elementos internos", "Total", "% na unidade"]);
+      expect(cabecalho.some((t) => t.includes("Valor"))).toBe(false);
     });
 
-    it("um projeto por linha, com as pessoas e a fatia da unidade", () => {
+    it("um projeto por linha, com externos, internos, total e fatia da unidade", () => {
       const { resumo } = folhas(comDoisProjetos());
       const linhas = linhasDaFolha(resumo);
 
       // 3 pessoas no SClínico (2 do perfil + 1 interno) e 1 no RSE, em 4.
       const sclinico = linhas.find((l) => l[0] === "SClínico")!;
-      expect(Number(sclinico[1])).toBe(3);
-      expect(Number(sclinico[2])).toBeCloseTo(75, 6);
+      expect([sclinico[1], sclinico[2], sclinico[3]].map(Number)).toEqual([2, 1, 3]);
+      expect(Number(sclinico[4])).toBeCloseTo(75, 6);
 
       const rse = linhas.find((l) => l[0] === "RSE")!;
-      expect(Number(rse[1])).toBe(1);
-      expect(Number(rse[2])).toBeCloseTo(25, 6);
+      expect([rse[1], rse[2], rse[3]].map(Number)).toEqual([1, 0, 1]);
+      expect(Number(rse[4])).toBeCloseTo(25, 6);
     });
 
     it("fecha com o total da unidade", () => {
       const { resumo } = folhas(comDoisProjetos());
       const total = linhasDaFolha(resumo).find((l) => l[0] === "Total da unidade")!;
-      expect(Number(total[1])).toBe(4);
-      expect(Number(total[2])).toBe(100);
+
+      expect([total[1], total[2], total[3]].map(Number)).toEqual([3, 1, 4]);
+      expect(Number(total[4])).toBe(100);
     });
 
     it("os números saem com formato, e não como texto", () => {
       const { resumo } = folhas(comDoisProjetos());
       const linha = linhaCom(resumo, "SClínico");
-      expect(typeof resumo.getCell(linha, 2).value).toBe("number");
-      expect(resumo.getCell(linha, 3).numFmt).toContain("%");
-      expect(resumo.getCell(linha, 4).numFmt).toContain("€");
+
+      for (const coluna of [2, 3, 4]) expect(typeof resumo.getCell(linha, coluna).value).toBe("number");
+      expect(resumo.getCell(linha, 5).numFmt).toContain("%");
+      // E nenhuma coluna em euros: o resumo deixou de falar de dinheiro.
+      expect([2, 3, 4, 5].some((c) => (resumo.getCell(linha, c).numFmt ?? "").includes("€"))).toBe(false);
     });
   });
 
@@ -168,8 +173,9 @@ describe("gerarWorkbookVistaGeral", () => {
     orcamento = comInterno(orcamento, orcamento.projetos[0].id, "Ana Silva");
     const { resumo, detalhe } = folhas(orcamento);
 
+    // Sem perfis não há externos; o interno registado é o total do projeto.
     const noResumo = linhasDaFolha(resumo).find((l) => l[0] === "Vazio")!;
-    expect(Number(noResumo[1])).toBe(1);
+    expect([noResumo[1], noResumo[2], noResumo[3]].map(Number)).toEqual([0, 1, 1]);
 
     const noDetalhe = linhasDaFolha(detalhe).filter((l) => l[0] === "Vazio");
     expect(noDetalhe).toHaveLength(1);

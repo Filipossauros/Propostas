@@ -196,7 +196,7 @@ export function VistaGeral() {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Resumo geral</h3>
-          <p className="painel-nota">Resumo de todos os projetos na unidade.</p>
+          <p className="painel-nota">As pessoas de todos os projetos na unidade.</p>
         </header>
 
         <ResumoGeral orcamento={orcamento} />

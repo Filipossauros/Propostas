@@ -1824,6 +1824,13 @@ input.campo-derivado {
   background: var(--fundo);
 }
 
+/* No resumo, a coluna dos internos leva a mesma cor das linhas de interno da
+   tabela de detalhe: é a mesma gente, contada de outra maneira. */
+.tabela-resumo-unidade .celula-interna {
+  color: var(--interno-texto);
+  background: var(--interno-fundo);
+}
+
 /* Elemento interno: a azul, para se distinguir de relance das linhas de perfil
    contratado, que são o que sai a concurso. */
 .linha-interno-registado td {

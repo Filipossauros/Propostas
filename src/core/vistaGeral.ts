@@ -222,6 +222,21 @@ export function valorDaEntradaNoAno(projeto: ProjetoVistaGeral, entrada: Entrada
 }
 
 /**
+ * Os elementos externos de um projeto: os exigidos aos concorrentes nos perfis.
+ *
+ * É o mínimo que o procedimento impõe, e não quem lá está: o que a vista
+ * compara é o que cada projeto obriga a ter.
+ */
+export function externosDoProjeto(projeto: ProjetoVistaGeral): number {
+  return projeto.entradas.reduce((soma, e) => soma + e.pessoas, 0);
+}
+
+/** Os elementos internos de um projeto: os da casa, registados à mão. */
+export function internosDoProjeto(projeto: ProjetoVistaGeral): number {
+  return projeto.internos.length;
+}
+
+/**
  * As pessoas afetas a um projeto: as exigidas aos concorrentes, mais as da casa.
  *
  * Cada elemento interno conta um, tal como cada elemento exigido num perfil
@@ -229,7 +244,15 @@ export function valorDaEntradaNoAno(projeto: ProjetoVistaGeral, entrada: Entrada
  * está a equipa —, e por isso as duas origens contam da mesma maneira.
  */
 export function pessoasDoProjeto(projeto: ProjetoVistaGeral): number {
-  return projeto.entradas.reduce((soma, e) => soma + e.pessoas, 0) + projeto.internos.length;
+  return externosDoProjeto(projeto) + internosDoProjeto(projeto);
+}
+
+export function externosDaUnidade(orcamento: OrcamentoUnidade): number {
+  return orcamento.projetos.reduce((soma, p) => soma + externosDoProjeto(p), 0);
+}
+
+export function internosDaUnidade(orcamento: OrcamentoUnidade): number {
+  return orcamento.projetos.reduce((soma, p) => soma + internosDoProjeto(p), 0);
 }
 
 export function pessoasDaUnidade(orcamento: OrcamentoUnidade): number {
