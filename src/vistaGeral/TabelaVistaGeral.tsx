@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useArrastoDeProjetos, type Arrasto } from "./arrasto";
 import { formatarMoeda } from "../core/lotes";
 import {
   anosDoOrcamento,
@@ -14,6 +15,8 @@ interface Props {
   onRemoverProjeto: (projetoId: string) => void;
   onRemoverInterno: (projetoId: string, internoId: string) => void;
   onAcrescentarInterno: (projetoId: string, nome: string) => void;
+  onMoverProjeto: (arrastadoId: string, alvoId: string) => void;
+  onDeslocarProjeto: (projetoId: string, passos: number) => void;
 }
 
 /**
@@ -59,8 +62,11 @@ export function TabelaVistaGeral({
   onRemoverProjeto,
   onRemoverInterno,
   onAcrescentarInterno,
+  onMoverProjeto,
+  onDeslocarProjeto,
 }: Props) {
   const anos = anosDoOrcamento(orcamento);
+  const arrasto = useArrastoDeProjetos({ onMover: onMoverProjeto, onDeslocar: onDeslocarProjeto });
 
   if (orcamento.projetos.length === 0) {
     return <p className="estado-vazio">Importe os JSON de lotes do Módulo 2 para começar a vista.</p>;
@@ -77,7 +83,7 @@ export function TabelaVistaGeral({
       <table className="tabela tabela-unidade">
         <caption className="tabela-legenda">
           Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos elementos
-          exigidos em cada perfil.
+          exigidos em cada perfil. Arraste um projeto para o reordenar; a ordem é a mesma nas duas tabelas.
         </caption>
 
         <thead>
@@ -111,6 +117,7 @@ export function TabelaVistaGeral({
             projeto={projeto}
             anos={anos}
             colunasDaLinha={colunasDaLinha}
+            arrasto={arrasto}
             onRemoverProjeto={onRemoverProjeto}
             onRemoverInterno={onRemoverInterno}
             onAcrescentarInterno={onAcrescentarInterno}
@@ -139,10 +146,11 @@ export function TabelaVistaGeral({
   );
 }
 
-interface PropsProjeto extends Omit<Props, "orcamento"> {
+interface PropsProjeto extends Omit<Props, "orcamento" | "onMoverProjeto" | "onDeslocarProjeto"> {
   projeto: ProjetoVistaGeral;
   anos: number[];
   colunasDaLinha: number;
+  arrasto: Arrasto;
 }
 
 /**
@@ -156,6 +164,7 @@ function LinhasDoProjeto({
   projeto,
   anos,
   colunasDaLinha,
+  arrasto,
   onRemoverProjeto,
   onRemoverInterno,
   onAcrescentarInterno,
@@ -166,6 +175,7 @@ function LinhasDoProjeto({
   const celulaDoProjeto = (
     <th scope="rowgroup" rowSpan={nLinhas} className="celula-projeto">
       <div className="projeto-nome">
+        <span {...arrasto.pega(projeto.id, projeto.nome)}>⠿</span>
         <strong>{projeto.nome}</strong>
         <button
           type="button"
@@ -249,7 +259,7 @@ function LinhasDoProjeto({
   ];
 
   return (
-    <tbody className="grupo-projeto">
+    <tbody className={`grupo-projeto ${arrasto.classe(projeto.id)}`.trim()} {...arrasto.zona(projeto.id)}>
       {linhas.map((linha, i) => (
         <tr
           key={linha.chave}

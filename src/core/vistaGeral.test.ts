@@ -17,12 +17,15 @@ import {
   projetoDeAgrupamento,
   semInterno,
   semProjeto,
+  comProjetoDeslocado,
+  comProjetoMovido,
   totaisPorAnoDaUnidade,
   totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
   valorDaUnidade,
   valorDoProjeto,
   valorDoProjetoNoAno,
+  type OrcamentoUnidade,
 } from "./vistaGeral";
 import { criarLote, criarPerfilEmLote, lotesIniciais } from "./lotes";
 import { ErroImportacao } from "./perfil";
@@ -334,5 +337,71 @@ describe("orçamento guardado no navegador", () => {
     expect(orcamento.unidade).toBe("");
     expect(orcamento.projetos.map((p) => p.nome)).toEqual(["A"]);
     expect(orcamento.projetos[0].entradas).toEqual([]);
+  });
+});
+
+describe("ordem dos projetos", () => {
+  function comTres(): OrcamentoUnidade {
+    let orcamento = orcamentoInicial();
+    for (const nome of ["A", "B", "C"]) {
+      orcamento = comProjeto(
+        orcamento,
+        projetoDeAgrupamento(
+          agrupamento({
+            nomeProjeto: nome,
+            lotes: [{ numero: "1", perfil: "Programador", pessoas: 1, valorHora: 100, horasPorAno: [1000, 0, 0] }],
+          }),
+        ),
+      );
+    }
+    return orcamento;
+  }
+
+  const ordem = (o: OrcamentoUnidade) => o.projetos.map((p) => p.nome).join("");
+
+  it("arrastar um projeto para cima põe-no no lugar do outro", () => {
+    const o = comTres();
+    expect(ordem(comProjetoMovido(o, o.projetos[2].id, o.projetos[0].id))).toBe("CAB");
+  });
+
+  it("e para baixo empurra os do meio para cima", () => {
+    const o = comTres();
+    expect(ordem(comProjetoMovido(o, o.projetos[0].id, o.projetos[2].id))).toBe("BCA");
+  });
+
+  it("largar um projeto sobre si próprio não mexe em nada", () => {
+    const o = comTres();
+    expect(comProjetoMovido(o, o.projetos[1].id, o.projetos[1].id)).toBe(o);
+  });
+
+  it("um id que não existe não altera a ordem", () => {
+    const o = comTres();
+    expect(ordem(comProjetoMovido(o, "inexistente", o.projetos[0].id))).toBe("ABC");
+    expect(ordem(comProjetoMovido(o, o.projetos[0].id, "inexistente"))).toBe("ABC");
+  });
+
+  it("as setas deslocam um lugar de cada vez", () => {
+    const o = comTres();
+    expect(ordem(comProjetoDeslocado(o, o.projetos[1].id, -1))).toBe("BAC");
+    expect(ordem(comProjetoDeslocado(o, o.projetos[1].id, 1))).toBe("ACB");
+  });
+
+  it("nas pontas, param: não dão erro nem dão a volta", () => {
+    const o = comTres();
+    expect(comProjetoDeslocado(o, o.projetos[0].id, -1)).toBe(o);
+    expect(comProjetoDeslocado(o, o.projetos[2].id, 1)).toBe(o);
+  });
+
+  it("reordenar não perde os elementos internos nem os valores", () => {
+    let o = comTres();
+    o = comInterno(o, o.projetos[0].id, "Ana Silva");
+    const antes = o.projetos.find((p) => p.nome === "A")!;
+
+    const depois = comProjetoMovido(o, antes.id, o.projetos[2].id);
+    const mesmo = depois.projetos.find((p) => p.nome === "A")!;
+
+    expect(depois.projetos).toHaveLength(3);
+    expect(mesmo).toEqual(antes);
+    expect(mesmo.internos.map((i) => i.nome)).toEqual(["Ana Silva"]);
   });
 });

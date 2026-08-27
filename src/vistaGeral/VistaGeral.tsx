@@ -6,6 +6,8 @@ import { ErroImportacao } from "../core/perfil";
 import {
   comInterno,
   comProjeto,
+  comProjetoDeslocado,
+  comProjetoMovido,
   ehOrcamentoGuardado,
   importarOrcamentoJSON,
   normalizarOrcamento,
@@ -107,6 +109,16 @@ export function VistaGeral() {
    * Pergunta antes, e diz o que leva com ela: os nomes dos elementos internos
    * foram escritos à mão, um a um, e não voltam de nenhum ficheiro importado.
    */
+  // A ordem dos projetos é uma só, e vive aqui: as duas tabelas arrastam sobre
+  // ela, e é por isso que arrastar numa se vê logo na outra.
+  function moverProjeto(arrastadoId: string, alvoId: string) {
+    setOrcamento((atual) => comProjetoMovido(atual, arrastadoId, alvoId));
+  }
+
+  function deslocarProjeto(projetoId: string, passos: number) {
+    setOrcamento((atual) => comProjetoDeslocado(atual, projetoId, passos));
+  }
+
   function recomecar() {
     if (!confirm("Apagar a Vista Geral, incluindo os elementos internos registados, e recomeçar do zero?")) return;
     setOrcamento(orcamentoInicial());
@@ -199,7 +211,11 @@ export function VistaGeral() {
           <p className="painel-nota">As pessoas de todos os projetos na unidade.</p>
         </header>
 
-        <ResumoGeral orcamento={orcamento} />
+        <ResumoGeral
+          orcamento={orcamento}
+          onMoverProjeto={moverProjeto}
+          onDeslocarProjeto={deslocarProjeto}
+        />
       </section>
 
       <section className="painel">
@@ -213,6 +229,8 @@ export function VistaGeral() {
           onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
           onRemoverInterno={(projetoId, internoId) => setOrcamento((atual) => semInterno(atual, projetoId, internoId))}
           onAcrescentarInterno={(projetoId, nome) => setOrcamento((atual) => comInterno(atual, projetoId, nome))}
+          onMoverProjeto={moverProjeto}
+          onDeslocarProjeto={deslocarProjeto}
         />
       </section>
 

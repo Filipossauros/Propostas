@@ -1765,6 +1765,12 @@ input.campo-derivado {
   gap: 8px;
 }
 
+/* O nome ocupa o que sobra: a pega fica encostada à esquerda e o × à direita,
+   em vez de os três se espalharem pela largura da célula. */
+.projeto-nome strong {
+  flex: 1;
+}
+
 .celula-projeto .meta {
   display: block;
   margin: 2px 0 0;
@@ -1834,11 +1840,59 @@ input.campo-derivado {
   color: var(--texto-suave);
 }
 
-/* No resumo, a coluna dos internos leva a mesma cor das linhas de interno da
-   tabela de detalhe: é a mesma gente, contada de outra maneira. */
-.tabela-resumo-unidade .celula-interna {
+/* No resumo, é o total que fica assinalado: é a soma das duas parcelas à
+   esquerda, e é dele que sai a percentagem à direita. */
+.tabela-resumo-unidade .celula-destacada {
   color: var(--interno-texto);
   background: var(--interno-fundo);
+}
+
+/* --- Reordenar projetos por arrasto ------------------------------------- */
+
+/* A pega é o que se agarra — e o único sítio por onde o arrasto começa: com a
+   linha inteira arrastável, selecionar texto numa célula puxava o projeto. */
+.pega-arrasto {
+  flex: none;
+  padding: 0 4px;
+  color: var(--texto-suave);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: grab;
+  border-radius: var(--raio-pequeno);
+  user-select: none;
+}
+
+.pega-arrasto:hover {
+  color: var(--texto);
+  background: var(--superficie-alt);
+}
+
+.pega-arrasto:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+.pega-arrasto:active {
+  cursor: grabbing;
+}
+
+/* No resumo o nome partilha a célula com a pega. */
+.nome-arrastavel {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* O que vai a caminho desmaia; onde vai cair ganha uma linha de chegada. */
+.projeto-a-arrastar {
+  opacity: 0.45;
+}
+
+.tabela-resumo-unidade tr.projeto-alvo th,
+.tabela-resumo-unidade tr.projeto-alvo td,
+tbody.grupo-projeto.projeto-alvo th,
+tbody.grupo-projeto.projeto-alvo td {
+  box-shadow: inset 0 2px 0 var(--azul-500);
 }
 
 /* Elemento interno: a azul, para se distinguir de relance das linhas de perfil

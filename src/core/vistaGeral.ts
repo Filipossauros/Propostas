@@ -298,6 +298,53 @@ export function percentagemNaUnidade(orcamento: OrcamentoUnidade, projeto: Proje
   return total === 0 ? 0 : (pessoasDoProjeto(projeto) / total) * 100;
 }
 
+// --------------------------------------------------------------------------
+// Ordem dos projetos
+// --------------------------------------------------------------------------
+//
+// A ordem da lista é a ordem por que os projetos aparecem — nas duas tabelas e
+// nos dois ficheiros. Não há uma ordem por tabela: quem arrasta numa está a
+// dizer em que ordem quer ver os projetos, e não em que ordem quer ver aquela
+// tabela.
+
+/** A ordem com o projeto arrastado no lugar de outro, empurrando os do meio. */
+export function comProjetoMovido(
+  orcamento: OrcamentoUnidade,
+  arrastadoId: string,
+  alvoId: string,
+): OrcamentoUnidade {
+  if (arrastadoId === alvoId) return orcamento;
+
+  const de = orcamento.projetos.findIndex((p) => p.id === arrastadoId);
+  const para = orcamento.projetos.findIndex((p) => p.id === alvoId);
+  if (de < 0 || para < 0) return orcamento;
+
+  const projetos = [...orcamento.projetos];
+  const [movido] = projetos.splice(de, 1);
+  projetos.splice(para, 0, movido);
+  return { ...orcamento, projetos };
+}
+
+/**
+ * A ordem com o projeto deslocado alguns lugares para cima ou para baixo.
+ *
+ * É o que o teclado usa: arrastar com o rato não é a única maneira de ordenar,
+ * e quem não o possa fazer tem de conseguir o mesmo com as setas. Nas pontas
+ * não dá erro nem dá a volta — fica onde está.
+ */
+export function comProjetoDeslocado(
+  orcamento: OrcamentoUnidade,
+  projetoId: string,
+  passos: number,
+): OrcamentoUnidade {
+  const de = orcamento.projetos.findIndex((p) => p.id === projetoId);
+  if (de < 0) return orcamento;
+
+  const para = Math.min(Math.max(de + passos, 0), orcamento.projetos.length - 1);
+  if (para === de) return orcamento;
+  return comProjetoMovido(orcamento, projetoId, orcamento.projetos[para].id);
+}
+
 /** Os lotes de um projeto, pela ordem em que aparecem. */
 export function lotesDoProjeto(projeto: ProjetoVistaGeral): string[] {
   const vistos: string[] = [];

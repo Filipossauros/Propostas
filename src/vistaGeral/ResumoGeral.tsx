@@ -10,9 +10,12 @@ import {
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
 import { DicaNota } from "../ui/DicaNota";
+import { useArrastoDeProjetos } from "./arrasto";
 
 interface Props {
   orcamento: OrcamentoUnidade;
+  onMoverProjeto: (arrastadoId: string, alvoId: string) => void;
+  onDeslocarProjeto: (projetoId: string, passos: number) => void;
 }
 
 /**
@@ -26,9 +29,12 @@ interface Props {
  * de valor punha lado a lado um projeto todo externo com outro feito de gente
  * da casa, como se o segundo não custasse nada. Separar externos de internos
  * responde melhor à mesma pergunta — quanto de cada projeto se contrata, e
- * quanto sai da unidade.
+ * quanto sai da unidade. O total é que fica assinalado: é a soma das duas
+ * parcelas, e é dele que sai a percentagem ao lado.
  */
-export function ResumoGeral({ orcamento }: Props) {
+export function ResumoGeral({ orcamento, onMoverProjeto, onDeslocarProjeto }: Props) {
+  const arrasto = useArrastoDeProjetos({ onMover: onMoverProjeto, onDeslocar: onDeslocarProjeto });
+
   if (orcamento.projetos.length === 0) {
     return <p className="estado-vazio">Sem projetos para resumir.</p>;
   }
@@ -40,7 +46,8 @@ export function ResumoGeral({ orcamento }: Props) {
       <table className="tabela tabela-resumo-unidade">
         <caption className="tabela-legenda">
           A percentagem é a fatia das pessoas da unidade que o projeto ocupa — contando os elementos exigidos nos
-          perfis e os elementos internos registados.
+          perfis e os elementos internos registados. Arraste um projeto para o reordenar; a ordem é a mesma nas duas
+          tabelas.
         </caption>
 
         <thead>
@@ -83,11 +90,16 @@ export function ResumoGeral({ orcamento }: Props) {
           {orcamento.projetos.map((projeto) => {
             const percentagem = percentagemNaUnidade(orcamento, projeto);
             return (
-              <tr key={projeto.id}>
-                <th scope="row">{projeto.nome}</th>
+              <tr key={projeto.id} className={arrasto.classe(projeto.id)} {...arrasto.zona(projeto.id)}>
+                <th scope="row">
+                  <span className="nome-arrastavel">
+                    <span {...arrasto.pega(projeto.id, projeto.nome)}>⠿</span>
+                    {projeto.nome}
+                  </span>
+                </th>
                 <td className="numerico">{externosDoProjeto(projeto)}</td>
-                <td className="numerico celula-interna">{internosDoProjeto(projeto)}</td>
-                <td className="numerico">{pessoasDoProjeto(projeto)}</td>
+                <td className="numerico">{internosDoProjeto(projeto)}</td>
+                <td className="numerico celula-destacada">{pessoasDoProjeto(projeto)}</td>
                 <td className="numerico">
                   {/* A barra dá a comparação que os números sozinhos obrigam a
                       fazer de cabeça: é para isto que se abre este quadro. */}
@@ -107,10 +119,10 @@ export function ResumoGeral({ orcamento }: Props) {
             <td className="numerico">
               <strong>{externosDaUnidade(orcamento)}</strong>
             </td>
-            <td className="numerico celula-interna">
+            <td className="numerico">
               <strong>{internosDaUnidade(orcamento)}</strong>
             </td>
-            <td className="numerico">
+            <td className="numerico celula-destacada">
               <strong>{pessoas}</strong>
             </td>
             <td className="numerico">{pessoas === 0 ? "—" : "100,0 %"}</td>
