@@ -1793,21 +1793,36 @@ input.campo-derivado {
 
 /* A barra fica atrás do número, na própria célula: dá a comparação entre
    projetos que a coluna de números obrigaria a fazer de cabeça. */
+/* A barra e o número em colunas próprias: o número num espaço de largura fixa,
+   para que «3,7 %» e «100,0 %» não empurrem a barra para sítios diferentes em
+   cada linha. Os algarismos tabulares fazem o resto. */
+.percentagem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.percentagem-valor {
+  min-width: 4.4em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .barra-percentagem {
-  display: inline-block;
+  flex: none;
   width: 74px;
   height: 6px;
-  margin-right: 8px;
   border-radius: 999px;
   background: var(--superficie-alt);
   overflow: hidden;
-  vertical-align: middle;
 }
 
+/* O preenchimento não é arredondado: quem o arredonda é a moldura, ao cortar o
+   que sai fora. Arredondado por si, uma percentagem pequena saía como um ponto
+   solto a meio da barra em vez de um começo de barra. */
 .barra-percentagem span {
   display: block;
   height: 100%;
-  border-radius: 999px;
   background: var(--unidade-500);
 }
 

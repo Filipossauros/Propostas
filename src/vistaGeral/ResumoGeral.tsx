@@ -102,11 +102,18 @@ export function ResumoGeral({ orcamento, onMoverProjeto, onDeslocarProjeto }: Pr
                 <td className="numerico celula-destacada">{pessoasDoProjeto(projeto)}</td>
                 <td className="numerico">
                   {/* A barra dá a comparação que os números sozinhos obrigam a
-                      fazer de cabeça: é para isto que se abre este quadro. */}
-                  <span className="barra-percentagem" aria-hidden="true">
-                    <span style={{ width: `${Math.min(100, percentagem)}%` }} />
+                      fazer de cabeça: é para isto que se abre este quadro. Vai
+                      num invólucro com o número para os dois ficarem em colunas
+                      próprias — soltos, a barra saltava de linha para linha
+                      conforme o número tivesse mais ou menos dígitos. */}
+                  <span className="percentagem">
+                    <span className="barra-percentagem" aria-hidden="true">
+                      <span style={{ width: `${Math.min(100, percentagem)}%` }} />
+                    </span>
+                    <span className="percentagem-valor">
+                      {formatarNumero(Math.round(percentagem * 10) / 10)} %
+                    </span>
                   </span>
-                  {formatarNumero(Math.round(percentagem * 10) / 10)} %
                 </td>
               </tr>
             );
@@ -125,7 +132,11 @@ export function ResumoGeral({ orcamento, onMoverProjeto, onDeslocarProjeto }: Pr
             <td className="numerico celula-destacada">
               <strong>{pessoas}</strong>
             </td>
-            <td className="numerico">{pessoas === 0 ? "—" : "100,0 %"}</td>
+            <td className="numerico">
+              <span className="percentagem">
+                <span className="percentagem-valor">{pessoas === 0 ? "—" : "100,0 %"}</span>
+              </span>
+            </td>
           </tr>
         </tfoot>
       </table>

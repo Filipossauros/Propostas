@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DIAS_DE_FERIADO_MUNICIPAL,
   DIAS_DE_FERIAS,
   HORAS_POR_DIA,
   diasDeSemana,
@@ -78,7 +79,7 @@ describe("diasDeSemana", () => {
 });
 
 describe("horasUteisDoAno", () => {
-  it("desconta feriados e férias, a oito horas por dia", () => {
+  it("desconta feriados, férias e o feriado municipal, a oito horas por dia", () => {
     const c = horasUteisDoAno(2026);
 
     expect(c).toEqual({
@@ -87,28 +88,37 @@ describe("horasUteisDoAno", () => {
       feriados: 9,
       diasUteis: 252,
       ferias: 22,
-      diasTrabalhados: 230,
+      municipal: 1,
+      diasTrabalhados: 229,
       horasPorDia: 8,
-      horas: 1840,
+      horas: 1832,
     });
+  });
+
+  it("o feriado municipal vale um dia de trabalho — oito horas a menos", () => {
+    for (let ano = 2024; ano <= 2035; ano++) {
+      const c = horasUteisDoAno(ano);
+      const semMunicipal = (c.diasUteis - c.ferias) * c.horasPorDia;
+      expect(semMunicipal - c.horas).toBe(HORAS_POR_DIA);
+    }
   });
 
   it("as parcelas fecham entre si, em qualquer ano", () => {
     for (let ano = 2024; ano <= 2035; ano++) {
       const c = horasUteisDoAno(ano);
       expect(c.diasUteis).toBe(c.diasDeSemana - c.feriados);
-      expect(c.diasTrabalhados).toBe(c.diasUteis - DIAS_DE_FERIAS);
+      expect(c.diasTrabalhados).toBe(c.diasUteis - DIAS_DE_FERIAS - DIAS_DE_FERIADO_MUNICIPAL);
       expect(c.horas).toBe(c.diasTrabalhados * HORAS_POR_DIA);
       expect(horasUteis(ano)).toBe(c.horas);
     }
   });
 
-  it("um ano dá sempre entre 1800 e 1880 horas", () => {
+  it("um ano dá sempre entre 1800 e 1870 horas", () => {
     // O intervalo é estreito por construção: o que varia é quantos feriados
     // calham ao fim de semana. Serve de rede a um erro grosseiro no cálculo.
     for (let ano = 2024; ano <= 2040; ano++) {
       expect(horasUteis(ano)).toBeGreaterThanOrEqual(1800);
-      expect(horasUteis(ano)).toBeLessThanOrEqual(1880);
+      expect(horasUteis(ano)).toBeLessThanOrEqual(1870);
     }
   });
 });

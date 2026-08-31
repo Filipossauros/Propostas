@@ -5,16 +5,27 @@
 // nacionais que calhem em dia útil, menos os dias de férias, vezes as horas de
 // trabalho por dia.
 //
-// Os feriados municipais ficam de fora — dependem do concelho onde o serviço é
-// prestado, e a aplicação não o sabe. O Carnaval também: é tolerância de ponto,
-// concedida ano a ano, e não feriado obrigatório. Quem os quiser descontar
-// corrige as horas à mão, que é o que o campo continua a permitir.
+// Do feriado municipal desconta-se um dia, sem se saber qual: cada concelho tem
+// o seu, mas todos têm um, e o serviço é prestado algures. Já o Carnaval fica de
+// fora — é tolerância de ponto, concedida ano a ano, e não feriado obrigatório.
+// Quem o quiser descontar corrige as horas à mão, que é o que o campo continua
+// a permitir.
 
 /** Um dia de trabalho, em horas. */
 export const HORAS_POR_DIA = 8;
 
 /** Dias úteis de descanso obrigatório por ano. */
 export const DIAS_DE_FERIAS = 22;
+
+/**
+ * O feriado municipal, em dias.
+ *
+ * Qual é depende do concelho onde o serviço é prestado, e a aplicação não o
+ * sabe — mas todos os concelhos têm um, e contá-lo como dia de trabalho dava
+ * sempre oito horas a mais. Desconta-se um dia inteiro: calhar ao fim de
+ * semana é possível, e nesse caso corrige-se à mão.
+ */
+export const DIAS_DE_FERIADO_MUNICIPAL = 1;
 
 /**
  * Domingo de Páscoa, pelo algoritmo gregoriano anónimo (Meeus/Jones/Butcher).
@@ -98,7 +109,8 @@ export interface HorasUteisDoAno {
   /** Dias de semana menos feriados: o que o ano tem de trabalho. */
   diasUteis: number;
   ferias: number;
-  /** Dias úteis menos férias. */
+  municipal: number;
+  /** Dias úteis menos férias e menos o feriado municipal. */
   diasTrabalhados: number;
   horasPorDia: number;
   horas: number;
@@ -108,7 +120,7 @@ export function horasUteisDoAno(ano: number): HorasUteisDoAno {
   const semana = diasDeSemana(ano);
   const feriados = feriadosEmDiaUtil(ano).length;
   const uteis = semana - feriados;
-  const trabalhados = uteis - DIAS_DE_FERIAS;
+  const trabalhados = uteis - DIAS_DE_FERIAS - DIAS_DE_FERIADO_MUNICIPAL;
 
   return {
     ano,
@@ -116,6 +128,7 @@ export function horasUteisDoAno(ano: number): HorasUteisDoAno {
     feriados,
     diasUteis: uteis,
     ferias: DIAS_DE_FERIAS,
+    municipal: DIAS_DE_FERIADO_MUNICIPAL,
     diasTrabalhados: trabalhados,
     horasPorDia: HORAS_POR_DIA,
     horas: trabalhados * HORAS_POR_DIA,

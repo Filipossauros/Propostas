@@ -1,7 +1,7 @@
 import type { Lote, PerfilEmLote } from "../core/types";
 import { comHorasDoAno, formatarMoeda, horasPorAnoDe, precoBaseEntrada, totalLote } from "../core/lotes";
 import { certificacoesDoPerfil } from "../core/perfil";
-import { DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteisDoAno } from "../core/horasUteis";
+import { DIAS_DE_FERIADO_MUNICIPAL, DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteisDoAno } from "../core/horasUteis";
 import { CampoNumero } from "../ui/CampoNumero";
 import { DicaNota } from "../ui/DicaNota";
 import { DicaRequisitos } from "../ui/DicaRequisitos";
@@ -244,7 +244,7 @@ function ExplicacaoHorasUteis({ anos }: { anos: number[] }) {
     <>
       <p>
         Dias de semana do ano, menos os feriados nacionais que caiam em dia útil, menos {DIAS_DE_FERIAS} dias de
-        férias, vezes {HORAS_POR_DIA} horas por dia.
+        férias, menos {DIAS_DE_FERIADO_MUNICIPAL} dia de feriado municipal, vezes {HORAS_POR_DIA} horas por dia.
       </p>
       <ul>
         {anos.map((ano) => {
@@ -252,8 +252,8 @@ function ExplicacaoHorasUteis({ anos }: { anos: number[] }) {
           return (
             <li key={ano}>
               <span>
-                {ano}: ({c.diasDeSemana} dias de semana − {c.feriados} feriados − {c.ferias} férias) ×{" "}
-                {c.horasPorDia} h
+                {ano}: ({c.diasDeSemana} dias de semana − {c.feriados} feriados − {c.ferias} férias − {c.municipal}{" "}
+                municipal) × {c.horasPorDia} h
               </span>
               <strong>{c.horas} h</strong>
             </li>
@@ -261,8 +261,9 @@ function ExplicacaoHorasUteis({ anos }: { anos: number[] }) {
         })}
       </ul>
       <p>
-        Ficam de fora os feriados municipais, que dependem do concelho da prestação, e o Carnaval, que é tolerância
-        de ponto e não feriado obrigatório. Corrija as horas à mão se os quiser descontar.
+        O feriado municipal conta um dia, sem se saber qual: depende do concelho da prestação, mas todos têm um.
+        Fica de fora o Carnaval, que é tolerância de ponto e não feriado obrigatório. Corrija as horas à mão se o
+        quiser descontar.
       </p>
     </>
   );
