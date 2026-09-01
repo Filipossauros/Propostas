@@ -144,6 +144,16 @@ describe("documentoRegrasEPrecoBase", () => {
   });
 });
 
+describe("preço base", () => {
+  it("a frase do preço base vai assinalada, para sair a negrito no Word", () => {
+    const blocos = documentoRegrasEPrecoBase(LOTES_EXEMPLO).blocos;
+    const frase = blocos.find((b) => b.tipo === "paragrafo" && b.texto.startsWith("O preço base do procedimento"));
+
+    expect(frase?.tipo).toBe("paragrafo");
+    expect(frase?.tipo === "paragrafo" && frase.destaque).toBe(true);
+  });
+});
+
 describe("divisão por lotes", () => {
   it("dá uma linha por lote, com as horas e o preço base", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));

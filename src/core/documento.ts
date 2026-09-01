@@ -31,7 +31,7 @@ export type ItemLista = string | { texto: string; alineas: string[] };
 
 export type BlocoDocumento =
   | { tipo: "titulo"; nivel: 1 | 2 | 3; texto: string }
-  | { tipo: "paragrafo"; texto: string }
+  | { tipo: "paragrafo"; texto: string; destaque?: boolean }
   | { tipo: "nota"; texto: string }
   | { tipo: "lista"; itens: ItemLista[]; numerada?: boolean }
   | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] };

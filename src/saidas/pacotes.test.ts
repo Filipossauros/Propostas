@@ -81,12 +81,12 @@ describe("pacote das peças do procedimento", () => {
     expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(2);
     expect(lista.some((n) => n.includes("Requisitos_e_regras.docx"))).toBe(true);
     // O exemplo tem encargos plurianuais: a informação que sai é o pedido.
-    expect(lista.some((n) => n.includes("Pedido_de_Encargos_Plurianuais.docx"))).toBe(true);
+    expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(true);
     expect(lista.some((n) => n.startsWith("Pedido_PPP_eavalia_"))).toBe(true);
     expect(lista.some((n) => n.endsWith("_Lotes.json"))).toBe(true);
 
     // Um formulário por lote com perfis: o exemplo tem dois.
-    expect(lista.filter((n) => n.startsWith("Formularios de Declaracao/"))).toHaveLength(2);
+    expect(lista.filter((n) => n.startsWith("Resumos Curriculares/"))).toHaveLength(2);
     // E os ficheiros do Módulo 1, numa pasta à parte.
     expect(lista.filter((n) => n.startsWith("Perfis/"))).toHaveLength(2);
   });
@@ -99,7 +99,7 @@ describe("pacote das peças do procedimento", () => {
 
     expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(2);
     expect(lista.some((n) => n.includes("Manifestacao_de_Necessidades.docx"))).toBe(true);
-    expect(lista.some((n) => n.includes("Pedido_de_Encargos_Plurianuais.docx"))).toBe(false);
+    expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(false);
   });
 
   it("um lote sem perfis não dá formulário nenhum", async () => {
@@ -107,7 +107,7 @@ describe("pacote das peças do procedimento", () => {
     semPerfis.lotes = semPerfis.lotes.map((lote) => ({ ...lote, perfis: [] }));
 
     const lista = nomes(await ficheirosDasPecas(semPerfis, PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO));
-    expect(lista.filter((n) => n.startsWith("Formularios de Declaracao/"))).toEqual([]);
+    expect(lista.filter((n) => n.startsWith("Resumos Curriculares/"))).toEqual([]);
   });
 });
 
@@ -192,7 +192,7 @@ describe("empacotamento", () => {
     const dentro = Object.keys(relido.files).filter((n) => !relido.files[n].dir);
 
     expect(dentro.some((n) => n.startsWith("Perfis/"))).toBe(true);
-    expect(dentro.some((n) => n.startsWith("Formularios de Declaracao/"))).toBe(true);
+    expect(dentro.some((n) => n.startsWith("Resumos Curriculares/"))).toBe(true);
     // Os .docx e .xlsx continuam a ser ZIP válidos depois de aninhados.
     const word = dentro.find((n) => n.endsWith("Requisitos_e_regras.docx"))!;
     const interior = await JSZip.loadAsync(await relido.file(word)!.async("arraybuffer"));

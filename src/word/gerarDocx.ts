@@ -107,7 +107,7 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
         new Paragraph({
           spacing: { after: 120 },
           alignment: AlignmentType.JUSTIFIED,
-          children: [new TextRun({ text: bloco.texto, size: 20 })],
+          children: [new TextRun({ text: bloco.texto, size: 20, bold: bloco.destaque })],
         }),
       ];
 

@@ -307,7 +307,7 @@ function renderizar(bloco: BlocoDocumento): string {
       // Um degrau abaixo do «IV – Anexo Técnico»: 1 → 2, 2 → 3, 3 → 3.
       return bloco.nivel === 1 ? titulo(bloco.texto, 2, true) : titulo(bloco.texto, 3);
     case "paragrafo":
-      return paragrafo(bloco.texto);
+      return paragrafo([run(bloco.texto, { negrito: bloco.destaque })]);
     case "nota":
       return paragrafo([run(bloco.texto, { italico: true, sz: TABELA })], { jc: "left" });
     case "lista":
@@ -657,11 +657,15 @@ export function corpoDaInformacao(
     }
   }
 
+  // A negrito: é o número que se procura ao folhear a informação.
   p.push(
-    paragrafo(
-      `O preço base do procedimento é de ${formatarMoeda(total.semIva)}, sem IVA, correspondendo a ` +
-        `${formatarMoeda(total.comIva)} com IVA à taxa legal em vigor.`,
-    ),
+    paragrafo([
+      run(
+        `O preço base do procedimento é de ${formatarMoeda(total.semIva)}, sem IVA, correspondendo a ` +
+          `${formatarMoeda(total.comIva)} com IVA à taxa legal em vigor.`,
+        { negrito: true },
+      ),
+    ]),
   );
 
   // A justificação das rates vem a seguir ao preço base, e não antes do quadro
@@ -715,7 +719,8 @@ export function corpoDaInformacao(
 
 /** No corpo da informação os parágrafos saem tal e qual; os títulos ficam de fora. */
 function renderizarNoCorpo(bloco: BlocoDocumento): string {
-  return bloco.tipo === "paragrafo" ? paragrafo(bloco.texto) : renderizar(bloco);
+  if (bloco.tipo !== "paragrafo") return renderizar(bloco);
+  return paragrafo([run(bloco.texto, { negrito: bloco.destaque })]);
 }
 
 // --------------------------------------------------------------------------

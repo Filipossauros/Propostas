@@ -227,8 +227,10 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     },
     {
       // A tabela dos anos exprime-se toda com IVA. O preço base do procedimento
-      // é elemento da peça e não pode sair dela por essa via.
+      // é elemento da peça e não pode sair dela por essa via — e sai a negrito,
+      // que é o número que se procura ao folhear o documento.
       tipo: "paragrafo",
+      destaque: true,
       texto:
         `O preço base do procedimento é de ${formatarMoeda(totalProcedimento(config).semIva)}, sem IVA, ` +
         `correspondendo a ${formatarMoeda(totalProcedimento(config).comIva)} com IVA à taxa legal em vigor.`,

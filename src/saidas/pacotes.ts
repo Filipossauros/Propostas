@@ -26,6 +26,9 @@ import { emPasta, nomeDoPacote, type FicheiroDoPacote } from "../ui/pacote";
 
 const JSON_MIME = "application/json";
 
+/** A pasta dos formulários que os concorrentes preenchem, um por lote. */
+const PASTA_DOS_RESUMOS = "Resumos Curriculares";
+
 function comoJSON(texto: string): Blob {
   return new Blob([texto], { type: JSON_MIME });
 }
@@ -65,7 +68,7 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
 async function informacaoDoProcedimento(config: LotesJSON, base: string, quando: Date): Promise<FicheiroDoPacote> {
   return config.encargosPlurianuais.ativo
     ? {
-        nome: `${base}_Pedido_de_Encargos_Plurianuais.docx`,
+        nome: `${base}_Pedido_Trienio.docx`,
         conteudo: await gerarPedidoPlurianualBlob(config, quando),
       }
     : {
@@ -109,7 +112,7 @@ export async function ficheirosDasPecas(
     await informacaoDoProcedimento(config, base, quando),
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
-    ...emPasta("Formularios de Declaracao", formularios),
+    ...emPasta(PASTA_DOS_RESUMOS, formularios),
     ...emPasta("Perfis", await ficheirosDosPerfis(perfis, nomeProjeto, config.descricaoProjeto)),
   ];
 }

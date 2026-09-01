@@ -113,6 +113,18 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toMatch(/O preço base do procedimento é de .+, sem IVA, correspondendo a .+ com IVA/);
   });
 
+  it("o preço base sai a negrito, nos dois documentos", async () => {
+    const negrito = (xml: string) => {
+      // O parágrafo do preço base, e o <w:b/> que lhe dá o peso.
+      const i = xml.indexOf("O preço base do procedimento é de");
+      const inicio = xml.lastIndexOf("<w:p>", i);
+      return xml.slice(inicio, i).includes("<w:b/>");
+    };
+
+    expect(negrito(await xmlDoDocumento(exemplo()))).toBe(true);
+    expect(negrito(await xmlDaManifestacao(semPlurianual()))).toBe(true);
+  });
+
   it("a justificação das rates vem depois do preço base, com o quadro de referência", async () => {
     const texto = await textoDoDocumento(exemplo());
 
