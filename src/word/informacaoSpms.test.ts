@@ -200,12 +200,25 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toContain("Regras de Adjudicação dos Lotes");
     // Numeradas de verdade — a marca e o texto ficam colados quando se tira a
     // marcação, porque o que os separa no documento é um tabulador a sério.
-    expect(texto).toContain("1.A adjudicação está limitada a 1 (um) lote por concorrente");
-    expect(texto).toContain("3.Sem prejuízo do disposto no n.º 2");
+    expect(texto).toContain("1.Não pode ser adjudicado mais de um lote ao mesmo Concorrente");
     expect(texto).toContain("i.Se encontrarem em relação de simples participação");
-    expect(texto).toContain("4.Sempre que, da aplicação do critério de adjudicação");
+    expect(texto).toContain("2.Sempre que, da aplicação do critério de adjudicação");
+    expect(texto).toContain("3.As regras previstas nos n.os 1 e 2");
     // E já não com marcas, que não servem uma norma que remete para números.
-    expect(texto).not.toContain("•A adjudicação está limitada");
+    expect(texto).not.toContain("•Não pode ser adjudicado");
+  });
+
+  it("as duas regras da preferência estão a seguir ao quadro dos lotes, e não nas regras", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    const preferencia = "A adjudicação está limitada a 1 (um) lote por concorrente, de acordo com a «ordem de " +
+      "preferência» indicada no modelo de apresentação de proposta";
+    expect(texto).toContain(preferencia);
+    // Depois da legenda do quadro, e antes das regras de adjudicação.
+    expect(texto.indexOf("o preço base é sem IVA.")).toBeLessThan(texto.indexOf(preferencia));
+    expect(texto.indexOf(preferencia)).toBeLessThan(texto.indexOf("Regras de Adjudicação dos Lotes"));
+    // E em parágrafo corrido, sem número: a numeração é da secção seguinte.
+    expect(texto).not.toContain(`1.${preferencia.slice(0, 30)}`);
   });
 
   it("as regras de apuramento falam do Resumo Curricular e de assinatura sem «qualificada»", async () => {
@@ -333,7 +346,7 @@ describe("gerarManifestacaoNecessidadesBlob", () => {
     expect(texto).not.toContain("[tabela dos procedimentos do ano corrente/transato");
     // O 2.2 que resta é a divisão por lotes, e não os encargos plurianuais.
     expect(texto).toContain("2.2. Divisão por lotes");
-    expect(texto).not.toContain("2.3.");
+    expect(texto).not.toContain("2.3. ");
   });
 
   it("o enquadramento dos encargos é o da bolsa de horas, e não o dos anos económicos", async () => {

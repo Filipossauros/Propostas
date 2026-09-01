@@ -120,11 +120,31 @@ describe("documentoRegrasEPrecoBase", () => {
   it("as causas de relação especial vão em alíneas, sem quebrar a série dos números", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
 
-    expect(texto).toContain("3. Sem prejuízo do disposto no n.º 2");
+    expect(texto).toContain("1. Não pode ser adjudicado mais de um lote ao mesmo Concorrente");
     expect(texto).toMatch(/i\. Se encontrarem em relação de simples participação/);
     expect(texto).toMatch(/iii\. Estarem sujeitos ao controlo ou influência dominante/);
-    // A alínea não gasta um número: a regra seguinte é a 4.
-    expect(texto).toContain("4. Sempre que, da aplicação do critério de adjudicação");
+    // A alínea não gasta um número: a regra seguinte é a 2.
+    expect(texto).toContain("2. Sempre que, da aplicação do critério de adjudicação");
+    // E a remissão foi atrás dos números que mudaram.
+    expect(texto).toContain("3. As regras previstas nos n.os 1 e 2");
+    expect(texto).not.toContain("nos n.os 3 e 4");
+  });
+
+  it("as regras da preferência ficam com o quadro dos lotes, fora da série numerada", () => {
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+    const preferencia = "A adjudicação está limitada a 1 (um) lote por concorrente";
+
+    expect(texto.indexOf("o preço base é sem IVA.")).toBeLessThan(texto.indexOf(preferencia));
+    expect(texto.indexOf(preferencia)).toBeLessThan(texto.indexOf("Regras de Adjudicação dos Lotes"));
+    expect(texto).not.toContain(`1. ${preferencia}`);
+  });
+
+  it("sem a limitação a um lote, as regras da preferência não aparecem", () => {
+    const semLimite = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(semLimite));
+
+    expect(texto).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
+    expect(texto).not.toContain("A adjudicação está limitada a 1 (um) lote por concorrente");
   });
 
   it("a ordem sequencial nomeia os lotes que o procedimento tem, e não três fixos", () => {

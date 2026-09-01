@@ -284,7 +284,28 @@ export function blocosDivisaoPorLotes(config: LotesJSON): BlocoDocumento[] {
       ],
       linhas,
     },
+    // A regra da preferência vem logo a seguir ao quadro dos lotes: é ali que
+    // se vê o que há para escolher, e é ali que a escolha se explica. As
+    // «Regras de Adjudicação dos Lotes» ficam com o que decide os empates.
+    ...(config.umLotePorConcorrente ? REGRAS_DE_PREFERENCIA.map(comoParagrafo) : []),
   ];
+}
+
+/**
+ * As duas regras da preferência do concorrente, em parágrafo corrido.
+ *
+ * Não vão numeradas: ficam antes das «Regras de Adjudicação dos Lotes», que têm
+ * numeração própria, e um par de números soltos aqui atrás confundia as duas
+ * séries — as remissões dessa secção passariam a ter dois sítios para onde
+ * apontar.
+ */
+const REGRAS_DE_PREFERENCIA = [
+  "A adjudicação está limitada a 1 (um) lote por concorrente, de acordo com a «ordem de preferência» indicada no modelo de apresentação de proposta que constitui o Anexo II do presente Programa de Concurso.",
+  "Sempre que da aplicação do critério de adjudicação resulte a atribuição a um mesmo concorrente de mais de 1 (um) lote, o critério para a ordenação será a «ordem de preferência» indicada na proposta do concorrente.",
+];
+
+function comoParagrafo(texto: string): BlocoDocumento {
+  return { tipo: "paragrafo", texto };
 }
 
 /** As horas de um lote: as de cada perfil, vezes os elementos que o perfil pede. */
@@ -429,12 +450,10 @@ function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
         "só tenha sido apresentada uma proposta sem motivos de exclusão.";
 
   const itens = [
-    "A adjudicação está limitada a 1 (um) lote por concorrente, de acordo com a «ordem de preferência» indicada no modelo de apresentação de proposta que constitui o Anexo II do presente Programa de Concurso.",
-    "Sempre que da aplicação do critério de adjudicação resulte a atribuição a um mesmo concorrente de mais de 1 (um) lote, o critério para a ordenação será a «ordem de preferência» indicada na proposta do concorrente.",
     {
       texto:
-        "Sem prejuízo do disposto no n.º 2, não pode ser adjudicado mais de um lote ao mesmo Concorrente, nem a " +
-        "Concorrente(s) com estes especialmente relacionados em virtude, designadamente, de:",
+        "Não pode ser adjudicado mais de um lote ao mesmo Concorrente, nem a Concorrente(s) com estes " +
+        "especialmente relacionados em virtude, designadamente, de:",
       alineas: [
         "Se encontrarem em relação de simples participação, de participação recíproca, de domínio ou de grupo;",
         "Partilharem representantes legais ou sócios;",
@@ -444,7 +463,10 @@ function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
     "Sempre que, da aplicação do critério de adjudicação, resulte a atribuição ao mesmo Concorrente, ou a " +
       `Concorrentes que estejam especialmente relacionados entre si, de mais de um lote, a adjudicação faz-se de ` +
       `acordo com a respetiva ordem sequencial, ou seja, ${ordemSequencial}.`,
-    "As regras previstas nos n.os 3 e 4 aplicam-se a agrupamentos concorrentes quando as situações neles previstas se verifiquem relativamente a algum dos seus membros.",
+    // Os n.os 3 e 4 do texto original são hoje os n.os 1 e 2: as duas regras da
+    // preferência passaram para a divisão por lotes, e a remissão foi atrás
+    // delas — deixada como estava, apontava para a própria regra e a seguinte.
+    "As regras previstas nos n.os 1 e 2 aplicam-se a agrupamentos concorrentes quando as situações neles previstas se verifiquem relativamente a algum dos seus membros.",
   ];
 
   return [
