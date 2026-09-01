@@ -20,6 +20,12 @@ export interface Coluna {
   peso?: number;
 }
 
+/** Um pedaço de parágrafo com peso próprio: é assim que uma frase sai a negrito. */
+export interface ParteDeTexto {
+  texto: string;
+  destaque?: boolean;
+}
+
 /**
  * Um item de lista: o texto, e as alíneas que dele pendam.
  *
@@ -31,7 +37,7 @@ export type ItemLista = string | { texto: string; alineas: string[] };
 
 export type BlocoDocumento =
   | { tipo: "titulo"; nivel: 1 | 2 | 3; texto: string }
-  | { tipo: "paragrafo"; texto: string; destaque?: boolean }
+  | { tipo: "paragrafo"; texto: string; destaque?: boolean; partes?: ParteDeTexto[] }
   | { tipo: "nota"; texto: string }
   | { tipo: "lista"; itens: ItemLista[]; numerada?: boolean }
   | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] };
@@ -44,6 +50,22 @@ export interface Documento {
 
 export function celula(texto: string, alinhamento?: Alinhamento, destaque?: boolean): Celula {
   return { texto, alinhamento, destaque };
+}
+
+/**
+ * Um parágrafo em que só parte do texto vai destacada.
+ *
+ * `texto` é derivado das partes, e não escrito à mão ao lado delas: as saídas
+ * que não sabem de negrito — o texto simples, o Excel — leem-no, e escrito duas
+ * vezes acabaria a divergir do que o Word mostra.
+ */
+export function paragrafoComPartes(...partes: ParteDeTexto[]): BlocoDocumento {
+  return { tipo: "paragrafo", texto: partes.map((p) => p.texto).join(""), partes };
+}
+
+/** As partes de um parágrafo — o texto todo numa só, quando não foi repartido. */
+export function partesDoParagrafo(bloco: Extract<BlocoDocumento, { tipo: "paragrafo" }>): ParteDeTexto[] {
+  return bloco.partes ?? [{ texto: bloco.texto, destaque: bloco.destaque }];
 }
 
 export function textoDoItem(item: ItemLista): string {

@@ -17,7 +17,7 @@ import {
   WidthType,
 } from "docx";
 import type { Alinhamento, BlocoDocumento, Celula, Coluna, Documento } from "../core/documento";
-import { alineasDoItem, marcaDeAlinea, textoDoItem } from "../core/documento";
+import { alineasDoItem, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
 
 const AZUL = "1F4E78";
 const AZUL_CLARO = "2E75B6";
@@ -107,7 +107,9 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
         new Paragraph({
           spacing: { after: 120 },
           alignment: AlignmentType.JUSTIFIED,
-          children: [new TextRun({ text: bloco.texto, size: 20, bold: bloco.destaque })],
+          children: partesDoParagrafo(bloco).map(
+            (parte) => new TextRun({ text: parte.texto, size: 20, bold: parte.destaque }),
+          ),
         }),
       ];
 

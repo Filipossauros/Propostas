@@ -125,6 +125,20 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(negrito(await xmlDaManifestacao(semPlurianual()))).toBe(true);
   });
 
+  it("o n.º mínimo de elementos sai a negrito, e a frase seguinte não", async () => {
+    const xml = await xmlDoDocumento(exemplo());
+    const i = xml.indexOf("O concorrente apresenta, para este perfil");
+    const paragrafo = xml.slice(xml.lastIndexOf("<w:p>", i), xml.indexOf("</w:p>", i));
+
+    // Duas partes no mesmo parágrafo: a primeira com peso, a segunda sem.
+    expect(paragrafo.slice(0, paragrafo.indexOf("O concorrente"))).toContain("<w:b/>");
+    const segunda = paragrafo.slice(paragrafo.indexOf("Cada elemento proposto"));
+    expect(paragrafo.slice(paragrafo.indexOf("elementos."), paragrafo.indexOf("Cada elemento"))).not.toContain(
+      "<w:b/>",
+    );
+    expect(segunda).not.toContain("<w:b/>");
+  });
+
   it("a justificação das rates vem depois do preço base, com o quadro de referência", async () => {
     const texto = await textoDoDocumento(exemplo());
 

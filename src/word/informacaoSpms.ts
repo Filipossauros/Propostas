@@ -20,7 +20,7 @@
 
 import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
-import { alineasDoItem, marcaDeAlinea, textoDoItem } from "../core/documento";
+import { alineasDoItem, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
 import type { LotesJSON } from "../core/types";
 import {
   blocosAnexoTecnico,
@@ -307,7 +307,7 @@ function renderizar(bloco: BlocoDocumento): string {
       // Um degrau abaixo do «IV – Anexo Técnico»: 1 → 2, 2 → 3, 3 → 3.
       return bloco.nivel === 1 ? titulo(bloco.texto, 2, true) : titulo(bloco.texto, 3);
     case "paragrafo":
-      return paragrafo([run(bloco.texto, { negrito: bloco.destaque })]);
+      return paragrafo(partesDoParagrafo(bloco).map((parte) => run(parte.texto, { negrito: parte.destaque })));
     case "nota":
       return paragrafo([run(bloco.texto, { italico: true, sz: TABELA })], { jc: "left" });
     case "lista":
@@ -720,7 +720,7 @@ export function corpoDaInformacao(
 /** No corpo da informação os parágrafos saem tal e qual; os títulos ficam de fora. */
 function renderizarNoCorpo(bloco: BlocoDocumento): string {
   if (bloco.tipo !== "paragrafo") return renderizar(bloco);
-  return paragrafo([run(bloco.texto, { negrito: bloco.destaque })]);
+  return paragrafo(partesDoParagrafo(bloco).map((parte) => run(parte.texto, { negrito: parte.destaque })));
 }
 
 // --------------------------------------------------------------------------

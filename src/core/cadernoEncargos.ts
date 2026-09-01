@@ -20,7 +20,7 @@ import {
   totalLote,
   totalProcedimento,
 } from "./lotes";
-import { celula, type BlocoDocumento, type Documento } from "./documento";
+import { celula, paragrafoComPartes, type BlocoDocumento, type Documento } from "./documento";
 
 const DIREITA = "direita" as const;
 
@@ -122,14 +122,21 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
 
     const perfis = lote.perfis.flatMap((entrada): BlocoDocumento[] => [
       { tipo: "titulo", nivel: 3, texto: entrada.perfil.perfil },
-      {
-        tipo: "paragrafo",
-        texto:
-          `O concorrente apresenta, para este perfil, um mínimo de ${entrada.nMinimoElementos} ` +
-          `${entrada.nMinimoElementos === 1 ? "elemento" : "elementos"}. ` +
-          `Cada elemento proposto satisfaz, cumulativamente, os requisitos mínimos de experiência profissional ` +
-          `constantes da tabela seguinte.`,
-      },
+      // O n.º mínimo de elementos sai a negrito: é o que muda de perfil para
+      // perfil, e é o que quem prepara a proposta tem de contar.
+      paragrafoComPartes(
+        {
+          texto:
+            `O concorrente apresenta, para este perfil, um mínimo de ${entrada.nMinimoElementos} ` +
+            `${entrada.nMinimoElementos === 1 ? "elemento" : "elementos"}.`,
+          destaque: true,
+        },
+        {
+          texto:
+            " Cada elemento proposto satisfaz, cumulativamente, os requisitos mínimos de experiência " +
+            "profissional constantes da tabela seguinte.",
+        },
+      ),
       {
         tipo: "tabela",
         colunas: [

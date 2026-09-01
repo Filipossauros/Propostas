@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { blocosDivisaoPorLotes, documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { normalizarLotesGuardados } from "./lotes";
-import { documentoParaTexto } from "./documento";
+import { documentoParaTexto, partesDoParagrafo } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
 import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
 import { ATIVIDADE_FIXA, ROTULO_CERTIFICACOES, mesesDeAnos } from "./types";
@@ -151,6 +151,38 @@ describe("preço base", () => {
 
     expect(frase?.tipo).toBe("paragrafo");
     expect(frase?.tipo === "paragrafo" && frase.destaque).toBe(true);
+  });
+});
+
+describe("n.º mínimo de elementos por perfil", () => {
+  const frase = (config = LOTES_EXEMPLO) =>
+    documentoRegrasEPrecoBase(config).blocos.find(
+      (b) => b.tipo === "paragrafo" && b.texto.startsWith("O concorrente apresenta, para este perfil"),
+    );
+
+  it("a frase do n.º mínimo vai destacada, e o resto do parágrafo não", () => {
+    const bloco = frase();
+    expect(bloco?.tipo).toBe("paragrafo");
+    const partes = bloco?.tipo === "paragrafo" ? partesDoParagrafo(bloco) : [];
+
+    expect(partes).toHaveLength(2);
+    expect(partes[0].destaque).toBe(true);
+    expect(partes[0].texto).toMatch(/^O concorrente apresenta, para este perfil, um mínimo de \d+ elementos?\.$/);
+    expect(partes[1].destaque).toBeUndefined();
+    expect(partes[1].texto).toContain("Cada elemento proposto satisfaz");
+  });
+
+  it("o texto do parágrafo é a junção das partes, e não uma cópia à parte", () => {
+    const bloco = frase();
+    const partes = bloco?.tipo === "paragrafo" ? partesDoParagrafo(bloco) : [];
+
+    expect(bloco?.tipo === "paragrafo" && bloco.texto).toBe(partes.map((p) => p.texto).join(""));
+  });
+
+  it("a saída em texto simples continua a ler a frase inteira", () => {
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO))).toContain(
+      "O concorrente apresenta, para este perfil, um mínimo de 2 elementos. Cada elemento proposto satisfaz",
+    );
   });
 });
 
