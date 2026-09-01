@@ -20,11 +20,20 @@ export interface Coluna {
   peso?: number;
 }
 
+/**
+ * Um item de lista: o texto, e as alíneas que dele pendam.
+ *
+ * As alíneas existem porque há normas que enumeram casos sem quebrar a série
+ * dos números — «nos termos do n.º 3» tem de continuar a apontar ao mesmo sítio
+ * depois de o número ganhar três alíneas.
+ */
+export type ItemLista = string | { texto: string; alineas: string[] };
+
 export type BlocoDocumento =
   | { tipo: "titulo"; nivel: 1 | 2 | 3; texto: string }
   | { tipo: "paragrafo"; texto: string }
   | { tipo: "nota"; texto: string }
-  | { tipo: "lista"; itens: string[]; numerada?: boolean }
+  | { tipo: "lista"; itens: ItemLista[]; numerada?: boolean }
   | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] };
 
 export interface Documento {
@@ -35,6 +44,21 @@ export interface Documento {
 
 export function celula(texto: string, alinhamento?: Alinhamento, destaque?: boolean): Celula {
   return { texto, alinhamento, destaque };
+}
+
+export function textoDoItem(item: ItemLista): string {
+  return typeof item === "string" ? item : item.texto;
+}
+
+export function alineasDoItem(item: ItemLista): string[] {
+  return typeof item === "string" ? [] : item.alineas;
+}
+
+const ROMANOS = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
+
+/** A marca de uma alínea: i., ii., iii. — e o número, passados os dez. */
+export function marcaDeAlinea(indice: number): string {
+  return `${ROMANOS[indice] ?? String(indice + 1)}.`;
 }
 
 // --------------------------------------------------------------------------
@@ -102,10 +126,11 @@ export function documentoParaTexto(doc: Documento): string {
         partes.push(`[ ${bloco.texto} ]`, "");
         break;
       case "lista":
-        partes.push(
-          ...bloco.itens.map((item, i) => (bloco.numerada ? `${i + 1}. ${item}` : `  - ${item}`)),
-          "",
-        );
+        for (const [i, item] of bloco.itens.entries()) {
+          partes.push(bloco.numerada ? `${i + 1}. ${textoDoItem(item)}` : `  - ${textoDoItem(item)}`);
+          partes.push(...alineasDoItem(item).map((a, j) => `     ${marcaDeAlinea(j)} ${a}`));
+        }
+        partes.push("");
         break;
       case "tabela":
         if (bloco.legenda) partes.push(bloco.legenda);

@@ -1,6 +1,6 @@
 // Extração de texto de um PDF assinado digitalmente — PLANO.md secção 8.
-// Como a assinatura é digital qualificada, o PDF é sempre um documento
-// digital com texto vetorial, extraível diretamente, sem OCR.
+// Como a assinatura é digital, o PDF é sempre um documento digital com texto
+// vetorial, extraível diretamente, sem OCR.
 //
 // Esta aplicação NUNCA valida a assinatura digital — isso faz-se com
 // ferramentas próprias (Autenticação.gov, Adobe).

@@ -17,6 +17,7 @@ import {
   WidthType,
 } from "docx";
 import type { Alinhamento, BlocoDocumento, Celula, Coluna, Documento } from "../core/documento";
+import { alineasDoItem, marcaDeAlinea, textoDoItem } from "../core/documento";
 
 const AZUL = "1F4E78";
 const AZUL_CLARO = "2E75B6";
@@ -121,18 +122,30 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
       ];
 
     case "lista":
-      return bloco.itens.map(
-        (item, i) =>
-          new Paragraph({
-            spacing: { after: 80 },
-            alignment: AlignmentType.JUSTIFIED,
-            indent: { left: 360, hanging: 360 },
-            children: [
-              new TextRun({ text: bloco.numerada ? `${i + 1}. ` : "• ", size: 20 }),
-              new TextRun({ text: item, size: 20 }),
-            ],
-          }),
-      );
+      return bloco.itens.flatMap((item, i) => [
+        new Paragraph({
+          spacing: { after: 80 },
+          alignment: AlignmentType.JUSTIFIED,
+          indent: { left: 360, hanging: 360 },
+          children: [
+            new TextRun({ text: bloco.numerada ? `${i + 1}. ` : "• ", size: 20 }),
+            new TextRun({ text: textoDoItem(item), size: 20 }),
+          ],
+        }),
+        // As alíneas avançam mais um degrau, sem número próprio na série.
+        ...alineasDoItem(item).map(
+          (alinea, j) =>
+            new Paragraph({
+              spacing: { after: 60 },
+              alignment: AlignmentType.JUSTIFIED,
+              indent: { left: 720, hanging: 360 },
+              children: [
+                new TextRun({ text: `${marcaDeAlinea(j)} `, size: 20 }),
+                new TextRun({ text: alinea, size: 20 }),
+              ],
+            }),
+        ),
+      ]);
 
     case "tabela": {
       const partes: (Paragraph | Table)[] = [];

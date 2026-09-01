@@ -233,7 +233,7 @@ describe("no ficheiro e no documento", () => {
     expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).not.toContain("plurianuais");
   });
 
-  it("com dois lotes, a tabela dos anos leva os subtotais de cada um", () => {
+  it("com dois lotes, a divisão por lotes diz o que cada um vale", () => {
     const base = lotesComPerfis([
       { numero: "1", perfis: [perfil({ perfil: "Analista" })] },
       { numero: "2", perfis: [perfil({ perfil: "Tester" })] },
@@ -244,11 +244,13 @@ describe("no ficheiro e no documento", () => {
     );
 
     expect(totaisPorAnoDoLote(config, config.lotes[0].id)[0]).toBeCloseTo(2 * 33 * 61.5, 2);
-    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("Subtotal do lote 2");
-  });
 
-  it("com um lote só, não há subtotal a repetir o total", () => {
-    expect(documentoParaTexto(documentoRegrasEPrecoBase(comPedido()))).not.toContain("Subtotal do lote");
+    // Os subtotais saíram da tabela dos anos; o que cada lote vale lê-se na
+    // «Divisão por lotes», com as horas ao lado.
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(config));
+    expect(texto).not.toContain("Subtotal do lote");
+    expect(texto).toContain("Divisão por lotes");
+    expect(texto).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
   });
 
   it("com pedido, o documento leva o fundamento, os anos e as horas de cada ano", () => {

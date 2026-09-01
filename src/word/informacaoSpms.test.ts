@@ -80,17 +80,15 @@ describe("gerarPedidoPlurianualBlob", () => {
     );
 
     expect(texto).toContain("26 de agosto de 2026");
-    // O assunto identifica o procedimento, que é o que dá entrada no circuito.
-    expect(texto).toContain(
-      "Pedido de Assunção de Encargos Plurianuais para Aquisição de Serviços de Manutenção do SClínico.",
-    );
+    // O assunto identifica o procedimento e o triénio que ele cobre.
+    expect(texto).toMatch(/Aquisição de Serviços de Manutenção do SClínico para o triénio 20\d\d-20\d\d\./);
     expect(texto).toContain("insere-se o Projeto SClínico");
   });
 
   it("sem nome de procedimento, o assunto cai no nome do projeto", async () => {
     const texto = await textoDoDocumento(exemplo({ nomeProjeto: "SClínico", nomeProcedimento: "" }));
 
-    expect(texto).toContain("Pedido de Assunção de Encargos Plurianuais para SClínico.");
+    expect(texto).toMatch(/SClínico para o triénio 20\d\d-20\d\d\./);
   });
 
   it("escreve a descrição do projeto onde antes ficava o marcador", async () => {
@@ -110,9 +108,87 @@ describe("gerarPedidoPlurianualBlob", () => {
     const texto = await textoDoDocumento(exemplo());
 
     // O exemplo começa em 2026.
-    expect(texto).toContain("assunção de encargos plurianuais 2026 e anos subsequentes");
+    expect(texto).toContain("2.2. Encargos previstos para o triénio 2026-2028");
     expect(texto).toContain("do início do contrato, 2026, e aos dois anos económicos seguintes, 2027 e 2028");
     expect(texto).toMatch(/O preço base do procedimento é de .+, sem IVA, correspondendo a .+ com IVA/);
+  });
+
+  it("a justificação das rates vem depois do preço base, com o quadro de referência", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    const frase =
+      "Os valores hora foram apurados através do valor médio das propostas obtidas nos últimos concursos " +
+      "realizados pela SPMS, E.P.E. para adquirir serviços de natureza equivalente, mediante a seguinte tabela:";
+    expect(texto).toContain(frase);
+    // E já não onde estava, antes do quadro dos anos.
+    expect(texto).not.toContain("obtidas no último concurso público realizado pela SPMS");
+    expect(texto.indexOf("O preço base do procedimento é de")).toBeLessThan(texto.indexOf(frase));
+
+    // O quadro traz os dez perfis de referência, com os procedimentos.
+    for (const coluna of ["Procedimento(s)", "N.º propostas admitidas", "Rate média das propostas (€/h)"]) {
+      expect(texto).toContain(coluna);
+    }
+    expect(texto).toContain("Consultor de Administração de Sistemas e Observabilidade");
+    expect(texto).toContain("20260065");
+    expect(texto).toContain("20230160");
+  });
+
+  it("a manifestação não leva o quadro das rates", async () => {
+    expect(await textoDaManifestacao(semPlurianual())).not.toContain("mediante a seguinte tabela:");
+  });
+
+  it("a tabela dos anos leva o lote à frente e o n.º mínimo de elementos", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const cabecalho = texto.slice(texto.indexOf("LotesPerfil") >= 0 ? texto.indexOf("LotesPerfil") : 0);
+
+    expect(texto).toContain("LotesPerfil");
+    expect(texto).toContain("N.º mín. elementos");
+    expect(texto).not.toContain("PessoasPerfil");
+    void cabecalho;
+  });
+
+  it("a tabela dos anos deixou de levar subtotais por lote", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    expect(texto).not.toContain("Subtotal do lote");
+    // O total a assumir continua lá: é o que o pedido pede.
+    expect(texto).toContain("Total a assumir");
+  });
+
+  it("a divisão por lotes fecha a análise, nos dois documentos", async () => {
+    const doPedido = await textoDoDocumento(exemplo());
+    expect(doPedido).toContain("2.3. Divisão por lotes");
+    expect(doPedido).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
+    expect(doPedido.indexOf("O preço base do procedimento é de")).toBeLessThan(
+      doPedido.indexOf("2.3. Divisão por lotes"),
+    );
+    expect(doPedido.indexOf("2.3. Divisão por lotes")).toBeLessThan(doPedido.indexOf("III – Conclusão"));
+
+    const daManifestacao = await textoDaManifestacao(semPlurianual());
+    expect(daManifestacao).toContain("2.2. Divisão por lotes");
+  });
+
+  it("as regras de adjudicação saem numeradas, com as alíneas por baixo", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    expect(texto).toContain("Regras de Adjudicação dos Lotes");
+    // Numeradas de verdade — a marca e o texto ficam colados quando se tira a
+    // marcação, porque o que os separa no documento é um tabulador a sério.
+    expect(texto).toContain("1.A adjudicação está limitada a 1 (um) lote por concorrente");
+    expect(texto).toContain("3.Sem prejuízo do disposto no n.º 2");
+    expect(texto).toContain("i.Se encontrarem em relação de simples participação");
+    expect(texto).toContain("4.Sempre que, da aplicação do critério de adjudicação");
+    // E já não com marcas, que não servem uma norma que remete para números.
+    expect(texto).not.toContain("•A adjudicação está limitada");
+  });
+
+  it("as regras de apuramento falam do Resumo Curricular e de assinatura sem «qualificada»", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    expect(texto).toContain("o concorrente apresenta, relativamente a cada elemento proposto, o Resumo Curricular");
+    expect(texto).toContain("mediante assinatura eletrónica.");
+    expect(texto).not.toContain("qualificada");
+    expect(texto).not.toContain("formulário de declaração de experiência profissional");
   });
 
   it("leva o anexo técnico completo", async () => {
@@ -121,7 +197,7 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toContain("Requisitos mínimos de experiência profissional");
     expect(texto).toContain("Programador Sénior — Java");
     expect(texto).toContain("Posto de trabalho");
-    expect(texto).toContain("Limitação de adjudicação a um lote por concorrente");
+    expect(texto).toContain("Regras de Adjudicação dos Lotes");
     expect(texto).toContain("Regras de apuramento da experiência");
   });
 
@@ -229,7 +305,9 @@ describe("gerarManifestacaoNecessidadesBlob", () => {
     expect(texto).not.toContain("Encargos com o projeto planeados para o ano corrente/transato");
     expect(texto).not.toContain("Para assegurar estes serviços foram desenvolvidos os seguintes procedimentos:");
     expect(texto).not.toContain("[tabela dos procedimentos do ano corrente/transato");
-    expect(texto).not.toContain("2.2.");
+    // O 2.2 que resta é a divisão por lotes, e não os encargos plurianuais.
+    expect(texto).toContain("2.2. Divisão por lotes");
+    expect(texto).not.toContain("2.3.");
   });
 
   it("o enquadramento dos encargos é o da bolsa de horas, e não o dos anos económicos", async () => {

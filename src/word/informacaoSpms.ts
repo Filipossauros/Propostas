@@ -20,8 +20,14 @@
 
 import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
+import { alineasDoItem, marcaDeAlinea, textoDoItem } from "../core/documento";
 import type { LotesJSON } from "../core/types";
-import { blocosAnexoTecnico, blocosEncargosPlurianuais, tabelaPrecoBase } from "../core/cadernoEncargos";
+import {
+  blocosAnexoTecnico,
+  blocosDivisaoPorLotes,
+  blocosEncargosPlurianuais,
+  tabelaPrecoBase,
+} from "../core/cadernoEncargos";
 import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 
@@ -137,17 +143,46 @@ function marcador(texto: string): string {
   return run(`[${texto}]`, { negrito: true, cor: POR_PREENCHER });
 }
 
-/** Uma alínea, com marca e avanço — sem `numbering.xml` à mistura. */
-function alinea(texto: string): string {
-  return paragrafo([run("•"), tabulador(), run(texto)], { antes: 40, depois: 40, ind: 284, pendente: 284 });
+/** Um item de lista, com marca e avanço — sem `numbering.xml` à mistura. */
+function itemDeLista(marca: string, texto: string, avanco = 284): string {
+  return paragrafo([run(marca), tabulador(), run(texto)], {
+    antes: 40,
+    depois: 40,
+    ind: avanco,
+    pendente: avanco,
+  });
+}
+
+/**
+ * Uma lista do documento estruturado, numerada ou com marcas.
+ *
+ * A numeração sai por extenso, e não de `numbering.xml`: as normas remetem
+ * umas para as outras pelo número («nos termos do n.º 2»), e um número que o
+ * Word recalcule ao editar deixaria a remissão a apontar para outro sítio.
+ */
+function lista(bloco: Extract<BlocoDocumento, { tipo: "lista" }>): string {
+  return bloco.itens
+    .map((item, i) => {
+      const marca = bloco.numerada ? `${i + 1}.` : "•";
+      return (
+        itemDeLista(marca, textoDoItem(item)) +
+        alineasDoItem(item)
+          .map((texto, j) => itemDeLista(marcaDeAlinea(j), texto, 624))
+          .join("")
+      );
+    })
+    .join("");
 }
 
 // --------------------------------------------------------------------------
 // Tabelas
 // --------------------------------------------------------------------------
 
-/** Uma linha de célula: texto simples, ou texto com uma segunda linha suave. */
-type LinhaDeCelula = string | { texto: string; suave: string };
+/**
+ * O conteúdo de uma célula: texto simples, texto com uma segunda linha suave,
+ * ou várias linhas do mesmo peso.
+ */
+type LinhaDeCelula = string | { texto: string; suave: string } | { linhas: string[] };
 
 interface OpcoesCelula {
   cabecalho?: boolean;
@@ -155,16 +190,27 @@ interface OpcoesCelula {
   sz?: number;
 }
 
+function conteudoEmRuns(conteudo: LinhaDeCelula, cabecalho: boolean, sz: number): string[] {
+  if (typeof conteudo === "string") return [run(conteudo, { negrito: cabecalho, sz })];
+
+  // Várias linhas do mesmo peso, separadas por quebras: é como os números de
+  // procedimento cabem numa coluna estreita sem se partirem a meio.
+  if ("linhas" in conteudo) {
+    return conteudo.linhas.flatMap((linha, i) =>
+      i === 0 ? [run(linha, { negrito: cabecalho, sz })] : [quebra(), run(linha, { negrito: cabecalho, sz })],
+    );
+  }
+
+  return [
+    run(conteudo.texto, { negrito: cabecalho, sz }),
+    quebra(),
+    run(conteudo.suave, { sz: sz - 2, cor: SUAVE }),
+  ];
+}
+
 function celula(conteudo: LinhaDeCelula, largura: number, { cabecalho, direita, sz = TABELA }: OpcoesCelula = {}): string {
   const sombra = cabecalho ? `<w:shd w:val="clear" w:color="auto" w:fill="${CINZA}"/>` : "";
-  const runs =
-    typeof conteudo === "string"
-      ? [run(conteudo, { negrito: cabecalho, sz })]
-      : [
-          run(conteudo.texto, { negrito: cabecalho, sz }),
-          quebra(),
-          run(conteudo.suave, { sz: sz - 2, cor: SUAVE }),
-        ];
+  const runs = conteudoEmRuns(conteudo, cabecalho === true, sz);
 
   return (
     `<w:tc><w:tcPr><w:tcW w:w="${largura}" w:type="dxa"/>${sombra}` +
@@ -265,7 +311,7 @@ function renderizar(bloco: BlocoDocumento): string {
     case "nota":
       return paragrafo([run(bloco.texto, { italico: true, sz: TABELA })], { jc: "left" });
     case "lista":
-      return bloco.itens.map(alinea).join("");
+      return lista(bloco);
     case "tabela":
       return tabelaDoBloco(bloco);
   }
@@ -381,6 +427,82 @@ function ultimaTabela(xml: string): string {
  */
 export type Variante = "plurianual" | "manifestacao";
 
+/**
+ * As rates dos concursos anteriores que fundamentam os valores hora usados.
+ *
+ * É um quadro de referência da organização, e não algo que a aplicação apure:
+ * vem dos procedimentos já realizados, e atualiza-se aqui quando houver mais.
+ */
+const RATES_DE_REFERENCIA: Array<{
+  perfil: string;
+  procedimentos: string[];
+  propostas: string;
+  base: string;
+  media: string;
+  diferenca: string;
+}> = [
+  {
+    perfil: "Analista Funcional",
+    procedimentos: ["20260065", "20260066", "20260080"],
+    propostas: "28",
+    base: "54,10 €/h",
+    media: "26,22 €/h",
+    diferenca: "52%",
+  },
+  { perfil: "Arquiteto de Sistemas", procedimentos: ["20260080"], propostas: "4", base: "59,51 €/h", media: "47,31 €/h", diferenca: "20%" },
+  { perfil: "Backend — Java data access", procedimentos: ["20260065"], propostas: "6", base: "54,10 €/h", media: "29,29 €/h", diferenca: "46%" },
+  { perfil: "Backend — System Integration", procedimentos: ["20260080"], propostas: "4", base: "54,10 €/h", media: "27,30 €/h", diferenca: "50%" },
+  {
+    perfil: "Consultor de Administração de Sistemas e Observabilidade",
+    procedimentos: ["20260081"],
+    propostas: "1",
+    base: "54,10 €/h",
+    media: "28,12 €/h",
+    diferenca: "48%",
+  },
+  { perfil: "Frontend", procedimentos: ["20260081"], propostas: "7", base: "54,10 €/h", media: "27,50 €/h", diferenca: "49%" },
+  {
+    perfil: "Tester",
+    procedimentos: ["20260065", "20260066", "20260080", "20260081"],
+    propostas: "23",
+    base: "27,05 €/h",
+    media: "22,60 €/h",
+    diferenca: "16%",
+  },
+  { perfil: "UX-UI Designer", procedimentos: ["20260066"], propostas: "13", base: "54,10 €/h", media: "27,64 €/h", diferenca: "49%" },
+  { perfil: "Gestor de Projeto", procedimentos: ["20230160"], propostas: "6", base: "40,50 €/h", media: "34,13 €/h", diferenca: "16%" },
+  { perfil: "Developer de Integração", procedimentos: ["20230160"], propostas: "4", base: "35,14 €/h", media: "30,08 €/h", diferenca: "14%" },
+];
+
+/**
+ * O quadro das rates de referência.
+ *
+ * Seis colunas numa página de retrato: sai a 8 pt, como a dos anos, e os
+ * números de procedimento vão um por linha dentro da célula — lado a lado
+ * partiam-se a meio do número.
+ */
+function tabelaDeRates(): string {
+  return tabela(
+    [
+      { titulo: "Perfil", peso: 24 },
+      { titulo: "Procedimento(s)", peso: 13 },
+      { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 12 },
+      { titulo: "Rate do valor base do procedimento (€/h)", alinhamento: "direita", peso: 17 },
+      { titulo: "Rate média das propostas (€/h)", alinhamento: "direita", peso: 17 },
+      { titulo: "Diferença da rate média para valor base", alinhamento: "direita", peso: 17 },
+    ],
+    RATES_DE_REFERENCIA.map((r) => [
+      r.perfil,
+      { linhas: r.procedimentos },
+      r.propostas,
+      r.base,
+      r.media,
+      r.diferenca,
+    ]),
+    { sz: ANOS },
+  );
+}
+
 /** As duas frases da conclusão da manifestação que fixam o tipo de procedimento. */
 const OPCOES_DE_PROCEDIMENTO: Array<{ opcao: string; sim: boolean; sufixo?: string }> = [
   { opcao: "Concurso Público", sim: true },
@@ -444,6 +566,8 @@ export function corpoDaInformacao(
   const procedimento = config.nomeProcedimento.trim() === "" ? projeto : config.nomeProcedimento.trim();
   const descricao = config.descricaoProjeto.trim();
   const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
+  /** O triénio, como se escreve no assunto e nos títulos: 2026-2028. */
+  const trienio = `${anos[0]}-${anos[anos.length - 1]}`;
   const total = totalProcedimento(config);
 
   // Do modelo aproveitam-se as duas tabelas que são identidade da organização:
@@ -459,7 +583,7 @@ export function corpoDaInformacao(
       dataPorExtenso(quando),
       manifestacao
         ? `Manifestação de necessidades para ${procedimento}.`
-        : `Pedido de Assunção de Encargos Plurianuais para ${procedimento}.`,
+        : `${procedimento} para o triénio ${trienio}.`,
       manifestacao,
     ),
   );
@@ -518,9 +642,7 @@ export function corpoDaInformacao(
         { jc: "left" },
       ),
     );
-    p.push(
-      titulo(`2.2. Encargos previstos através da assunção de encargos plurianuais ${anos[0]} e anos subsequentes`, 2),
-    );
+    p.push(titulo(`2.2. Encargos previstos para o triénio ${trienio}`, 2));
 
     // Os parágrafos de enquadramento e a tabela são os mesmos que a aplicação
     // produz no seu próprio Word: uma fonte só, para não divergirem.
@@ -528,12 +650,6 @@ export function corpoDaInformacao(
       if (bloco.tipo === "paragrafo" && bloco.texto.startsWith("O preço base")) continue;
       if (bloco.tipo === "titulo") continue;
       if (bloco.tipo === "tabela") {
-        p.push(
-          paragrafo(
-            "Os valores hora apresentados foram apurados através do valor médio das propostas obtidas no último " +
-              "concurso público realizado pela SPMS, E.P.E. para adquirir serviços desta natureza.",
-          ),
-        );
         p.push(tabelaPlurianual(bloco));
         continue;
       }
@@ -547,6 +663,23 @@ export function corpoDaInformacao(
         `${formatarMoeda(total.comIva)} com IVA à taxa legal em vigor.`,
     ),
   );
+
+  // A justificação das rates vem a seguir ao preço base, e não antes do quadro
+  // dos anos: é o preço base que ela fundamenta.
+  if (!manifestacao) {
+    p.push(
+      paragrafo(
+        "Os valores hora foram apurados através do valor médio das propostas obtidas nos últimos concursos " +
+          "realizados pela SPMS, E.P.E. para adquirir serviços de natureza equivalente, mediante a seguinte tabela:",
+      ),
+    );
+    p.push(tabelaDeRates());
+  }
+
+  // A divisão por lotes é o que se adjudica: fecha a análise, depois de o preço
+  // base do procedimento estar fixado.
+  p.push(titulo(manifestacao ? "2.2. Divisão por lotes" : "2.3. Divisão por lotes", 2));
+  for (const bloco of blocosDivisaoPorLotes(config)) p.push(renderizarNoCorpo(bloco));
 
   p.push(titulo("III – Conclusão"));
   if (manifestacao) {

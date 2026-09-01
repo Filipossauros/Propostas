@@ -252,7 +252,7 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string
       ];
 
   const linhas: Array<{ texto: string; titulo?: boolean }> = [
-    { texto: "DECLARAÇÃO DE EXPERIÊNCIA PROFISSIONAL — INSTRUÇÕES DE PREENCHIMENTO", titulo: true },
+    { texto: "RESUMO CURRICULAR — INSTRUÇÕES DE PREENCHIMENTO", titulo: true },
     { texto: "" },
     ...indice,
     { texto: "" },
@@ -279,7 +279,7 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string
     },
     {
       texto:
-        "6. Após concluir o preenchimento, assine digitalmente o documento com assinatura digital qualificada e submeta o PDF resultante nos termos do procedimento.",
+        "6. Após concluir o preenchimento, assine digitalmente o documento e submeta o PDF resultante nos termos do procedimento.",
     },
   ];
 
@@ -318,7 +318,7 @@ function construirFolhaExperiencia(
 
   sheet.mergeCells(LINHA_TITULO, 1, LINHA_TITULO, 8);
   const tituloCell = sheet.getCell(LINHA_TITULO, 1);
-  tituloCell.value = "DECLARAÇÃO DE EXPERIÊNCIA PROFISSIONAL";
+  tituloCell.value = "RESUMO CURRICULAR";
   tituloCell.font = { bold: true, size: 14, color: { argb: COR_FAIXA } };
   tituloCell.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(LINHA_TITULO).height = ALTURA_TITULO;

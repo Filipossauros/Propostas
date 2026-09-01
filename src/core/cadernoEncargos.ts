@@ -12,10 +12,10 @@ import {
   anosPlurianuais,
   formatarMoeda,
   formatarNumero,
+  horasContratadas,
   linhasPlurianuais,
   linhasTabelaValores,
   taxaIva,
-  totaisPorAnoDoLote,
   totaisPorAnoPlurianual,
   totalLote,
   totalProcedimento,
@@ -40,19 +40,8 @@ export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { ti
     celula(formatarMoeda(l.valores.comIva), DIREITA),
   ]);
 
-  for (const lote of config.lotes) {
-    const total = totalLote(lote, taxa, config.encargosPlurianuais.ativo);
-    linhas.push([
-      celula(lote.numero, undefined, true),
-      celula(`Subtotal do lote ${lote.numero}`, undefined, true),
-      celula("", DIREITA, true),
-      celula("", DIREITA, true),
-      celula("", DIREITA, true),
-      celula(formatarMoeda(total.semIva), DIREITA, true),
-      celula(formatarMoeda(total.comIva), DIREITA, true),
-    ]);
-  }
-
+  // Sem subtotais por lote: quem os quer lê-os na «Divisão por lotes», onde
+  // estão com as horas ao lado em vez de espalhados por esta tabela.
   const total = totalProcedimento(config);
   linhas.push([
     celula("", undefined, true),
@@ -178,11 +167,11 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
 
   const anos = anosPlurianuais(encargos.anoInicio);
   const linhas = linhasPlurianuais(config).map((linha) => [
-    celula(String(linha.pessoas), DIREITA),
+    celula(linha.lote, DIREITA),
     celula(linha.perfil),
     celula(formatarMoeda(linha.valorHoraSemIva), DIREITA),
     celula(formatarMoeda(linha.valorHoraComIva), DIREITA),
-    celula(linha.lote, DIREITA),
+    celula(String(linha.pessoas), DIREITA),
     // O valor de cada ano leva consigo as horas de que resulta: sem elas, um
     // ano a zero parece um lapso em vez da decisão que é.
     ...linha.totais.map((total, i) =>
@@ -190,20 +179,8 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     ),
   ]);
 
-  // Com um lote só, o subtotal seria o total repetido uma linha acima.
-  if (config.lotes.length > 1) {
-    for (const lote of config.lotes) {
-      linhas.push([
-        celula("", DIREITA, true),
-        celula(`Subtotal do lote ${lote.numero}`, undefined, true),
-        celula("", DIREITA, true),
-        celula("", DIREITA, true),
-        celula(lote.numero, DIREITA, true),
-        ...totaisPorAnoDoLote(config, lote.id).map((total) => celula(formatarMoeda(total), DIREITA, true)),
-      ]);
-    }
-  }
-
+  // Sem subtotais por lote: o que cada lote vale está na «Divisão por lotes»,
+  // com as horas ao lado, e aqui só faria a tabela dos anos crescer.
   const totais = totaisPorAnoPlurianual(config);
   linhas.push([
     celula("", DIREITA, true),
@@ -239,11 +216,11 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
       tipo: "tabela",
       legenda: "Encargos a assumir por ano económico, com IVA incluído, e horas de que resultam.",
       colunas: [
-        { titulo: "Pessoas", alinhamento: DIREITA, peso: 8 },
+        { titulo: "Lotes", alinhamento: DIREITA, peso: 6 },
         { titulo: "Perfil", peso: 24 },
         { titulo: "Rate (€/h) s/ IVA", alinhamento: DIREITA, peso: 11 },
         { titulo: "Rate (€/h) c/ IVA", alinhamento: DIREITA, peso: 11 },
-        { titulo: "Lotes", alinhamento: DIREITA, peso: 6 },
+        { titulo: "N.º mín. elementos", alinhamento: DIREITA, peso: 8 },
         ...anos.map((ano) => ({ titulo: `Total € c/ IVA ${ano}`, alinhamento: DIREITA, peso: 13 })),
       ],
       linhas,
@@ -260,15 +237,68 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
 }
 
 /**
+ * O que cada lote leva: horas e preço base.
+ *
+ * É a leitura que interessa a quem adjudica — um lote é o que se adjudica de
+ * uma vez —, e vem sem título próprio porque cada documento lhe dá o seu: nas
+ * informações da SPMS é uma secção numerada, no documento das regras é uma
+ * secção como as outras.
+ */
+export function blocosDivisaoPorLotes(config: LotesJSON): BlocoDocumento[] {
+  const plurianual = config.encargosPlurianuais.ativo;
+
+  const linhas = config.lotes.map((lote) => [
+    celula(lote.numero, DIREITA),
+    celula(lote.designacao),
+    celula(formatarNumero(horasDoLote(lote, plurianual)), DIREITA),
+    celula(formatarMoeda(totalLote(lote, 0, plurianual).semIva), DIREITA),
+  ]);
+
+  const total = totalProcedimento(config);
+  linhas.push([
+    celula("", DIREITA, true),
+    celula("Total", undefined, true),
+    celula(formatarNumero(config.lotes.reduce((soma, l) => soma + horasDoLote(l, plurianual), 0)), DIREITA, true),
+    celula(formatarMoeda(total.semIva), DIREITA, true),
+  ]);
+
+  return [
+    { tipo: "paragrafo", texto: "A determinação dos lotes para efeito de adjudicação é a seguinte:" },
+    {
+      tipo: "tabela",
+      legenda: "As horas de cada lote são as de todos os elementos que o compõem; o preço base é sem IVA.",
+      colunas: [
+        { titulo: "Lote n.º", alinhamento: DIREITA, peso: 10 },
+        { titulo: "Descrição", peso: 46 },
+        { titulo: "Total horas", alinhamento: DIREITA, peso: 18 },
+        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 26 },
+      ],
+      linhas,
+    },
+  ];
+}
+
+/** As horas de um lote: as de cada perfil, vezes os elementos que o perfil pede. */
+function horasDoLote(lote: LotesJSON["lotes"][number], plurianual: boolean): number {
+  return lote.perfis.reduce((soma, e) => soma + e.nMinimoElementos * horasContratadas(e, plurianual), 0);
+}
+
+/**
  * O preço base do procedimento: ou a repartição por anos, ou a tabela simples.
  *
  * Ou uma, ou outra: com pedido plurianual, a repartição por anos é o preço
  * base, e as duas juntas obrigavam a lê-las uma contra a outra.
  */
 function blocosPrecoBase(config: LotesJSON): BlocoDocumento[] {
-  return config.encargosPlurianuais.ativo
+  const precoBase: BlocoDocumento[] = config.encargosPlurianuais.ativo
     ? blocosEncargosPlurianuais(config)
     : [{ tipo: "titulo", nivel: 1, texto: "Preço base" }, tabelaPrecoBase(config)];
+
+  return [
+    ...precoBase,
+    { tipo: "titulo", nivel: 1, texto: "Divisão por lotes" },
+    ...blocosDivisaoPorLotes(config),
+  ];
 }
 
 // --------------------------------------------------------------------------
@@ -359,13 +389,8 @@ function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
 // Regras para o Programa do Concurso
 // --------------------------------------------------------------------------
 
-/** Número de blocos do formulário, igual em todos: é do procedimento. */
-function descricaoBlocos(config: LotesJSON): string {
-  return `Cada formulário comporta ${config.nBlocos} blocos de projeto.`;
-}
-
 /**
- * Limitação de adjudicação a um lote por concorrente.
+ * Regras de adjudicação dos lotes, quando cada concorrente só pode levar um.
  *
  * Tem título próprio, e não é mais um número na lista das regras de apuramento:
  * altera o resultado do procedimento para lá do apuramento da experiência, e
@@ -374,18 +399,55 @@ function descricaoBlocos(config: LotesJSON): string {
 function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
   if (!config.umLotePorConcorrente) return [];
 
-  return [
-    { tipo: "titulo", nivel: 1, texto: "Limitação de adjudicação a um lote por concorrente" },
+  const numeros = config.lotes.map((lote) => `Lote ${lote.numero}`);
+  // A ordem sequencial da regra 4 é a dos lotes deste procedimento, e não uma
+  // lista fixa de três: escrita à mão, um procedimento com dois ou quatro lotes
+  // saía com uma norma a falar de lotes que não existem.
+  const ordemSequencial =
+    numeros.length <= 1
+      ? "escolhe-se o adjudicatário de cada lote pela ordem em que os lotes estão numerados"
+      : `escolhe-se o adjudicatário do ${numeros[0]} em primeiro lugar, ${numeros
+          .slice(1, -1)
+          .map((n) => `de seguida o adjudicatário do ${n}`)
+          .concat(`e, por fim, o adjudicatário do ${numeros[numeros.length - 1]}`)
+          .join(", ")}`;
+
+  const seguintes = numeros.slice(1);
+  const excecao =
+    seguintes.length === 0
+      ? ""
+      : ` O disposto nos números anteriores não se aplica à adjudicação do ${listaPorExtenso(seguintes)} quando ` +
+        "só tenha sido apresentada uma proposta sem motivos de exclusão.";
+
+  const itens = [
+    "A adjudicação está limitada a 1 (um) lote por concorrente, de acordo com a «ordem de preferência» indicada no modelo de apresentação de proposta que constitui o Anexo II do presente Programa de Concurso.",
+    "Sempre que da aplicação do critério de adjudicação resulte a atribuição a um mesmo concorrente de mais de 1 (um) lote, o critério para a ordenação será a «ordem de preferência» indicada na proposta do concorrente.",
     {
-      tipo: "lista",
-      numerada: true,
-      itens: [
-        "A cada concorrente não pode ser adjudicado mais do que um lote do presente procedimento.",
-        "Para efeitos do número anterior, as propostas são apreciadas pela ordem crescente do número do lote.",
-        "O concorrente a quem tenha sido adjudicado um lote fica impedido de o ser em qualquer lote subsequente, ainda que a sua proposta a esse lote satisfaça todos os requisitos.",
+      texto:
+        "Sem prejuízo do disposto no n.º 2, não pode ser adjudicado mais de um lote ao mesmo Concorrente, nem a " +
+        "Concorrente(s) com estes especialmente relacionados em virtude, designadamente, de:",
+      alineas: [
+        "Se encontrarem em relação de simples participação, de participação recíproca, de domínio ou de grupo;",
+        "Partilharem representantes legais ou sócios;",
+        "Estarem sujeitos ao controlo ou influência dominante de uma entidade comum, um ou mais deles controlar ou exercer influência dominante sobre outro(s), ou conjuntamente controlarem ou exercerem influência dominante sobre uma terceira entidade.",
       ],
     },
+    "Sempre que, da aplicação do critério de adjudicação, resulte a atribuição ao mesmo Concorrente, ou a " +
+      `Concorrentes que estejam especialmente relacionados entre si, de mais de um lote, a adjudicação faz-se de ` +
+      `acordo com a respetiva ordem sequencial, ou seja, ${ordemSequencial}.`,
+    "As regras previstas nos n.os 3 e 4 aplicam-se a agrupamentos concorrentes quando as situações neles previstas se verifiquem relativamente a algum dos seus membros.",
   ];
+
+  return [
+    { tipo: "titulo", nivel: 1, texto: "Regras de Adjudicação dos Lotes" },
+    { tipo: "lista", numerada: true, itens: excecao === "" ? itens : [...itens, excecao.trim()] },
+  ];
+}
+
+/** «Lote 2, Lote 3 e Lote 4» — a enumeração como se escreve numa norma. */
+function listaPorExtenso(itens: string[]): string {
+  if (itens.length <= 1) return itens.join("");
+  return `${itens.slice(0, -1).join(", ")} e do ${itens[itens.length - 1]}`;
 }
 
 /**
@@ -413,25 +475,25 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
       tipo: "lista",
       numerada: true,
       itens: [
-        "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o formulário de declaração de experiência profissional, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
-        "O formulário é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica qualificada, não sendo admissível a sua substituição por assinatura do representante do concorrente.",
-        `${descricaoBlocos(config)} Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do formulário quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
-        "Em cada bloco de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
-        "O formulário não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
-        "O formulário de declaração de experiência profissional deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido formulário deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica qualificada.",
+        "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o Resumo Curricular, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
+        "O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica.",
+        `O Resumo Curricular comporta ${config.nBlocos} Projetos de projeto. Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do Resumo Curricular quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
+        "Em cada Projeto de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
+        "O Resumo Curricular não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
+        "O Resumo Curricular deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido Resumo Curricular deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica.",
         "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
-        "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do formulário de declaração de experiência profissional; (ii) a falta de assinatura do PDF do formulário de declaração de experiência profissional, mediante assinatura eletrónica qualificada pelo próprio titular da experiência; ou (iii) a alteração da estrutura do formulário disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
+        "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do Resumo Curricular; (ii) a falta de assinatura do PDF do Resumo Curricular, mediante assinatura eletrónica pelo próprio titular da experiência; ou (iii) a alteração da estrutura do Resumo Curricular disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
         "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a dedicação não tenha sido integral ao longo do período do projeto.",
         "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
         "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
-        "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
+        "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse Projeto, que não foi declarada experiência no requisito em causa.",
         "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
-        "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo bloco.",
-        "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse bloco, a experiência no requisito em causa.",
+        "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo Projeto.",
+        "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse Projeto, a experiência no requisito em causa.",
         "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
-        "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo bloco. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse bloco, que não foi declarada experiência no requisito em causa.",
-        "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o formulário é preenchido: experiência ainda por decorrer não é experiência adquirida.",
-        "Quando o bloco de projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada, nesse bloco, a experiência em todos os requisitos.",
+        "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo projeto. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse projeto, que não foi declarada experiência no requisito em causa.",
+        "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o Resumo Curricular é submetido, considerando-se experiência ainda por decorrer como não adquirida.",
+        "Quando o projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada a experiência em todos os requisitos associados ao projeto.",
         "Os requisitos mínimos exprimem-se em meses inteiros, não havendo lugar a arredondamento.",
       ],
     },

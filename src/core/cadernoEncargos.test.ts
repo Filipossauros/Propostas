@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
+import { blocosDivisaoPorLotes, documentoRegrasEPrecoBase } from "./cadernoEncargos";
+import { normalizarLotesGuardados } from "./lotes";
 import { documentoParaTexto } from "./documento";
 import { LOTES_EXEMPLO } from "./exemplo";
 import { certificacoes, itens, lotesComPerfis, perfil, requisito } from "./fixtures";
@@ -98,21 +99,79 @@ describe("documentoRegrasEPrecoBase", () => {
   it("indica o n.º de projetos por formulário, que é do procedimento", () => {
     const config = { ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]), nBlocos: 15 };
 
-    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("comporta 15 blocos");
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("comporta 15 Projetos");
   });
 
   it("só aparece quando a opção está ativa, e com título próprio", () => {
     const semLimite = { ...LOTES_EXEMPLO, umLotePorConcorrente: false };
-    const titulo = "Limitação de adjudicação a um lote por concorrente";
+    const titulo = "Regras de Adjudicação dos Lotes";
 
     expect(documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO))).toContain(titulo);
     expect(documentoParaTexto(documentoRegrasEPrecoBase(semLimite))).not.toContain(titulo);
   });
 
-  it("fixa a ordem de apreciação, que é o que decide quem fica com o quê", () => {
-    expect(documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO))).toContain(
-      "ordem crescente do número do lote",
-    );
+  it("remete para a ordem de preferência da proposta, que é o que decide quem fica com o quê", () => {
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+
+    expect(texto).toContain("A adjudicação está limitada a 1 (um) lote por concorrente");
+    expect(texto).toContain("«ordem de preferência» indicada na proposta do concorrente");
+  });
+
+  it("as causas de relação especial vão em alíneas, sem quebrar a série dos números", () => {
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+
+    expect(texto).toContain("3. Sem prejuízo do disposto no n.º 2");
+    expect(texto).toMatch(/i\. Se encontrarem em relação de simples participação/);
+    expect(texto).toMatch(/iii\. Estarem sujeitos ao controlo ou influência dominante/);
+    // A alínea não gasta um número: a regra seguinte é a 4.
+    expect(texto).toContain("4. Sempre que, da aplicação do critério de adjudicação");
+  });
+
+  it("a ordem sequencial nomeia os lotes que o procedimento tem, e não três fixos", () => {
+    // O exemplo tem dois lotes: a norma não pode falar de um terceiro.
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+
+    expect(texto).toContain("escolhe-se o adjudicatário do Lote 1 em primeiro lugar, e, por fim, o adjudicatário do Lote 2");
+    expect(texto).not.toContain("Lote 3");
+  });
+
+  it("com um lote só, não há exceção do último lote a apresentar", () => {
+    const umLote = { ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]), umLotePorConcorrente: true };
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(umLote));
+
+    expect(texto).toContain("Regras de Adjudicação dos Lotes");
+    expect(texto).not.toContain("só tenha sido apresentada uma proposta sem motivos de exclusão");
+  });
+});
+
+describe("divisão por lotes", () => {
+  it("dá uma linha por lote, com as horas e o preço base", () => {
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+
+    expect(texto).toContain("Divisão por lotes");
+    expect(texto).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
+    for (const coluna of ["Lote n.º", "Descrição", "Total horas", "Preço base (s/ IVA)"]) {
+      expect(texto).toContain(coluna);
+    }
+    for (const lote of LOTES_EXEMPLO.lotes) expect(texto).toContain(lote.designacao);
+  });
+
+  it("as horas de um lote contam os elementos de cada perfil", () => {
+    const config = normalizarLotesGuardados({
+      ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]),
+      encargosPlurianuais: { ativo: false, anoInicio: 2027 },
+    });
+    // A fixture dá 100 horas e 2 elementos: 200 horas de trabalho no lote.
+    config.lotes[0].perfis[0].horas = 100;
+    config.lotes[0].perfis[0].nMinimoElementos = 2;
+
+    const linhas = blocosDivisaoPorLotes(config).find((b) => b.tipo === "tabela")!;
+    expect(linhas.linhas[0][2].texto).toBe("200");
+  });
+
+  it("as tabelas de preço base deixam de levar subtotais por lote", () => {
+    const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
+    expect(texto).not.toContain("Subtotal do lote");
   });
 });
 
@@ -180,7 +239,7 @@ describe("normas de nulidade da experiência", () => {
   });
 
   it("não admite experiência para além do mês do preenchimento", () => {
-    expect(texto).toContain("para além do mês e ano em que o formulário é preenchido");
+    expect(texto).toContain("para além do mês e ano em que o Resumo Curricular é submetido");
   });
 
   it("anula a experiência do bloco de projeto incompleto", () => {

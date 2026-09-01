@@ -65,7 +65,7 @@ export const TEXTO_DECLARACAO_VERACIDADE =
   "verdadeiras e correspondem à experiência profissional efetivamente exercida.";
 
 export const LINHA_ASSINATURA = 12;
-export const ROTULO_ASSINATURA = "Assinatura digital qualificada do candidato";
+export const ROTULO_ASSINATURA = "Assinatura digital do perfil";
 
 export const LINHA_BRANCO_APOS_IDENTIFICACAO = 13;
 
