@@ -38,6 +38,7 @@ import {
   contorno,
   fillSolido,
 } from "./estilo";
+import { prepararImpressao } from "./impressao";
 
 const LETRA = "Calibri";
 const MOEDA = '#,##0.00\\ "€"';
@@ -111,10 +112,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
   folhaDoResumo(livro, orcamento);
 
   const anos = anosDoOrcamento(orcamento);
-  const folha = livro.addWorksheet("Detalhe por projeto", {
-    views: [{ showGridLines: false }],
-    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  });
+  const folha = livro.addWorksheet("Detalhe por projeto", { views: [{ showGridLines: false }] });
 
   const titulos = [
     "Projeto",
@@ -164,6 +162,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
   // O cabeçalho e a coluna do projeto ficam à vista ao rolar: com uma dezena de
   // projetos, sem eles não se sabe que ano é cada coluna nem de quem é a linha.
   folha.views = [{ state: "frozen", ySplit: linhaCabecalho, xSplit: 1, showGridLines: false }];
+  prepararImpressao(folha, { repetirAte: linhaCabecalho });
   if (ultimaLinha >= primeiraLinha) {
     folha.autoFilter = {
       from: { row: linhaCabecalho, column: 1 },
@@ -181,10 +180,7 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
  * de que é feita cada linha.
  */
 function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): void {
-  const folha = livro.addWorksheet("Resumo geral", {
-    views: [{ showGridLines: false }],
-    pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  });
+  const folha = livro.addWorksheet("Resumo geral", { views: [{ showGridLines: false }] });
   const titulos = ["Projeto", "Elementos externos", "Elementos internos", "Total", "% na unidade"];
   folha.columns = [{ width: 40 }, { width: 20 }, { width: 20 }, { width: 12 }, { width: 15 }];
 
@@ -229,6 +225,7 @@ function folhaDoResumo(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): vo
   ]);
 
   folha.views = [{ state: "frozen", ySplit: linhaCabecalho, showGridLines: false }];
+  prepararImpressao(folha, { repetirAte: linhaCabecalho });
 }
 
 function faixa(folha: ExcelJS.Worksheet, linha: number, nColunas: number, valor: string): void {

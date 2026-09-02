@@ -23,6 +23,7 @@ import {
   contorno,
   fillSolido,
 } from "./estilo";
+import { prepararImpressao } from "./impressao";
 
 const LETRA = "Calibri";
 
@@ -117,10 +118,8 @@ function nota(folha: ExcelJS.Worksheet, linha: number, texto: string): void {
 }
 
 function folhaDoPerfil(livro: ExcelJS.Workbook, perfil: PerfilJSON, nome: string): void {
-  const folha = livro.addWorksheet(nome, {
-    views: [{ showGridLines: false }],
-    pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
-  });
+  const folha = livro.addWorksheet(nome, { views: [{ showGridLines: false }] });
+  prepararImpressao(folha, { repetirAte: 1 });
   folha.columns = [{ width: 78 }, { width: 14 }, { width: 14 }];
 
   let linha = 1;

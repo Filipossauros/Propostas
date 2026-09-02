@@ -20,6 +20,7 @@ import {
   COR_SUBCABECALHO,
   fillSolido,
 } from "./estilo";
+import { prepararImpressao } from "./impressao";
 import {
   CAMPOS_IDENTIFICACAO,
   LINHA_ASSINATURA,
@@ -242,6 +243,7 @@ function subtitulo(config: EspecificacaoFormulario): string {
 function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string; perfil: string }>): void {
   const sheet = wb.addWorksheet(NOME_FOLHA_LEIAME);
   sheet.getColumn(1).width = 110;
+  prepararImpressao(sheet);
 
   const umPerfil = folhas.length === 1;
   const indice = umPerfil
@@ -472,6 +474,11 @@ function construirFolhaExperiencia(
   }
 
   sheet.views = [{ state: "frozen", ySplit: LINHA_FAIXA_IDENTIFICACAO }];
+
+  // Deitada e ajustada à largura: são oito colunas, e em retrato as datas da
+  // experiência iam para uma segunda folha, longe do requisito a que dizem
+  // respeito. O título e o perfil repetem-se no topo de cada página.
+  prepararImpressao(sheet, { repetirAte: LINHA_SUBTITULO });
 
   sheet.protect("", {
     selectLockedCells: true,

@@ -37,6 +37,7 @@ import {
   contorno,
   fillSolido,
 } from "./estilo";
+import { prepararImpressao } from "./impressao";
 
 // --------------------------------------------------------------------------
 // Construção de folhas tabulares
@@ -167,6 +168,8 @@ function adicionarFolhaTabela(
   }
 
   sheet.views = [{ state: "frozen", ySplit: LINHA_CABECALHO }];
+  // O cabeçalho repete-se em cada página impressa, como se repete no ecrã.
+  prepararImpressao(sheet, { repetirAte: LINHA_CABECALHO });
   sheet.autoFilter = {
     from: { row: LINHA_CABECALHO, column: 1 },
     to: { row: LINHA_CABECALHO + Math.max(linhas.length, 1), column: nColunas },
@@ -242,6 +245,7 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
   const sheet = wb.addWorksheet("Procedimento");
   sheet.getColumn(1).width = 34;
   sheet.getColumn(2).width = 62;
+  prepararImpressao(sheet);
 
   sheet.mergeCells(1, 1, 1, 2);
   const titulo = sheet.getCell(1, 1);
