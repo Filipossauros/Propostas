@@ -21,6 +21,7 @@ import {
   totalProcedimento,
 } from "./lotes";
 import { celula, paragrafoComPartes, type BlocoDocumento, type Documento } from "./documento";
+import { blocosResumosCurriculares, TITULO_ANEXO_RESUMOS } from "./resumoCurricular";
 
 const DIREITA = "direita" as const;
 
@@ -541,6 +542,22 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
 export function documentoRegrasEPrecoBase(config: LotesJSON): Documento {
   return {
     titulo: "Regras de comprovação e apuramento da experiência profissional",
-    blocos: [...blocosPrecoBase(config), ...blocosAnexoTecnico(config)],
+    blocos: [...blocosPrecoBase(config), ...blocosAnexoTecnico(config), ...blocosAnexoDosResumos(config)],
   };
+}
+
+/**
+ * O anexo dos Resumos Curriculares, com o seu título e numa página própria.
+ *
+ * Vem no fim, depois das regras que lhe remetem: é o formulário que se anexa
+ * ao Programa do Concurso, e não mais uma regra.
+ */
+function blocosAnexoDosResumos(config: LotesJSON): BlocoDocumento[] {
+  const resumos = blocosResumosCurriculares(config);
+  if (resumos.length === 0) return [];
+  return [
+    { tipo: "quebraDePagina" },
+    { tipo: "titulo", nivel: 1, texto: TITULO_ANEXO_RESUMOS },
+    ...resumos,
+  ];
 }

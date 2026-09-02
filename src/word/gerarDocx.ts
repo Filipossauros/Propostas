@@ -8,6 +8,7 @@ import {
   Document,
   HeadingLevel,
   Packer,
+  PageBreak,
   Paragraph,
   ShadingType,
   Table,
@@ -163,6 +164,9 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
       partes.push(new Paragraph({ spacing: { after: 200 }, children: [] }));
       return partes;
     }
+
+    case "quebraDePagina":
+      return [new Paragraph({ children: [new PageBreak()] })];
   }
 }
 

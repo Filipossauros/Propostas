@@ -29,6 +29,7 @@ import {
   tabelaPrecoBase,
 } from "../core/cadernoEncargos";
 import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
+import { blocosResumosCurriculares, TITULO_ANEXO_RESUMOS } from "../core/resumoCurricular";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 
 // --------------------------------------------------------------------------
@@ -52,6 +53,9 @@ const CINZA = "EDF1F5";
 
 /** Área útil da página do modelo: 11906 − 1701 − 849, em DXA. */
 const LARGURA = 9356;
+
+/** Quebra de página — o que separa os capítulos e as folhas do anexo dos resumos. */
+const QUEBRA_DE_PAGINA = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -314,6 +318,8 @@ function renderizar(bloco: BlocoDocumento): string {
       return lista(bloco);
     case "tabela":
       return tabelaDoBloco(bloco);
+    case "quebraDePagina":
+      return QUEBRA_DE_PAGINA;
   }
 }
 
@@ -781,9 +787,18 @@ export function corpoDaInformacao(
   p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240 }));
   p.push(herdado(assinatura));
 
-  p.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+  p.push(QUEBRA_DE_PAGINA);
   p.push(titulo("IV – Anexo Técnico"));
   for (const bloco of blocosAnexoTecnico(config)) p.push(renderizar(bloco));
+
+  // O formulário que os concorrentes preenchem, reproduzido a seguir ao anexo
+  // técnico: é dele que saem os campos a que as regras de apuramento remetem.
+  const resumos = blocosResumosCurriculares(config);
+  if (resumos.length > 0) {
+    p.push(QUEBRA_DE_PAGINA);
+    p.push(titulo(`V – ${TITULO_ANEXO_RESUMOS}`));
+    for (const bloco of resumos) p.push(renderizar(bloco));
+  }
 
   return p.join("");
 }

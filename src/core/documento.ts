@@ -40,7 +40,14 @@ export type BlocoDocumento =
   | { tipo: "paragrafo"; texto: string; destaque?: boolean; partes?: ParteDeTexto[] }
   | { tipo: "nota"; texto: string }
   | { tipo: "lista"; itens: ItemLista[]; numerada?: boolean }
-  | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] };
+  | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] }
+  /**
+   * Uma quebra de página. Existe para o anexo dos Resumos Curriculares, onde
+   * cada folha do ficheiro de cálculo tem de sair numa folha do Word — sem
+   * isso, dois resumos partilhariam a mesma página e deixariam de se ler como
+   * o formulário que reproduzem.
+   */
+  | { tipo: "quebraDePagina" };
 
 export interface Documento {
   titulo: string;
@@ -157,6 +164,9 @@ export function documentoParaTexto(doc: Documento): string {
       case "tabela":
         if (bloco.legenda) partes.push(bloco.legenda);
         partes.push(tabelaParaTexto(bloco.colunas, bloco.linhas), "");
+        break;
+      case "quebraDePagina":
+        partes.push("", "");
         break;
     }
   }
