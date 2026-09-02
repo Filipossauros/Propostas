@@ -150,13 +150,42 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).not.toContain("obtidas no último concurso público realizado pela SPMS");
     expect(texto.indexOf("O preço base do procedimento é de")).toBeLessThan(texto.indexOf(frase));
 
-    // O quadro traz os dez perfis de referência, com os procedimentos.
-    for (const coluna of ["Procedimento(s)", "N.º propostas admitidas", "Rate média das propostas (€/h)"]) {
+    // O quadro traz os onze perfis de referência, com os procedimentos.
+    for (const coluna of [
+      "Procedimento(s)",
+      "N.º propostas admitidas",
+      "Rate do valor base do procedimento (€/h)",
+      "Rate mais alta válida (proposta) (€/h)",
+      "Rate média das propostas (€/h)",
+      "Diferença da rate média para valor base",
+    ]) {
       expect(texto).toContain(coluna);
     }
     expect(texto).toContain("Consultor de Administração de Sistemas e Observabilidade");
     expect(texto).toContain("20260065");
     expect(texto).toContain("20230160");
+  });
+
+  it("o quadro leva os onze perfis, o Suporte IOP incluído", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const perfis = [
+      "Analista Funcional",
+      "Arquiteto de Sistemas",
+      "Backend — Java data access",
+      "Backend — System Integration",
+      "Consultor de Administração de Sistemas e Observabilidade",
+      "Frontend",
+      "Tester",
+      "UX-UI Designer",
+      "Gestor de Projeto",
+      "Developer de Integração",
+      "Suporte IOP",
+    ];
+    for (const perfil of perfis) expect(texto).toContain(perfil);
+
+    // A linha do Suporte IOP, com os seus valores, do procedimento à diferença.
+    // As células ficam coladas quando se tira a marcação do XML.
+    expect(texto).toContain("Suporte IOP20230160835,14 €/h34,90 €/h30,95 €/h12%");
   });
 
   it("a manifestação não leva o quadro das rates", async () => {

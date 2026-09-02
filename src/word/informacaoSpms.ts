@@ -438,6 +438,7 @@ const RATES_DE_REFERENCIA: Array<{
   procedimentos: string[];
   propostas: string;
   base: string;
+  maisAlta: string;
   media: string;
   diferenca: string;
 }> = [
@@ -446,56 +447,126 @@ const RATES_DE_REFERENCIA: Array<{
     procedimentos: ["20260065", "20260066", "20260080"],
     propostas: "28",
     base: "54,10 €/h",
+    maisAlta: "46,50 €/h",
     media: "26,22 €/h",
     diferenca: "52%",
   },
-  { perfil: "Arquiteto de Sistemas", procedimentos: ["20260080"], propostas: "4", base: "59,51 €/h", media: "47,31 €/h", diferenca: "20%" },
-  { perfil: "Backend — Java data access", procedimentos: ["20260065"], propostas: "6", base: "54,10 €/h", media: "29,29 €/h", diferenca: "46%" },
-  { perfil: "Backend — System Integration", procedimentos: ["20260080"], propostas: "4", base: "54,10 €/h", media: "27,30 €/h", diferenca: "50%" },
+  {
+    perfil: "Arquiteto de Sistemas",
+    procedimentos: ["20260080"],
+    propostas: "4",
+    base: "59,51 €/h",
+    maisAlta: "52,00 €/h",
+    media: "47,31 €/h",
+    diferenca: "20%",
+  },
+  {
+    perfil: "Backend — Java data access",
+    procedimentos: ["20260065"],
+    propostas: "6",
+    base: "54,10 €/h",
+    maisAlta: "46,50 €/h",
+    media: "29,29 €/h",
+    diferenca: "46%",
+  },
+  {
+    perfil: "Backend — System Integration",
+    procedimentos: ["20260080"],
+    propostas: "4",
+    base: "54,10 €/h",
+    maisAlta: "38,13 €/h",
+    media: "27,30 €/h",
+    diferenca: "50%",
+  },
   {
     perfil: "Consultor de Administração de Sistemas e Observabilidade",
     procedimentos: ["20260081"],
     propostas: "1",
     base: "54,10 €/h",
+    maisAlta: "28,12 €/h",
     media: "28,12 €/h",
     diferenca: "48%",
   },
-  { perfil: "Frontend", procedimentos: ["20260081"], propostas: "7", base: "54,10 €/h", media: "27,50 €/h", diferenca: "49%" },
+  {
+    perfil: "Frontend",
+    procedimentos: ["20260081"],
+    propostas: "7",
+    base: "54,10 €/h",
+    maisAlta: "46,50 €/h",
+    media: "27,50 €/h",
+    diferenca: "49%",
+  },
   {
     perfil: "Tester",
     procedimentos: ["20260065", "20260066", "20260080", "20260081"],
     propostas: "23",
     base: "27,05 €/h",
+    maisAlta: "27,05 €/h",
     media: "22,60 €/h",
     diferenca: "16%",
   },
-  { perfil: "UX-UI Designer", procedimentos: ["20260066"], propostas: "13", base: "54,10 €/h", media: "27,64 €/h", diferenca: "49%" },
-  { perfil: "Gestor de Projeto", procedimentos: ["20230160"], propostas: "6", base: "40,50 €/h", media: "34,13 €/h", diferenca: "16%" },
-  { perfil: "Developer de Integração", procedimentos: ["20230160"], propostas: "4", base: "35,14 €/h", media: "30,08 €/h", diferenca: "14%" },
+  {
+    perfil: "UX-UI Designer",
+    procedimentos: ["20260066"],
+    propostas: "13",
+    base: "54,10 €/h",
+    maisAlta: "37,25 €/h",
+    media: "27,64 €/h",
+    diferenca: "49%",
+  },
+  {
+    perfil: "Gestor de Projeto",
+    procedimentos: ["20230160"],
+    propostas: "6",
+    base: "40,50 €/h",
+    maisAlta: "39,70 €/h",
+    media: "34,13 €/h",
+    diferenca: "16%",
+  },
+  {
+    perfil: "Developer de Integração",
+    procedimentos: ["20230160"],
+    propostas: "4",
+    base: "35,14 €/h",
+    maisAlta: "34,90 €/h",
+    media: "30,08 €/h",
+    diferenca: "14%",
+  },
+  {
+    perfil: "Suporte IOP",
+    procedimentos: ["20230160"],
+    propostas: "8",
+    base: "35,14 €/h",
+    maisAlta: "34,90 €/h",
+    media: "30,95 €/h",
+    diferenca: "12%",
+  },
 ];
 
 /**
  * O quadro das rates de referência.
  *
- * Seis colunas numa página de retrato: sai a 8 pt, como a dos anos, e os
+ * Sete colunas numa página de retrato: sai a 8 pt, como a dos anos, e os
  * números de procedimento vão um por linha dentro da célula — lado a lado
  * partiam-se a meio do número.
  */
 function tabelaDeRates(): string {
   return tabela(
     [
-      { titulo: "Perfil", peso: 24 },
-      { titulo: "Procedimento(s)", peso: 13 },
-      { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 12 },
-      { titulo: "Rate do valor base do procedimento (€/h)", alinhamento: "direita", peso: 17 },
-      { titulo: "Rate média das propostas (€/h)", alinhamento: "direita", peso: 17 },
-      { titulo: "Diferença da rate média para valor base", alinhamento: "direita", peso: 17 },
+      { titulo: "Perfil", peso: 22 },
+      { titulo: "Procedimento(s)", peso: 11 },
+      { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 10 },
+      { titulo: "Rate do valor base do procedimento (€/h)", alinhamento: "direita", peso: 15 },
+      { titulo: "Rate mais alta válida (proposta) (€/h)", alinhamento: "direita", peso: 14 },
+      { titulo: "Rate média das propostas (€/h)", alinhamento: "direita", peso: 14 },
+      { titulo: "Diferença da rate média para valor base", alinhamento: "direita", peso: 14 },
     ],
     RATES_DE_REFERENCIA.map((r) => [
       r.perfil,
       { linhas: r.procedimentos },
       r.propostas,
       r.base,
+      r.maisAlta,
       r.media,
       r.diferenca,
     ]),
