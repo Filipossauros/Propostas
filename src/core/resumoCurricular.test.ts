@@ -94,8 +94,12 @@ describe("anexoDosResumos, com as folhas em imagem", () => {
     expect(anexo.paisagem.filter((b) => b.tipo === "imagem")).toHaveLength(2);
   });
 
-  it("põe uma quebra de página entre folhas, e nenhuma tabela", () => {
-    expect(anexo.paisagem.filter((b) => b.tipo === "quebraDePagina")).toHaveLength(1);
+  it("começa cada folha numa página nova, sem quebra à frente dela", () => {
+    // A quebra é uma marca no parágrafo da imagem: um parágrafo de quebra à
+    // parte não caberia na página que a imagem enche, e deixava uma folha em
+    // branco pelo meio.
+    expect(anexo.paisagem.filter((b) => b.tipo === "quebraDePagina")).toHaveLength(0);
+    expect(anexo.paisagem.map((b) => (b.tipo === "imagem" ? b.novaPagina === true : null))).toEqual([false, true]);
     expect(anexo.paisagem.some((b) => b.tipo === "tabela")).toBe(false);
   });
 

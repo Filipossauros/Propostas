@@ -343,7 +343,7 @@ export function Modulo2({
             }
           />
           <span>
-            <strong>Procedimento com pedido de encargos plurianuais</strong>
+            <strong>Procedimento com encargos a mais de um ano</strong>
             <span className="meta">
               A execução estende-se por mais do que um ano económico, e a despesa dos anos seguintes carece de
               autorização prévia.
@@ -354,7 +354,7 @@ export function Modulo2({
         {config.encargosPlurianuais.ativo && (
           <div className="campo-dependente">
             <div className="titulo-com-dica">
-              <span className="rotulo">Anos do contrato</span>
+              <span className="rotulo">Ano de início do contrato</span>
               <DicaRepartirHoras />
             </div>
             <label className="campo-estreito">

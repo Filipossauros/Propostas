@@ -46,7 +46,23 @@ export type BlocoDocumento =
    * não sabe que largura tem a página; é cada saída que a reduz ao que lá cabe,
    * sempre com a proporção intacta.
    */
-  | { tipo: "imagem"; dados: Uint8Array; largura: number; altura: number; descricao: string }
+  | {
+      tipo: "imagem";
+      dados: Uint8Array;
+      largura: number;
+      altura: number;
+      descricao: string;
+      /**
+       * A imagem começa uma página nova.
+       *
+       * É uma marca no próprio parágrafo da imagem, e não uma quebra à frente
+       * dela: uma quebra é um parágrafo com vida própria e, quando a imagem
+       * ocupa a página toda, essa linha vazia já não cabe — vai para a página
+       * seguinte e leva a quebra com ela, deixando uma folha em branco pelo
+       * meio.
+       */
+      novaPagina?: boolean;
+    }
   /**
    * Uma quebra de página. Existe para o anexo dos Resumos Curriculares, onde
    * cada folha do ficheiro de cálculo tem de sair numa folha do Word — sem

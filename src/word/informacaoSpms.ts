@@ -823,9 +823,15 @@ function renderizarNoCorpo(bloco: BlocoDocumento): string {
 const EMU_POR_PIXEL = 914400 / 96;
 const DXA_POR_PIXEL = 1440 / 96;
 
-/** A4 deitado, menos as margens do modelo: o que sobra para a folha. */
+/**
+ * A4 deitado, menos as margens do modelo: o que sobra para a folha.
+ *
+ * À altura tira-se ainda uma linha de folga: uma imagem medida ao milímetro da
+ * altura útil fica à mercê de qualquer arredondamento do Word e, passando um
+ * décimo, salta para a página seguinte e deixa a anterior em branco.
+ */
 const LARGURA_EM_PAISAGEM = 16838 - 1701 - 849;
-const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417;
+const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417 - 240;
 
 const CAMINHO_RELACOES = "word/_rels/document.xml.rels";
 const TIPO_IMAGEM = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
@@ -857,9 +863,16 @@ function paginaDaFolha(imagem: ImagemDaFolha, indice: number, relacao: string, e
     '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>' +
     "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>";
 
+  // A página nova é marcada no próprio parágrafo da imagem: uma quebra à frente
+  // dela é um parágrafo com vida própria e, com a imagem a ocupar a página
+  // toda, essa linha vazia já não cabia — ia para a página seguinte e levava a
+  // quebra com ela, deixando uma folha em branco pelo meio. Pela mesma razão a
+  // entrelinha é fixada em simples: a do estilo é 1,08 e chegava para a imagem
+  // deixar de caber.
+  const quebra = indice === 0 ? "" : "<w:pageBreakBefore/>";
   return (
-    (indice === 0 ? "" : QUEBRA_DE_PAGINA) +
-    `<w:p><w:pPr><w:pStyle w:val="Normal0"/><w:spacing w:before="0" w:after="0"/>` +
+    `<w:p><w:pPr><w:pStyle w:val="Normal0"/>${quebra}` +
+    '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>' +
     `<w:jc w:val="center"/></w:pPr><w:r>${desenho}</w:r></w:p>`
   );
 }

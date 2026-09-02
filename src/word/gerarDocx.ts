@@ -8,6 +8,7 @@ import {
   Document,
   HeadingLevel,
   ImageRun,
+  LineRuleType,
   PageOrientation,
   Packer,
   PageBreak,
@@ -32,11 +33,20 @@ const A4_LONGO = 16838;
 /** Uma polegada tem 1440 DXA e 96 píxeis: é assim que a imagem cabe na página. */
 const DXA_POR_PIXEL = 1440 / 96;
 
+/**
+ * Uma linha de folga na altura da página.
+ *
+ * Uma imagem medida ao milímetro da altura útil fica à mercê de qualquer
+ * arredondamento do Word; passando um décimo, salta para a página seguinte e
+ * deixa a anterior em branco. A folga custa 3% do tamanho e evita isso.
+ */
+const FOLGA = 240;
+
 /** A área útil da página deitada, em píxeis: é lá que as folhas do anexo cabem. */
 function areaEmPaisagem(): { largura: number; altura: number } {
   return {
     largura: (A4_LONGO - 2 * MARGEM) / DXA_POR_PIXEL,
-    altura: (A4_CURTO - 2 * MARGEM) / DXA_POR_PIXEL,
+    altura: (A4_CURTO - 2 * MARGEM - FOLGA) / DXA_POR_PIXEL,
   };
 }
 const AZUL_CLARO = "2E75B6";
@@ -190,7 +200,11 @@ function blocoParaDocx(bloco: BlocoDocumento, escala = 1): (Paragraph | Table)[]
       return [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { after: 0 },
+          // Sem espaço nem entrelinha por cima do natural: a imagem é medida
+          // para a altura exata da página, e um décimo a mais empurrava-a para
+          // a página seguinte.
+          spacing: { before: 0, after: 0, line: 240, lineRule: LineRuleType.AUTO },
+          pageBreakBefore: bloco.novaPagina === true,
           children: [
             new ImageRun({
               type: "png",

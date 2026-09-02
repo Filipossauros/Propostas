@@ -177,16 +177,15 @@ export function anexoDosResumos(
 
   return {
     corpo: [abertura],
-    paisagem: imagens.flatMap((imagem, i): BlocoDocumento[] => [
-      ...quebraEntre(i),
-      {
-        tipo: "imagem",
-        dados: imagem.dados,
-        largura: imagem.largura,
-        altura: imagem.altura,
-        descricao: `Resumo Curricular — ${imagem.perfil}`,
-      },
-    ]),
+    paisagem: imagens.map((imagem, i): BlocoDocumento => ({
+      tipo: "imagem",
+      dados: imagem.dados,
+      largura: imagem.largura,
+      altura: imagem.altura,
+      descricao: `Resumo Curricular — ${imagem.perfil}`,
+      // Cada folha começa uma página; a primeira continua a que o título abriu.
+      novaPagina: i > 0,
+    })),
   };
 }
 
