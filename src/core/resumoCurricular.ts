@@ -36,6 +36,19 @@ import {
 
 export const TITULO_ANEXO_RESUMOS = "Resumos Curriculares";
 
+/**
+ * Uma folha desenhada em imagem, com as dimensões naturais em píxeis.
+ *
+ * Quem a produz é o `excel/imagemDaFolha`, que precisa de um canvas e por isso
+ * só corre no browser; o tipo vive aqui para o núcleo não depender dele.
+ */
+export interface ImagemDaFolha {
+  perfil: string;
+  dados: Uint8Array;
+  largura: number;
+  altura: number;
+}
+
 /** O bloco de projeto reproduzido — o primeiro, e só ele. */
 const BLOCO_REPRODUZIDO = 1;
 
@@ -126,29 +139,61 @@ export function folhasDoAnexo(config: LotesJSON): EspecificacaoFormulario[] {
     .flatMap((lote) => lote.perfis.map((entrada) => especificacao(entrada.perfil, config.nBlocos, lote)));
 }
 
+function aberturaDoAnexo(config: LotesJSON): BlocoDocumento {
+  return {
+    tipo: "paragrafo",
+    texto:
+      "Reproduz-se em seguida o Resumo Curricular disponibilizado aos concorrentes, tal como consta do " +
+      "ficheiro de folha de cálculo anexo ao Programa do Concurso: uma folha por perfil, na página " +
+      `correspondente. O ficheiro comporta ${config.nBlocos} Projetos por perfil, todos com a mesma ` +
+      "estrutura; reproduz-se aqui apenas o primeiro.",
+  };
+}
+
 /**
  * O anexo, sem o seu próprio título: cada documento encabeça-o à sua maneira —
  * «V – Resumos Curriculares» na informação da organização, uma secção no
  * documento das regras.
+ *
+ * Sai em duas partes porque as folhas vão em imagem, e a imagem da folha é mais
+ * larga do que alta: a abertura fica no corpo vertical do documento e as folhas
+ * numa secção horizontal, uma por página. Sem imagens — fora do browser, onde
+ * não há canvas para as desenhar — a folha volta a sair em tabelas, no corpo.
  */
-export function blocosResumosCurriculares(config: LotesJSON): BlocoDocumento[] {
+export function anexoDosResumos(
+  config: LotesJSON,
+  imagens: ImagemDaFolha[] = [],
+): { corpo: BlocoDocumento[]; paisagem: BlocoDocumento[] } {
   const folhas = folhasDoAnexo(config);
-  if (folhas.length === 0) return [];
+  if (folhas.length === 0) return { corpo: [], paisagem: [] };
 
-  return [
-    {
-      tipo: "paragrafo",
-      texto:
-        "Reproduz-se em seguida o Resumo Curricular disponibilizado aos concorrentes, tal como consta do " +
-        "ficheiro de folha de cálculo anexo ao Programa do Concurso: uma folha por perfil, na página " +
-        `correspondente. O ficheiro comporta ${config.nBlocos} Projetos por perfil, todos com a mesma ` +
-        "estrutura; reproduz-se aqui apenas o primeiro.",
-    },
-    ...folhas.flatMap((folha, i): BlocoDocumento[] => [
-      // A quebra vai entre folhas, e não antes da primeira: antes da primeira
-      // deixaria o título do anexo sozinho no fim da página anterior.
-      ...(i === 0 ? [] : ([{ tipo: "quebraDePagina" }] as BlocoDocumento[])),
-      ...blocosDaFolha(folha),
+  const abertura = aberturaDoAnexo(config);
+  if (imagens.length !== folhas.length) {
+    return {
+      corpo: [abertura, ...folhas.flatMap((folha, i) => [...quebraEntre(i), ...blocosDaFolha(folha)])],
+      paisagem: [],
+    };
+  }
+
+  return {
+    corpo: [abertura],
+    paisagem: imagens.flatMap((imagem, i): BlocoDocumento[] => [
+      ...quebraEntre(i),
+      {
+        tipo: "imagem",
+        dados: imagem.dados,
+        largura: imagem.largura,
+        altura: imagem.altura,
+        descricao: `Resumo Curricular — ${imagem.perfil}`,
+      },
     ]),
-  ];
+  };
+}
+
+/**
+ * A quebra vai entre folhas, e não antes da primeira: antes da primeira
+ * deixaria o título do anexo sozinho no fim da página anterior.
+ */
+function quebraEntre(indice: number): BlocoDocumento[] {
+  return indice === 0 ? [] : [{ tipo: "quebraDePagina" }];
 }

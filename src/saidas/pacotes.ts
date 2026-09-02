@@ -11,6 +11,7 @@ import type { Ordenacao } from "../core/ordenacao";
 import type { OrcamentoUnidade } from "../core/vistaGeral";
 import { perfisParaJSON } from "../core/perfil";
 import { especificacao, lotesParaJSON } from "../core/lotes";
+import type { ImagemDaFolha } from "../core/resumoCurricular";
 import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { resultadosParaJSON } from "../core/resultadosJSON";
 import { anosDoOrcamento, orcamentoParaJSON } from "../core/vistaGeral";
@@ -18,6 +19,7 @@ import { gerarDocxBlob } from "../word/gerarDocx";
 import { gerarManifestacaoNecessidadesBlob, gerarPedidoPlurianualBlob } from "../word/informacaoSpms";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
+import { imagensDosResumos } from "../excel/imagemDaFolha";
 import { gerarEavaliaBlob } from "../excel/eavalia";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { gerarVistaGeralBlob } from "../excel/vistaGeral";
@@ -65,15 +67,20 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
  * necessidades. Sai sempre uma, e nunca as duas: são a mesma informação vista
  * de dois sítios, e juntas obrigavam quem recebe o processo a escolher.
  */
-async function informacaoDoProcedimento(config: LotesJSON, base: string, quando: Date): Promise<FicheiroDoPacote> {
+async function informacaoDoProcedimento(
+  config: LotesJSON,
+  base: string,
+  quando: Date,
+  imagens: ImagemDaFolha[],
+): Promise<FicheiroDoPacote> {
   return config.encargosPlurianuais.ativo
     ? {
         nome: `${base}_Pedido_Trienio.docx`,
-        conteudo: await gerarPedidoPlurianualBlob(config, quando),
+        conteudo: await gerarPedidoPlurianualBlob(config, quando, imagens),
       }
     : {
         nome: `${base}_Manifestacao_de_Necessidades.docx`,
-        conteudo: await gerarManifestacaoNecessidadesBlob(config, quando),
+        conteudo: await gerarManifestacaoNecessidadesBlob(config, quando, imagens),
       };
 }
 
@@ -95,6 +102,11 @@ export async function ficheirosDasPecas(
   const base = nomeSeguro(nomeProjeto, "Projeto");
   const comPerfis = config.lotes.filter((lote) => lote.perfis.length > 0);
 
+  // As folhas do Resumo Curricular são desenhadas uma só vez: entram no anexo
+  // dos dois documentos Word, e desenhá-las duas vezes seria o mesmo trabalho a
+  // dobrar.
+  const imagens = await imagensDosResumos(config);
+
   const formularios = await Promise.all(
     comPerfis.map(async (lote) => ({
       nome: `${base}_${nomeSeguro(lote.designacao, `Lote_${lote.numero}`)}.xlsx`,
@@ -107,9 +119,9 @@ export async function ficheirosDasPecas(
   return [
     {
       nome: `${base}_Requisitos_e_regras.docx`,
-      conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(config)]),
+      conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(config, imagens)]),
     },
-    await informacaoDoProcedimento(config, base, quando),
+    await informacaoDoProcedimento(config, base, quando, imagens),
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta(PASTA_DOS_RESUMOS, formularios),

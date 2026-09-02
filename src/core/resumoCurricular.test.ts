@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blocosResumosCurriculares, folhasDoAnexo, TITULO_ANEXO_RESUMOS } from "./resumoCurricular";
+import { anexoDosResumos, folhasDoAnexo, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "./resumoCurricular";
 import { documentoRegrasEPrecoBase } from "./cadernoEncargos";
 import { documentoParaTexto } from "./documento";
 import { lotesComPerfis, perfil, requisito } from "./fixtures";
@@ -15,8 +15,8 @@ function titulos(blocos: BlocoDocumento[]): string[] {
   return blocos.filter((b) => b.tipo === "titulo").map((b) => (b.tipo === "titulo" ? b.texto : ""));
 }
 
-describe("blocosResumosCurriculares", () => {
-  const blocos = blocosResumosCurriculares(CONFIG);
+describe("anexoDosResumos, sem imagens", () => {
+  const blocos = anexoDosResumos(CONFIG).corpo;
 
   it("reproduz uma folha por perfil de cada lote", () => {
     expect(folhasDoAnexo(CONFIG).map((f) => f.perfil)).toEqual(["Analista", "Gestor"]);
@@ -75,7 +75,40 @@ describe("blocosResumosCurriculares", () => {
   });
 
   it("não existe quando não há perfis em lote algum", () => {
-    expect(blocosResumosCurriculares(lotesComPerfis([{ numero: "1", perfis: [] }]))).toEqual([]);
+    expect(anexoDosResumos(lotesComPerfis([{ numero: "1", perfis: [] }]))).toEqual({ corpo: [], paisagem: [] });
+  });
+});
+
+describe("anexoDosResumos, com as folhas em imagem", () => {
+  const imagens: ImagemDaFolha[] = folhasDoAnexo(CONFIG).map((folha) => ({
+    perfil: folha.perfil,
+    dados: new Uint8Array([1, 2, 3]),
+    largura: 1006,
+    altura: 673,
+  }));
+  const anexo = anexoDosResumos(CONFIG, imagens);
+
+  it("deixa no corpo só a abertura, e as folhas em paisagem", () => {
+    expect(anexo.corpo).toHaveLength(1);
+    expect(anexo.corpo[0].tipo).toBe("paragrafo");
+    expect(anexo.paisagem.filter((b) => b.tipo === "imagem")).toHaveLength(2);
+  });
+
+  it("põe uma quebra de página entre folhas, e nenhuma tabela", () => {
+    expect(anexo.paisagem.filter((b) => b.tipo === "quebraDePagina")).toHaveLength(1);
+    expect(anexo.paisagem.some((b) => b.tipo === "tabela")).toBe(false);
+  });
+
+  it("identifica cada imagem pelo perfil que reproduz", () => {
+    expect(anexo.paisagem.filter((b) => b.tipo === "imagem").map((b) => (b.tipo === "imagem" ? b.descricao : ""))).toEqual([
+      "Resumo Curricular — Analista",
+      "Resumo Curricular — Gestor",
+    ]);
+  });
+
+  it("volta às tabelas quando as imagens não cobrem todas as folhas", () => {
+    expect(anexoDosResumos(CONFIG, imagens.slice(0, 1)).paisagem).toEqual([]);
+    expect(anexoDosResumos(CONFIG, imagens.slice(0, 1)).corpo.some((b) => b.tipo === "tabela")).toBe(true);
   });
 });
 
@@ -87,5 +120,19 @@ describe("anexo dos resumos no documento das regras", () => {
     expect(titulo).toBeGreaterThan(0);
     expect(blocos[titulo - 1].tipo).toBe("quebraDePagina");
     expect(titulos(blocos.slice(titulo))).toContain("Resumo Curricular — Analista");
+  });
+
+  it("com imagens, as folhas vão para a secção em paisagem", () => {
+    const imagens: ImagemDaFolha[] = folhasDoAnexo(CONFIG).map((folha) => ({
+      perfil: folha.perfil,
+      dados: new Uint8Array([1]),
+      largura: 1006,
+      altura: 673,
+    }));
+    const doc = documentoRegrasEPrecoBase(CONFIG, imagens);
+
+    expect(titulos(doc.blocos)).toContain(TITULO_ANEXO_RESUMOS);
+    expect(doc.blocosEmPaisagem?.filter((b) => b.tipo === "imagem")).toHaveLength(2);
+    expect(titulos(doc.blocos)).not.toContain("Resumo Curricular — Analista");
   });
 });

@@ -42,6 +42,12 @@ export type BlocoDocumento =
   | { tipo: "lista"; itens: ItemLista[]; numerada?: boolean }
   | { tipo: "tabela"; legenda?: string; colunas: Coluna[]; linhas: Celula[][] }
   /**
+   * Uma imagem, com as dimensões naturais em píxeis a 96 ppp. Quem a desenha
+   * não sabe que largura tem a página; é cada saída que a reduz ao que lá cabe,
+   * sempre com a proporção intacta.
+   */
+  | { tipo: "imagem"; dados: Uint8Array; largura: number; altura: number; descricao: string }
+  /**
    * Uma quebra de página. Existe para o anexo dos Resumos Curriculares, onde
    * cada folha do ficheiro de cálculo tem de sair numa folha do Word — sem
    * isso, dois resumos partilhariam a mesma página e deixariam de se ler como
@@ -53,6 +59,13 @@ export interface Documento {
   titulo: string;
   subtitulo?: string;
   blocos: BlocoDocumento[];
+  /**
+   * Blocos que vão numa secção própria, em orientação horizontal.
+   *
+   * É o que o anexo dos Resumos Curriculares precisa: a folha do formulário é
+   * mais larga do que alta, e numa página vertical sairia reduzida a metade.
+   */
+  blocosEmPaisagem?: BlocoDocumento[];
 }
 
 export function celula(texto: string, alinhamento?: Alinhamento, destaque?: boolean): Celula {
@@ -88,6 +101,25 @@ const ROMANOS = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
 /** A marca de uma alínea: i., ii., iii. — e o número, passados os dez. */
 export function marcaDeAlinea(indice: number): string {
   return `${ROMANOS[indice] ?? String(indice + 1)}.`;
+}
+
+/**
+ * A escala comum às imagens de uma secção: a maior que faz caber a maior delas.
+ *
+ * É comum de propósito. Com uma escala por imagem, cada folha sairia do tamanho
+ * que a sua página permitia e o anexo mudava de corpo de letra de página para
+ * página. Nunca amplia: a folha é desenhada a 96 ppp, e esticá-la só a
+ * esborrataria.
+ */
+export function escalaDasImagens(blocos: BlocoDocumento[], larguraUtil: number, alturaUtil: number): number {
+  const imagens = blocos.filter((b) => b.tipo === "imagem");
+  if (imagens.length === 0) return 1;
+
+  return Math.min(
+    larguraUtil / Math.max(...imagens.map((i) => i.largura)),
+    alturaUtil / Math.max(...imagens.map((i) => i.altura)),
+    1,
+  );
 }
 
 // --------------------------------------------------------------------------
@@ -139,7 +171,7 @@ export function documentoParaTexto(doc: Documento): string {
   if (doc.subtitulo) partes.push(doc.subtitulo);
   partes.push("");
 
-  for (const bloco of doc.blocos) {
+  for (const bloco of [...doc.blocos, ...(doc.blocosEmPaisagem ?? [])]) {
     switch (bloco.tipo) {
       case "titulo":
         partes.push(
@@ -167,6 +199,9 @@ export function documentoParaTexto(doc: Documento): string {
         break;
       case "quebraDePagina":
         partes.push("", "");
+        break;
+      case "imagem":
+        partes.push(`[ imagem: ${bloco.descricao} ]`, "");
         break;
     }
   }

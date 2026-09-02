@@ -7,6 +7,8 @@ import {
   BorderStyle,
   Document,
   HeadingLevel,
+  ImageRun,
+  PageOrientation,
   Packer,
   PageBreak,
   Paragraph,
@@ -18,9 +20,25 @@ import {
   WidthType,
 } from "docx";
 import type { Alinhamento, BlocoDocumento, Celula, Coluna, Documento } from "../core/documento";
-import { alineasDoItem, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
+import { alineasDoItem, escalaDasImagens, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
 
 const AZUL = "1F4E78";
+const MARGEM = 1134;
+
+/** A4, em DXA — a mesma folha nas duas orientações. */
+const A4_CURTO = 11906;
+const A4_LONGO = 16838;
+
+/** Uma polegada tem 1440 DXA e 96 píxeis: é assim que a imagem cabe na página. */
+const DXA_POR_PIXEL = 1440 / 96;
+
+/** A área útil da página deitada, em píxeis: é lá que as folhas do anexo cabem. */
+function areaEmPaisagem(): { largura: number; altura: number } {
+  return {
+    largura: (A4_LONGO - 2 * MARGEM) / DXA_POR_PIXEL,
+    altura: (A4_CURTO - 2 * MARGEM) / DXA_POR_PIXEL,
+  };
+}
 const AZUL_CLARO = "2E75B6";
 const CINZA = "F2F2F2";
 const BORDA = "BFBFBF";
@@ -84,7 +102,7 @@ function tabelaDocx(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>): Table {
   });
 }
 
-function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
+function blocoParaDocx(bloco: BlocoDocumento, escala = 1): (Paragraph | Table)[] {
   switch (bloco.tipo) {
     case "titulo":
       return [
@@ -167,11 +185,33 @@ function blocoParaDocx(bloco: BlocoDocumento): (Paragraph | Table)[] {
 
     case "quebraDePagina":
       return [new Paragraph({ children: [new PageBreak()] })];
+
+    case "imagem":
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 0 },
+          children: [
+            new ImageRun({
+              type: "png",
+              data: bloco.dados,
+              altText: { name: bloco.descricao, description: bloco.descricao, title: bloco.descricao },
+              // Arredonda-se para baixo: meio píxel a mais e a folha já não
+              // cabe na altura da página, e o Word empurra-a para a seguinte.
+              transformation: {
+                width: Math.floor(bloco.largura * escala),
+                height: Math.floor(bloco.altura * escala),
+              },
+            }),
+          ],
+        }),
+      ];
   }
 }
 
 export function construirDocx(documentos: Documento[]): Document {
   const filhos: (Paragraph | Table)[] = [];
+  const emPaisagem: (Paragraph | Table)[] = [];
 
   documentos.forEach((doc, idx) => {
     if (idx > 0) {
@@ -195,6 +235,12 @@ export function construirDocx(documentos: Documento[]): Document {
     }
 
     for (const bloco of doc.blocos) filhos.push(...blocoParaDocx(bloco));
+
+    // A secção horizontal é comum a todos os documentos do ficheiro: são
+    // páginas de anexo, e uma secção por documento espalhava-as pelo meio.
+    const area = areaEmPaisagem();
+    const escala = escalaDasImagens(doc.blocosEmPaisagem ?? [], area.largura, area.altura);
+    for (const bloco of doc.blocosEmPaisagem ?? []) emPaisagem.push(...blocoParaDocx(bloco, escala));
   });
 
   return new Document({
@@ -206,9 +252,31 @@ export function construirDocx(documentos: Documento[]): Document {
     },
     sections: [
       {
-        properties: { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } },
+        properties: {
+          page: {
+            size: { width: A4_CURTO, height: A4_LONGO, orientation: PageOrientation.PORTRAIT },
+            margin: { top: MARGEM, bottom: MARGEM, left: MARGEM, right: MARGEM },
+          },
+        },
         children: filhos,
       },
+      // As folhas do anexo são mais largas do que altas: numa página vertical
+      // sairiam reduzidas a pouco mais de metade.
+      ...(emPaisagem.length === 0
+        ? []
+        : [
+            {
+              properties: {
+                page: {
+                  // As medidas vão em retrato nas duas secções: é a orientação
+                  // que as troca, e trocá-las aqui desfazia a troca.
+                  size: { width: A4_CURTO, height: A4_LONGO, orientation: PageOrientation.LANDSCAPE },
+                  margin: { top: MARGEM, bottom: MARGEM, left: MARGEM, right: MARGEM },
+                },
+              },
+              children: emPaisagem,
+            },
+          ]),
     ],
   });
 }

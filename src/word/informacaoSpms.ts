@@ -20,7 +20,7 @@
 
 import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
-import { alineasDoItem, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
+import { alineasDoItem, escalaDasImagens, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
 import type { LotesJSON } from "../core/types";
 import {
   blocosAnexoTecnico,
@@ -29,7 +29,7 @@ import {
   tabelaPrecoBase,
 } from "../core/cadernoEncargos";
 import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
-import { blocosResumosCurriculares, TITULO_ANEXO_RESUMOS } from "../core/resumoCurricular";
+import { anexoDosResumos, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "../core/resumoCurricular";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 
 // --------------------------------------------------------------------------
@@ -320,6 +320,10 @@ function renderizar(bloco: BlocoDocumento): string {
       return tabelaDoBloco(bloco);
     case "quebraDePagina":
       return QUEBRA_DE_PAGINA;
+    case "imagem":
+      // As imagens só existem no anexo horizontal, onde são montadas com o
+      // identificador da relação que as liga ao ficheiro em `word/media`.
+      throw new Error("Uma imagem não se desenha no corpo: usa-se `paginaDaFolha`.");
   }
 }
 
@@ -634,6 +638,7 @@ export function corpoDaInformacao(
   modelo: string,
   quando: Date,
   variante: Variante = "plurianual",
+  imagens: ImagemDaFolha[] = [],
 ): string {
   const manifestacao = variante === "manifestacao";
   const projeto = config.nomeProjeto.trim() === "" ? "(projeto sem nome)" : config.nomeProjeto.trim();
@@ -793,11 +798,12 @@ export function corpoDaInformacao(
 
   // O formulário que os concorrentes preenchem, reproduzido a seguir ao anexo
   // técnico: é dele que saem os campos a que as regras de apuramento remetem.
-  const resumos = blocosResumosCurriculares(config);
-  if (resumos.length > 0) {
+  // As folhas em si vão na secção horizontal, montada em `gerarInformacaoBlob`.
+  const resumos = anexoDosResumos(config, imagens);
+  if (resumos.corpo.length > 0) {
     p.push(QUEBRA_DE_PAGINA);
     p.push(titulo(`V – ${TITULO_ANEXO_RESUMOS}`));
-    for (const bloco of resumos) p.push(renderizar(bloco));
+    for (const bloco of resumos.corpo) p.push(renderizar(bloco));
   }
 
   return p.join("");
@@ -810,17 +816,111 @@ function renderizarNoCorpo(bloco: BlocoDocumento): string {
 }
 
 // --------------------------------------------------------------------------
+// O anexo horizontal, com as folhas em imagem
+// --------------------------------------------------------------------------
+
+/** Uma polegada: 1440 DXA, 914 400 EMU, 96 píxeis. */
+const EMU_POR_PIXEL = 914400 / 96;
+const DXA_POR_PIXEL = 1440 / 96;
+
+/** A4 deitado, menos as margens do modelo: o que sobra para a folha. */
+const LARGURA_EM_PAISAGEM = 16838 - 1701 - 849;
+const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417;
+
+const CAMINHO_RELACOES = "word/_rels/document.xml.rels";
+const TIPO_IMAGEM = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+
+/** Uma página do anexo: a folha desenhada, centrada e à escala comum a todas. */
+function paginaDaFolha(imagem: ImagemDaFolha, indice: number, relacao: string, escala: number): string {
+  // Para baixo: meio píxel a mais e a folha deixa de caber na altura da página.
+  const cx = Math.floor(imagem.largura * escala) * EMU_POR_PIXEL;
+  const cy = Math.floor(imagem.altura * escala) * EMU_POR_PIXEL;
+  const nome = `Resumo Curricular — ${imagem.perfil}`;
+  const id = indice + 1;
+
+  const desenho =
+    "<w:drawing>" +
+    '<wp:inline distT="0" distB="0" distL="0" distR="0">' +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
+    '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
+    `<wp:docPr id="${id}" name="${esc(nome)}" descr="${esc(nome)}"/>` +
+    '<wp:cNvGraphicFramePr><a:graphicFrameLocks' +
+    ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>' +
+    "</wp:cNvGraphicFramePr>" +
+    '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+    '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+    '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+    `<pic:nvPicPr><pic:cNvPr id="${id}" name="${esc(nome)}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+    `<pic:blipFill><a:blip r:embed="${relacao}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+    '<pic:spPr><a:xfrm><a:off x="0" y="0"/>' +
+    `<a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>' +
+    "</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>";
+
+  return (
+    (indice === 0 ? "" : QUEBRA_DE_PAGINA) +
+    `<w:p><w:pPr><w:pStyle w:val="Normal0"/><w:spacing w:before="0" w:after="0"/>` +
+    `<w:jc w:val="center"/></w:pPr><w:r>${desenho}</w:r></w:p>`
+  );
+}
+
+/** A mesma secção do modelo, deitada: só a folha muda de orientação. */
+function sectPrEmPaisagem(sect: string): string {
+  return sect.replace(
+    /<w:pgSz[^>]*\/>/,
+    '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>',
+  );
+}
+
+// --------------------------------------------------------------------------
 // Montagem do ficheiro
 // --------------------------------------------------------------------------
 
 const CAMINHO_DOCUMENTO = "word/document.xml";
 
-async function gerarInformacaoBlob(config: LotesJSON, quando: Date, variante: Variante): Promise<Blob> {
+async function gerarInformacaoBlob(
+  config: LotesJSON,
+  quando: Date,
+  variante: Variante,
+  imagens: ImagemDaFolha[] = [],
+): Promise<Blob> {
   const zip = await JSZip.loadAsync(modeloBase64, { base64: true });
   const modelo = await zip.file(CAMINHO_DOCUMENTO)!.async("string");
 
   const sect = entre(modelo, "<w:sectPr", "</w:sectPr>");
-  const corpo = corpoDaInformacao(config, modelo, quando, variante) + sect;
+  const folhas = anexoDosResumos(config, imagens).paisagem.length === 0 ? [] : imagens;
+
+  let corpo = corpoDaInformacao(config, modelo, quando, variante, imagens);
+  if (folhas.length === 0) {
+    corpo += sect;
+  } else {
+    // O `sectPr` de um parágrafo fecha a secção onde ele está: o corpo fica
+    // vertical, e o `sectPr` final do documento — deitado — passa a valer só
+    // para as páginas do anexo.
+    const relacoes = await zip.file(CAMINHO_RELACOES)!.async("string");
+    const ids = folhas.map((_, i) => `rIdResumo${i + 1}`);
+    const escala = escalaDasImagens(
+      folhas.map((imagem) => ({ tipo: "imagem", ...imagem, descricao: imagem.perfil })),
+      LARGURA_EM_PAISAGEM / DXA_POR_PIXEL,
+      ALTURA_EM_PAISAGEM / DXA_POR_PIXEL,
+    );
+
+    folhas.forEach((imagem, i) => zip.file(`word/media/resumo${i + 1}.png`, imagem.dados));
+    zip.file(
+      CAMINHO_RELACOES,
+      relacoes.replace(
+        "</Relationships>",
+        ids.map((id, i) => `<Relationship Id="${id}" Type="${TIPO_IMAGEM}" Target="media/resumo${i + 1}.png"/>`).join("") +
+          "</Relationships>",
+      ),
+    );
+
+    corpo +=
+      `<w:p><w:pPr>${sect}</w:pPr></w:p>` +
+      folhas.map((imagem, i) => paginaDaFolha(imagem, i, ids[i], escala)).join("") +
+      sectPrEmPaisagem(sect);
+  }
+
   const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
   const fim = modelo.lastIndexOf("</w:body>");
 
@@ -831,10 +931,18 @@ async function gerarInformacaoBlob(config: LotesJSON, quando: Date, variante: Va
   });
 }
 
-export function gerarPedidoPlurianualBlob(config: LotesJSON, quando = new Date()): Promise<Blob> {
-  return gerarInformacaoBlob(config, quando, "plurianual");
+export function gerarPedidoPlurianualBlob(
+  config: LotesJSON,
+  quando = new Date(),
+  imagens: ImagemDaFolha[] = [],
+): Promise<Blob> {
+  return gerarInformacaoBlob(config, quando, "plurianual", imagens);
 }
 
-export function gerarManifestacaoNecessidadesBlob(config: LotesJSON, quando = new Date()): Promise<Blob> {
-  return gerarInformacaoBlob(config, quando, "manifestacao");
+export function gerarManifestacaoNecessidadesBlob(
+  config: LotesJSON,
+  quando = new Date(),
+  imagens: ImagemDaFolha[] = [],
+): Promise<Blob> {
+  return gerarInformacaoBlob(config, quando, "manifestacao", imagens);
 }

@@ -7,7 +7,8 @@
 //
 // Só corre no browser: depende de `document.createElement("canvas")`.
 
-import type { EspecificacaoFormulario } from "../core/types";
+import type { EspecificacaoFormulario, LotesJSON } from "../core/types";
+import { folhasDoAnexo, type ImagemDaFolha } from "../core/resumoCurricular";
 import {
   COR_CAMPO_BG,
   COR_CAMPO_BLOQUEADO_BG,
@@ -100,6 +101,36 @@ function partirEmLinhas(ctx: CanvasRenderingContext2D, texto: string, largura: n
   return linhas;
 }
 
+/** A fonte de um estilo, tal como o canvas a quer. */
+function fonteDe(estilo: Estilo): { fonte: string; tamanho: number } {
+  const tamanho = ((estilo.tamanho ?? 10) * 96) / 72;
+  return {
+    tamanho,
+    fonte: `${estilo.italico ? "italic " : ""}${estilo.negrito ? "600 " : ""}${tamanho.toFixed(1)}px ${LETRA}`,
+  };
+}
+
+/**
+ * A altura de que um texto precisa numa célula, depois de quebrado.
+ *
+ * As linhas do Excel têm altura fixa e cortam o que não cabe — na folha, quem
+ * lê pode alargar a linha; na imagem, não. Por isso a linha cresce aqui o que
+ * for preciso para nada ficar cortado.
+ */
+function alturaNecessaria(
+  ctx: CanvasRenderingContext2D,
+  texto: string,
+  primeira: number,
+  ultima: number,
+  estilo: Estilo,
+): number {
+  if (texto === "" || !estilo.quebra) return 0;
+  const { fonte, tamanho } = fonteDe(estilo);
+  ctx.font = fonte;
+  const linhas = partirEmLinhas(ctx, texto, larguraDe(primeira, ultima) - 2 * RECUO);
+  return Math.ceil(linhas.length * tamanho * 1.2 + 8);
+}
+
 /**
  * Uma célula: fundo, moldura e texto, com o mesmo tratamento do Excel —
  * centrado na vertical, recuado na horizontal, e quebrado quando não cabe.
@@ -127,8 +158,8 @@ function pintar(
   }
   if (texto === "") return;
 
-  const tamanho = ((estilo.tamanho ?? 10) * 96) / 72;
-  ctx.font = `${estilo.italico ? "italic " : ""}${estilo.negrito ? "600 " : ""}${tamanho.toFixed(1)}px ${LETRA}`;
+  const { fonte, tamanho } = fonteDe(estilo);
+  ctx.font = fonte;
   ctx.fillStyle = estilo.texto ?? cor(COR_CAMPO_TEXTO);
   ctx.textBaseline = "middle";
 
@@ -173,31 +204,43 @@ const DATA: Estilo = { fundo: cor(COR_ROTULO_BG), texto: cor(COR_ROTULO_TEXTO), 
  * quando o Word a reduz à largura da página.
  */
 export function desenharFolha(config: EspecificacaoFormulario, escala = 2): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (ctx === null) throw new Error("Não foi possível desenhar a folha: canvas indisponível.");
+
+  // As linhas que levam texto quebrado crescem o que for preciso: os rótulos
+  // dos requisitos e os cabeçalhos das datas da experiência são compridos, e à
+  // altura do Excel sairiam cortados na imagem.
+  const cresce = (base: number, ...medidas: number[]) => Math.max(base, ...medidas);
+  const alturaSubcabecalho = cresce(
+    alturaDeLinha(32),
+    alturaNecessaria(ctx, TEXTO_SUBCABECALHO_REQUISITO, 0, 2, SUB),
+    ...[TEXTO_SUBCABECALHO_DECLARA, TEXTO_SUBCABECALHO_INICIO_MES, TEXTO_SUBCABECALHO_INICIO_ANO,
+      TEXTO_SUBCABECALHO_FIM_MES, TEXTO_SUBCABECALHO_FIM_ANO].map((t, i) => alturaNecessaria(ctx, t, 3 + i, 3 + i, SUB)),
+  );
+
   const alturas = [
     alturaDeLinha(26), // título
     alturaDeLinha(20), // subtítulo
     alturaDeLinha(10), // branco
     alturaDeLinha(22), // faixa da identificação
     ...CAMPOS_IDENTIFICACAO.map(() => alturaDeLinha(20)),
-    alturaDeLinha(32), // declaração
+    cresce(alturaDeLinha(32), alturaNecessaria(ctx, TEXTO_DECLARACAO_VERACIDADE, 0, 7, NOTA)), // declaração
     alturaDeLinha(20), // assinatura
     alturaDeLinha(8), // separador
     alturaDeLinha(22), // faixa do bloco
     alturaDeLinha(20), // cliente / projeto
     alturaDeLinha(20), // função
     alturaDeLinha(16), // cabeçalho das datas
-    alturaDeLinha(40), // datas do projeto
-    alturaDeLinha(32), // subcabeçalho dos requisitos
-    ...config.requisitos.map(() => alturaDeLinha(20)),
-    alturaDeLinha(34), // nota do bloco
+    cresce(alturaDeLinha(40), alturaNecessaria(ctx, TEXTO_DISCLAIMER_PROJETO_EM_CURSO, 6, 7, { ...NOTA, tamanho: 8 })),
+    alturaSubcabecalho,
+    ...config.requisitos.map((r) => cresce(alturaDeLinha(20), alturaNecessaria(ctx, r.designacao, 0, 2, ROTULO))),
+    cresce(alturaDeLinha(34), alturaNecessaria(ctx, TEXTO_NOTA_BLOCO, 0, 7, NOTA)), // nota do bloco
   ];
   const alturaTotal = alturas.reduce((soma, a) => soma + a, 0);
 
-  const canvas = document.createElement("canvas");
   canvas.width = LARGURA_TOTAL * escala;
   canvas.height = alturaTotal * escala;
-  const ctx = canvas.getContext("2d");
-  if (ctx === null) throw new Error("Não foi possível desenhar a folha: canvas indisponível.");
   ctx.scale(escala, escala);
   ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, LARGURA_TOTAL, alturaTotal);
@@ -304,16 +347,30 @@ export function desenharFolha(config: EspecificacaoFormulario, escala = 2): HTML
 }
 
 /** A folha em PNG, com as dimensões em píxeis que o Word precisa de saber. */
-export async function imagemDaFolha(
-  config: EspecificacaoFormulario,
-  escala = 2,
-): Promise<{ dados: Uint8Array; largura: number; altura: number }> {
+export async function imagemDaFolha(config: EspecificacaoFormulario, escala = 2): Promise<ImagemDaFolha> {
   const canvas = desenharFolha(config, escala);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (blob === null) throw new Error("Não foi possível converter a folha em imagem.");
   return {
+    perfil: config.perfil,
     dados: new Uint8Array(await blob.arrayBuffer()),
     largura: canvas.width / escala,
     altura: canvas.height / escala,
   };
+}
+
+/**
+ * As folhas do anexo, todas desenhadas — ou nenhuma.
+ *
+ * Fora do browser não há canvas para as desenhar; nesse caso devolve-se lista
+ * vazia e os documentos Word voltam a reproduzir a folha em tabelas, que é o
+ * que sabem fazer sem imagens.
+ */
+export async function imagensDosResumos(config: LotesJSON, escala = 2): Promise<ImagemDaFolha[]> {
+  if (typeof document === "undefined") return [];
+  try {
+    return await Promise.all(folhasDoAnexo(config).map((folha) => imagemDaFolha(folha, escala)));
+  } catch {
+    return [];
+  }
 }
