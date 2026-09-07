@@ -11,7 +11,8 @@
 // A Vista Geral traz nomes de pessoas da equipa, registados à mão por quem a
 // preenche. Ficam neste navegador, e só nele — como tudo o resto, nada sai do
 // posto de trabalho. Apagar um projeto apaga também os nomes que lhe estavam
-// afetos.
+// afetos. O mesmo vale para a Vista Geral da Direção, que junta as das
+// unidades e traz consigo os mesmos nomes.
 
 const PREFIXO = "propostas.v2.";
 
@@ -24,6 +25,8 @@ export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
 export const CHAVE_DESCRICAO_PROJETO = `${PREFIXO}descricaoProjeto`;
 /** Orçamento da unidade da Vista Geral, com os elementos internos registados. */
 export const CHAVE_VISTA_GERAL = `${PREFIXO}vistaGeral`;
+/** Vista Geral da Direção: as vistas das unidades que o Diretor juntou. */
+export const CHAVE_VISTA_DIRECAO = `${PREFIXO}vistaDirecao`;
 
 function armazenamentoDisponivel(): boolean {
   try {

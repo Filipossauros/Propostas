@@ -35,6 +35,13 @@
   --unidade-500: #1f7d77;
   --unidade-100: #e2f1ef;
 
+  /* A Direção fica um degrau acima da unidade, e leva família de cor própria —
+     o mesmo registo sóbrio, um tom mais fundo — para os dois separadores se
+     distinguirem de relance. */
+  --direcao-700: #4b3a72;
+  --direcao-500: #6b54a0;
+  --direcao-100: #ece8f5;
+
   /* Quem é da casa lê-se a azul, destacado das linhas de perfil contratado. */
   --interno-texto: #1f4e78;
   --interno-fundo: #eaf2fa;
@@ -78,6 +85,10 @@
     --unidade-700: #7fd3cb;
     --unidade-500: #4bb3aa;
     --unidade-100: #143331;
+
+    --direcao-700: #b9a8e2;
+    --direcao-500: #9d89cf;
+    --direcao-100: #2a2440;
 
     --interno-texto: #8ec5f0;
     --interno-fundo: #16324a;
@@ -214,6 +225,35 @@ body {
 
 .modulo-cabecalho-unidade h2 {
   color: var(--unidade-700);
+}
+
+.aba.aba-direcao .aba-numero {
+  background: var(--direcao-100);
+  color: var(--direcao-700);
+}
+
+.aba.aba-direcao:hover {
+  border-color: var(--direcao-500);
+}
+
+.aba.aba-direcao.aba-ativa {
+  border-color: var(--direcao-700);
+  background: var(--direcao-100);
+  color: var(--direcao-700);
+}
+
+.aba.aba-direcao.aba-ativa .aba-numero {
+  background: var(--direcao-700);
+  color: var(--superficie);
+}
+
+.aba.aba-direcao.aba-ativa .aba-descricao {
+  color: var(--direcao-700);
+  opacity: 0.85;
+}
+
+.modulo-cabecalho-direcao h2 {
+  color: var(--direcao-700);
 }
 
 /* ----------------------------------------------------------------- Módulos */
@@ -1976,4 +2016,183 @@ tbody.grupo-projeto.projeto-alvo td {
 .linha-interno input {
   flex: 1;
   max-width: 320px;
+}
+
+/* ------------------------------------------------- Vista Geral da Direção */
+
+/* Os números do topo: o que a Direção vem cá ver antes de abrir qualquer
+   tabela. Uma fita fina, e não cartões — não são o assunto da página, são a
+   sua abertura. */
+.tira-totais {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin: 14px 0 0;
+  background: var(--borda);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  overflow: hidden;
+}
+
+.tira-totais > div {
+  background: var(--superficie);
+  padding: 10px 14px;
+}
+
+.tira-totais dt {
+  margin: 0 0 2px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+}
+
+.tira-totais dd {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tira-totais dd span {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+
+/* As unidades carregadas, uma etiqueta cada, com o botão de as tirar. */
+.lista-unidades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.etiqueta-unidade {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 999px;
+  background: var(--superficie);
+  font-size: 0.85rem;
+}
+
+.etiqueta-unidade .meta {
+  font-size: 0.78rem;
+}
+
+.etiqueta-unidade button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.etiqueta-unidade button:hover {
+  background: var(--vermelho-fundo);
+  color: var(--vermelho);
+}
+
+/* Os anos escolhem-se aos vários, ao lado das listas de escolha única. */
+.filtro-anos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filtro-anos .seletor-vista {
+  margin-bottom: 0;
+}
+
+.filtro-anos .seletor-vista button {
+  padding: 6px 12px;
+  border-radius: var(--raio-pequeno);
+  cursor: pointer;
+}
+
+.filtro-anos .seletor-vista button.aba-ativa {
+  background: var(--direcao-700);
+  border-color: var(--direcao-700);
+  color: var(--superficie);
+}
+
+/* A linha que abre: o botão é o próprio nome, e a seta diz o estado. */
+.abre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.abre .seta {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+}
+
+.abre[aria-expanded="true"] .seta {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abre .seta {
+    transition: none;
+  }
+}
+
+.tabela tr.linha-unidade > * {
+  background: var(--direcao-100);
+}
+
+.tabela tr.linha-unidade th {
+  color: var(--direcao-700);
+}
+
+.tabela tr.linha-detalhe > * {
+  font-size: 0.88rem;
+}
+
+.tabela tr.linha-detalhe th:first-child {
+  padding-left: 34px;
+  font-weight: 400;
+}
+
+.tabela tr.linha-grupo > * {
+  background: var(--direcao-100);
+  color: var(--direcao-700);
+  font-weight: 600;
+}
+
+.tabela tr.linha-grupo .meta {
+  color: var(--direcao-700);
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+/* As rates de um perfil, quando não foram uma só, leem-se como intervalo: não
+   se parte a meio. */
+.intervalo-rate {
+  white-space: nowrap;
 }

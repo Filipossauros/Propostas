@@ -11,8 +11,9 @@ import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
+import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
 
-type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4" | "vistaGeral";
+type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4" | "vistaGeral" | "vistaDirecao";
 
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
   { chave: "modulo1", numero: "1", titulo: "Perfis", descricao: "Requisitos e formulário" },
@@ -22,18 +23,33 @@ const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: strin
 ];
 
 /**
- * A Vista Geral não é o quinto passo de nada.
+ * As vistas gerais não são o quinto passo de nada.
  *
  * Os quatro módulos são um caminho: perfis, lotes, avaliação, ordenação, sempre
- * do mesmo procedimento. Esta olha para muitos procedimentos ao mesmo tempo, e
- * por isso fica à parte — numa linha própria, por baixo dos quatro, e com cor
- * própria, para não se ler como o passo a seguir à ordenação.
+ * do mesmo procedimento. Estas olham para muitos procedimentos ao mesmo tempo,
+ * e por isso ficam à parte — numa linha própria, por baixo dos quatro, e com
+ * cor própria, para não se lerem como o passo a seguir à ordenação.
+ *
+ * São duas, uma por cada altura a que a pergunta se faz: a da unidade junta os
+ * procedimentos de uma unidade, a da direção junta as unidades. Cada uma leva a
+ * sua cor: quem trabalha numa não está a trabalhar na outra.
  */
-const ABA_VISTA_GERAL: { chave: Aba; titulo: string; descricao: string } = {
-  chave: "vistaGeral",
-  titulo: "Vista Geral",
-  descricao: "Orçamento e pessoas da unidade",
-};
+const ABAS_DE_VISTA: Array<{ chave: Aba; marca: string; classe: string; titulo: string; descricao: string }> = [
+  {
+    chave: "vistaGeral",
+    marca: "Σ",
+    classe: "aba-unidade",
+    titulo: "Vista Geral da Unidade",
+    descricao: "Orçamento e pessoas da unidade",
+  },
+  {
+    chave: "vistaDirecao",
+    marca: "ΣΣ",
+    classe: "aba-direcao",
+    titulo: "Vista Geral da Direção",
+    descricao: "As unidades da direção lado a lado",
+  },
+];
 
 function ehTexto(valor: unknown): valor is string {
   return typeof valor === "string";
@@ -144,20 +160,23 @@ function App() {
           {/* Força a vista para uma linha própria, por baixo dos quatro módulos. */}
           <span className="abas-quebra" aria-hidden="true" />
 
-          <button
-            type="button"
-            className={aba === ABA_VISTA_GERAL.chave ? "aba aba-unidade aba-ativa" : "aba aba-unidade"}
-            aria-current={aba === ABA_VISTA_GERAL.chave ? "page" : undefined}
-            onClick={() => setAba(ABA_VISTA_GERAL.chave)}
-          >
-            <span className="aba-numero" aria-hidden="true">
-              Σ
-            </span>
-            <span className="aba-texto">
-              <span className="aba-titulo">{ABA_VISTA_GERAL.titulo}</span>
-              <span className="aba-descricao">{ABA_VISTA_GERAL.descricao}</span>
-            </span>
-          </button>
+          {ABAS_DE_VISTA.map((v) => (
+            <button
+              key={v.chave}
+              type="button"
+              className={aba === v.chave ? `aba ${v.classe} aba-ativa` : `aba ${v.classe}`}
+              aria-current={aba === v.chave ? "page" : undefined}
+              onClick={() => setAba(v.chave)}
+            >
+              <span className="aba-numero" aria-hidden="true">
+                {v.marca}
+              </span>
+              <span className="aba-texto">
+                <span className="aba-titulo">{v.titulo}</span>
+                <span className="aba-descricao">{v.descricao}</span>
+              </span>
+            </button>
+          ))}
         </nav>
       </header>
 
@@ -205,6 +224,7 @@ function App() {
         )}
 
         {aba === "vistaGeral" && <VistaGeral />}
+        {aba === "vistaDirecao" && <VistaGeralDirecao />}
       </main>
       </div>
     </ProtecaoExemplos>
