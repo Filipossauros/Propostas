@@ -49,7 +49,7 @@ describe("serieDeData", () => {
 describe("gerarEavaliaBlob", () => {
   it("escreve as três respostas nas medidas a que respeitam", async () => {
     const zip = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
 
@@ -60,7 +60,7 @@ describe("gerarEavaliaBlob", () => {
 
   it("data com o dia da geração as respostas que assumem compromisso futuro", async () => {
     const zip = await gerar(
-      config({ iap: "Cumpre Totalmente", chaveMovelDigital: "Cumpre Parcialmente", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Cumpre Totalmente", chaveMovelDigital: "Cumpre Parcialmente", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
 
@@ -71,7 +71,7 @@ describe("gerarEavaliaBlob", () => {
 
   it("não data quem já cumpre nem aquilo a que não se aplica", async () => {
     const zip = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
     const original = await modelo();
@@ -92,7 +92,7 @@ describe("gerarEavaliaBlob", () => {
 
   it("a medida da cibersegurança vai sempre como não aplicável", async () => {
     const respondido = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
     const porResponder = await gerar(config(informacaoEavaliaInicial()), DIA);
@@ -125,7 +125,7 @@ describe("gerarEavaliaBlob", () => {
   });
 
   it("preserva o estilo das células que preenche", async () => {
-    const zip = await gerar(config({ iap: "Cumpre Parcialmente", chaveMovelDigital: "", idiomas: "" }), DIA);
+    const zip = await gerar(config({ ...informacaoEavaliaInicial(), iap: "Cumpre Parcialmente", chaveMovelDigital: "", idiomas: "" }), DIA);
 
     // s="17" na resposta e s="14" na data — é o estilo que dá formato de data.
     expect(await celula(zip, ALINHAMENTO, "E6")).toContain('s="17"');
@@ -138,7 +138,7 @@ describe("integridade do modelo", () => {
   it("não toca em mais nada: só as duas folhas preenchidas mudam", async () => {
     const original = await modelo();
     const gerado = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
 
@@ -156,7 +156,7 @@ describe("integridade do modelo", () => {
   });
 
   it("não acrescenta cadeias partilhadas ao modelo", async () => {
-    const gerado = await gerar(config({ iap: "Já cumpre", chaveMovelDigital: "", idiomas: "" }), DIA);
+    const gerado = await gerar(config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "", idiomas: "" }), DIA);
 
     expect(await gerado.file("xl/sharedStrings.xml")!.async("string")).toBe(
       await (await modelo()).file("xl/sharedStrings.xml")!.async("string"),
@@ -165,7 +165,7 @@ describe("integridade do modelo", () => {
 
   it("o XML das folhas preenchidas continua bem formado", async () => {
     const zip = await gerar(
-      config({ iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
+      config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
       DIA,
     );
 

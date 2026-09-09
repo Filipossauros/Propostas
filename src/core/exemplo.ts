@@ -90,7 +90,14 @@ export const LOTES_EXEMPLO: LotesJSON = {
   nBlocos: N_BLOCOS_PADRAO,
   umLotePorConcorrente: true,
   postoTrabalho: postoTrabalhoInicial(),
-  eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" },
+  eavalia: {
+    iap: "Já cumpre",
+    sms: "Não aplicável",
+    faturacao: "Não aplicável",
+    chaveMovelDigital: "Não aplicável",
+    usabilidade: "Já cumpre",
+    idiomas: "Cumpre Parcialmente",
+  },
   // Ano fixo, e não o de hoje: o exemplo é também o ficheiro de referência do
   // repositório, e um valor que muda com o calendário faria o ficheiro mudar
   // sozinho de uma execução para a outra.

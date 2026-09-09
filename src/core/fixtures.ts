@@ -117,7 +117,14 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     encargosPlurianuais: encargosPlurianuaisIniciais(),
     // Respondido: o agrupamento das fixtures representa um procedimento
     // completo, e as respostas ao eAvalia são de preenchimento obrigatório.
-    eavalia: { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Não aplicável" },
+    eavalia: {
+      iap: "Já cumpre",
+      sms: "Não aplicável",
+      faturacao: "Não aplicável",
+      chaveMovelDigital: "Não aplicável",
+      usabilidade: "Já cumpre",
+      idiomas: "Não aplicável",
+    },
     lotes: entradas.map((e, idx) => ({
       id: `lote-${idx}`,
       numero: e.numero,

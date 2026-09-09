@@ -428,20 +428,27 @@ export type RespostaEavalia =
   | "Não aplicável";
 
 /**
- * As três medidas do formulário eAvalia que esta aplicação preenche. As
- * restantes vêm já respondidas no modelo e não são tocadas.
+ * As medidas do formulário eAvalia que esta aplicação pergunta. As restantes ou
+ * têm resposta fixa — que não se decide procedimento a procedimento — ou ficam
+ * como o modelo as traz.
  */
 export interface InformacaoEavalia {
   /** Utilização da plataforma de interoperabilidade da AP (iAP). */
   iap: RespostaEavalia;
+  /** Envio de SMS pela Plataforma de Mensagens da AP (DL n.º 49/2024). */
+  sms: RespostaEavalia;
+  /** Emissão de faturação pela Plataforma de Pagamentos da AP (DL n.º 49/2024). */
+  faturacao: RespostaEavalia;
   /** Chave móvel digital como único método de autenticação nos portais públicos. */
   chaveMovelDigital: RespostaEavalia;
+  /** Usabilidade e acessibilidade ao nível do selo de prata, ou superior. */
+  usabilidade: RespostaEavalia;
   /** Portal disponível pelo menos em português e inglês. */
   idiomas: RespostaEavalia;
 }
 
 export function informacaoEavaliaInicial(): InformacaoEavalia {
-  return { iap: "", chaveMovelDigital: "", idiomas: "" };
+  return { iap: "", sms: "", faturacao: "", chaveMovelDigital: "", usabilidade: "", idiomas: "" };
 }
 
 export const TAXA_IVA_PADRAO = 23;

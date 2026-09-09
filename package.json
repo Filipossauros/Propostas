@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "exemplos": "tsx scripts/gerar-exemplos.mts"
+    "exemplos": "tsx scripts/gerar-exemplos.mts",
+    "eavalia-padrao": "tsx scripts/gerar-eavalia-padrao.mts"
   },
   "dependencies": {
     "docx": "^9.7.1",

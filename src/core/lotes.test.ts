@@ -31,7 +31,7 @@ import {
   postoTrabalhoInicial,
 } from "./types";
 import { certificacoes, lotesComPerfis, perfil } from "./fixtures";
-import type { LotesJSON, PerfilEmLote } from "./types";
+import type { InformacaoEavalia, LotesJSON, PerfilEmLote } from "./types";
 
 function lotesExemplo(): LotesJSON {
   return lotesComPerfis([
@@ -273,21 +273,29 @@ describe("validarPostoTrabalho", () => {
   });
 });
 
+/** Todas as medidas respondidas — o ponto de partida dos casos deste bloco. */
+const RESPONDIDO: InformacaoEavalia = {
+  iap: "Já cumpre",
+  sms: "Não aplicável",
+  faturacao: "Não aplicável",
+  chaveMovelDigital: "Não aplicável",
+  usabilidade: "Já cumpre",
+  idiomas: "Não aplicável",
+};
+
 describe("validarEavalia", () => {
   it("exige as três respostas", () => {
-    expect(validarEavalia(informacaoEavaliaInicial())).toHaveLength(3);
+    expect(validarEavalia(informacaoEavaliaInicial())).toHaveLength(6);
   });
 
   it("aponta a medida que ficou por responder", () => {
-    const erros = validarEavalia({ iap: "Já cumpre", chaveMovelDigital: "", idiomas: "Não aplicável" });
+    const erros = validarEavalia({ ...RESPONDIDO, chaveMovelDigital: "" });
 
     expect(erros.map((e) => e.campo)).toEqual(["eavalia.chaveMovelDigital"]);
   });
 
   it("aceita quando todas estão respondidas", () => {
-    const respondido = { iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" } as const;
-
-    expect(validarEavalia(respondido)).toHaveLength(0);
+    expect(validarEavalia({ ...RESPONDIDO, idiomas: "Cumpre Parcialmente" })).toHaveLength(0);
   });
 });
 
@@ -305,7 +313,10 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     expect(validarLotes(incompleto).map((e) => e.campo)).toEqual([
       "postoTrabalho.locais",
       "eavalia.iap",
+      "eavalia.sms",
+      "eavalia.faturacao",
       "eavalia.chaveMovelDigital",
+      "eavalia.usabilidade",
       "eavalia.idiomas",
     ]);
   });

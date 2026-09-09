@@ -120,7 +120,10 @@ export function validarPostoTrabalho(posto: PostoTrabalho): ErroValidacao[] {
 /** As medidas do pedido de parecer eAvalia que esta aplicação preenche. */
 const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> = [
   { campo: "iap", nome: "a utilização da plataforma de interoperabilidade da ARTE (iAP)" },
+  { campo: "sms", nome: "o envio de SMS pela plataforma da ARTE" },
+  { campo: "faturacao", nome: "a emissão de faturação pela plataforma da ARTE" },
   { campo: "chaveMovelDigital", nome: "a utilização de chave móvel digital" },
+  { campo: "usabilidade", nome: "a conformidade em usabilidade e acessibilidade" },
   { campo: "idiomas", nome: "a disponibilização do portal em português e inglês" },
 ];
 
@@ -348,9 +351,14 @@ function lerResposta(valor: unknown): RespostaEavalia {
 function normalizarEavalia(bruto: unknown): InformacaoEavalia {
   if (typeof bruto !== "object" || bruto === null) return informacaoEavaliaInicial();
   const e = bruto as Record<string, unknown>;
+  // Um agrupamento gravado antes de estas medidas existirem não as traz: ficam
+  // por responder, que é o estado inicial de qualquer uma.
   return {
     iap: lerResposta(e.iap),
+    sms: lerResposta(e.sms),
+    faturacao: lerResposta(e.faturacao),
     chaveMovelDigital: lerResposta(e.chaveMovelDigital),
+    usabilidade: lerResposta(e.usabilidade),
     idiomas: lerResposta(e.idiomas),
   };
 }
