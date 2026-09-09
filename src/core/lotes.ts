@@ -369,7 +369,7 @@ function lerSelo(bruto: unknown): RespostaSelo {
   return SELOS.includes(bruto as RespostaSelo) ? (bruto as RespostaSelo) : "";
 }
 
-const SELOS: RespostaSelo[] = ["", "Não aplicável", "Declaração", "Selo Ouro", "Selo Prata", "Selo Bronze"];
+const SELOS: RespostaSelo[] = ["", "Não aplicável", "Selo Ouro", "Selo Prata", "Selo Bronze"];
 
 /** Só as opções que constam da lista, e sem repetições, pela ordem da lista. */
 function lerOpcoes<T extends string>(bruto: unknown, admitidas: readonly T[]): T[] {

@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import { construirEavaliaPadrao } from "./eavaliaPadrao";
+import { medidasPerguntadas } from "./eavaliaModelo";
 import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
 
 const ALINHAMENTO = "xl/worksheets/sheet3.xml";
@@ -66,15 +67,15 @@ describe("eAvalia-padrão", () => {
     expect(protecao).toContain('deleteRows="1"');
   });
 
-  it("deixa editáveis as respostas às medidas e as datas, e nada mais", async () => {
+  it("deixa editáveis as medidas que a aplicação pergunta, e nada mais", async () => {
     const zip = await padrao();
     const folha = await zip.file(ALINHAMENTO)!.async("string");
     const abertas = editaveis(folha, estilosAbertos(await zip.file(ESTILOS)!.async("string")));
 
-    // As respostas — todas menos as duas de resposta fixa — e as datas.
-    expect(abertas.filter((ref) => ref.startsWith("E"))).toHaveLength(29);
-    expect(abertas.filter((ref) => ref.startsWith("F"))).toHaveLength(9);
-    expect(abertas.some((ref) => ref.startsWith("A") || ref.startsWith("B"))).toBe(false);
+    // Uma célula por medida perguntada, e a data da única que admite
+    // comprometer-se com um prazo. O que a aplicação não pergunta fica
+    // trancado, como as respostas fixas.
+    expect(abertas.sort()).toEqual(["E10", "E26", "E42", "E44", "E6", "E8", "F44"].sort());
   });
 
   it("traz as respostas fixas escritas e trancadas", async () => {
@@ -90,17 +91,32 @@ describe("eAvalia-padrão", () => {
     expect(abertas).not.toContain("E70");
   });
 
-  it("não toca nas outras folhas nem nas listas de escolha", async () => {
+  it("não toca nas outras folhas", async () => {
     const antes = await JSZip.loadAsync(modelo());
     const depois = await padrao();
 
     for (const nome of ["xl/worksheets/sheet2.xml", "xl/worksheets/sheet8.xml", "xl/sharedStrings.xml"]) {
       expect(await depois.file(nome)!.async("string")).toBe(await antes.file(nome)!.async("string"));
     }
-    // As listas de validação continuam a apontar à folha «Backup».
-    const folha = await depois.file(ALINHAMENTO)!.async("string");
+  });
+
+  it("oferece em cada medida as opções que a aplicação oferece, e só essas", async () => {
+    const folha = await (await padrao()).file(ALINHAMENTO)!.async("string");
+
+    for (const medida of medidasPerguntadas()) {
+      const lista = new RegExp(
+        `<dataValidation type="list"[^>]*sqref="([^"]*\\bE${medida.linha}\\b[^"]*)"[^>]*>` +
+          `<formula1>"([^"]*)"</formula1>`,
+      ).exec(folha);
+
+      expect(lista?.[2].split(",")).toEqual(medida.opcoes);
+    }
+
+    // As medidas que a aplicação não pergunta ficam com a lista do modelo, que
+    // aponta à folha «Backup» — trancadas, mas intactas.
     expect(folha).toContain("Backup!$B$7:$B$11");
-    expect(folha).toContain("Backup!$B$13:$B$17");
+    // A da usabilidade deixou de ser a do modelo: passou a ter a sua.
+    expect(folha).not.toContain("Backup!$B$13:$B$17");
   });
 
   it("deixa o XML bem formado, e o cellXfs a contar certo", async () => {

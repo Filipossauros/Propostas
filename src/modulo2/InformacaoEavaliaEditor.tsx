@@ -1,4 +1,5 @@
 import type { InformacaoEavalia } from "../core/types";
+import { medidasPerguntadas } from "../excel/eavaliaModelo";
 
 interface Props {
   eavalia: InformacaoEavalia;
@@ -6,66 +7,12 @@ interface Props {
 }
 
 /**
- * Uma medida do formulário, com as respostas que lhe cabem.
- *
- * As opções de cada medida saem do próprio campo: a da usabilidade responde-se
- * na escala dos selos, e o tipo não deixa oferecer aqui uma resposta que o
- * ficheiro não aceite.
+ * As perguntas e as respostas são as do modelo eAvalia (`eavaliaModelo.ts`),
+ * pela ordem das linhas do formulário — as mesmas que o ficheiro-padrão oferece
+ * a quem o preenche à mão. As opções estão escritas tal e qual as listas de
+ * escolha do formulário, incluindo o "Já cumpre" com minúscula.
  */
-type Medida = {
-  [C in keyof InformacaoEavalia]: {
-    campo: C;
-    pergunta: string;
-    opcoes: Array<Exclude<InformacaoEavalia[C], "">>;
-  };
-}[keyof InformacaoEavalia];
-
-/**
- * As opções são as das listas de validação do formulário eAvalia, escritas tal
- * e qual — incluindo o "Já cumpre" com minúscula. Cada medida oferece só as que
- * lhe fazem sentido.
- *
- * A ordem é a das linhas do formulário, para quem confere o ficheiro gerado
- * poder descer as duas listas lado a lado.
- */
-const MEDIDAS: Medida[] = [
-  {
-    campo: "iap",
-    pergunta: "Utilização da plataforma de interoperabilidade da ARTE (iAP)",
-    opcoes: ["Já cumpre", "Não aplicável"],
-  },
-  {
-    campo: "sms",
-    pergunta: "O sistema envia SMS através da plataforma da ARTE",
-    opcoes: ["Já cumpre", "Não aplicável"],
-  },
-  {
-    campo: "faturacao",
-    pergunta: "O sistema emite faturação através da plataforma da ARTE",
-    opcoes: ["Já cumpre", "Não aplicável"],
-  },
-  {
-    campo: "chaveMovelDigital",
-    pergunta:
-      "Utilização de chave móvel digital como único método de autenticação para portais (websites) " +
-      "disponibilizados ao público.",
-    opcoes: ["Já cumpre", "Não aplicável"],
-  },
-  {
-    campo: "usabilidade",
-    pergunta:
-      "Conformidade com as melhores práticas de usabilidade e acessibilidade, a nível equivalente ou " +
-      "superior ao selo de prata.",
-    // A escala do selo é a que o ficheiro traz para esta medida, e não a do
-    // cumprimento: aqui responde-se com o selo que se tem.
-    opcoes: ["Não aplicável", "Declaração", "Selo Ouro", "Selo Prata", "Selo Bronze"],
-  },
-  {
-    campo: "idiomas",
-    pergunta: "Disponibilização do portal (website) pelo menos nos idiomas português e inglês.",
-    opcoes: ["Cumpre Parcialmente", "Já cumpre", "Não aplicável"],
-  },
-];
+const MEDIDAS = medidasPerguntadas();
 
 /**
  * Muda uma resposta só.

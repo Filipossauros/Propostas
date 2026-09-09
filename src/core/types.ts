@@ -435,7 +435,7 @@ export type RespostaEavalia =
  * e um valor de fora seria recusado. Daí o tipo à parte: assim nenhum selo pode
  * ir parar a uma medida que o não admita, nem o contrário.
  */
-export type RespostaSelo = "" | "Não aplicável" | "Declaração" | "Selo Ouro" | "Selo Prata" | "Selo Bronze";
+export type RespostaSelo = "" | "Não aplicável" | "Selo Ouro" | "Selo Prata" | "Selo Bronze";
 
 /**
  * As medidas do formulário eAvalia que esta aplicação pergunta. As restantes ou

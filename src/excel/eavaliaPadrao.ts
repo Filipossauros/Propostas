@@ -2,10 +2,10 @@
 //
 // As equipas que não passam por aqui preenchem o pedido de parecer à mão, e
 // nada as impede de responder ao lado do que a organização já decidiu. Este
-// ficheiro fecha essa porta: as medidas de resposta fixa vão já respondidas e
-// trancadas, e da folha do alinhamento tecnológico só ficam abertas as células
-// que admitem escolha — as respostas às medidas e as datas que algumas delas
-// obrigam a indicar.
+// ficheiro fecha essa porta: o que se pode responder no padrão é exatamente o
+// que se responde no Módulo 2 — as mesmas medidas e, em cada uma, as mesmas
+// opções. As de resposta fixa vão já respondidas, e o resto da folha do
+// alinhamento tecnológico fica trancado.
 //
 // As restantes folhas — a despesa, os custos — ficam como estão: também são
 // para preencher, e não é aqui que se decide o que lá vai.
@@ -21,28 +21,109 @@ import {
   FOLHA_ALINHAMENTO,
   lerCadeiasPartilhadas,
   MEDIDAS,
+  medidasPerguntadas,
+  RESPOSTAS_COM_DATA,
   textoDaMedida,
 } from "./eavaliaModelo";
 
 /**
- * As células de resposta que ficam abertas, e as de data que as acompanham.
+ * As células que ficam abertas, e a lista de escolha de cada uma.
  *
- * Saem da própria validação do modelo (`x14:dataValidation` com lista) e não de
- * uma lista escrita à mão: se o formulário ganhar medidas, elas ficam abertas
- * sem ninguém ter de se lembrar disso.
+ * São as das medidas que o Módulo 2 pergunta, e mais nenhuma: as restantes ou
+ * têm resposta fixa, ou não se respondem na aplicação — e o padrão não há de
+ * admitir o que a aplicação não admite.
  */
-function celulasComEscolha(xml: string): string[] {
-  const listas = [...xml.matchAll(/<x14:dataValidation type="list"[\s\S]*?<xm:sqref>([^<]*)<\/xm:sqref>/g)];
-  if (listas.length === 0) {
-    throw new ErroModeloEavalia("O modelo eAvalia já não tem listas de escolha na folha do alinhamento.");
-  }
-  return listas.flatMap((m) => m[1].split(/\s+/).filter((ref) => ref !== ""));
+function escolhasDoFormulario(): Map<string, readonly string[]> {
+  return new Map(medidasPerguntadas().map((medida) => [`E${medida.linha}`, medida.opcoes]));
 }
 
-/** As células de data do formulário: uma resposta de compromisso obriga a indicá-la. */
-function celulasComData(xml: string): string[] {
-  const datas = /<dataValidation type="date"[^>]*sqref="([^"]*)"/.exec(xml);
-  return datas === null ? [] : datas[1].split(/\s+/).filter((ref) => ref !== "");
+/**
+ * As datas que acompanham as respostas de compromisso.
+ *
+ * Só se abre a data das medidas que admitem comprometer-se com um prazo: onde
+ * a escolha é entre já cumprir e não se aplicar, não há data por que esperar.
+ */
+function datasDoFormulario(): string[] {
+  return medidasPerguntadas()
+    .filter((medida) => medida.opcoes.some((opcao) => RESPOSTAS_COM_DATA.includes(opcao)))
+    .map((medida) => `F${medida.linha}`);
+}
+
+/**
+ * Tira das listas do modelo as células que passam a ter lista própria.
+ *
+ * As listas do modelo vivem na extensão `x14` e apontam à folha «Backup», onde
+ * estão as cinco respostas possíveis. Duas listas sobre a mesma célula seriam
+ * uma contradição, pelo que a do modelo deixa de a cobrir. Uma lista que fique
+ * sem células nenhumas desaparece.
+ */
+function semRefsNasListas(xml: string, refs: Set<string>): string {
+  const cobertas = new Set<string>();
+  let removidas = 0;
+
+  const semRefs = xml.replace(/<x14:dataValidation\b[\s\S]*?<\/x14:dataValidation>/g, (validacao) => {
+    const sqref = /<xm:sqref>([^<]*)<\/xm:sqref>/.exec(validacao);
+    if (sqref === null) return validacao;
+
+    const todas = sqref[1].split(/\s+/).filter((ref) => ref !== "");
+    for (const ref of todas) if (refs.has(ref)) cobertas.add(ref);
+
+    const restantes = todas.filter((ref) => !refs.has(ref));
+    if (restantes.length === 0) {
+      removidas += 1;
+      return "";
+    }
+    return validacao.replace(sqref[0], `<xm:sqref>${restantes.join(" ")}</xm:sqref>`);
+  });
+
+  for (const ref of refs) {
+    if (!cobertas.has(ref)) {
+      throw new ErroModeloEavalia(`A célula ${ref} do modelo eAvalia já não tem lista de escolha.`);
+    }
+  }
+
+  return semRefs.replace(/<x14:dataValidations count="(\d+)"/, (_inteiro, conta: string) => {
+    return `<x14:dataValidations count="${Number(conta) - removidas}"`;
+  });
+}
+
+/** Uma lista de escolha escrita no próprio ficheiro, e não por referência à folha «Backup». */
+function listaDeEscolha(refs: string[], opcoes: readonly string[]): string {
+  return (
+    '<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" ' +
+    `sqref="${refs.join(" ")}"><formula1>"${opcoes.join(",")}"</formula1></dataValidation>`
+  );
+}
+
+/**
+ * Junta as listas novas — e as datas que se abriram — às validações da folha.
+ *
+ * Medidas com as mesmas opções partilham uma validação, que é como o Excel as
+ * escreve e como se lêem melhor.
+ */
+function comValidacoesProprias(xml: string, escolhas: Map<string, readonly string[]>, datas: string[]): string {
+  const porOpcoes = new Map<string, string[]>();
+  for (const [ref, opcoes] of escolhas) {
+    const chave = opcoes.join("\u0000");
+    porOpcoes.set(chave, [...(porOpcoes.get(chave) ?? []), ref]);
+  }
+  const novas = [...porOpcoes].map(([chave, refs]) => listaDeEscolha(refs, chave.split("\u0000")));
+
+  const bloco = /<dataValidations count="(\d+)">([\s\S]*?)<\/dataValidations>/.exec(xml);
+  if (bloco === null) throw new ErroModeloEavalia("O modelo eAvalia não tem validações na folha do alinhamento.");
+
+  // A data das medidas abertas tem de caber na validação de data do modelo,
+  // que não cobre todas as linhas do formulário.
+  const comDatas = bloco[2].replace(/(<dataValidation type="date"[^>]*sqref=")([^"]*)(")/, (_i, antes, refs, depois) => {
+    const todas = refs.split(/\s+/).filter((ref: string) => ref !== "");
+    const faltam = datas.filter((ref) => !todas.includes(ref));
+    return `${antes}${[...todas, ...faltam].join(" ")}${depois}`;
+  });
+
+  return xml.replace(
+    bloco[0],
+    () => `<dataValidations count="${Number(bloco[1]) + novas.length}">${comDatas}${novas.join("")}</dataValidations>`,
+  );
 }
 
 /**
@@ -175,14 +256,20 @@ export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8A
     xml = escreverCelula(xml, ref, (attrs) => celulaDeTexto(ref, attrs, medida.fixa), true);
   }
 
-  // 2. Abre-se o que admite escolha — menos o que acabou de ser decidido — e
-  //    tranca-se tudo o resto.
+  // 2. As medidas que o Módulo 2 pergunta passam a ter, no ficheiro, a lista de
+  //    escolha que o ecrã oferece — nem mais opções, nem outras.
+  const escolhas = escolhasDoFormulario();
+  const datas = datasDoFormulario();
+  xml = semRefsNasListas(xml, new Set(escolhas.keys()));
+  xml = comValidacoesProprias(xml, escolhas, datas);
+
+  // 3. Só essas células ficam abertas; tudo o resto tranca-se.
   const { inicio, fim, xfs } = lerCellXfs(await ficheiroEstilos.async("string"));
   const estilos = estilosComProtecao(xfs);
-  const abertas = new Set([...celulasComEscolha(xml), ...celulasComData(xml)].filter((ref) => !fixas.has(ref)));
+  const abertas = new Set([...escolhas.keys(), ...datas].filter((ref) => !fixas.has(ref)));
   xml = comProtecaoDeclarada(xml, abertas, estilos);
 
-  // 3. E tranca-se a folha, que é o que dá efeito ao passo anterior.
+  // 4. E tranca-se a folha, que é o que dá efeito ao passo anterior.
   if (xml.includes("<sheetProtection")) {
     throw new ErroModeloEavalia("A folha do alinhamento já vinha protegida no modelo.");
   }

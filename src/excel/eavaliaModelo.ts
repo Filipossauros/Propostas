@@ -24,10 +24,36 @@ export interface MedidaBase {
   inicioDoTexto: string;
 }
 
-export type Medida = (MedidaBase & { campo: keyof InformacaoEavalia }) | (MedidaBase & { fixa: RespostaEavalia });
+/**
+ * Uma medida que se pergunta: a pergunta como aparece no Módulo 2 e as
+ * respostas que admite.
+ *
+ * As opções vivem aqui, e não no ecrã, porque há dois sítios que têm de as ter
+ * iguais: o `select` do Módulo 2 e a lista de escolha do ficheiro-padrão. Quem
+ * preenche o padrão à mão há de poder responder o mesmo — nem mais, nem menos
+ * — do que quem usa a aplicação.
+ *
+ * O tipo é mapeado sobre os campos para que as opções de cada medida sejam as
+ * que aquele campo admite: a da usabilidade responde-se na escala dos selos, e
+ * nenhuma outra.
+ */
+export type MedidaPerguntada = {
+  [C in keyof InformacaoEavalia]: MedidaBase & {
+    campo: C;
+    pergunta: string;
+    opcoes: Array<Exclude<InformacaoEavalia[C], "">>;
+  };
+}[keyof InformacaoEavalia];
+
+export type Medida = MedidaPerguntada | (MedidaBase & { fixa: RespostaEavalia });
 
 /** Qualquer resposta que possa acabar escrita numa célula do formulário. */
 export type RespostaDoFormulario = RespostaEavalia | RespostaSelo;
+
+/** As medidas que se perguntam, pela ordem das linhas do formulário. */
+export function medidasPerguntadas(): MedidaPerguntada[] {
+  return MEDIDAS.filter((medida): medida is MedidaPerguntada => "campo" in medida);
+}
 
 /** Folha "Alinhamento Tecnológico" — a terceira do livro. */
 export const FOLHA_ALINHAMENTO = "xl/worksheets/sheet3.xml";
@@ -42,31 +68,49 @@ export const MEDIDAS: Medida[] = [
     campo: "iap",
     linha: 6,
     inicioDoTexto: "Reutilização de dados disponíveis por outros serviços ou entidades",
+    pergunta: "Utilização da plataforma de interoperabilidade da ARTE (iAP)",
+    opcoes: ["Já cumpre", "Não aplicável"],
   },
   {
     campo: "sms",
     linha: 8,
     inicioDoTexto: "Adoção da Plataforma de Mensagens da Administração Pública",
+    pergunta: "Utilização da plataforma de SMS da ARTE",
+    opcoes: ["Já cumpre", "Não aplicável"],
   },
   {
     campo: "faturacao",
     linha: 10,
     inicioDoTexto: "Adoção da Plataforma de Pagamentos da Administração Pública",
+    pergunta: "Utilização da plataforma de Faturação da ARTE",
+    opcoes: ["Já cumpre", "Não aplicável"],
   },
   {
     campo: "chaveMovelDigital",
     linha: 26,
     inicioDoTexto: "Implementação de mecanismos de autenticação e assinatura disponibilizados pelo Estado",
+    pergunta:
+      "Utilização de chave móvel digital como único método de autenticação para portais (websites) " +
+      "disponibilizados ao público.",
+    opcoes: ["Já cumpre", "Não aplicável"],
   },
   {
     campo: "usabilidade",
     linha: 42,
     inicioDoTexto: "Conformidade com as melhores práticas no que respeita a usabilidade",
+    pergunta:
+      "Conformidade com as melhores práticas de usabilidade e acessibilidade, a nível equivalente ou " +
+      "superior ao selo de prata.",
+    // Esta medida responde-se com o selo que se tem, e não com o
+    // «cumpre/não cumpre» das restantes — ver `RespostaSelo`.
+    opcoes: ["Não aplicável", "Selo Ouro", "Selo Prata", "Selo Bronze"],
   },
   {
     campo: "idiomas",
     linha: 44,
     inicioDoTexto: "Disponibilização dos serviços e conteúdos pelo menos nos idiomas português e inglês",
+    pergunta: "Disponibilização do portal (website) pelo menos nos idiomas português e inglês.",
+    opcoes: ["Cumpre Parcialmente", "Já cumpre", "Não aplicável"],
   },
   // Respostas fixas: não são decisões que se tomem procedimento a procedimento
   // — o ponto de troca de tráfego está adotado, e a conformidade com o Quadro
