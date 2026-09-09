@@ -279,12 +279,12 @@ const RESPONDIDO: InformacaoEavalia = {
   sms: "Não aplicável",
   faturacao: "Não aplicável",
   chaveMovelDigital: "Não aplicável",
-  usabilidade: "Já cumpre",
+  usabilidade: "Selo Prata",
   idiomas: "Não aplicável",
 };
 
 describe("validarEavalia", () => {
-  it("exige as três respostas", () => {
+  it("exige as seis respostas", () => {
     expect(validarEavalia(informacaoEavaliaInicial())).toHaveLength(6);
   });
 
@@ -296,6 +296,18 @@ describe("validarEavalia", () => {
 
   it("aceita quando todas estão respondidas", () => {
     expect(validarEavalia({ ...RESPONDIDO, idiomas: "Cumpre Parcialmente" })).toHaveLength(0);
+  });
+
+  it("a usabilidade responde-se na escala dos selos, e o que lá não cabe volta por responder", () => {
+    // Um ficheiro guardado antes de a medida passar a ter escala própria trazia
+    // aqui um «Já cumpre», que o formulário não aceita nessa célula.
+    const antigo = { ...lotesExemplo(), eavalia: { ...RESPONDIDO, usabilidade: "Já cumpre" } };
+    const importado = importarLotesJSON(JSON.stringify(antigo));
+
+    expect(importado.eavalia.usabilidade).toBe("");
+    expect(importarLotesJSON(JSON.stringify({ ...antigo, eavalia: RESPONDIDO })).eavalia.usabilidade).toBe(
+      "Selo Prata",
+    );
   });
 });
 

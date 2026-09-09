@@ -6,7 +6,7 @@
 // às equipas que não usam a aplicação (`eavaliaPadrao.ts`). O modelo é o mesmo,
 // e as linhas das medidas têm de ser as mesmas nos dois.
 
-import type { InformacaoEavalia, RespostaEavalia } from "../core/types";
+import type { InformacaoEavalia, RespostaEavalia, RespostaSelo } from "../core/types";
 
 /**
  * Uma medida do formulário que esta aplicação preenche.
@@ -25,6 +25,9 @@ export interface MedidaBase {
 }
 
 export type Medida = (MedidaBase & { campo: keyof InformacaoEavalia }) | (MedidaBase & { fixa: RespostaEavalia });
+
+/** Qualquer resposta que possa acabar escrita numa célula do formulário. */
+export type RespostaDoFormulario = RespostaEavalia | RespostaSelo;
 
 /** Folha "Alinhamento Tecnológico" — a terceira do livro. */
 export const FOLHA_ALINHAMENTO = "xl/worksheets/sheet3.xml";
@@ -94,7 +97,7 @@ export class ErroModeloEavalia extends Error {}
  * cumpre não tem data por que se comprometer, e a quem não se aplica não há
  * data nenhuma a pedir.
  */
-export const RESPOSTAS_COM_DATA: RespostaEavalia[] = ["Cumpre Totalmente", "Cumpre Parcialmente"];
+export const RESPOSTAS_COM_DATA: RespostaDoFormulario[] = ["Cumpre Totalmente", "Cumpre Parcialmente"];
 
 // --------------------------------------------------------------------------
 // Manipulação do XML das folhas

@@ -52,6 +52,20 @@ describe("eAvalia-padrão", () => {
     expect(folha).toContain("</sheetData><sheetProtection");
   });
 
+  it("deixa selecionar e formatar as células, que é como se preenche", async () => {
+    const folha = await (await padrao()).file(ALINHAMENTO)!.async("string");
+    const protecao = /<sheetProtection [^>]*>/.exec(folha)![0];
+
+    // Ao contrário do que as caixas do Excel dão a entender, aqui `1` é «não
+    // deixa»: com estes dois atributos a folha não se conseguia sequer clicar.
+    expect(protecao).not.toContain("selectLockedCells");
+    expect(protecao).not.toContain("selectUnlockedCells");
+    expect(protecao).toContain('formatCells="0"');
+    // E o que se veda é mexer na estrutura do formulário.
+    expect(protecao).toContain('insertRows="1"');
+    expect(protecao).toContain('deleteRows="1"');
+  });
+
   it("deixa editáveis as respostas às medidas e as datas, e nada mais", async () => {
     const zip = await padrao();
     const folha = await zip.file(ALINHAMENTO)!.async("string");

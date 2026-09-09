@@ -95,7 +95,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
     sms: "Não aplicável",
     faturacao: "Não aplicável",
     chaveMovelDigital: "Não aplicável",
-    usabilidade: "Já cumpre",
+    usabilidade: "Selo Prata",
     idiomas: "Cumpre Parcialmente",
   },
   // Ano fixo, e não o de hoje: o exemplo é também o ficheiro de referência do

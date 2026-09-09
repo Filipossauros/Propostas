@@ -122,7 +122,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
       sms: "Não aplicável",
       faturacao: "Não aplicável",
       chaveMovelDigital: "Não aplicável",
-      usabilidade: "Já cumpre",
+      usabilidade: "Selo Prata",
       idiomas: "Não aplicável",
     },
     lotes: entradas.map((e, idx) => ({

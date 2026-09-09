@@ -131,11 +131,20 @@ function comProtecaoDeclarada(xml: string, abertas: Set<string>, estilos: Estilo
  * distração onde a resposta já está decidida, não trancar o ficheiro a quem
  * tenha uma razão para o alterar. A ordem dos elementos de uma folha é imposta
  * pelo esquema, e `sheetProtection` vem logo a seguir a `sheetData`.
+ *
+ * ATENÇÃO ao sentido dos atributos, que é ao contrário do que as caixas do
+ * Excel dão a entender: aqui `1` é «não deixa». `selectLockedCells` e
+ * `selectUnlockedCells` ficam de fora — postos a `1`, ninguém conseguiria
+ * sequer selecionar uma célula, e a folha, protegida, deixava de se preencher.
+ * O que fica vedado é mexer na estrutura: inserir e apagar linhas ou colunas,
+ * ordenar, filtrar. Formatar continua livre — alargar uma coluna para ler o
+ * texto todo não estraga nada.
  */
 const PROTECAO =
   '<sheetProtection sheet="1" objects="1" scenarios="1" ' +
-  'selectLockedCells="1" selectUnlockedCells="1" formatCells="0" formatColumns="0" formatRows="0" ' +
-  'insertRows="0" insertColumns="0" deleteRows="0" deleteColumns="0" sort="0" autoFilter="0" pivotTables="0"/>';
+  'formatCells="0" formatColumns="0" formatRows="0" ' +
+  'insertColumns="1" insertRows="1" insertHyperlinks="1" deleteColumns="1" deleteRows="1" ' +
+  'sort="1" autoFilter="1" pivotTables="1"/>';
 
 export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8Array> {
   const zip = await JSZip.loadAsync(modelo);

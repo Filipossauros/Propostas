@@ -12,7 +12,7 @@
 // com as restantes entradas intactas.
 
 import JSZip from "jszip";
-import type { LotesJSON, RespostaEavalia } from "../core/types";
+import type { LotesJSON } from "../core/types";
 import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
 import {
   CELULA_OBJETO,
@@ -27,6 +27,7 @@ import {
   RESPOSTAS_COM_DATA,
   serieDeData,
   textoDaMedida,
+  type RespostaDoFormulario,
 } from "./eavaliaModelo";
 
 export { ErroModeloEavalia, serieDeData };
@@ -77,7 +78,7 @@ export async function gerarEavaliaBlob(
       );
     }
 
-    const resposta: RespostaEavalia = "fixa" in medida ? medida.fixa : config.eavalia[medida.campo];
+    const resposta: RespostaDoFormulario = "fixa" in medida ? medida.fixa : config.eavalia[medida.campo];
     if (resposta === "") continue;
 
     alinhamento = escreverCelula(

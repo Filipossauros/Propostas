@@ -428,6 +428,16 @@ export type RespostaEavalia =
   | "Não aplicável";
 
 /**
+ * A medida da usabilidade e acessibilidade responde-se noutra escala.
+ *
+ * A célula dessa medida tem lista de validação própria no formulário — os selos
+ * de usabilidade e acessibilidade, e não o «cumpre/não cumpre» das restantes —,
+ * e um valor de fora seria recusado. Daí o tipo à parte: assim nenhum selo pode
+ * ir parar a uma medida que o não admita, nem o contrário.
+ */
+export type RespostaSelo = "" | "Não aplicável" | "Declaração" | "Selo Ouro" | "Selo Prata" | "Selo Bronze";
+
+/**
  * As medidas do formulário eAvalia que esta aplicação pergunta. As restantes ou
  * têm resposta fixa — que não se decide procedimento a procedimento — ou ficam
  * como o modelo as traz.
@@ -441,8 +451,8 @@ export interface InformacaoEavalia {
   faturacao: RespostaEavalia;
   /** Chave móvel digital como único método de autenticação nos portais públicos. */
   chaveMovelDigital: RespostaEavalia;
-  /** Usabilidade e acessibilidade ao nível do selo de prata, ou superior. */
-  usabilidade: RespostaEavalia;
+  /** Usabilidade e acessibilidade: o selo obtido, ou nenhum. */
+  usabilidade: RespostaSelo;
   /** Portal disponível pelo menos em português e inglês. */
   idiomas: RespostaEavalia;
 }
