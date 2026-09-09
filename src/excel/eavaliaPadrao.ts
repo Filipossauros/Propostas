@@ -146,7 +146,35 @@ interface EstilosComProtecao {
 
 const XF_POR_OMISSAO = '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
 
-function estilosComProtecao(xfs: string[]): EstilosComProtecao {
+/**
+ * O fundo amarelo dos campos a preencher, acrescentado à paleta do modelo.
+ *
+ * É o que num formulário em papel seria a caixa a sombreado: quem abre o
+ * ficheiro vê logo onde pode escrever, sem ter de descobrir célula a célula o
+ * que a proteção deixa e o que não deixa.
+ */
+function comFundoAmarelo(estilos: string): { xml: string; amarelo: number } {
+  const bloco = /<fills count="(\d+)">([\s\S]*?)<\/fills>/.exec(estilos);
+  if (bloco === null) throw new ErroModeloEavalia("O modelo eAvalia não tem os fundos das células.");
+
+  const amarelo = '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2A8"/><bgColor indexed="64"/></patternFill></fill>';
+  const conta = Number(bloco[1]);
+  return {
+    xml: estilos.replace(bloco[0], () => `<fills count="${conta + 1}">${bloco[2]}${amarelo}</fills>`),
+    amarelo: conta,
+  };
+}
+
+/** O mesmo estilo, com o fundo dos campos a preencher. */
+function comAmarelo(xf: string, amarelo: number): string {
+  const semAtributo = xf.replace(/\sapplyFill="[01]"/, "");
+  const comFill = /fillId="\d+"/.test(semAtributo)
+    ? semAtributo.replace(/fillId="\d+"/, `fillId="${amarelo}"`)
+    : semAtributo.replace("<xf ", `<xf fillId="${amarelo}" `);
+  return comFill.replace("<xf ", '<xf applyFill="1" ');
+}
+
+function estilosComProtecao(xfs: string[], amarelo: number): EstilosComProtecao {
   const porEstado = new Map<string, number>();
   const novos: string[] = [];
 
@@ -158,7 +186,8 @@ function estilosComProtecao(xfs: string[]): EstilosComProtecao {
       if (jaHa !== undefined) return jaHa;
 
       const protecao = `<protection locked="${aberto ? 0 : 1}"/>`;
-      const base = (xfs[origem] ?? XF_POR_OMISSAO).replace(/<protection[^>]*\/>/g, "");
+      const original = (xfs[origem] ?? XF_POR_OMISSAO).replace(/<protection[^>]*\/>/g, "");
+      const base = aberto ? comAmarelo(original, amarelo) : original;
       const comAtributo = base.includes('applyProtection="1"')
         ? base
         : base.replace("<xf ", '<xf applyProtection="1" ');
@@ -263,9 +292,11 @@ export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8A
   xml = semRefsNasListas(xml, new Set(escolhas.keys()));
   xml = comValidacoesProprias(xml, escolhas, datas);
 
-  // 3. Só essas células ficam abertas; tudo o resto tranca-se.
-  const { inicio, fim, xfs } = lerCellXfs(await ficheiroEstilos.async("string"));
-  const estilos = estilosComProtecao(xfs);
+  // 3. Só essas células ficam abertas — e a amarelo, para se verem; tudo o
+  //    resto tranca-se.
+  const { xml: estilosXml, amarelo } = comFundoAmarelo(await ficheiroEstilos.async("string"));
+  const { inicio, fim, xfs } = lerCellXfs(estilosXml);
+  const estilos = estilosComProtecao(xfs, amarelo);
   const abertas = new Set([...escolhas.keys(), ...datas].filter((ref) => !fixas.has(ref)));
   xml = comProtecaoDeclarada(xml, abertas, estilos);
 
@@ -276,7 +307,6 @@ export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8A
   xml = xml.replace("</sheetData>", `</sheetData>${PROTECAO}`);
   zip.file(FOLHA_ALINHAMENTO, xml);
 
-  const estilosXml = await ficheiroEstilos.async("string");
   const total = xfs.length + estilos.acrescentados.length;
   zip.file(
     "xl/styles.xml",

@@ -24,6 +24,15 @@ function estilosAbertos(estilos: string): Set<number> {
   return new Set(xfs.flatMap((xf, i) => (xf.includes('locked="0"') ? [i] : [])));
 }
 
+/** Os `xf` que pintam a célula de amarelo. */
+function estilosRealcados(estilos: string): Set<number> {
+  const fills = /<fills count="\d+">([\s\S]*?)<\/fills>/.exec(estilos)![1];
+  const amarelo = (fills.match(/<fill>|<fill\/>/g) ?? []).length - 1;
+  const bloco = /<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/.exec(estilos)![1];
+  const xfs = bloco.match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g) ?? [];
+  return new Set(xfs.flatMap((xf, i) => (xf.includes(`fillId="${amarelo}"`) ? [i] : [])));
+}
+
 /** As células da folha que ficaram editáveis. */
 function editaveis(folha: string, abertos: Set<number>): string[] {
   const celulas = [...folha.matchAll(/<c r="([A-Z]+\d+)"([^>]*?)(?:\/>|>)/g)];
@@ -76,6 +85,21 @@ describe("eAvalia-padrão", () => {
     // comprometer-se com um prazo. O que a aplicação não pergunta fica
     // trancado, como as respostas fixas.
     expect(abertas.sort()).toEqual(["E10", "E26", "E42", "E44", "E6", "E8", "F44"].sort());
+  });
+
+  it("pinta de amarelo o que se preenche, e só isso", async () => {
+    const zip = await padrao();
+    const folha = await zip.file(ALINHAMENTO)!.async("string");
+    const estilos = await zip.file(ESTILOS)!.async("string");
+
+    const abertas = editaveis(folha, estilosAbertos(estilos));
+    const amarelas = editaveis(folha, estilosRealcados(estilos));
+
+    expect(amarelas.sort()).toEqual(abertas.sort());
+
+    // O amarelo é um fundo novo, e o `fills` há de contá-lo.
+    const fills = /<fills count="(\d+)">([\s\S]*?)<\/fills>/.exec(estilos)!;
+    expect((fills[2].match(/<fill>|<fill\/>/g) ?? []).length).toBe(Number(fills[1]));
   });
 
   it("traz as respostas fixas escritas e trancadas", async () => {
