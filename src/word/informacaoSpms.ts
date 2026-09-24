@@ -21,7 +21,8 @@
 import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
 import { alineasDoItem, escalaDasImagens, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
-import type { LotesJSON } from "../core/types";
+import type { ItemPerfil, LotesJSON } from "../core/types";
+import { alineasDe } from "../core/justificacao";
 import {
   blocosAnexoTecnico,
   blocosDivisaoPorLotes,
@@ -632,6 +633,23 @@ function escolha({ opcao, sim, sufixo }: { opcao: string; sim: boolean; sufixo?:
   );
 }
 
+/**
+ * Uma frase que anuncia uma enumeração, e as alíneas a seguir.
+ *
+ * Sem nenhuma entrada escrita — o Módulo 1 não o deixa, mas um ficheiro antigo
+ * pode chegar assim — fica o espaço a vermelho no lugar da lista, como os
+ * outros campos por preencher do documento, em vez de uma frase que termina
+ * em dois pontos e não diz mais nada.
+ */
+function enumeracao(frase: string, itens: ItemPerfil[], falta: string): string[] {
+  const alineas = alineasDe(itens);
+  if (alineas.length === 0) return [paragrafo([run(`${frase} `), marcador(falta)])];
+  return [
+    paragrafo(frase, { depois: 60 }),
+    ...alineas.map((alinea) => itemDeLista(alinea.marca, alinea.texto)),
+  ];
+}
+
 /** O corpo completo do documento, em XML. */
 export function corpoDaInformacao(
   config: LotesJSON,
@@ -693,6 +711,14 @@ export function corpoDaInformacao(
       marcador("está / não está"),
       run(" integrado no contrato programa com a ACSS."),
     ]),
+  );
+  p.push(...enumeracao("O Projeto prevê os seguintes benefícios:", config.justificacao.beneficios, "benefícios"));
+  p.push(
+    ...enumeracao(
+      "A não contratação destes serviços acarreta os seguintes riscos:",
+      config.justificacao.riscos,
+      "riscos da não contratação",
+    ),
   );
 
   p.push(titulo("II – Análise"));

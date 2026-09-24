@@ -104,6 +104,47 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(xml).toContain("[descrição do projeto]");
   });
 
+  it("a seguir ao contrato programa, enumera os benefícios e os riscos da não contratação", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const acss = texto.indexOf("integrado no contrato programa com a ACSS.");
+    const beneficios = texto.indexOf("O Projeto prevê os seguintes benefícios:");
+    const riscos = texto.indexOf("A não contratação destes serviços acarreta os seguintes riscos:");
+
+    expect(acss).toBeGreaterThan(-1);
+    expect(acss).toBeLessThan(beneficios);
+    expect(beneficios).toBeLessThan(riscos);
+    expect(riscos).toBeLessThan(texto.indexOf("II – Análise"));
+
+    const [b1, , b3] = LOTES_EXEMPLO.justificacao.beneficios.map((b) => b.designacao);
+    const [r1] = LOTES_EXEMPLO.justificacao.riscos.map((r) => r.designacao);
+    expect(texto).toContain(`a)${b1};`);
+    expect(texto).toContain(`c)${b3}.`);
+    expect(texto.indexOf(`a)${r1};`)).toBeGreaterThan(riscos);
+  });
+
+  it("a manifestação de necessidades leva as mesmas duas listas", async () => {
+    const texto = await textoDaManifestacao(semPlurianual());
+
+    expect(texto).toContain("O Projeto prevê os seguintes benefícios:");
+    expect(texto).toContain("A não contratação destes serviços acarreta os seguintes riscos:");
+  });
+
+  it("sem benefícios nem riscos, deixa os marcadores a vermelho em vez de listas vazias", async () => {
+    const xml = await xmlDoDocumento(exemplo({ justificacao: { beneficios: [], riscos: [] } }));
+
+    expect(xml).toContain("[benefícios]");
+    expect(xml).toContain("[riscos da não contratação]");
+  });
+
+  it("a repartição por anos conta as horas úteis e as férias", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    expect(texto).toContain(
+      "sendo o encargo de cada ano o produto do número de elementos pelas horas úteis desse ano e pelo preço " +
+        "unitário por hora. Foi ainda considerado um total de 22 dias de férias.",
+    );
+  });
+
   it("leva os três anos económicos e o preço base do procedimento", async () => {
     const texto = await textoDoDocumento(exemplo());
 

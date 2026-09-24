@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { justificacaoInicial } from "./justificacao";
 import { LOTES_EXEMPLO, PERFIL_EXEMPLO, PERFIS_EXEMPLO } from "./exemplo";
 import { importarPerfisJSON, perfisParaJSON, validarPerfil, validarPerfis } from "./perfil";
 import { importarLotesJSON, lotesParaJSON, totalProcedimento, validarLotes } from "./lotes";
@@ -30,7 +31,7 @@ describe("dados de exemplo", () => {
 
   it("os ficheiros de exemplo são reimportáveis pela própria aplicação", () => {
     expect(
-      importarPerfisJSON(perfisParaJSON(PERFIS_EXEMPLO, "Projeto X", "Uma descrição")).perfis,
+      importarPerfisJSON(perfisParaJSON(PERFIS_EXEMPLO, "Projeto X", "Uma descrição", justificacaoInicial())).perfis,
     ).toEqual(PERFIS_EXEMPLO);
     expect(importarLotesJSON(lotesParaJSON(LOTES_EXEMPLO))).toEqual(LOTES_EXEMPLO);
   });

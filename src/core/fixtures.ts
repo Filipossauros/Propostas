@@ -109,6 +109,10 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     tipo: "lotes",
     nomeProjeto: "Projeto Teste",
     descricaoProjeto: "Descrição do projeto de teste",
+    justificacao: {
+      beneficios: [{ id: "beneficio-1", designacao: "Benefício de teste" }],
+      riscos: [{ id: "risco-1", designacao: "Risco de teste" }],
+    },
     nomeProcedimento: "Procedimento Teste",
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: 3,

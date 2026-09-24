@@ -1,7 +1,19 @@
 import { useState } from "react";
-import type { LotesJSON, PerfilJSON } from "./core/types";
+import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import { CHAVE_DESCRICAO_PROJETO, CHAVE_LOTES, CHAVE_NOME_PROJETO, CHAVE_PERFIS } from "./core/persistencia";
+import {
+  CHAVE_DESCRICAO_PROJETO,
+  CHAVE_JUSTIFICACAO_PROJETO,
+  CHAVE_LOTES,
+  CHAVE_NOME_PROJETO,
+  CHAVE_PERFIS,
+} from "./core/persistencia";
+import {
+  ehJustificacaoGuardada,
+  justificacaoInicial,
+  normalizarJustificacao,
+  temJustificacao,
+} from "./core/justificacao";
 import { ehListaDePerfisGuardada } from "./core/perfil";
 import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
@@ -91,6 +103,12 @@ function App() {
     () => "",
     ehTexto,
   );
+  const [justificacao, setJustificacao] = useEstadoPersistente<JustificacaoProjeto>(
+    CHAVE_JUSTIFICACAO_PROJETO,
+    justificacaoInicial,
+    ehJustificacaoGuardada,
+    normalizarJustificacao,
+  );
 
   /**
    * Ponto único de alteração do catálogo.
@@ -124,6 +142,11 @@ function App() {
   /** A descrição do projeto viaja nos mesmos ficheiros, e pela mesma regra. */
   function adotarDescricaoProjeto(doFicheiro: string) {
     if (doFicheiro.trim() !== "" && descricaoProjeto.trim() === "") setDescricaoProjeto(doFicheiro);
+  }
+
+  /** Os benefícios e os riscos também — e as duas listas juntas, como foram escritas. */
+  function adotarJustificacao(doFicheiro: JustificacaoProjeto) {
+    if (temJustificacao(doFicheiro) && !temJustificacao(justificacao)) setJustificacao(doFicheiro);
   }
 
   function irPara(destino: Aba) {
@@ -191,6 +214,9 @@ function App() {
             descricaoProjeto={descricaoProjeto}
             onAlterarDescricaoProjeto={setDescricaoProjeto}
             onAdotarDescricaoProjeto={adotarDescricaoProjeto}
+            justificacao={justificacao}
+            onAlterarJustificacao={setJustificacao}
+            onAdotarJustificacao={adotarJustificacao}
             lotePorPerfilId={lotePorPerfilId(lotes)}
             onIrParaLotes={() => irPara("modulo2")}
           />
@@ -206,6 +232,9 @@ function App() {
             descricaoProjeto={descricaoProjeto}
             onDefinirDescricaoProjeto={setDescricaoProjeto}
             onAdotarDescricaoProjeto={adotarDescricaoProjeto}
+            justificacao={justificacao}
+            onDefinirJustificacao={setJustificacao}
+            onAdotarJustificacao={adotarJustificacao}
             onAcrescentarPerfis={acrescentarPerfis}
             onSubstituirPerfis={aplicarPerfis}
           />

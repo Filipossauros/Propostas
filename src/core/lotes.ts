@@ -32,6 +32,7 @@ import {
   regimeTemLocal,
 } from "./types";
 import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
+import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
 import { gerarId } from "./id";
 
 /**
@@ -67,6 +68,7 @@ export function lotesIniciais(): LotesJSON {
     tipo: "lotes",
     nomeProjeto: "",
     descricaoProjeto: "",
+    justificacao: justificacaoInicial(),
     nomeProcedimento: "",
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: N_BLOCOS_PADRAO,
@@ -291,6 +293,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     nBlocos: Number.isInteger(config.nBlocos) && config.nBlocos > 0 ? config.nBlocos : N_BLOCOS_PADRAO,
     nomeProjeto: config.nomeProjeto ?? "",
     descricaoProjeto: config.descricaoProjeto ?? "",
+    justificacao: normalizarJustificacao((registo as { justificacao?: unknown }).justificacao),
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
     postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
@@ -323,6 +326,7 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
   return comRepartricaoPostaEmDia({
     ...config,
     descricaoProjeto: config.descricaoProjeto ?? "",
+    justificacao: normalizarJustificacao(config.justificacao),
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),

@@ -1,8 +1,9 @@
 // Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
-import type { ItemPerfil, PerfilJSON, PerfisJSON, Requisito } from "./types";
+import type { ItemPerfil, JustificacaoProjeto, PerfilJSON, PerfisJSON, Requisito } from "./types";
 import { ATIVIDADE_FIXA, MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
 import { gerarId } from "./id";
+import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
 
 export interface ErroValidacao {
   campo: string;
@@ -150,12 +151,18 @@ export function validarPerfis(perfis: PerfilJSON[]): ErroValidacao[] {
 }
 
 /** Serializa todos os perfis num ficheiro único. */
-export function perfisParaJSON(perfis: PerfilJSON[], nomeProjeto: string, descricaoProjeto: string): string {
+export function perfisParaJSON(
+  perfis: PerfilJSON[],
+  nomeProjeto: string,
+  descricaoProjeto: string,
+  justificacao: JustificacaoProjeto,
+): string {
   const ficheiro: PerfisJSON = {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfis",
     nomeProjeto,
     descricaoProjeto,
+    justificacao,
     perfis,
   };
   return JSON.stringify(ficheiro, null, 2);
@@ -229,7 +236,7 @@ export function semAtividadeFixa(itens: ItemPerfil[]): ItemPerfil[] {
   return itens.filter((i) => !mesmoTexto(i.designacao, ATIVIDADE_FIXA));
 }
 
-function normalizarItens(bruto: unknown): ItemPerfil[] {
+export function normalizarItens(bruto: unknown): ItemPerfil[] {
   if (typeof bruto === "string") {
     return itensSeparados(bruto).map((designacao) => ({ id: gerarId(), designacao }));
   }
@@ -272,6 +279,8 @@ export interface PerfisImportados {
   nomeProjeto: string;
   /** Vazio nos ficheiros gerados antes de o campo existir. */
   descricaoProjeto: string;
+  /** Listas vazias nos ficheiros gerados antes de os campos existirem. */
+  justificacao: JustificacaoProjeto;
 }
 
 /**
@@ -290,6 +299,7 @@ export function importarPerfisJSON(texto: string): PerfisImportados {
     return {
       nomeProjeto: typeof bruto.nomeProjeto === "string" ? bruto.nomeProjeto : "",
       descricaoProjeto: typeof bruto.descricaoProjeto === "string" ? bruto.descricaoProjeto : "",
+      justificacao: normalizarJustificacao(bruto.justificacao),
       perfis: bruto.perfis.map((p) => {
         if (typeof p !== "object" || p === null || Array.isArray(p)) {
           throw new ErroImportacao("O ficheiro de perfis contém uma entrada que não é um perfil.");
@@ -300,7 +310,12 @@ export function importarPerfisJSON(texto: string): PerfisImportados {
   }
 
   if (bruto.tipo === "perfil") {
-    return { nomeProjeto: "", descricaoProjeto: "", perfis: [normalizarPerfil(bruto)] };
+    return {
+      nomeProjeto: "",
+      descricaoProjeto: "",
+      justificacao: justificacaoInicial(),
+      perfis: [normalizarPerfil(bruto)],
+    };
   }
 
   throw new ErroImportacao(

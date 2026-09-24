@@ -3,6 +3,36 @@
   "tipo": "perfis",
   "nomeProjeto": "Modernização dos Sistemas de Informação",
   "descricaoProjeto": "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, assegurando a continuidade do serviço durante a migração",
+  "justificacao": {
+    "beneficios": [
+      {
+        "id": "beneficio-1",
+        "designacao": "Redução do tempo de registo clínico, com uma única aplicação em vez de várias por instituição"
+      },
+      {
+        "id": "beneficio-2",
+        "designacao": "Partilha de informação clínica entre instituições, sem reintrodução manual de dados"
+      },
+      {
+        "id": "beneficio-3",
+        "designacao": "Diminuição dos custos de manutenção associados a aplicações em fim de vida"
+      }
+    ],
+    "riscos": [
+      {
+        "id": "risco-1",
+        "designacao": "Interrupção do suporte às aplicações em fim de vida, com impacto na continuidade da prestação de cuidados"
+      },
+      {
+        "id": "risco-2",
+        "designacao": "Exposição a vulnerabilidades de segurança sem correção disponível"
+      },
+      {
+        "id": "risco-3",
+        "designacao": "Perda do conhecimento acumulado pelas equipas, por falta de continuidade dos recursos"
+      }
+    ]
+  },
   "perfis": [
     {
       "schemaVersion": "2.0",

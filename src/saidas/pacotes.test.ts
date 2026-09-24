@@ -13,7 +13,13 @@ import {
   nomeDoPacoteDePerfis,
 } from "./pacotes";
 import { carimboDeData, emPasta, nomeDoPacote } from "../ui/pacote";
-import { DESCRICAO_PROJETO_EXEMPLO, LOTES_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import {
+  DESCRICAO_PROJETO_EXEMPLO,
+  JUSTIFICACAO_EXEMPLO,
+  LOTES_EXEMPLO,
+  NOME_PROJETO_EXEMPLO,
+  PERFIS_EXEMPLO,
+} from "../core/exemplo";
 import { normalizarLotesGuardados } from "../core/lotes";
 import { avaliarProcedimento } from "../core/avaliacaoProcedimento";
 import { ordenarPropostas } from "../core/ordenacao";
@@ -65,7 +71,12 @@ describe("nomes dos pacotes de cada módulo", () => {
 
 describe("pacote dos perfis", () => {
   it("leva o Excel e o JSON", async () => {
-    const ficheiros = await ficheirosDosPerfis(PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, DESCRICAO_PROJETO_EXEMPLO);
+    const ficheiros = await ficheirosDosPerfis(
+      PERFIS_EXEMPLO,
+      NOME_PROJETO_EXEMPLO,
+      DESCRICAO_PROJETO_EXEMPLO,
+      JUSTIFICACAO_EXEMPLO,
+    );
     expect(nomes(ficheiros)).toEqual([
       "Modernizacao_dos_Sistemas_de_Informacao_Perfis.xlsx",
       "Modernizacao_dos_Sistemas_de_Informacao_Perfis.json",

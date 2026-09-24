@@ -231,6 +231,44 @@ describe("divisão por lotes", () => {
     expect(linhas.linhas[0][2].texto).toBe("200");
   });
 
+  it("com encargos a mais de um ano, leva as horas de cada ano antes do total", () => {
+    const config = normalizarLotesGuardados({
+      ...lotesComPerfis([
+        { numero: "1", perfis: [perfil({ id: "p1" })] },
+        { numero: "2", perfis: [perfil({ id: "p2", perfil: "Outro perfil" })] },
+      ]),
+      encargosPlurianuais: { ativo: true, anoInicio: 2027 },
+    });
+    config.lotes[0].perfis[0] = { ...config.lotes[0].perfis[0], nMinimoElementos: 2, horasPorAno: [100, 200, 300] };
+    config.lotes[1].perfis[0] = { ...config.lotes[1].perfis[0], nMinimoElementos: 1, horasPorAno: [10, 20, 30] };
+
+    const tabela = blocosDivisaoPorLotes(config).find((b) => b.tipo === "tabela")!;
+    expect(tabela.colunas.map((c) => c.titulo)).toEqual([
+      "Lote n.º",
+      "Descrição",
+      "Horas 2027",
+      "Horas 2028",
+      "Horas 2029",
+      "Total horas",
+      "Preço base (s/ IVA)",
+    ]);
+    // Cada ano conta os elementos do perfil, como o total.
+    expect(tabela.linhas[0].slice(2, 6).map((c) => c.texto)).toEqual(["200", "400", "600", "1200"]);
+    expect(tabela.linhas[1].slice(2, 6).map((c) => c.texto)).toEqual(["10", "20", "30", "60"]);
+    // E a linha do total soma os lotes ano a ano.
+    expect(tabela.linhas[2].slice(2, 6).map((c) => c.texto)).toEqual(["210", "420", "630", "1260"]);
+  });
+
+  it("num contrato de um ano, não repete o total numa coluna do ano", () => {
+    const config = normalizarLotesGuardados({
+      ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]),
+      encargosPlurianuais: { ativo: false, anoInicio: 2027 },
+    });
+
+    const tabela = blocosDivisaoPorLotes(config).find((b) => b.tipo === "tabela")!;
+    expect(tabela.colunas.map((c) => c.titulo)).toEqual(["Lote n.º", "Descrição", "Total horas", "Preço base (s/ IVA)"]);
+  });
+
   it("as tabelas de preço base deixam de levar subtotais por lote", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
     expect(texto).not.toContain("Subtotal do lote");

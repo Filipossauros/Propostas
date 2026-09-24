@@ -5,7 +5,7 @@
 // ordenação (Módulo 4) leva os da avaliação (Módulo 3). Ter a lista escrita uma
 // só vez é o que garante que o pacote maior não fica a divergir do menor.
 
-import type { LotesJSON, PerfilJSON } from "../core/types";
+import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "../core/types";
 import type { ResultadoProcedimento } from "../core/avaliacaoProcedimento";
 import type { Ordenacao } from "../core/ordenacao";
 import type { OrcamentoUnidade } from "../core/vistaGeral";
@@ -46,11 +46,15 @@ export async function ficheirosDosPerfis(
   perfis: PerfilJSON[],
   nomeProjeto: string,
   descricaoProjeto: string,
+  justificacao: JustificacaoProjeto,
 ): Promise<FicheiroDoPacote[]> {
   const base = nomeSeguro(nomeProjeto, "Projeto");
   return [
     { nome: `${base}_Perfis.xlsx`, conteudo: await gerarResumoPerfisBlob(perfis, nomeProjeto) },
-    { nome: `${base}_Perfis.json`, conteudo: comoJSON(perfisParaJSON(perfis, nomeProjeto, descricaoProjeto)) },
+    {
+      nome: `${base}_Perfis.json`,
+      conteudo: comoJSON(perfisParaJSON(perfis, nomeProjeto, descricaoProjeto, justificacao)),
+    },
   ];
 }
 
@@ -128,7 +132,10 @@ export async function ficheirosDasPecas(
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta(PASTA_DOS_RESUMOS, formularios),
-    ...emPasta("Perfis", await ficheirosDosPerfis(perfis, nomeProjeto, config.descricaoProjeto)),
+    ...emPasta(
+      "Perfis",
+      await ficheirosDosPerfis(perfis, nomeProjeto, config.descricaoProjeto, config.justificacao),
+    ),
   ];
 }
 

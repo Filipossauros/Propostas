@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DESCRICAO_PROJETO_EXEMPLO,
+  JUSTIFICACAO_EXEMPLO,
   LOTES_EXEMPLO,
   NOME_PROJETO_EXEMPLO,
   PERFIS_EXEMPLO,
@@ -21,6 +22,7 @@ const perfisExemplo = {
   tipo: "perfis",
   nomeProjeto: NOME_PROJETO_EXEMPLO,
   descricaoProjeto: DESCRICAO_PROJETO_EXEMPLO,
+  justificacao: JUSTIFICACAO_EXEMPLO,
   perfis: PERFIS_EXEMPLO,
 };
 

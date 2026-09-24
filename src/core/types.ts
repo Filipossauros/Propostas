@@ -51,6 +51,22 @@ export interface ItemPerfil {
 export type Atividade = ItemPerfil;
 
 /**
+ * Porque se contrata: o que o projeto traz, e o que se perde sem estes serviços.
+ *
+ * É do projeto e não de um perfil — as informações da SPMS dizem «O Projeto
+ * prevê os seguintes benefícios» —, e por isso escreve-se uma vez, no Módulo 1,
+ * e viaja com o nome e a descrição do projeto em cada ficheiro exportado.
+ *
+ * Duas listas, e não texto corrido, pela razão das outras listas da aplicação:
+ * cada benefício e cada risco é uma alínea autónoma do documento — a), b), … —
+ * e é a linha que a delimita, não a pontuação que o texto traga.
+ */
+export interface JustificacaoProjeto {
+  beneficios: ItemPerfil[];
+  riscos: ItemPerfil[];
+}
+
+/**
  * Atividade que fecha o conteúdo funcional de todos os perfis.
  *
  * Não se guarda no perfil nem se edita: é cláusula de fecho, e a mesma em todos
@@ -143,6 +159,8 @@ export interface PerfisJSON {
   nomeProjeto: string;
   /** Descrição do projeto — ver `LotesJSON.descricaoProjeto`. */
   descricaoProjeto: string;
+  /** Benefícios e riscos da não contratação — ver `JustificacaoProjeto`. */
+  justificacao: JustificacaoProjeto;
   perfis: PerfilJSON[];
 }
 
@@ -262,6 +280,12 @@ export interface LotesJSON {
    * documento, e um texto longo dava um período impossível de ler.
    */
   descricaoProjeto: string;
+  /**
+   * Benefícios do projeto e riscos da não contratação, escritos no Módulo 1.
+   * Entram no «Enquadramento» das informações da SPMS — ver
+   * `JustificacaoProjeto`.
+   */
+  justificacao: JustificacaoProjeto;
   /**
    * Nome do procedimento, apenas para registo. Só o nome — o número ainda não
    * é conhecido nesta fase (à semelhança do perfil e do próprio agrupamento).

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { PerfilJSON } from "../core/types";
+import type { JustificacaoProjeto, PerfilJSON } from "../core/types";
 import { ATIVIDADE_FIXA, ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES } from "../core/types";
 import {
   ErroImportacao,
@@ -10,7 +10,13 @@ import {
   validarNomeProjeto,
   validarPerfis,
 } from "../core/perfil";
-import { DESCRICAO_PROJETO_EXEMPLO, NOME_PROJETO_EXEMPLO, PERFIS_EXEMPLO } from "../core/exemplo";
+import {
+  DESCRICAO_PROJETO_EXEMPLO,
+  JUSTIFICACAO_EXEMPLO,
+  NOME_PROJETO_EXEMPLO,
+  PERFIS_EXEMPLO,
+} from "../core/exemplo";
+import { justificacaoInicial, temJustificacao, validarJustificacao } from "../core/justificacao";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDosPerfis, nomeDoPacoteDePerfis } from "../saidas/pacotes";
@@ -30,6 +36,11 @@ interface Props {
   onAlterarDescricaoProjeto: (descricao: string) => void;
   /** Aceita a descrição vinda de um ficheiro importado, se ainda não houver uma. */
   onAdotarDescricaoProjeto: (descricao: string) => void;
+  /** Benefícios do projeto e riscos da não contratação. */
+  justificacao: JustificacaoProjeto;
+  onAlterarJustificacao: (justificacao: JustificacaoProjeto) => void;
+  /** Aceita os benefícios e riscos vindos de um ficheiro, se ainda não houver nenhum escrito. */
+  onAdotarJustificacao: (justificacao: JustificacaoProjeto) => void;
   /** Número do lote a que cada perfil já está atribuído, indexado pelo id do perfil. */
   lotePorPerfilId: Record<string, string>;
   onIrParaLotes: () => void;
@@ -44,6 +55,9 @@ export function Modulo1({
   descricaoProjeto,
   onAlterarDescricaoProjeto,
   onAdotarDescricaoProjeto,
+  justificacao,
+  onAlterarJustificacao,
+  onAdotarJustificacao,
   lotePorPerfilId,
   onIrParaLotes,
 }: Props) {
@@ -56,6 +70,7 @@ export function Modulo1({
     ...validarNomeProjeto(nomeProjeto),
     ...validarDescricaoProjeto(descricaoProjeto),
     ...validarPerfis(perfis),
+    ...validarJustificacao(justificacao),
   ];
   const podeExportar = erros.length === 0;
 
@@ -106,7 +121,7 @@ export function Modulo1({
     try {
       await descarregarPacote(
         nomeDoPacoteDePerfis(nomeProjeto),
-        await ficheirosDosPerfis(perfis, nomeProjeto, descricaoProjeto),
+        await ficheirosDosPerfis(perfis, nomeProjeto, descricaoProjeto, justificacao),
       );
     } catch {
       setMensagem({ tipo: "erro", texto: "Não foi possível gerar o pacote dos perfis." });
@@ -120,6 +135,7 @@ export function Modulo1({
     const falhados: string[] = [];
     let nomeDeFicheiro = "";
     let descricaoDeFicheiro = "";
+    let justificacaoDeFicheiro = justificacaoInicial();
 
     for (const ficheiro of Array.from(ficheiros)) {
       try {
@@ -127,6 +143,7 @@ export function Modulo1({
         carregados.push(...importado.perfis);
         if (nomeDeFicheiro === "") nomeDeFicheiro = importado.nomeProjeto;
         if (descricaoDeFicheiro === "") descricaoDeFicheiro = importado.descricaoProjeto;
+        if (!temJustificacao(justificacaoDeFicheiro)) justificacaoDeFicheiro = importado.justificacao;
       } catch (erro) {
         falhados.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
@@ -134,6 +151,7 @@ export function Modulo1({
 
     onAdotarNomeProjeto(nomeDeFicheiro);
     onAdotarDescricaoProjeto(descricaoDeFicheiro);
+    onAdotarJustificacao(justificacaoDeFicheiro);
 
     if (carregados.length > 0) {
       // Um perfil reimportado substitui a versão em memória; os restantes juntam-se.
@@ -156,6 +174,7 @@ export function Modulo1({
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
     onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
     onAlterarDescricaoProjeto(DESCRICAO_PROJETO_EXEMPLO);
+    onAlterarJustificacao(structuredClone(JUSTIFICACAO_EXEMPLO));
     setIdEmEdicao(null);
     setMensagem({ tipo: "sucesso", texto: `${PERFIS_EXEMPLO.length} perfis de exemplo carregados.` });
   }
@@ -190,6 +209,7 @@ export function Modulo1({
     // preenchido é o género de resto que acaba dentro de uma peça.
     onAlterarNomeProjeto("");
     onAlterarDescricaoProjeto("");
+    onAlterarJustificacao(justificacaoInicial());
     setIdEmEdicao(null);
     setMensagem({ tipo: "sucesso", texto: "Perfis e identificação do projeto repostos." });
   }
@@ -372,6 +392,38 @@ export function Modulo1({
           />
         </>
       )}
+
+      {/* Do projeto, e não do perfil em edição: ficam à vista mesmo sem perfil
+          escolhido, e são os mesmos seja qual for o perfil aberto em cima. */}
+      <ListaItensEditor
+        titulo="Benefícios do projeto"
+        nota={
+          "Obrigatório. Um benefício por linha. Saem no «Enquadramento» das informações da SPMS, como alíneas " +
+          "a), b), c)…, a seguir à frase do contrato programa com a ACSS."
+        }
+        nomeItem="benefício"
+        rotuloColuna="Benefício"
+        placeholder="ex.: Redução do tempo de registo clínico, com uma única aplicação em vez de várias"
+        textoVazio="Ainda não há benefícios. Acrescente o primeiro."
+        rotuloAdicionar="+ Adicionar benefício"
+        itens={justificacao.beneficios}
+        onChange={(beneficios) => onAlterarJustificacao({ ...justificacao, beneficios })}
+      />
+
+      <ListaItensEditor
+        titulo="Riscos da não contratação"
+        nota={
+          "Obrigatório. Um risco por linha: o que acontece se estes serviços não forem contratados. Saem no " +
+          "«Enquadramento» das informações da SPMS, a seguir aos benefícios, também como alíneas."
+        }
+        nomeItem="risco"
+        rotuloColuna="Risco"
+        placeholder="ex.: Interrupção do suporte às aplicações em fim de vida"
+        textoVazio="Ainda não há riscos. Acrescente o primeiro."
+        rotuloAdicionar="+ Adicionar risco"
+        itens={justificacao.riscos}
+        onChange={(riscos) => onAlterarJustificacao({ ...justificacao, riscos })}
+      />
 
       {erros.length > 0 && (
         <section className="painel painel-erros">

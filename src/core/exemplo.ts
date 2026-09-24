@@ -4,7 +4,16 @@
 // gerado a partir daqui (`npm run exemplos`), e os botões "exemplo" da interface
 // leem esta constante diretamente — sem qualquer pedido de rede.
 
-import type { Bloco, Declaracao, LotesJSON, MesAno, PerfilEmLote, PerfilJSON, Requisito } from "./types";
+import type {
+  Bloco,
+  Declaracao,
+  JustificacaoProjeto,
+  LotesJSON,
+  MesAno,
+  PerfilEmLote,
+  PerfilJSON,
+  Requisito,
+} from "./types";
 import { N_BLOCOS_PADRAO, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
 
@@ -80,11 +89,26 @@ export const DESCRICAO_PROJETO_EXEMPLO =
   "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, " +
   "assegurando a continuidade do serviço durante a migração";
 
+/** Benefícios e riscos do projeto de exemplo, com ids fixos como os perfis. */
+export const JUSTIFICACAO_EXEMPLO: JustificacaoProjeto = {
+  beneficios: [
+    "Redução do tempo de registo clínico, com uma única aplicação em vez de várias por instituição",
+    "Partilha de informação clínica entre instituições, sem reintrodução manual de dados",
+    "Diminuição dos custos de manutenção associados a aplicações em fim de vida",
+  ].map((designacao, i) => ({ id: `beneficio-${i + 1}`, designacao })),
+  riscos: [
+    "Interrupção do suporte às aplicações em fim de vida, com impacto na continuidade da prestação de cuidados",
+    "Exposição a vulnerabilidades de segurança sem correção disponível",
+    "Perda do conhecimento acumulado pelas equipas, por falta de continuidade dos recursos",
+  ].map((designacao, i) => ({ id: `risco-${i + 1}`, designacao })),
+};
+
 export const LOTES_EXEMPLO: LotesJSON = {
   schemaVersion: SCHEMA_VERSION_ATUAL,
   tipo: "lotes",
   nomeProjeto: NOME_PROJETO_EXEMPLO,
   descricaoProjeto: DESCRICAO_PROJETO_EXEMPLO,
+  justificacao: JUSTIFICACAO_EXEMPLO,
   nomeProcedimento: "Aquisição de Serviços de Desenvolvimento e Manutenção Aplicacional",
   taxaIva: TAXA_IVA_PADRAO,
   nBlocos: N_BLOCOS_PADRAO,

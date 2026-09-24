@@ -13,6 +13,7 @@ import {
   formatarMoeda,
   formatarNumero,
   horasContratadas,
+  horasPorAnoDe,
   linhasPlurianuais,
   linhasTabelaValores,
   taxaIva,
@@ -22,6 +23,7 @@ import {
 } from "./lotes";
 import { celula, paragrafoComPartes, type BlocoDocumento, type Documento } from "./documento";
 import { anexoDosResumos, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "./resumoCurricular";
+import { DIAS_DE_FERIAS } from "./horasUteis";
 
 const DIREITA = "direita" as const;
 
@@ -218,7 +220,10 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
       tipo: "paragrafo",
       texto:
         "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de " +
-        "cada ano o produto do número de elementos pelas horas desse ano e pelo preço unitário por hora.",
+        "cada ano o produto do número de elementos pelas horas úteis desse ano e pelo preço unitário por hora. " +
+        // O mesmo número com que a aplicação apura as horas úteis de cada ano:
+        // uma constante só, para a frase não dizer uma coisa e a conta outra.
+        `Foi ainda considerado um total de ${DIAS_DE_FERIAS} dias de férias.`,
     },
     {
       tipo: "tabela",
@@ -256,33 +261,53 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
  */
 export function blocosDivisaoPorLotes(config: LotesJSON): BlocoDocumento[] {
   const plurianual = config.encargosPlurianuais.ativo;
+  // As horas de cada ano só se mostram quando o contrato se estende por vários:
+  // num contrato de um ano, a coluna do ano repetia a do total.
+  const anos = plurianual ? anosPlurianuais(config.encargosPlurianuais.anoInicio) : [];
+  const porAno = (lote: LotesJSON["lotes"][number]) => (plurianual ? horasDoLotePorAno(lote) : []);
 
   const linhas = config.lotes.map((lote) => [
     celula(lote.numero, DIREITA),
     celula(lote.designacao),
+    ...porAno(lote).map((horas) => celula(formatarNumero(horas), DIREITA)),
     celula(formatarNumero(horasDoLote(lote, plurianual)), DIREITA),
     celula(formatarMoeda(totalLote(lote, 0, plurianual).semIva), DIREITA),
   ]);
 
   const total = totalProcedimento(config);
+  const totaisPorAno = anos.map((_, i) => config.lotes.reduce((soma, lote) => soma + porAno(lote)[i], 0));
   linhas.push([
     celula("", DIREITA, true),
     celula("Total", undefined, true),
+    ...totaisPorAno.map((horas) => celula(formatarNumero(horas), DIREITA, true)),
     celula(formatarNumero(config.lotes.reduce((soma, l) => soma + horasDoLote(l, plurianual), 0)), DIREITA, true),
     celula(formatarMoeda(total.semIva), DIREITA, true),
   ]);
+
+  const colunas = plurianual
+    ? [
+        { titulo: "Lote n.º", alinhamento: DIREITA, peso: 8 },
+        { titulo: "Descrição", peso: 27 },
+        ...anos.map((ano) => ({ titulo: `Horas ${ano}`, alinhamento: DIREITA, peso: 12 })),
+        { titulo: "Total horas", alinhamento: DIREITA, peso: 13 },
+        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 16 },
+      ]
+    : [
+        { titulo: "Lote n.º", alinhamento: DIREITA, peso: 10 },
+        { titulo: "Descrição", peso: 46 },
+        { titulo: "Total horas", alinhamento: DIREITA, peso: 18 },
+        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 26 },
+      ];
 
   return [
     { tipo: "paragrafo", texto: "A determinação dos lotes para efeito de adjudicação é a seguinte:" },
     {
       tipo: "tabela",
-      legenda: "As horas de cada lote são as de todos os elementos que o compõem; o preço base é sem IVA.",
-      colunas: [
-        { titulo: "Lote n.º", alinhamento: DIREITA, peso: 10 },
-        { titulo: "Descrição", peso: 46 },
-        { titulo: "Total horas", alinhamento: DIREITA, peso: 18 },
-        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 26 },
-      ],
+      legenda: plurianual
+        ? "As horas de cada lote são as de todos os elementos que o compõem, por ano económico e no total; o " +
+          "preço base é sem IVA."
+        : "As horas de cada lote são as de todos os elementos que o compõem; o preço base é sem IVA.",
+      colunas,
       linhas,
     },
     // A regra da preferência vem logo a seguir ao quadro dos lotes: é ali que
@@ -307,6 +332,14 @@ const REGRAS_DE_PREFERENCIA = [
 
 function comoParagrafo(texto: string): BlocoDocumento {
   return { tipo: "paragrafo", texto };
+}
+
+/** As horas de um lote em cada ano do contrato, pela ordem de `anosPlurianuais`. */
+function horasDoLotePorAno(lote: LotesJSON["lotes"][number]): number[] {
+  return lote.perfis.reduce(
+    (soma, e) => soma.map((valor, i) => valor + e.nMinimoElementos * horasPorAnoDe(e, true)[i]),
+    anosPlurianuais(0).map(() => 0),
+  );
 }
 
 /** As horas de um lote: as de cada perfil, vezes os elementos que o perfil pede. */
