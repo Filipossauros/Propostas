@@ -104,6 +104,23 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(xml).toContain("[descrição do projeto]");
   });
 
+  it("já não leva o ponto dos procedimentos do ano corrente/transato", async () => {
+    const texto = await textoDoDocumento(exemplo());
+
+    expect(texto).not.toContain("Encargos com o projeto planeados para o ano corrente/transato");
+    expect(texto).not.toContain("Para assegurar estes serviços foram desenvolvidos os seguintes procedimentos:");
+    expect(texto).not.toContain("[tabela dos procedimentos do ano corrente/transato");
+    expect(texto).not.toContain("2.3. ");
+  });
+
+  it("«benefícios» e «riscos» saem a negrito na frase que anuncia cada lista", async () => {
+    const xml = await xmlDoDocumento(exemplo());
+
+    for (const palavra of ["benefícios", "riscos"]) {
+      expect(xml).toMatch(new RegExp(`<w:r><w:rPr>(?:(?!</w:rPr>).)*<w:b/>(?:(?!</w:rPr>).)*</w:rPr><w:t[^>]*>${palavra}</w:t></w:r>`));
+    }
+  });
+
   it("a seguir ao contrato programa, enumera os benefícios e os riscos da não contratação", async () => {
     const texto = await textoDoDocumento(exemplo());
     const acss = texto.indexOf("integrado no contrato programa com a ACSS.");
@@ -149,7 +166,7 @@ describe("gerarPedidoPlurianualBlob", () => {
     const texto = await textoDoDocumento(exemplo());
 
     // O exemplo começa em 2026.
-    expect(texto).toContain("2.2. Encargos previstos para o triénio 2026-2028");
+    expect(texto).toContain("2.1. Encargos previstos para o triénio 2026-2028");
     expect(texto).toContain("do início do contrato, 2026, e aos dois anos económicos seguintes, 2027 e 2028");
     expect(texto).toMatch(/O preço base do procedimento é de .+, sem IVA, correspondendo a .+ com IVA/);
   });
@@ -253,12 +270,12 @@ describe("gerarPedidoPlurianualBlob", () => {
 
   it("a divisão por lotes fecha a análise, nos dois documentos", async () => {
     const doPedido = await textoDoDocumento(exemplo());
-    expect(doPedido).toContain("2.3. Divisão por lotes");
+    expect(doPedido).toContain("2.2. Divisão por lotes");
     expect(doPedido).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
     expect(doPedido.indexOf("O preço base do procedimento é de")).toBeLessThan(
-      doPedido.indexOf("2.3. Divisão por lotes"),
+      doPedido.indexOf("2.2. Divisão por lotes"),
     );
-    expect(doPedido.indexOf("2.3. Divisão por lotes")).toBeLessThan(doPedido.indexOf("III – Conclusão"));
+    expect(doPedido.indexOf("2.2. Divisão por lotes")).toBeLessThan(doPedido.indexOf("III – Conclusão"));
 
     const daManifestacao = await textoDaManifestacao(semPlurianual());
     expect(daManifestacao).toContain("2.2. Divisão por lotes");

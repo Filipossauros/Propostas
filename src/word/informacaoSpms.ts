@@ -636,14 +636,23 @@ function escolha({ opcao, sim, sufixo }: { opcao: string; sim: boolean; sufixo?:
 /**
  * Uma frase que anuncia uma enumeração, e as alíneas a seguir.
  *
+ * A frase vem em três partes — antes, a palavra que diz o que se enumera, e o
+ * fim — para essa palavra sair a negrito: é por ela que se encontra a lista ao
+ * folhear o documento.
+ *
  * Sem nenhuma entrada escrita — o Módulo 1 não o deixa, mas um ficheiro antigo
  * pode chegar assim — fica o espaço a vermelho no lugar da lista, como os
  * outros campos por preencher do documento, em vez de uma frase que termina
  * em dois pontos e não diz mais nada.
  */
-function enumeracao(frase: string, itens: ItemPerfil[], falta: string): string[] {
+function enumeracao(
+  [antes, destaque, fim]: [string, string, string],
+  itens: ItemPerfil[],
+  falta: string,
+): string[] {
+  const frase = [run(antes), run(destaque, { negrito: true }), run(fim)];
   const alineas = alineasDe(itens);
-  if (alineas.length === 0) return [paragrafo([run(`${frase} `), marcador(falta)])];
+  if (alineas.length === 0) return [paragrafo([...frase, run(" "), marcador(falta)])];
   return [
     paragrafo(frase, { depois: 60 }),
     ...alineas.map((alinea) => itemDeLista(alinea.marca, alinea.texto)),
@@ -712,10 +721,16 @@ export function corpoDaInformacao(
       run(" integrado no contrato programa com a ACSS."),
     ]),
   );
-  p.push(...enumeracao("O Projeto prevê os seguintes benefícios:", config.justificacao.beneficios, "benefícios"));
   p.push(
     ...enumeracao(
-      "A não contratação destes serviços acarreta os seguintes riscos:",
+      ["O Projeto prevê os seguintes ", "benefícios", ":"],
+      config.justificacao.beneficios,
+      "benefícios",
+    ),
+  );
+  p.push(
+    ...enumeracao(
+      ["A não contratação destes serviços acarreta os seguintes ", "riscos", ":"],
       config.justificacao.riscos,
       "riscos da não contratação",
     ),
@@ -724,8 +739,6 @@ export function corpoDaInformacao(
   p.push(titulo("II – Análise"));
 
   if (manifestacao) {
-    // Sem encargos plurianuais não há histórico de procedimentos a enquadrar: a
-    // análise é só o que se vai gastar, e passa a ser o ponto 2.1.
     p.push(titulo("2.1. Encargos previstos", 2));
     p.push(
       paragrafo(
@@ -738,19 +751,7 @@ export function corpoDaInformacao(
     );
     p.push(tabelaDoBloco(tabelaPrecoBase(config)));
   } else {
-    p.push(titulo("2.1. Encargos com o projeto planeados para o ano corrente/transato", 2));
-    p.push(paragrafo("Para assegurar estes serviços foram desenvolvidos os seguintes procedimentos:"));
-    p.push(
-      paragrafo(
-        [
-          marcador(
-            "tabela dos procedimentos do ano corrente/transato: n.º de procedimento, objeto, adjudicatário e valor",
-          ),
-        ],
-        { jc: "left" },
-      ),
-    );
-    p.push(titulo(`2.2. Encargos previstos para o triénio ${trienio}`, 2));
+    p.push(titulo(`2.1. Encargos previstos para o triénio ${trienio}`, 2));
 
     // Os parágrafos de enquadramento e a tabela são os mesmos que a aplicação
     // produz no seu próprio Word: uma fonte só, para não divergirem.
@@ -790,7 +791,7 @@ export function corpoDaInformacao(
 
   // A divisão por lotes é o que se adjudica: fecha a análise, depois de o preço
   // base do procedimento estar fixado.
-  p.push(titulo(manifestacao ? "2.2. Divisão por lotes" : "2.3. Divisão por lotes", 2));
+  p.push(titulo("2.2. Divisão por lotes", 2));
   for (const bloco of blocosDivisaoPorLotes(config)) p.push(renderizarNoCorpo(bloco));
 
   p.push(titulo("III – Conclusão"));
