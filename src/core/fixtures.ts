@@ -117,6 +117,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: 3,
     umLotePorConcorrente: false,
+    contratoProgramaAcss: true,
     postoTrabalho: postoTrabalhoInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
     // Respondido: o agrupamento das fixtures representa um procedimento

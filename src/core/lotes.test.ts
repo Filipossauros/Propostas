@@ -316,6 +316,7 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     const config = lotesExemplo();
     const incompleto = {
       ...config,
+      contratoProgramaAcss: null,
       postoTrabalho: { ...config.postoTrabalho, locais: [] },
       eavalia: informacaoEavaliaInicial(),
     };
@@ -323,6 +324,7 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     expect(validarLotes(config)).toHaveLength(0);
     // Pela ordem por que os painéis aparecem no Módulo 2.
     expect(validarLotes(incompleto).map((e) => e.campo)).toEqual([
+      "contratoProgramaAcss",
       "postoTrabalho.locais",
       "eavalia.iap",
       "eavalia.sms",
@@ -331,6 +333,23 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
       "eavalia.usabilidade",
       "eavalia.idiomas",
     ]);
+  });
+});
+
+describe("contrato programa com a ACSS", () => {
+  it("é de escolha obrigatória, e um ficheiro anterior abre sem ela", () => {
+    const { contratoProgramaAcss: _sem, ...antigo } = lotesExemplo();
+    const lido = importarLotesJSON(JSON.stringify(antigo));
+
+    expect(lido.contratoProgramaAcss).toBeNull();
+    expect(validarLotes(lido).map((e) => e.campo)).toContain("contratoProgramaAcss");
+  });
+
+  it("guarda o «não» como escolha, e não como falta dela", () => {
+    const config = { ...lotesExemplo(), contratoProgramaAcss: false };
+
+    expect(importarLotesJSON(lotesParaJSON(config)).contratoProgramaAcss).toBe(false);
+    expect(validarLotes(config)).toHaveLength(0);
   });
 });
 

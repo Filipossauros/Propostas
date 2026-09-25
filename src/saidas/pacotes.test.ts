@@ -63,7 +63,7 @@ describe("nomeDoPacote", () => {
 describe("nomes dos pacotes de cada módulo", () => {
   it("cada módulo tem o seu assunto", () => {
     expect(nomeDoPacoteDePerfis("SClínico", QUANDO)).toBe("SClinico_Perfis_26082026.zip");
-    expect(nomeDoPacoteDePecas("SClínico", QUANDO)).toBe("SClinico_Pecas_do_Procedimento_26082026.zip");
+    expect(nomeDoPacoteDePecas("SClínico", QUANDO)).toBe("SClinico_Anexo_Tecnico_26082026.zip");
     expect(nomeDoPacoteDeAvaliacao("SClínico", QUANDO)).toBe("SClinico_Analise_de_Propostas_26082026.zip");
     expect(nomeDoPacoteDeOrdenacao("SClínico", QUANDO)).toBe("SClinico_Ordenacao_de_Propostas_26082026.zip");
   });

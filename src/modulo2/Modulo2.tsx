@@ -230,7 +230,7 @@ export function Modulo2({
   }
 
   /**
-   * Todas as peças do procedimento num pacote só.
+   * O Anexo Técnico: todas as peças do procedimento num pacote só.
    *
    * Os dois documentos Word — o das regras, e a informação formal que o
    * procedimento pede —, o pedido eAvalia, o JSON dos lotes, um formulário
@@ -249,7 +249,7 @@ export function Modulo2({
     } catch (erro) {
       setMensagem({
         tipo: "erro",
-        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar as peças do procedimento.",
+        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar o Anexo Técnico.",
       });
     } finally {
       setAGerar(false);
@@ -335,6 +335,28 @@ export function Modulo2({
           O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO.trim()}» seguido do nome do projeto, e altera-se
           alterando esse nome no Módulo 1. O n.º de projetos é o mesmo em todos os formulários de declaração. Todos
           os preços unitários são introduzidos sem IVA.
+        </p>
+
+        <label className="campo-escolha">
+          <span className="rotulo">Integração no contrato programa com a ACSS</span>
+          <select
+            value={config.contratoProgramaAcss === null ? "" : config.contratoProgramaAcss ? "sim" : "nao"}
+            aria-invalid={config.contratoProgramaAcss === null}
+            onChange={(e) =>
+              onAlterarConfig((atual) => ({
+                ...atual,
+                contratoProgramaAcss: e.target.value === "" ? null : e.target.value === "sim",
+              }))
+            }
+          >
+            <option value="">— por escolher —</option>
+            <option value="sim">Está integrado</option>
+            <option value="nao">Não está integrado</option>
+          </select>
+        </label>
+        <p className="ajuda">
+          Obrigatório. Completa, no enquadramento da informação, a frase «O Projeto está / não está integrado no
+          contrato programa com a ACSS».
         </p>
 
         <label className="campo-opcao">
@@ -565,7 +587,7 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Peças do procedimento</h3>
+          <h3>Anexo Técnico</h3>
         </header>
         <div className="acoes">
           <button
@@ -574,7 +596,7 @@ export function Modulo2({
             onClick={() => void descarregarPecas()}
             disabled={aGerar || !podeExportar}
           >
-            {aGerar ? "A gerar…" : "Descarregar peças do procedimento (ZIP)"}
+            {aGerar ? "A gerar…" : "Descarregar Anexo Técnico (ZIP)"}
           </button>
         </div>
         <p className="ajuda">

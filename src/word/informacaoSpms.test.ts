@@ -9,6 +9,7 @@ import {
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { normalizarLotesGuardados } from "../core/lotes";
 import type { LotesJSON } from "../core/types";
+import { horasUteis } from "../core/horasUteis";
 
 function exemplo(alteracoes: Partial<LotesJSON> = {}): LotesJSON {
   return normalizarLotesGuardados({ ...LOTES_EXEMPLO, ...alteracoes });
@@ -153,13 +154,33 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(xml).toContain("[riscos da não contratação]");
   });
 
-  it("a repartição por anos conta as horas úteis e as férias", async () => {
+  it("com horas escritas à mão, a repartição fala das horas indicadas, sem lhes atribuir cálculo", async () => {
     const texto = await textoDoDocumento(exemplo());
 
     expect(texto).toContain(
-      "sendo o encargo de cada ano o produto do número de elementos pelas horas úteis desse ano e pelo preço " +
-        "unitário por hora. Foi ainda considerado um total de 22 dias de férias.",
+      "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de cada " +
+        "ano o produto do número de elementos pelas horas úteis indicadas e pelo preço unitário por hora.",
     );
+    expect(texto).not.toContain("dias de férias");
+  });
+
+  it("com as horas úteis de cada ano, a repartição diz como se apuram e quanto dão", async () => {
+    const config = exemplo();
+    const inicio = config.encargosPlurianuais.anoInicio;
+    const anos = [inicio, inicio + 1, inicio + 2].map((ano) => horasUteis(ano));
+    config.lotes = config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada) => ({ ...entrada, horasPorAno: anos })),
+    }));
+    const texto = await textoDoDocumento(config);
+
+    expect(texto).toContain(
+      "correspondem às horas úteis de cada ano: os dias de semana do ano, deduzidos os feriados nacionais que " +
+        "calhem em dia útil, 22 dias de férias e 1 dia de feriado municipal, multiplicados por 8 horas de trabalho " +
+        `diário — ${anos[0]} horas em ${inicio}, ${anos[1]} horas em ${inicio + 1} e ${anos[2]} horas em ${inicio + 2}.`,
+    );
+    expect(texto).toContain("pelas horas úteis desse ano e pelo preço unitário por hora.");
+    expect(texto).not.toContain("horas úteis indicadas");
   });
 
   it("leva os três anos económicos e o preço base do procedimento", async () => {
@@ -327,13 +348,59 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toContain("Regras de apuramento da experiência");
   });
 
+  it("fecha sempre com o anexo da folha do alinhamento do eAvalia", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const anexo = texto.indexOf("VI – Alinhamento Tecnológico (eAvalia)");
+
+    expect(anexo).toBeGreaterThan(texto.indexOf("V – "));
+    expect(texto.slice(anexo)).toContain("Reprodução da folha «Alinhamento Tecnológico» do pedido de parecer prévio");
+    // Nenhum outro anexo depois dele.
+    expect(texto.slice(anexo + 1)).not.toMatch(/VI?I – /);
+
+    const manifestacao = await textoDaManifestacao(semPlurianual());
+    expect(manifestacao).toContain("VI – Alinhamento Tecnológico (eAvalia)");
+  });
+
+  it("fora do browser, a folha sai em tabela: as secções e as respostas do eAvalia", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const anexo = texto.slice(texto.indexOf("VI – Alinhamento Tecnológico (eAvalia)"));
+
+    expect(anexo).toContain("a. Plataforma de Interoperabilidade da Administração Pública");
+    expect(anexo).toMatch(/Reutilização de dados disponíveis[^]*?Já cumpre/);
+    expect(anexo).toContain("Selo Prata");
+    // O título da folha não é uma medida.
+    expect(anexo).not.toContain("Guidelines Tecnológicas");
+  });
+
+  it("a secção final do documento continua a ser a do modelo, de pé", async () => {
+    const xml = await xmlDoDocumento(exemplo());
+
+    expect(xml).toMatch(/<w:pgSz w:w="11906" w:h="16838"\/>[^]*<\/w:sectPr><\/w:body>/);
+    expect(xml.trimEnd().endsWith("</w:document>")).toBe(true);
+  });
+
   it("assinala a vermelho o que a aplicação não sabe", async () => {
     const xml = await xmlDoDocumento(exemplo());
 
-    for (const marca of ["[n.º do documento]", "[está / não está]"]) {
-      expect(xml).toContain(marca);
-    }
+    expect(xml).toContain("[n.º do documento]");
     expect(xml).toContain('<w:color w:val="C00000"/>');
+  });
+
+  it("escreve a integração no contrato programa com a ACSS que foi escolhida", async () => {
+    const sim = await textoDoDocumento(exemplo({ contratoProgramaAcss: true }));
+    expect(sim).toContain("O Projeto está integrado no contrato programa com a ACSS.");
+    expect(sim).not.toContain("[está / não está]");
+
+    const nao = await textoDoDocumento(exemplo({ contratoProgramaAcss: false }));
+    expect(nao).toContain("O Projeto não está integrado no contrato programa com a ACSS.");
+
+    const manifestacao = await textoDaManifestacao({ ...semPlurianual(), contratoProgramaAcss: false });
+    expect(manifestacao).toContain("O Projeto não está integrado no contrato programa com a ACSS.");
+  });
+
+  it("sem escolha — ficheiro anterior a ela —, deixa o marcador a vermelho", async () => {
+    const xml = await xmlDoDocumento(exemplo({ contratoProgramaAcss: null }));
+    expect(xml).toContain("[está / não está]");
   });
 
   it("não deixa campos de formulário nem texto de marcador do Word", async () => {

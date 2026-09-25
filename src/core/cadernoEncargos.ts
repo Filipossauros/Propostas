@@ -23,7 +23,7 @@ import {
 } from "./lotes";
 import { celula, paragrafoComPartes, type BlocoDocumento, type Documento } from "./documento";
 import { anexoDosResumos, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "./resumoCurricular";
-import { DIAS_DE_FERIAS } from "./horasUteis";
+import { DIAS_DE_FERIADO_MUNICIPAL, DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteis } from "./horasUteis";
 
 const DIREITA = "direita" as const;
 
@@ -165,6 +165,57 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
 
 /** Preço base e requisitos por lote e perfil. */
 /**
+ * Se as horas de todos os perfis, em todos os anos, são as horas úteis desse
+ * ano — as que o botão «Preencher com as horas úteis» do Módulo 2 escreve.
+ *
+ * Basta um perfil corrigido à mão (a meio tempo, a entrar a meio do contrato)
+ * para já não serem, e a frase do documento não pode afirmar um cálculo que as
+ * horas escritas não seguem. Sem perfis também não: não há horas a descrever.
+ */
+export function horasSaoAsUteis(config: LotesJSON, anos: number[]): boolean {
+  const entradas = config.lotes.flatMap((lote) => lote.perfis);
+  return (
+    entradas.length > 0 &&
+    entradas.every((entrada) => horasPorAnoDe(entrada, true).every((horas, i) => horas === horasUteis(anos[i])))
+  );
+}
+
+function dias(n: number): string {
+  return `${n} ${n === 1 ? "dia" : "dias"}`;
+}
+
+/** «a, b e c». */
+function enumerar(itens: string[]): string {
+  return itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+}
+
+/**
+ * Como se repartem as horas pelos anos, e de onde vêm.
+ *
+ * Quando são as horas úteis de cada ano, a frase diz como se apuram, com as
+ * mesmas constantes com que a aplicação as conta — para a frase e a conta não
+ * poderem divergir — e os números a que chegam. Quando não são, fica a
+ * formulação genérica: as horas são as indicadas, sem lhes atribuir um cálculo.
+ */
+function fraseDaReparticao(config: LotesJSON, anos: number[]): string {
+  if (!horasSaoAsUteis(config, anos)) {
+    return (
+      "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de " +
+      "cada ano o produto do número de elementos pelas horas úteis indicadas e pelo preço unitário por hora."
+    );
+  }
+
+  const porAno = enumerar(anos.map((ano) => `${formatarNumero(horasUteis(ano))} horas em ${ano}`));
+  return (
+    "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados e correspondem às " +
+    "horas úteis de cada ano: os dias de semana do ano, deduzidos os feriados nacionais que calhem em dia útil, " +
+    `${dias(DIAS_DE_FERIAS)} de férias e ${dias(DIAS_DE_FERIADO_MUNICIPAL)} de feriado municipal, multiplicados ` +
+    `por ${HORAS_POR_DIA} horas de trabalho diário — ${porAno}. O encargo de cada ano é o produto do número de ` +
+    "elementos pelas horas úteis desse ano e pelo preço unitário por hora."
+  );
+}
+
+/**
  * Pedido de autorização para assumir encargos em anos económicos futuros.
  *
  * Só sai quando o procedimento o leva. A tabela repete a do Módulo 2 linha por
@@ -218,12 +269,7 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
     },
     {
       tipo: "paragrafo",
-      texto:
-        "As horas contratadas para cada perfil repartem-se pelos anos económicos indicados, sendo o encargo de " +
-        "cada ano o produto do número de elementos pelas horas úteis desse ano e pelo preço unitário por hora. " +
-        // O mesmo número com que a aplicação apura as horas úteis de cada ano:
-        // uma constante só, para a frase não dizer uma coisa e a conta outra.
-        `Foi ainda considerado um total de ${DIAS_DE_FERIAS} dias de férias.`,
+      texto: fraseDaReparticao(config, anos),
     },
     {
       tipo: "tabela",

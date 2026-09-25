@@ -63,7 +63,7 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
 }
 
 // --------------------------------------------------------------------------
-// Módulo 2 — peças do procedimento
+// Módulo 2 — Anexo Técnico (as peças do procedimento)
 // --------------------------------------------------------------------------
 
 /**
@@ -140,7 +140,8 @@ export async function ficheirosDasPecas(
 }
 
 export function nomeDoPacoteDePecas(nomeProjeto: string, quando?: Date): string {
-  return nomeDoPacote(nomeProjeto, "Pecas_do_Procedimento", quando);
+  // O pacote chama-se como o painel que o gera no Módulo 2.
+  return nomeDoPacote(nomeProjeto, "Anexo_Tecnico", quando);
 }
 
 // --------------------------------------------------------------------------

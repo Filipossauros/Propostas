@@ -32,6 +32,9 @@ import {
 import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
 import { anexoDosResumos, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "../core/resumoCurricular";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
+import { gerarEavaliaBlob } from "../excel/eavalia";
+import { lerFolhaDoAlinhamento, type CelulaDaFolha, type FolhaDesenhavel } from "../excel/folhaDoAlinhamento";
+import { paginasDoAlinhamento } from "../excel/imagemDoAlinhamento";
 
 // --------------------------------------------------------------------------
 // Tipografia
@@ -714,10 +717,14 @@ export function corpoDaInformacao(
       run("."),
     ]),
   );
+  // A escolha é feita no Módulo 2; um ficheiro anterior a ela chega sem
+  // resposta, e aí fica o marcador a vermelho em vez de uma das duas presumida.
   p.push(
     paragrafo([
       run("O Projeto "),
-      marcador("está / não está"),
+      config.contratoProgramaAcss === null
+        ? marcador("está / não está")
+        : run(config.contratoProgramaAcss ? "está" : "não está"),
       run(" integrado no contrato programa com a ACSS."),
     ]),
   );
@@ -860,17 +867,30 @@ const DXA_POR_PIXEL = 1440 / 96;
 const LARGURA_EM_PAISAGEM = 16838 - 1701 - 849;
 const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417 - 240;
 
+/** A4 de pé, menos as margens do modelo, com a mesma folga à altura. */
+const LARGURA_EM_RETRATO = 11906 - 1701 - 849;
+const ALTURA_EM_RETRATO = 16838 - 1970 - 1417 - 240;
+/** O que o título do anexo e a frase de abertura ocupam no alto da primeira página. */
+const RESERVA_DO_TITULO = 1800;
+
 const CAMINHO_RELACOES = "word/_rels/document.xml.rels";
 const TIPO_IMAGEM = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
 
-/** Uma página do anexo: a folha desenhada, centrada e à escala comum a todas. */
-function paginaDaFolha(imagem: ImagemDaFolha, indice: number, relacao: string, escala: number): string {
-  // Para baixo: meio píxel a mais e a folha deixa de caber na altura da página.
-  const cx = Math.floor(imagem.largura * escala) * EMU_POR_PIXEL;
-  const cy = Math.floor(imagem.altura * escala) * EMU_POR_PIXEL;
-  const nome = `Resumo Curricular — ${imagem.perfil}`;
-  const id = indice + 1;
+interface ImagemNaPagina {
+  /** Em EMU, já à escala a que entra. */
+  cx: number;
+  cy: number;
+  nome: string;
+  /** Único no documento: é o `id` do `docPr`. */
+  id: number;
+  relacao: string;
+  novaPagina: boolean;
+  /** O `sectPr` da secção que este parágrafo fecha, quando é o último dela. */
+  fechaSeccao?: string;
+}
 
+/** Um parágrafo com uma imagem só, centrada. */
+function paragrafoDeImagem({ cx, cy, nome, id, relacao, novaPagina, fechaSeccao = "" }: ImagemNaPagina): string {
   const desenho =
     "<w:drawing>" +
     '<wp:inline distT="0" distB="0" distL="0" distR="0">' +
@@ -895,13 +915,28 @@ function paginaDaFolha(imagem: ImagemDaFolha, indice: number, relacao: string, e
   // toda, essa linha vazia já não cabia — ia para a página seguinte e levava a
   // quebra com ela, deixando uma folha em branco pelo meio. Pela mesma razão a
   // entrelinha é fixada em simples: a do estilo é 1,08 e chegava para a imagem
-  // deixar de caber.
-  const quebra = indice === 0 ? "" : "<w:pageBreakBefore/>";
+  // deixar de caber. E o fecho da secção vai também aqui, e não num parágrafo
+  // vazio a seguir, que numa página cheia saltava para uma folha em branco.
+  const quebra = novaPagina ? "<w:pageBreakBefore/>" : "";
   return (
     `<w:p><w:pPr><w:pStyle w:val="Normal0"/>${quebra}` +
     '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>' +
-    `<w:jc w:val="center"/></w:pPr><w:r>${desenho}</w:r></w:p>`
+    `<w:jc w:val="center"/>${fechaSeccao}</w:pPr><w:r>${desenho}</w:r></w:p>`
   );
+}
+
+/** Uma página do anexo dos resumos: a folha desenhada, centrada e à escala comum a todas. */
+function paginaDaFolha(imagem: ImagemDaFolha, indice: number, relacao: string, escala: number, fechaSeccao?: string): string {
+  // Para baixo: meio píxel a mais e a folha deixa de caber na altura da página.
+  return paragrafoDeImagem({
+    cx: Math.floor(imagem.largura * escala) * EMU_POR_PIXEL,
+    cy: Math.floor(imagem.altura * escala) * EMU_POR_PIXEL,
+    nome: `Resumo Curricular — ${imagem.perfil}`,
+    id: indice + 1,
+    relacao,
+    novaPagina: indice > 0,
+    fechaSeccao,
+  });
 }
 
 /** A mesma secção do modelo, deitada: só a folha muda de orientação. */
@@ -918,6 +953,53 @@ function sectPrEmPaisagem(sect: string): string {
 
 const CAMINHO_DOCUMENTO = "word/document.xml";
 
+/** O título do anexo do eAvalia, que é sempre o último. */
+export const TITULO_ANEXO_EAVALIA = "Alinhamento Tecnológico (eAvalia)";
+
+/** O número do anexo do eAvalia: o que vier a seguir ao dos resumos, quando os há. */
+function numeroDoAnexoEavalia(config: LotesJSON, imagens: ImagemDaFolha[]): string {
+  return anexoDosResumos(config, imagens).corpo.length > 0 ? "VI" : "V";
+}
+
+/**
+ * A folha em tabela, quando não pôde ser desenhada — fora do browser não há
+ * canvas. O conteúdo é o mesmo: cada medida com a resposta e a data, e as
+ * secções do formulário a negrito.
+ */
+function tabelaDoAlinhamento(folha: FolhaDesenhavel): string {
+  // O que está na coluna de uma célula da coluna A, nas linhas que ela ocupa:
+  // o cabeçalho da primeira secção funde duas linhas, e o «Resposta» está na
+  // segunda.
+  const aoLado = (celula: CelulaDaFolha, coluna: number) =>
+    folha.celulas
+      .filter((c) => c.coluna === coluna && c.linha >= celula.linha && c.linha <= celula.ateLinha)
+      .map((c) => c.texto.trim())
+      .find((texto) => texto !== "") ?? "";
+
+  const linhas: Celula[][] = [];
+  for (const celula of folha.celulas.filter((c) => c.coluna === 0 && c.texto.trim() !== "")) {
+    const resposta = aoLado(celula, 4);
+    const seccao = resposta.toLowerCase() === "resposta";
+    // O título e o subtítulo da folha não são medidas: ficam de fora.
+    if (!seccao && linhas.length === 0) continue;
+    linhas.push([
+      { texto: celula.texto.trim(), destaque: seccao },
+      { texto: seccao ? "" : resposta },
+      { texto: seccao ? "" : aoLado(celula, 5), alinhamento: "direita" },
+    ]);
+  }
+
+  return tabelaDoBloco({
+    tipo: "tabela",
+    colunas: [
+      { titulo: "Medida", peso: 64 },
+      { titulo: "Resposta", peso: 22 },
+      { titulo: "Data", alinhamento: "direita", peso: 14 },
+    ],
+    linhas,
+  });
+}
+
 async function gerarInformacaoBlob(
   config: LotesJSON,
   quando: Date,
@@ -930,35 +1012,77 @@ async function gerarInformacaoBlob(
   const sect = entre(modelo, "<w:sectPr", "</w:sectPr>");
   const folhas = anexoDosResumos(config, imagens).paisagem.length === 0 ? [] : imagens;
 
+  // O último anexo é a folha do alinhamento do eAvalia que segue com a
+  // informação: gera-se aqui, do mesmo modo que no pacote, para a imagem ser a
+  // do ficheiro e não uma reconstrução à parte.
+  const eavalia = await gerarEavaliaBlob(config, quando);
+  const alinhamento = await lerFolhaDoAlinhamento(new Uint8Array(await eavalia.arrayBuffer()));
+  const paginasEavalia = await paginasDoAlinhamento(alinhamento, {
+    largura: LARGURA_EM_RETRATO / DXA_POR_PIXEL,
+    alturaPrimeira: (ALTURA_EM_RETRATO - RESERVA_DO_TITULO) / DXA_POR_PIXEL,
+    alturaSeguintes: ALTURA_EM_RETRATO / DXA_POR_PIXEL,
+  });
+
+  const relacoesNovas: string[] = [];
+  const relacao = (id: string, ficheiro: string, dados: Uint8Array) => {
+    zip.file(`word/media/${ficheiro}`, dados);
+    relacoesNovas.push(`<Relationship Id="${id}" Type="${TIPO_IMAGEM}" Target="media/${ficheiro}"/>`);
+    return id;
+  };
+
   let corpo = corpoDaInformacao(config, modelo, quando, variante, imagens);
+
   if (folhas.length === 0) {
-    corpo += sect;
+    corpo += QUEBRA_DE_PAGINA;
   } else {
     // O `sectPr` de um parágrafo fecha a secção onde ele está: o corpo fica
-    // vertical, e o `sectPr` final do documento — deitado — passa a valer só
-    // para as páginas do anexo.
-    const relacoes = await zip.file(CAMINHO_RELACOES)!.async("string");
-    const ids = folhas.map((_, i) => `rIdResumo${i + 1}`);
+    // vertical, as páginas dos resumos deitadas — fechadas pela última delas —,
+    // e o anexo do eAvalia volta a ficar de pé, na secção final do documento.
     const escala = escalaDasImagens(
       folhas.map((imagem) => ({ tipo: "imagem", ...imagem, descricao: imagem.perfil })),
       LARGURA_EM_PAISAGEM / DXA_POR_PIXEL,
       ALTURA_EM_PAISAGEM / DXA_POR_PIXEL,
     );
-
-    folhas.forEach((imagem, i) => zip.file(`word/media/resumo${i + 1}.png`, imagem.dados));
-    zip.file(
-      CAMINHO_RELACOES,
-      relacoes.replace(
-        "</Relationships>",
-        ids.map((id, i) => `<Relationship Id="${id}" Type="${TIPO_IMAGEM}" Target="media/resumo${i + 1}.png"/>`).join("") +
-          "</Relationships>",
-      ),
-    );
-
     corpo +=
       `<w:p><w:pPr>${sect}</w:pPr></w:p>` +
-      folhas.map((imagem, i) => paginaDaFolha(imagem, i, ids[i], escala)).join("") +
-      sectPrEmPaisagem(sect);
+      folhas
+        .map((imagem, i) =>
+          paginaDaFolha(
+            imagem,
+            i,
+            relacao(`rIdResumo${i + 1}`, `resumo${i + 1}.png`, imagem.dados),
+            escala,
+            i === folhas.length - 1 ? sectPrEmPaisagem(sect) : undefined,
+          ),
+        )
+        .join("");
+  }
+
+  corpo += titulo(`${numeroDoAnexoEavalia(config, imagens)} – ${TITULO_ANEXO_EAVALIA}`);
+  corpo += paragrafo(
+    "Reprodução da folha «Alinhamento Tecnológico» do pedido de parecer prévio eAvalia que acompanha a presente " +
+      "informação, com as respostas às medidas de alinhamento tecnológico.",
+  );
+  corpo +=
+    paginasEavalia.length === 0
+      ? tabelaDoAlinhamento(alinhamento)
+      : paginasEavalia
+          .map((pagina, i) =>
+            paragrafoDeImagem({
+              cx: pagina.largura * EMU_POR_PIXEL,
+              cy: pagina.altura * EMU_POR_PIXEL,
+              nome: `eAvalia — Alinhamento Tecnológico (${i + 1}/${paginasEavalia.length})`,
+              id: 1000 + i,
+              relacao: relacao(`rIdEavalia${i + 1}`, `eavalia${i + 1}.png`, pagina.dados),
+              novaPagina: i > 0,
+            }),
+          )
+          .join("");
+  corpo += sect;
+
+  if (relacoesNovas.length > 0) {
+    const relacoes = await zip.file(CAMINHO_RELACOES)!.async("string");
+    zip.file(CAMINHO_RELACOES, relacoes.replace("</Relationships>", `${relacoesNovas.join("")}</Relationships>`));
   }
 
   const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;

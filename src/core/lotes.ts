@@ -73,6 +73,7 @@ export function lotesIniciais(): LotesJSON {
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: N_BLOCOS_PADRAO,
     umLotePorConcorrente: false,
+    contratoProgramaAcss: null,
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
@@ -243,10 +244,27 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
   return [
     ...erros,
     ...validarNBlocos(config),
+    ...validarContratoPrograma(config),
     ...validarPostoTrabalho(config.postoTrabalho),
     ...validarEavalia(config.eavalia),
     ...validarEncargosPlurianuais(config),
   ];
+}
+
+/** Um ficheiro anterior à escolha não a traz: fica por fazer, e não presumida. */
+function lerContratoPrograma(valor: unknown): boolean | null {
+  return typeof valor === "boolean" ? valor : null;
+}
+
+export function validarContratoPrograma(config: LotesJSON): ErroValidacao[] {
+  return config.contratoProgramaAcss === null
+    ? [
+        {
+          campo: "contratoProgramaAcss",
+          mensagem: "Indique se o projeto está integrado no contrato programa com a ACSS.",
+        },
+      ]
+    : [];
 }
 
 // --------------------------------------------------------------------------
@@ -296,6 +314,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     justificacao: normalizarJustificacao((registo as { justificacao?: unknown }).justificacao),
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
+    contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
     postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
     eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(
@@ -327,6 +346,7 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
     ...config,
     descricaoProjeto: config.descricaoProjeto ?? "",
     justificacao: normalizarJustificacao(config.justificacao),
+    contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),

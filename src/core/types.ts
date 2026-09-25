@@ -307,6 +307,15 @@ export interface LotesJSON {
    * tenha ficado com um fica impedido nos seguintes.
    */
   umLotePorConcorrente: boolean;
+  /**
+   * Se o projeto está integrado no contrato programa com a ACSS.
+   *
+   * Escolha obrigatória, sem valor por omissão: `null` enquanto ninguém a fez.
+   * É ela que escreve, no enquadramento das informações, «O Projeto está /
+   * não está integrado…» — e presumir uma das duas era pôr na boca de quem
+   * assina uma afirmação que não fez.
+   */
+  contratoProgramaAcss: boolean | null;
   /** Condições de execução: onde, em que regime e com que equipamento. */
   postoTrabalho: PostoTrabalho;
   /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */
