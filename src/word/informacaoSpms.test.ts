@@ -114,12 +114,34 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).not.toContain("2.3. ");
   });
 
-  it("«benefícios» e «riscos» saem a negrito na frase que anuncia cada lista", async () => {
-    const xml = await xmlDoDocumento(exemplo());
+  it("as frases que anunciam as listas e a integração no contrato programa saem a negrito", async () => {
+    const negrito = (texto: string) =>
+      new RegExp(`<w:r><w:rPr>(?:(?!</w:rPr>).)*<w:b/>(?:(?!</w:rPr>).)*</w:rPr><w:t[^>]*>${texto}</w:t></w:r>`);
 
-    for (const palavra of ["benefícios", "riscos"]) {
-      expect(xml).toMatch(new RegExp(`<w:r><w:rPr>(?:(?!</w:rPr>).)*<w:b/>(?:(?!</w:rPr>).)*</w:rPr><w:t[^>]*>${palavra}</w:t></w:r>`));
-    }
+    const xml = await xmlDoDocumento(exemplo({ contratoProgramaAcss: true }));
+    expect(xml).toMatch(negrito("O Projeto prevê os seguintes benefícios:"));
+    expect(xml).toMatch(negrito("A não contratação destes serviços acarreta os seguintes riscos:"));
+    expect(xml).toMatch(negrito("está"));
+    expect(xml).toMatch(negrito(" integrado no contrato programa"));
+    // O resto da frase fica em texto normal.
+    expect(xml).not.toMatch(negrito(" com a ACSS."));
+
+    const nao = await xmlDoDocumento(exemplo({ contratoProgramaAcss: false }));
+    expect(nao).toMatch(negrito("não está"));
+  });
+
+  it("o rodapé tem uma linha de separação só, como borda, sem a fila de sublinhados", async () => {
+    const zip = await JSZip.loadAsync(await (await gerarPedidoPlurianualBlob(exemplo())).arrayBuffer());
+    const rodape = await zip.file("word/footer1.xml")!.async("string");
+
+    expect(rodape).not.toMatch(/_{10,}/);
+    expect(rodape.match(/<w:pBdr><w:bottom w:val="single"[^>]*\/><\/w:pBdr>/g)).toHaveLength(1);
+    // O resto do rodapé fica como no modelo.
+    expect(rodape).toContain("Serviços Partilhados do Ministério da Saúde");
+    expect(rodape).toContain("PAGE");
+    // E continua equilibrado: tantos parágrafos e runs abertos como fechados.
+    expect(rodape.match(/<w:p\b/g)?.length).toBe(rodape.match(/<\/w:p>/g)?.length);
+    expect(rodape.match(/<w:r\b/g)?.length).toBe(rodape.match(/<\/w:r>/g)?.length);
   });
 
   it("a seguir ao contrato programa, enumera os benefícios e os riscos da não contratação", async () => {

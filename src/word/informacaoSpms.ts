@@ -639,21 +639,16 @@ function escolha({ opcao, sim, sufixo }: { opcao: string; sim: boolean; sufixo?:
 /**
  * Uma frase que anuncia uma enumeração, e as alíneas a seguir.
  *
- * A frase vem em três partes — antes, a palavra que diz o que se enumera, e o
- * fim — para essa palavra sair a negrito: é por ela que se encontra a lista ao
- * folhear o documento.
+ * A frase sai a negrito: é por ela que se encontra a lista ao folhear o
+ * documento.
  *
  * Sem nenhuma entrada escrita — o Módulo 1 não o deixa, mas um ficheiro antigo
  * pode chegar assim — fica o espaço a vermelho no lugar da lista, como os
  * outros campos por preencher do documento, em vez de uma frase que termina
  * em dois pontos e não diz mais nada.
  */
-function enumeracao(
-  [antes, destaque, fim]: [string, string, string],
-  itens: ItemPerfil[],
-  falta: string,
-): string[] {
-  const frase = [run(antes), run(destaque, { negrito: true }), run(fim)];
+function enumeracao(texto: string, itens: ItemPerfil[], falta: string): string[] {
+  const frase = [run(texto, { negrito: true })];
   const alineas = alineasDe(itens);
   if (alineas.length === 0) return [paragrafo([...frase, run(" "), marcador(falta)])];
   return [
@@ -719,25 +714,27 @@ export function corpoDaInformacao(
   );
   // A escolha é feita no Módulo 2; um ficheiro anterior a ela chega sem
   // resposta, e aí fica o marcador a vermelho em vez de uma das duas presumida.
+  // O que se afirma — está ou não está integrado — sai a negrito.
   p.push(
     paragrafo([
       run("O Projeto "),
       config.contratoProgramaAcss === null
         ? marcador("está / não está")
-        : run(config.contratoProgramaAcss ? "está" : "não está"),
-      run(" integrado no contrato programa com a ACSS."),
+        : run(config.contratoProgramaAcss ? "está" : "não está", { negrito: true }),
+      run(" integrado no contrato programa", { negrito: true }),
+      run(" com a ACSS."),
     ]),
   );
   p.push(
     ...enumeracao(
-      ["O Projeto prevê os seguintes ", "benefícios", ":"],
+      "O Projeto prevê os seguintes benefícios:",
       config.justificacao.beneficios,
       "benefícios",
     ),
   );
   p.push(
     ...enumeracao(
-      ["A não contratação destes serviços acarreta os seguintes ", "riscos", ":"],
+      "A não contratação destes serviços acarreta os seguintes riscos:",
       config.justificacao.riscos,
       "riscos da não contratação",
     ),
@@ -952,6 +949,27 @@ function sectPrEmPaisagem(sect: string): string {
 // --------------------------------------------------------------------------
 
 const CAMINHO_DOCUMENTO = "word/document.xml";
+const CAMINHO_RODAPE = "word/footer1.xml";
+
+/**
+ * A linha de separação do rodapé, desenhada como borda e não como texto.
+ *
+ * No modelo é uma fila de sublinhados: com o tipo de letra do rodapé ocupa
+ * mais do que a largura da página e parte-se em duas, a segunda a meio. Uma
+ * borda inferior do parágrafo tem sempre a largura do texto, seja qual for o
+ * tipo de letra — é uma linha só, de margem a margem. Fica no mesmo parágrafo,
+ * com a mesma cor, para o resto do rodapé não mudar de sítio.
+ */
+export function rodapeComLinhaUnica(rodape: string): string {
+  return rodape.replace(/<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?<w:t>_{10,}<\/w:t>[\s\S]*?<\/w:p>/, (paragrafo) =>
+    paragrafo
+      .replace(/<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?<w:t>_+<\/w:t><\/w:r>/g, "")
+      .replace(
+        /(<w:pStyle [^>]*\/>)/,
+        '$1<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="A6A6A6"/></w:pBdr>',
+      ),
+  );
+}
 
 /** O título do anexo do eAvalia, que é sempre o último. */
 export const TITULO_ANEXO_EAVALIA = "Alinhamento Tecnológico (eAvalia)";
@@ -1089,6 +1107,10 @@ async function gerarInformacaoBlob(
   const fim = modelo.lastIndexOf("</w:body>");
 
   zip.file(CAMINHO_DOCUMENTO, modelo.slice(0, inicio) + corpo + modelo.slice(fim));
+
+  const rodape = zip.file(CAMINHO_RODAPE);
+  if (rodape !== null) zip.file(CAMINHO_RODAPE, rodapeComLinhaUnica(await rodape.async("string")));
+
   return zip.generateAsync({
     type: "blob",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
