@@ -533,6 +533,11 @@ textarea {
   display: none;
 }
 
+/* O n.º da informação é curto, mas tem formato livre («I/1234/2026»). */
+.campo-numero-informacao {
+  max-width: 260px;
+}
+
 /* ------------------------------------------------------------------ Botões */
 
 button {

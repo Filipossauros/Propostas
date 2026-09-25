@@ -113,6 +113,31 @@ describe("pacote das peças do procedimento", () => {
     expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(false);
   });
 
+  it("sem o n.º da informação, não leva o PDF — ficaria com o número por preencher", async () => {
+    const lista = nomes(await ficheirosDasPecas(config({ numeroInformacao: "  " }), PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO));
+    expect(lista.some((n) => n.endsWith(".pdf"))).toBe(false);
+  });
+
+  it("com o n.º da informação, leva também a informação em PDF, ao lado do Word", async () => {
+    // O conversor lê o Word com o DOMParser do browser; aqui, o do jsdom.
+    const { JSDOM } = await import("jsdom");
+    globalThis.DOMParser = new JSDOM().window.DOMParser;
+
+    const ficheiros = await ficheirosDasPecas(
+      config({ numeroInformacao: "I/1234/2026" }),
+      PERFIS_EXEMPLO,
+      NOME_PROJETO_EXEMPLO,
+      QUANDO,
+    );
+    const pdf = ficheiros.find((f) => f.nome.endsWith(".pdf"));
+
+    expect(pdf?.nome).toBe("Modernizacao_dos_Sistemas_de_Informacao_Pedido_Trienio.pdf");
+    const bytes = new Uint8Array(await (pdf!.conteudo as Blob).arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+    // Só um PDF: o da informação.
+    expect(nomes(ficheiros).filter((n) => n.endsWith(".pdf"))).toHaveLength(1);
+  });
+
   it("um lote sem perfis não dá formulário nenhum", async () => {
     const semPerfis = config();
     semPerfis.lotes = semPerfis.lotes.map((lote) => ({ ...lote, perfis: [] }));

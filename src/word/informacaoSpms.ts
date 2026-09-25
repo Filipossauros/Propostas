@@ -104,15 +104,18 @@ interface OpcoesParagrafo {
   ind?: number;
   pendente?: number;
   borda?: boolean;
+  /** Fica na mesma página que o parágrafo seguinte — é o caso dos títulos. */
+  comOSeguinte?: boolean;
 }
 
 function paragrafo(conteudo: string | string[], opcoes: OpcoesParagrafo = {}): string {
-  const { jc = "both", antes = 120, depois = 120, ind = 0, pendente = 0, borda = false } = opcoes;
+  const { jc = "both", antes = 120, depois = 120, ind = 0, pendente = 0, borda = false, comOSeguinte = false } = opcoes;
   const runs = typeof conteudo === "string" ? [run(conteudo)] : conteudo;
 
   // A ordem dos filhos de `w:pPr` é imposta pelo esquema: pBdr antes de tabs,
   // tabs antes de spacing, spacing antes de ind, ind antes de jc.
   let ppr = '<w:pPr><w:pStyle w:val="Normal0"/>';
+  if (comOSeguinte) ppr += "<w:keepNext/>";
   if (borda) ppr += '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="2" w:color="BFBFBF"/></w:pBdr>';
   if (ind && pendente) ppr += `<w:tabs><w:tab w:val="left" w:pos="${ind}"/></w:tabs>`;
   ppr += `<w:spacing w:before="${antes}" w:after="${depois}" w:line="259" w:lineRule="auto"/>`;
@@ -139,11 +142,13 @@ function vazio(depois = 0): string {
 function titulo(texto: string, nivel: 1 | 2 | 3 = 1, borda = false): string {
   const sz = nivel === 1 ? TITULO : CORPO;
   const antes = { 1: 360, 2: 280, 3: 200 }[nivel];
+  // Um título nunca fica sozinho no fundo de uma página, separado do que titula.
   return paragrafo([run(texto, { negrito: true, italico: nivel === 3, sz })], {
     jc: "left",
     antes,
     depois: 120,
     borda,
+    comOSeguinte: true,
   });
 }
 
@@ -366,6 +371,20 @@ function soArial(xml: string): string {
     .replace(/<w:szCs w:val="14"\/>/g, `<w:szCs w:val="${TABELA}"/>`);
 }
 
+/**
+ * Um bloco do modelo que não se parte entre páginas: todos os parágrafos,
+ * menos o último, ficam com o seguinte.
+ */
+function juntoAoSeguinte(xml: string): string {
+  const paragrafos = [...xml.matchAll(/<w:pPr>/g)];
+  let n = 0;
+  return xml.replace(/<w:pPr>(<w:pStyle [^>]*\/>)?/g, (inteiro, estilo: string | undefined) => {
+    n += 1;
+    if (n === paragrafos.length || inteiro.includes("keepNext")) return inteiro;
+    return `<w:pPr>${estilo ?? ""}<w:keepNext/>`;
+  });
+}
+
 function herdado(xml: string): string {
   return soArial(semCampos(xml));
 }
@@ -388,7 +407,7 @@ export function dataPorExtenso(quando: Date): string {
  * documento e o assunto: é o cabimento a que a despesa vai, e a aplicação não
  * o sabe.
  */
-function tabelaIdentificacao(data: string, assunto: string, comOrcamento: boolean): string {
+function tabelaIdentificacao(numero: string, data: string, assunto: string, comOrcamento: boolean): string {
   const campo = (rotulo: string, valor: string[]): string =>
     paragrafo([run(rotulo, { sz: TABELA }), tabulador(TABELA), ...valor], { jc: "left" });
 
@@ -404,7 +423,9 @@ function tabelaIdentificacao(data: string, assunto: string, comOrcamento: boolea
     "</w:tblPr>" +
     '<w:tblGrid><w:gridCol w:w="4455"/><w:gridCol w:w="4901"/></w:tblGrid>' +
     "<w:tr>" +
-    `<w:tc><w:tcPr><w:tcW w:w="4455" w:type="dxa"/></w:tcPr>${campo("N.º:", [marcador("n.º do documento")])}</w:tc>` +
+    `<w:tc><w:tcPr><w:tcW w:w="4455" w:type="dxa"/></w:tcPr>${campo("N.º:", [
+      numero === "" ? marcador("n.º do documento") : run(numero, { negrito: true, sz: TABELA }),
+    ])}</w:tc>` +
     `<w:tc><w:tcPr><w:tcW w:w="4901" w:type="dxa"/></w:tcPr>${campo("Data:", [run(data, { negrito: true, sz: TABELA })])}</w:tc>` +
     "</w:tr>" +
     (comOrcamento
@@ -687,6 +708,7 @@ export function corpoDaInformacao(
   p.push(vazio(120));
   p.push(
     tabelaIdentificacao(
+      config.numeroInformacao.trim(),
       dataPorExtenso(quando),
       manifestacao
         ? `Manifestação de necessidades para ${procedimento}.`
@@ -820,8 +842,10 @@ export function corpoDaInformacao(
   // uma manifestação.
   p.push(paragrafo(REMESSA));
   p.push(vazio(240));
-  p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240 }));
-  p.push(herdado(assinatura));
+  // O fecho e a assinatura ficam juntos na mesma página: um nome sozinho no
+  // topo da seguinte, longe do texto que assina, não se lê como assinatura.
+  p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240, comOSeguinte: true }));
+  p.push(juntoAoSeguinte(herdado(assinatura)));
 
   p.push(QUEBRA_DE_PAGINA);
   p.push(titulo("IV – Anexo Técnico"));

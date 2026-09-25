@@ -407,11 +407,33 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(xml.trimEnd().endsWith("</w:document>")).toBe(true);
   });
 
+  it("os títulos e a assinatura ficam com o que se lhes segue, sem se partirem entre páginas", async () => {
+    const xml = await xmlDoDocumento(exemplo());
+
+    // Um título: «keepNext» logo a seguir ao estilo.
+    expect(xml).toMatch(/<w:pStyle w:val="Normal0"\/><w:keepNext\/>(?:(?!<\/w:p>).)*I – Enquadramento/);
+    // O fecho e a tabela da assinatura, menos o último parágrafo dela.
+    const fecho = xml.indexOf("À consideração superior,");
+    const assinatura = xml.slice(xml.lastIndexOf("<w:p>", fecho), xml.indexOf("</w:tbl>", fecho));
+    const paragrafos = assinatura.match(/<w:pPr>/g)?.length ?? 0;
+    expect(paragrafos).toBeGreaterThan(2);
+    expect(assinatura.match(/<w:keepNext\/>/g)).toHaveLength(paragrafos - 1);
+  });
+
   it("assinala a vermelho o que a aplicação não sabe", async () => {
     const xml = await xmlDoDocumento(exemplo());
 
     expect(xml).toContain("[n.º do documento]");
     expect(xml).toContain('<w:color w:val="C00000"/>');
+  });
+
+  it("escreve o n.º da informação quando indicado, em vez do marcador", async () => {
+    const texto = await textoDoDocumento(exemplo({ numeroInformacao: " I/1234/2026 " }));
+    expect(texto).toContain("N.º:I/1234/2026");
+    expect(texto).not.toContain("[n.º do documento]");
+
+    const manifestacao = await textoDaManifestacao({ ...semPlurianual(), numeroInformacao: "I/77/2026" });
+    expect(manifestacao).toContain("I/77/2026");
   });
 
   it("escreve a integração no contrato programa com a ACSS que foi escolhida", async () => {

@@ -74,6 +74,7 @@ export function lotesIniciais(): LotesJSON {
     nBlocos: N_BLOCOS_PADRAO,
     umLotePorConcorrente: false,
     contratoProgramaAcss: null,
+    numeroInformacao: "",
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
@@ -315,6 +316,7 @@ export function importarLotesJSON(texto: string): LotesJSON {
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
     contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
+    numeroInformacao: typeof config.numeroInformacao === "string" ? config.numeroInformacao : "",
     postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
     eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(
@@ -347,6 +349,7 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
     descricaoProjeto: config.descricaoProjeto ?? "",
     justificacao: normalizarJustificacao(config.justificacao),
     contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
+    numeroInformacao: typeof config.numeroInformacao === "string" ? config.numeroInformacao : "",
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),

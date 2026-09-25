@@ -92,6 +92,31 @@ async function informacaoDoProcedimento(
 }
 
 /**
+ * A informação em PDF — só quando já tem número.
+ *
+ * O PDF é desenhado a partir do próprio Word que segue no pacote, e é o que se
+ * submete tal e qual: sem o n.º da informação ficaria com o espaço a vermelho,
+ * que no Word ainda se preenche e no PDF já não. Por isso, sem número, não sai.
+ *
+ * O conversor carrega-se só aqui: a biblioteca de PDF não pesa no arranque da
+ * aplicação para quem nunca o chega a usar.
+ */
+async function informacaoEmPdf(config: LotesJSON, informacao: FicheiroDoPacote): Promise<FicheiroDoPacote[]> {
+  const numero = config.numeroInformacao.trim();
+  if (numero === "" || !(informacao.conteudo instanceof Blob)) return [];
+
+  const { wordEmPdf } = await import("../pdf/wordEmPdf");
+  const titulo = `Informação ${numero} — ${config.nomeProcedimento.trim() || config.nomeProjeto.trim()}`;
+  const pdf = await wordEmPdf(informacao.conteudo, titulo);
+  return [
+    {
+      nome: informacao.nome.replace(/\.docx$/, ".pdf"),
+      conteudo: new Blob([pdf as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
+    },
+  ];
+}
+
+/**
  * Tudo o que sai do procedimento: os dois documentos Word, o JSON dos lotes, o
  * pedido eAvalia, um formulário de declaração por lote — e, numa pasta à parte,
  * os ficheiros dos perfis do Módulo 1.
@@ -123,12 +148,15 @@ export async function ficheirosDasPecas(
     })),
   );
 
+  const informacao = await informacaoDoProcedimento(config, base, quando, imagens);
+
   return [
     {
       nome: `${base}_Requisitos_e_regras.docx`,
       conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(config, imagens)]),
     },
-    await informacaoDoProcedimento(config, base, quando, imagens),
+    informacao,
+    ...(await informacaoEmPdf(config, informacao)),
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta(PASTA_DOS_RESUMOS, formularios),

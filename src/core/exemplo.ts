@@ -114,6 +114,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   nBlocos: N_BLOCOS_PADRAO,
   umLotePorConcorrente: true,
   contratoProgramaAcss: true,
+  numeroInformacao: "",
   postoTrabalho: postoTrabalhoInicial(),
   eavalia: {
     iap: "Já cumpre",

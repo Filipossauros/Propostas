@@ -118,6 +118,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     nBlocos: 3,
     umLotePorConcorrente: false,
     contratoProgramaAcss: true,
+    numeroInformacao: "",
     postoTrabalho: postoTrabalhoInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
     // Respondido: o agrupamento das fixtures representa um procedimento

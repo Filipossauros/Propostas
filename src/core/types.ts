@@ -327,6 +327,12 @@ export interface LotesJSON {
    * assina uma afirmação que não fez.
    */
   contratoProgramaAcss: boolean | null;
+  /**
+   * O n.º da informação da SPMS, quando já foi atribuído. Facultativo: sem ele
+   * a informação sai com o espaço a vermelho para o preencher no Word, e o
+   * pacote não leva a versão em PDF — que já não se podia completar.
+   */
+  numeroInformacao: string;
   /** Condições de execução: onde, em que regime e com que equipamento. */
   postoTrabalho: PostoTrabalho;
   /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */

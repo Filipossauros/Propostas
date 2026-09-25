@@ -38,6 +38,7 @@
   "nBlocos": 15,
   "umLotePorConcorrente": true,
   "contratoProgramaAcss": true,
+  "numeroInformacao": "",
   "postoTrabalho": {
     "regime": "Híbrido",
     "locais": [
