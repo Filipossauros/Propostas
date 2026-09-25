@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { JustificacaoProjeto, PerfilJSON } from "../core/types";
-import { ATIVIDADE_FIXA, ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES } from "../core/types";
+import { ATIVIDADE_FIXA, BENEFICIO_FIXO, ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES } from "../core/types";
 import {
   ErroImportacao,
   duplicarPerfil,
@@ -399,13 +399,16 @@ export function Modulo1({
         titulo="Benefícios do projeto"
         nota={
           "Obrigatório. Um benefício por linha. Saem no «Enquadramento» das informações da SPMS, como alíneas " +
-          "a), b), c)…, a seguir à frase do contrato programa com a ACSS."
+          "a), b), c)…, a seguir à frase do contrato programa com a ACSS. O último é fixo e fecha a lista em " +
+          "todos os projetos: acrescente pelo menos um antes dele."
         }
         nomeItem="benefício"
         rotuloColuna="Benefício"
         placeholder="ex.: Redução do tempo de registo clínico, com uma única aplicação em vez de várias"
         textoVazio="Ainda não há benefícios. Acrescente o primeiro."
         rotuloAdicionar="+ Adicionar benefício"
+        itemFixo={BENEFICIO_FIXO}
+        rotuloFixo="fixo"
         itens={justificacao.beneficios}
         onChange={(beneficios) => onAlterarJustificacao({ ...justificacao, beneficios })}
       />

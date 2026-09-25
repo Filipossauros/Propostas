@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { alineasDe, normalizarJustificacao, temJustificacao, validarJustificacao } from "./justificacao";
+import {
+  alineasDe,
+  beneficiosDoProjeto,
+  normalizarJustificacao,
+  temJustificacao,
+  validarJustificacao,
+} from "./justificacao";
+import { BENEFICIO_FIXO } from "./types";
 import { importarPerfisJSON, perfisParaJSON } from "./perfil";
 import { importarLotesJSON, lotesParaJSON } from "./lotes";
 import { JUSTIFICACAO_EXEMPLO, LOTES_EXEMPLO, PERFIS_EXEMPLO } from "./exemplo";
@@ -22,6 +29,27 @@ describe("validarJustificacao", () => {
 
   it("aceita as duas listas preenchidas", () => {
     expect(validarJustificacao(JUSTIFICACAO_EXEMPLO)).toEqual([]);
+  });
+});
+
+describe("benefício fixo", () => {
+  it("fecha a lista dos benefícios, depois dos escritos", () => {
+    const lista = beneficiosDoProjeto({ beneficios: itens("Um", "Dois"), riscos: [] });
+    expect(lista.map((b) => b.designacao)).toEqual(["Um", "Dois", BENEFICIO_FIXO]);
+  });
+
+  it("não se guarda: um ficheiro que o traga escrito abre sem ele, para não sair duas vezes", () => {
+    const lida = normalizarJustificacao({
+      beneficios: [{ id: "x", designacao: `  ${BENEFICIO_FIXO}  ` }, { id: "y", designacao: "Outro" }],
+      riscos: [],
+    });
+    expect(lida.beneficios.map((b) => b.designacao)).toEqual(["Outro"]);
+  });
+
+  it("não conta como benefício escrito: continua a pedir pelo menos um além dele", () => {
+    const erros = validarJustificacao({ beneficios: [], riscos: itens("Atraso") });
+    expect(erros.map((e) => e.campo)).toEqual(["justificacao.beneficios"]);
+    expect(erros[0].mensagem).toContain("além do benefício de fecho");
   });
 });
 

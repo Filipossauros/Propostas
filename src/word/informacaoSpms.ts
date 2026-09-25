@@ -22,7 +22,7 @@ import JSZip from "jszip";
 import type { BlocoDocumento, Celula, Coluna } from "../core/documento";
 import { alineasDoItem, escalaDasImagens, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
 import type { ItemPerfil, LotesJSON } from "../core/types";
-import { alineasDe } from "../core/justificacao";
+import { alineasDe, beneficiosDoProjeto } from "../core/justificacao";
 import {
   blocosAnexoTecnico,
   blocosDivisaoPorLotes,
@@ -728,7 +728,7 @@ export function corpoDaInformacao(
   p.push(
     ...enumeracao(
       "O Projeto prevê os seguintes benefícios:",
-      config.justificacao.beneficios,
+      beneficiosDoProjeto(config.justificacao),
       "benefícios",
     ),
   );

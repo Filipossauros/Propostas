@@ -16,6 +16,8 @@ interface Props {
    * fecho do conteúdo funcional, que sai em todos os perfis por igual.
    */
   itemFixo?: string;
+  /** A marca ao lado da entrada fixa — «fixa», «fixo» —, a concordar com o nome do item. */
+  rotuloFixo?: string;
   itens: ItemPerfil[];
   onChange: (itens: ItemPerfil[]) => void;
 }
@@ -44,6 +46,7 @@ export function ListaItensEditor({
   textoVazio,
   rotuloAdicionar,
   itemFixo,
+  rotuloFixo = "fixa",
   itens,
   onChange,
 }: Props) {
@@ -146,8 +149,8 @@ export function ListaItensEditor({
                   <span className="pega pega-fixa" aria-hidden="true">
                     {itens.length + 1}
                   </span>
-                  <input type="text" value={itemFixo} readOnly aria-label={`${rotuloColuna}, fixa`} />
-                  <span className="meta">fixa</span>
+                  <input type="text" value={itemFixo} readOnly aria-label={`${rotuloColuna}, ${rotuloFixo}`} />
+                  <span className="meta">{rotuloFixo}</span>
                 </div>
               </li>
             )}

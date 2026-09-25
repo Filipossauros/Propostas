@@ -222,7 +222,7 @@ function verificarSchemaVersion(bruto: Record<string, unknown>): void {
  * ficheiro não o traz.
  */
 /** Compara textos ignorando espaços a mais, que é como as listas divergem. */
-function mesmoTexto(a: string, b: string): boolean {
+export function mesmoTexto(a: string, b: string): boolean {
   return a.replace(/\s+/g, " ").trim() === b.replace(/\s+/g, " ").trim();
 }
 

@@ -67,6 +67,17 @@ export interface JustificacaoProjeto {
 }
 
 /**
+ * Benefício que fecha a lista de benefícios de todos os projetos.
+ *
+ * Como a atividade de fecho do conteúdo funcional — ver `ATIVIDADE_FIXA` —, não
+ * se guarda nem se edita: é a razão comum a todas as contratações desta
+ * natureza, e sai no fim da lista, onde quer que os benefícios saiam.
+ */
+export const BENEFICIO_FIXO =
+  "Permitirá suprir a insuficiência de recursos humanos internos dotados das qualificações técnicas " +
+  "especializadas necessárias à execução das atividades do projeto.";
+
+/**
  * Atividade que fecha o conteúdo funcional de todos os perfis.
  *
  * Não se guarda no perfil nem se edita: é cláusula de fecho, e a mesma em todos

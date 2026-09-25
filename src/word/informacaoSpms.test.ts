@@ -9,6 +9,7 @@ import {
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { normalizarLotesGuardados } from "../core/lotes";
 import type { LotesJSON } from "../core/types";
+import { BENEFICIO_FIXO } from "../core/types";
 import { horasUteis } from "../core/horasUteis";
 
 function exemplo(alteracoes: Partial<LotesJSON> = {}): LotesJSON {
@@ -158,7 +159,10 @@ describe("gerarPedidoPlurianualBlob", () => {
     const [b1, , b3] = LOTES_EXEMPLO.justificacao.beneficios.map((b) => b.designacao);
     const [r1] = LOTES_EXEMPLO.justificacao.riscos.map((r) => r.designacao);
     expect(texto).toContain(`a)${b1};`);
-    expect(texto).toContain(`c)${b3}.`);
+    expect(texto).toContain(`c)${b3};`);
+    // O benefício de fecho, fixo, é sempre o último.
+    expect(texto).toContain(`d)${BENEFICIO_FIXO}`);
+    expect(texto.indexOf(`d)${BENEFICIO_FIXO}`)).toBeLessThan(riscos);
     expect(texto.indexOf(`a)${r1};`)).toBeGreaterThan(riscos);
   });
 
@@ -169,10 +173,12 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toContain("A não contratação destes serviços acarreta os seguintes riscos:");
   });
 
-  it("sem benefícios nem riscos, deixa os marcadores a vermelho em vez de listas vazias", async () => {
+  it("sem benefícios escritos fica o fixo; sem riscos, o marcador a vermelho", async () => {
     const xml = await xmlDoDocumento(exemplo({ justificacao: { beneficios: [], riscos: [] } }));
+    const texto = xml.replace(/<[^>]+>/g, "");
 
-    expect(xml).toContain("[benefícios]");
+    expect(texto).toContain(`a)${BENEFICIO_FIXO}`);
+    expect(xml).not.toContain("[benefícios]");
     expect(xml).toContain("[riscos da não contratação]");
   });
 

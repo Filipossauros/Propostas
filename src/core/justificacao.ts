@@ -6,7 +6,8 @@
 // gravado e a validação.
 
 import type { ItemPerfil, JustificacaoProjeto } from "./types";
-import { normalizarItens, type ErroValidacao } from "./perfil";
+import { BENEFICIO_FIXO } from "./types";
+import { mesmoTexto, normalizarItens, type ErroValidacao } from "./perfil";
 
 export function justificacaoInicial(): JustificacaoProjeto {
   return { beneficios: [], riscos: [] };
@@ -21,7 +22,20 @@ export function justificacaoInicial(): JustificacaoProjeto {
 export function normalizarJustificacao(bruto: unknown): JustificacaoProjeto {
   if (typeof bruto !== "object" || bruto === null || Array.isArray(bruto)) return justificacaoInicial();
   const j = bruto as Partial<Record<keyof JustificacaoProjeto, unknown>>;
-  return { beneficios: normalizarItens(j.beneficios), riscos: normalizarItens(j.riscos) };
+  return { beneficios: semBeneficioFixo(normalizarItens(j.beneficios)), riscos: normalizarItens(j.riscos) };
+}
+
+/**
+ * Retira o benefício de fecho de uma lista guardada: quem o tenha escrito à
+ * mão antes de ele passar a ser fixo não o há de ver duas vezes no documento.
+ */
+export function semBeneficioFixo(itens: ItemPerfil[]): ItemPerfil[] {
+  return itens.filter((i) => !mesmoTexto(i.designacao, BENEFICIO_FIXO));
+}
+
+/** Os benefícios como saem nos documentos: os escritos, e o fixo no fim. */
+export function beneficiosDoProjeto(justificacao: JustificacaoProjeto): ItemPerfil[] {
+  return [...justificacao.beneficios, { id: "beneficio-fixo", designacao: BENEFICIO_FIXO }];
 }
 
 /** O que vem do navegador tem, pelo menos, a forma de um objeto — o resto põe-no em dia a normalização. */
@@ -69,7 +83,7 @@ export function validarJustificacao(justificacao: JustificacaoProjeto): ErroVali
       justificacao.beneficios,
       "justificacao.beneficios",
       "benefício",
-      "Indique pelo menos um benefício do projeto.",
+      "Indique os benefícios do projeto: além do benefício de fecho, que é fixo, indique pelo menos um.",
     ),
     ...validarLista(
       justificacao.riscos,
