@@ -23,7 +23,6 @@ import {
   blocosAnexoTecnico,
   blocosDivisaoPorLotes,
   blocosEncargosPlurianuais,
-  tabelaPrecoBase,
 } from "../core/cadernoEncargos";
 import {
   anosPlurianuais,
@@ -297,6 +296,8 @@ function celula(
       antes: 40,
       depois: 40,
       entrelinha: 240,
+      // O cabeçalho nunca fica sozinho no fundo de uma página.
+      comOSeguinte: cabecalho,
     }) +
     "</w:tc>"
   );
@@ -353,6 +354,26 @@ function tabelaDoBloco(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>, sz = 
     bloco.linhas.map((l) => l.map((c) => c.texto)),
     { legenda: bloco.legenda, sz, destaques: bloco.linhas.map((l) => l.some((c) => c.destaque === true)) },
   );
+}
+
+/**
+ * O quadro dos anos, com as horas por baixo do valor: são oito colunas numa
+ * página de retrato, e «181 843,20 € (1760 h)» numa linha só partia-se em três.
+ */
+function tabelaPlurianual(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>): string {
+  const folga: Record<string, number> = { Perfil: 21, Lotes: 8 };
+  const colunas = bloco.colunas.map((c) => ({ ...c, peso: folga[c.titulo] ?? c.peso }));
+  const linhas = bloco.linhas.map((linha) =>
+    linha.map((c): LinhaDeCelula => {
+      const m = /^(.+?) \((\d[\d\s]*) h\)$/.exec(c.texto);
+      return m === null ? c.texto : { texto: m[1], suave: `${m[2]} h` };
+    }),
+  );
+  return tabela(colunas, linhas, {
+    legenda: bloco.legenda,
+    sz: ANOS,
+    destaques: bloco.linhas.map((l) => l.some((c) => c.destaque === true)),
+  });
 }
 
 function lista(bloco: Extract<BlocoDocumento, { tipo: "lista" }>, ind = RECUO): string {
@@ -726,9 +747,9 @@ function corpo(
   p.push(seccao(7, "Gestão, monitorização e controlo"));
   p.push(
     paragrafo(
-      "Atenta a natureza da prestação de serviços, executada na modalidade de Bolsa de Horas — em que o prestador " +
+      "Atenta a natureza da prestação de serviços, executada na modalidade de Bolsa de Horas em que o prestador " +
         "disponibiliza recursos com os perfis e a experiência fixados, sob a orientação técnica da entidade " +
-        "adjudicante —, não são aplicáveis níveis de serviço (SLA) nem penalizações associadas a resultados.",
+        "adjudicante, não são aplicáveis níveis de serviço (SLA) nem penalizações associadas a resultados.",
     ),
   );
   p.push(
@@ -799,19 +820,14 @@ function corpo(
     ),
   );
   p.push(numerado("2.", [run("Pressupostos dos cálculos", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  const pressupostos = [
-    `Volume de horas de referência: ${formatarNumero(n.horasTotal)} horas (${horasAno}).`,
-    `Custo unitário médio ponderado de referência: ${formatarMoeda(n.horasTotal === 0 ? 0 : n.referencia / n.horasTotal)}/h, sem IVA.`,
-    `Custo de referência: ${formatarMoeda(n.referencia)}, sem IVA.`,
-    margem > 0
-      ? `Margem prudencial: ${formatarNumero(margem)} %, aplicada ao valor hora de cada perfil, correspondente a ${formatarMoeda(n.estimado - n.referencia)}.`
-      : "Margem prudencial: 0 %, por se encontrar incorporada nos valores unitários de referência (ver ponto 3).",
-    ...n.anos.map((ano, i) => `Valor máximo para ${ano}: ${formatarMoeda(n.porAno[i])}, sem IVA.`),
-    `Valor máximo para ${n.meses} meses: ${formatarMoeda(n.estimado)}, sem IVA.`,
-  ];
-  pressupostos.forEach((t) => p.push(alinea("•", t, RECUO_ALINEA)));
-  p.push(vazio(120));
-  p.push(tabelaDoBloco(tabelaPrecoBase(config)));
+  // Os parágrafos e o quadro dos anos da informação anterior: o enquadramento
+  // do período, a repartição das horas e os encargos por ano, com IVA.
+  for (const bloco of blocosEncargosPlurianuais(config)) {
+    if (bloco.tipo === "titulo") continue;
+    if (bloco.tipo === "paragrafo" && bloco.destaque === true) continue;
+    if (bloco.tipo === "tabela") p.push(tabelaPlurianual(bloco));
+    else if (bloco.tipo === "paragrafo") p.push(recuado(bloco.texto));
+  }
   if (margem > 0) {
     const linhas = original.lotes.flatMap((lote, li) =>
       lote.perfis.map((e, pi) => [
@@ -846,10 +862,6 @@ function corpo(
         `natureza similar${servicos === "" ? "" : `, designadamente ${servicos.replace(/[.;]+$/, "")}`}.`,
     ),
   );
-  const reparticaoBloco = blocosEncargosPlurianuais(config).find(
-    (b): b is Extract<BlocoDocumento, { tipo: "paragrafo" }> => b.tipo === "paragrafo" && b.texto.startsWith("As horas contratadas"),
-  );
-  if (reparticaoBloco !== undefined) p.push(recuado(reparticaoBloco.texto));
   p.push(
     recuado(
       "Relativamente ao valor unitário, o mesmo foi apurado de acordo com o valor médio das propostas obtidas nos " +
@@ -1069,6 +1081,13 @@ function paginasDeImagem(
     .join("");
 }
 
+/** O cabeçalho sem as linhas «Template DAG» e «Setembro de 2026» — os parágrafos ficam, vazios. */
+export function semVersaoDoModelo(cabecalho: string): string {
+  return cabecalho.replace(/<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?(?:Template DAG|Setembro de)[\s\S]*?<\/w:p>/g, (paragrafo) =>
+    paragrafo.replace(/<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g, ""),
+  );
+}
+
 function decodificar(base64: string): Uint8Array {
   const binario = atob(base64);
   const bytes = new Uint8Array(binario.length);
@@ -1193,6 +1212,11 @@ export async function gerarManifestacaoBlob(
   const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
   const fim = modelo.lastIndexOf("</w:body>");
   zip.file("word/document.xml", modelo.slice(0, inicio) + xml + modelo.slice(fim));
+
+  // O cabeçalho do modelo traz a marca da versão do template («Template DAG /
+  // Setembro de 2026»): é do modelo, não da informação, e sai.
+  const cabecalho = zip.file("word/header1.xml");
+  if (cabecalho !== null) zip.file("word/header1.xml", semVersaoDoModelo(await cabecalho.async("string")));
 
   const rodape = zip.file("word/footer1.xml");
   if (rodape !== null) zip.file("word/footer1.xml", rodapeComLinhaUnica(await rodape.async("string")));
