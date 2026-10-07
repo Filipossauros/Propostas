@@ -164,7 +164,7 @@ requisitos do equipamento em branco travam os descarregamentos do Módulo 2, com
 qualquer outra questão por resolver. Só se exige o que a escolha do regime e do
 equipamento tornou aplicável.
 
-### O pedido de encargos plurianuais
+### Os encargos plurianuais
 
 Quando a execução do contrato atravessa mais do que um ano económico, a despesa
 dos anos seguintes carece de autorização prévia. A opção nos parâmetros do
@@ -194,6 +194,36 @@ de cada lote, e o resumo é só de leitura, como sempre foi.
 A tabela dos anos exprime-se toda com IVA, pelo que o preço base do procedimento
 — que é elemento da peça — sai numa linha própria por baixo dela, sem IVA e com
 IVA.
+
+### A manifestação de necessidades
+
+O ZIP do Módulo 2 leva a informação do procedimento no modelo da DAG para o
+novo CCP — a manifestação de necessidades —, em Word e, com o n.º da informação
+preenchido, também em PDF. Substitui o pedido de encargos plurianuais e a
+manifestação anterior: a repartição por anos vai dentro dela, no Anexo I.
+
+Segue as dez secções do modelo, com os parágrafos numerados em série, e os
+anexos: I — memória descritiva e de cálculo; III — especificações técnicas, com
+as regras de adjudicação dos lotes e de apuramento da experiência a fechar; IV —
+os Resumos Curriculares; V e VI — as duas folhas do eAvalia. O Anexo II
+(fundamentação acima de 5 M€) não é gerado: acima desse valor a informação
+assinala-o a vermelho. As tabelas são as da aplicação.
+
+O conteúdo vem do que já está escrito: os **objetivos da aquisição**, os
+benefícios e os riscos do Módulo 1; os lotes, o posto de trabalho e o eAvalia do
+Módulo 2. Os textos da avaliação custo-benefício (beneficiários, riscos da
+execução, mitigação) e da sustentabilidade são fixos, os mesmos em todas as
+manifestações desta natureza. O **júri técnico** — diretor, coordenador,
+unidade e gestor de projeto — escreve-se no Módulo 2: o coordenador assina a
+informação, e a unidade sai na assinatura por baixo da direção.
+
+**Margem prudencial.** Os valores hora são a média das propostas dos últimos
+procedimentos equivalentes. A 0 % (por omissão), a margem considera-se neles
+incorporada, e o fundamento — obrigatório — di-lo. Acima de 0 %, a margem
+aplica-se ao valor hora de cada perfil, arredondado ao cêntimo, e passa a todos
+os valores: perfis, lotes, anos, preço base, eAvalia, o resumo do Módulo 2 e a
+vista geral. O JSON do agrupamento guarda os valores de referência e a margem à
+parte.
 
 ### O pedido de parecer eAvalia
 

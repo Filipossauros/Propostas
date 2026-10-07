@@ -149,6 +149,20 @@ describe("leitura de um agrupamento", () => {
   });
 });
 
+describe("margem prudencial na vista", () => {
+  it("os valores do projeto levam a margem, como as peças do procedimento", () => {
+    const config = agrupamento({
+      nomeProjeto: "Com margem",
+      lotes: [{ numero: "1", perfil: "Programador", pessoas: 1, valorHora: 10, horasPorAno: [100, 0, 0] }],
+    });
+    config.margemPrudencial = 10;
+
+    const entrada = projetoDeAgrupamento(config).entradas[0];
+    expect(entrada.valorHoraSemIva).toBe(11);
+    expect(Math.round(entrada.totaisPorAno[0])).toBe(1353);
+  });
+});
+
 describe("acrescentar projetos", () => {
   it("acrescenta pela ordem de importação", () => {
     let orcamento = orcamentoInicial();

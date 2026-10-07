@@ -1,7 +1,7 @@
-// Benefícios do projeto e riscos da não contratação.
+// Objetivos da aquisição, benefícios do projeto e riscos da não contratação.
 //
-// Escrevem-se no Módulo 1, com o nome e a descrição do projeto, e entram no
-// «Enquadramento» das informações da SPMS. Aqui vive o que as duas listas têm
+// Escrevem-se no Módulo 1, com o nome e a descrição do projeto, e entram na
+// manifestação de necessidades. Aqui vive o que as duas listas têm
 // de comum aos ficheiros e aos ecrãs: o estado inicial, a leitura do que vem
 // gravado e a validação.
 
@@ -10,7 +10,7 @@ import { BENEFICIO_FIXO } from "./types";
 import { mesmoTexto, normalizarItens, type ErroValidacao } from "./perfil";
 
 export function justificacaoInicial(): JustificacaoProjeto {
-  return { beneficios: [], riscos: [] };
+  return { objetivos: [], beneficios: [], riscos: [] };
 }
 
 /**
@@ -22,7 +22,11 @@ export function justificacaoInicial(): JustificacaoProjeto {
 export function normalizarJustificacao(bruto: unknown): JustificacaoProjeto {
   if (typeof bruto !== "object" || bruto === null || Array.isArray(bruto)) return justificacaoInicial();
   const j = bruto as Partial<Record<keyof JustificacaoProjeto, unknown>>;
-  return { beneficios: semBeneficioFixo(normalizarItens(j.beneficios)), riscos: normalizarItens(j.riscos) };
+  return {
+    objetivos: normalizarItens(j.objetivos),
+    beneficios: semBeneficioFixo(normalizarItens(j.beneficios)),
+    riscos: normalizarItens(j.riscos),
+  };
 }
 
 /**
@@ -45,7 +49,9 @@ export function ehJustificacaoGuardada(valor: unknown): valor is JustificacaoPro
 
 /** Se há alguma coisa escrita — o que decide se uma importação a pode adotar. */
 export function temJustificacao(justificacao: JustificacaoProjeto): boolean {
-  return [...justificacao.beneficios, ...justificacao.riscos].some((item) => item.designacao.trim() !== "");
+  return [...justificacao.objetivos, ...justificacao.beneficios, ...justificacao.riscos].some(
+    (item) => item.designacao.trim() !== "",
+  );
 }
 
 function validarLista(itens: ItemPerfil[], campo: string, nome: string, falta: string): ErroValidacao[] {
@@ -73,12 +79,18 @@ function validarLista(itens: ItemPerfil[], campo: string, nome: string, falta: s
 }
 
 /**
- * As duas listas são obrigatórias, e cada uma com pelo menos uma entrada: vão
- * para o enquadramento das informações, e uma lista vazia deixava lá a frase
+ * As três listas são obrigatórias, e cada uma com pelo menos uma entrada: vão
+ * para a manifestação de necessidades, e uma lista vazia deixava lá a frase
  * que a anuncia sem nada a seguir.
  */
 export function validarJustificacao(justificacao: JustificacaoProjeto): ErroValidacao[] {
   return [
+    ...validarLista(
+      justificacao.objetivos,
+      "justificacao.objetivos",
+      "objetivo",
+      "Indique pelo menos um objetivo da aquisição.",
+    ),
     ...validarLista(
       justificacao.beneficios,
       "justificacao.beneficios",

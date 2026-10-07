@@ -264,8 +264,8 @@ export function Modulo1({
           />
         </label>
         <p className="ajuda">
-          O que o projeto se propõe fazer. Completa a frase «Este projeto visa …» no pedido de assunção de encargos
-          plurianuais, pelo que uma ou duas frases bastam.
+          O que o projeto se propõe fazer. Sai na manifestação de necessidades («…a necessidade visa:») e na
+          descrição das especificações técnicas, pelo que uma ou duas frases bastam.
         </p>
       </section>
 
@@ -442,11 +442,26 @@ export function Modulo1({
       {/* Do projeto, e não do perfil em edição: ficam à vista mesmo sem perfil
           escolhido, e são os mesmos seja qual for o perfil aberto em cima. */}
       <ListaItensEditor
+        titulo="Objetivos da aquisição"
+        nota={
+          "Obrigatório. Um objetivo por linha. Abrem o «Enquadramento» da manifestação de necessidades, como " +
+          "alíneas a., b., c.…, a seguir à frase «…que possibilitará atingir os seguintes objetivos»."
+        }
+        nomeItem="objetivo"
+        rotuloColuna="Objetivo"
+        placeholder="ex.: Assegurar a continuidade da manutenção das aplicações até à sua substituição"
+        textoVazio="Ainda não há objetivos. Acrescente o primeiro."
+        rotuloAdicionar="+ Adicionar objetivo"
+        itens={justificacao.objetivos}
+        onChange={(objetivos) => onAlterarJustificacao({ ...justificacao, objetivos })}
+      />
+
+      <ListaItensEditor
         titulo="Benefícios do projeto"
         nota={
-          "Obrigatório. Um benefício por linha. Saem no «Enquadramento» das informações da SPMS, como alíneas " +
-          "a), b), c)…, a seguir à frase do contrato programa com a ACSS. O último é fixo e fecha a lista em " +
-          "todos os projetos: acrescente pelo menos um antes dele."
+          "Obrigatório. Um benefício por linha. Saem na manifestação de necessidades, como alíneas a., b., c.…, " +
+          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício. O último é " +
+          "fixo e fecha a lista em todos os projetos: acrescente pelo menos um antes dele."
         }
         nomeItem="benefício"
         rotuloColuna="Benefício"
@@ -462,8 +477,8 @@ export function Modulo1({
       <ListaItensEditor
         titulo="Riscos da não contratação"
         nota={
-          "Obrigatório. Um risco por linha: o que acontece se estes serviços não forem contratados. Saem no " +
-          "«Enquadramento» das informações da SPMS, a seguir aos benefícios, também como alíneas."
+          "Obrigatório. Um risco por linha: o que acontece se estes serviços não forem contratados. Saem na " +
+          "secção «Riscos da não contratação» da manifestação de necessidades, também como alíneas."
         }
         nomeItem="risco"
         rotuloColuna="Risco"

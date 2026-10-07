@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { N_BLOCOS_PADRAO, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
+import { JUSTIFICACAO_SEM_MARGEM } from "./margem";
 
 function req(id: string, designacao: string, mesesMinimos: number): Requisito {
   return { id, designacao, mesesMinimos };
@@ -95,8 +96,13 @@ export const DESCRICAO_PROJETO_EXEMPLO =
   "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, " +
   "assegurando a continuidade do serviço durante a migração";
 
-/** Benefícios e riscos do projeto de exemplo, com ids fixos como os perfis. */
+/** Objetivos, benefícios e riscos do projeto de exemplo, com ids fixos como os perfis. */
 export const JUSTIFICACAO_EXEMPLO: JustificacaoProjeto = {
+  objetivos: [
+    "Assegurar a continuidade do desenvolvimento e da manutenção das aplicações de gestão clínica até à sua substituição",
+    "Concretizar a migração para uma plataforma única e interoperável, sem interrupção do serviço prestado às instituições",
+    "Garantir a interoperabilidade da nova plataforma com os sistemas centrais do SNS",
+  ].map((designacao, i) => ({ id: `objetivo-${i + 1}`, designacao })),
   beneficios: [
     "Redução do tempo de registo clínico, com uma única aplicação em vez de várias por instituição",
     "Partilha de informação clínica entre instituições, sem reintrodução manual de dados",
@@ -119,7 +125,14 @@ export const LOTES_EXEMPLO: LotesJSON = {
   taxaIva: TAXA_IVA_PADRAO,
   nBlocos: N_BLOCOS_PADRAO,
   umLotePorConcorrente: true,
-  contratoProgramaAcss: true,
+  margemPrudencial: 0,
+  justificacaoMargem: JUSTIFICACAO_SEM_MARGEM,
+  juri: {
+    diretor: "Maria Exemplo",
+    coordenador: "Filipe Mealha",
+    unidade: "Unidade de Planeamento, Arquitetura, Conformidade e Engenharia",
+    gestorProjeto: "João Exemplo",
+  },
   numeroInformacao: "",
   postoTrabalho: postoTrabalhoInicial(),
   eavalia: {

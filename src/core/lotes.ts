@@ -6,6 +6,7 @@
 import type {
   EspecificacaoFormulario,
   InformacaoEavalia,
+  JuriTecnico,
   Lote,
   LotesJSON,
   EncargosPlurianuais,
@@ -28,11 +29,18 @@ import {
   TAXA_IVA_PADRAO,
   encargosPlurianuaisIniciais,
   informacaoEavaliaInicial,
+  juriInicial,
   postoTrabalhoInicial,
   regimeTemLocal,
 } from "./types";
-import { ErroImportacao, certificacoesDoPerfil, comCategoriasEavalia, type ErroValidacao } from "./perfil";
+import {
+  ErroImportacao,
+  certificacoesDoPerfil,
+  comCategoriasEavalia,
+  type ErroValidacao,
+} from "./perfil";
 import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
+import { JUSTIFICACAO_SEM_MARGEM, justificacaoPorOmissao } from "./margem";
 import { gerarId } from "./id";
 
 /**
@@ -40,7 +48,8 @@ import { gerarId } from "./id";
  * partir do nome do projeto, para que as peças, os ficheiros e o pedido de
  * parecer digam todos exatamente a mesma coisa.
  */
-export const PREFIXO_NOME_PROCEDIMENTO = "Aquisição de Serviços de Desenvolvimento e Manutenção do projeto ";
+export const PREFIXO_NOME_PROCEDIMENTO =
+  "Aquisição de Serviços de Desenvolvimento e Manutenção do projeto ";
 
 /**
  * O nome do procedimento correspondente a um projeto.
@@ -59,7 +68,14 @@ export function criarLote(numero: string): Lote {
 }
 
 export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
-  return { id: gerarId(), perfil, horas: 0, horasPorAno: horasEmBranco(), valorHora: 0, nMinimoElementos: 1 };
+  return {
+    id: gerarId(),
+    perfil,
+    horas: 0,
+    horasPorAno: horasEmBranco(),
+    valorHora: 0,
+    nMinimoElementos: 1,
+  };
 }
 
 export function lotesIniciais(): LotesJSON {
@@ -73,7 +89,9 @@ export function lotesIniciais(): LotesJSON {
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: N_BLOCOS_PADRAO,
     umLotePorConcorrente: false,
-    contratoProgramaAcss: null,
+    margemPrudencial: 0,
+    justificacaoMargem: JUSTIFICACAO_SEM_MARGEM,
+    juri: juriInicial(),
     numeroInformacao: "",
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
@@ -107,15 +125,20 @@ export function validarPostoTrabalho(posto: PostoTrabalho): ErroValidacao[] {
     if (posto.locais.includes("Outro") && posto.outroLocal.trim() === "") {
       erros.push({
         campo: "postoTrabalho.outroLocal",
-        mensagem: "Posto de trabalho: indique qual é o outro local da prestação de serviços.",
+        mensagem:
+          "Posto de trabalho: indique qual é o outro local da prestação de serviços.",
       });
     }
   }
 
-  if (posto.equipamento === "Equipamentos do Prestador" && posto.requisitosEquipamento.trim() === "") {
+  if (
+    posto.equipamento === "Equipamentos do Prestador" &&
+    posto.requisitosEquipamento.trim() === ""
+  ) {
     erros.push({
       campo: "postoTrabalho.requisitosEquipamento",
-      mensagem: "Posto de trabalho: indique os requisitos mínimos do equipamento do prestador.",
+      mensagem:
+        "Posto de trabalho: indique os requisitos mínimos do equipamento do prestador.",
     });
   }
 
@@ -123,14 +146,27 @@ export function validarPostoTrabalho(posto: PostoTrabalho): ErroValidacao[] {
 }
 
 /** As medidas do pedido de parecer eAvalia que esta aplicação preenche. */
-const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> = [
-  { campo: "iap", nome: "a utilização da plataforma de interoperabilidade da ARTE (iAP)" },
-  { campo: "sms", nome: "o envio de SMS pela plataforma da ARTE" },
-  { campo: "faturacao", nome: "a emissão de faturação pela plataforma da ARTE" },
-  { campo: "chaveMovelDigital", nome: "a utilização de chave móvel digital" },
-  { campo: "usabilidade", nome: "a conformidade em usabilidade e acessibilidade" },
-  { campo: "idiomas", nome: "a disponibilização do portal em português e inglês" },
-];
+const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> =
+  [
+    {
+      campo: "iap",
+      nome: "a utilização da plataforma de interoperabilidade da ARTE (iAP)",
+    },
+    { campo: "sms", nome: "o envio de SMS pela plataforma da ARTE" },
+    {
+      campo: "faturacao",
+      nome: "a emissão de faturação pela plataforma da ARTE",
+    },
+    { campo: "chaveMovelDigital", nome: "a utilização de chave móvel digital" },
+    {
+      campo: "usabilidade",
+      nome: "a conformidade em usabilidade e acessibilidade",
+    },
+    {
+      campo: "idiomas",
+      nome: "a disponibilização do portal em português e inglês",
+    },
+  ];
 
 /**
  * Respostas ao alinhamento tecnológico. Todas são exigidas: o pedido de parecer
@@ -147,10 +183,19 @@ const MEDIDAS_EAVALIA: Array<{ campo: keyof InformacaoEavalia; nome: string }> =
 /** N.º de projetos por formulário: um inteiro positivo, e não muito mais. */
 function validarNBlocos(config: LotesJSON): ErroValidacao[] {
   if (Number.isInteger(config.nBlocos) && config.nBlocos >= 1) return [];
-  return [{ campo: "nBlocos", mensagem: "O n.º de projetos por Excel deve ser um inteiro maior do que zero." }];
+  return [
+    {
+      campo: "nBlocos",
+      mensagem:
+        "O n.º de projetos por Excel deve ser um inteiro maior do que zero.",
+    },
+  ];
 }
 
-export function validarEncargosPlurianuais(config: LotesJSON, hoje = new Date()): ErroValidacao[] {
+export function validarEncargosPlurianuais(
+  config: LotesJSON,
+  hoje = new Date(),
+): ErroValidacao[] {
   const encargos = config.encargosPlurianuais;
   if (!encargos.ativo) return [];
 
@@ -187,9 +232,15 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
   config.lotes.forEach((lote, idxLote) => {
     const numero = lote.numero.trim();
     if (numero === "") {
-      erros.push({ campo: `lotes[${idxLote}].numero`, mensagem: `Lote ${idxLote + 1}: indique o número do lote.` });
+      erros.push({
+        campo: `lotes[${idxLote}].numero`,
+        mensagem: `Lote ${idxLote + 1}: indique o número do lote.`,
+      });
     } else if (numerosVistos.has(numero)) {
-      erros.push({ campo: `lotes[${idxLote}].numero`, mensagem: `Número de lote repetido: "${numero}".` });
+      erros.push({
+        campo: `lotes[${idxLote}].numero`,
+        mensagem: `Número de lote repetido: "${numero}".`,
+      });
     } else {
       numerosVistos.add(numero);
     }
@@ -231,7 +282,10 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
           mensagem: `${prefixo}: indique um valor/hora maior que zero.`,
         });
       }
-      if (!Number.isInteger(entrada.nMinimoElementos) || entrada.nMinimoElementos < 1) {
+      if (
+        !Number.isInteger(entrada.nMinimoElementos) ||
+        entrada.nMinimoElementos < 1
+      ) {
         erros.push({
           campo: `lotes[${idxLote}].perfis[${idxPerfil}].nMinimoElementos`,
           mensagem: `${prefixo}: o n.º mínimo de elementos deve ser um inteiro ≥ 1.`,
@@ -245,27 +299,112 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
   return [
     ...erros,
     ...validarNBlocos(config),
-    ...validarContratoPrograma(config),
+    ...validarMargem(config),
     ...validarPostoTrabalho(config.postoTrabalho),
     ...validarEavalia(config.eavalia),
     ...validarEncargosPlurianuais(config),
+    ...validarJuri(config),
   ];
 }
 
-/** Um ficheiro anterior à escolha não a traz: fica por fazer, e não presumida. */
-function lerContratoPrograma(valor: unknown): boolean | null {
-  return typeof valor === "boolean" ? valor : null;
+/**
+ * A margem prudencial e o seu fundamento. O fundamento é obrigatório: com 0 %
+ * é ele que explica por que não há margem, e acima de 0 % por que a há.
+ */
+export function validarMargem(config: LotesJSON): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+  if (
+    !Number.isFinite(config.margemPrudencial) ||
+    config.margemPrudencial < 0
+  ) {
+    erros.push({
+      campo: "margemPrudencial",
+      mensagem:
+        "A margem prudencial deve ser uma percentagem igual ou superior a 0.",
+    });
+  }
+  if (config.justificacaoMargem.trim() === "") {
+    erros.push({
+      campo: "justificacaoMargem",
+      mensagem:
+        config.margemPrudencial > 0
+          ? "Fundamente a margem prudencial."
+          : "Com a margem prudencial a 0 %, indique por que não se aplica.",
+    });
+  }
+  return erros;
 }
 
-export function validarContratoPrograma(config: LotesJSON): ErroValidacao[] {
-  return config.contratoProgramaAcss === null
-    ? [
-        {
-          campo: "contratoProgramaAcss",
-          mensagem: "Indique se o projeto está integrado no contrato programa com a ACSS.",
-        },
-      ]
-    : [];
+/**
+ * O júri técnico: os três elementos que a manifestação propõe, e a unidade do
+ * coordenador, que é quem a assina.
+ */
+export function validarJuri(config: LotesJSON): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+  const juri: Array<[keyof JuriTecnico, string]> = [
+    ["diretor", "Indique o diretor que integra o júri técnico."],
+    [
+      "coordenador",
+      "Indique o coordenador que integra o júri técnico e assina a informação.",
+    ],
+    ["unidade", "Indique a unidade (coordenação) do coordenador."],
+    [
+      "gestorProjeto",
+      "Indique o gestor de projeto que integra o júri técnico.",
+    ],
+  ];
+  for (const [campo, mensagem] of juri) {
+    if (config.juri[campo].trim() === "")
+      erros.push({ campo: `juri.${campo}`, mensagem });
+  }
+  return erros;
+}
+
+/** O júri de um ficheiro: os campos que tragam texto, e os outros por preencher. */
+function lerJuri(bruto: unknown): JuriTecnico {
+  const j =
+    typeof bruto === "object" && bruto !== null
+      ? (bruto as Record<string, unknown>)
+      : {};
+  const texto = (v: unknown) => (typeof v === "string" ? v : "");
+  return {
+    diretor: texto(j.diretor),
+    coordenador: texto(j.coordenador),
+    unidade: texto(j.unidade),
+    gestorProjeto: texto(j.gestorProjeto),
+  };
+}
+
+/**
+ * Os campos da manifestação de um agrupamento guardado, postos em dia.
+ *
+ * Ficheiros anteriores não os trazem: a margem fica a 0 %, com o fundamento
+ * por omissão, e o júri por preencher. A escolha do contrato programa com a
+ * ACSS, que a informação deixou de levar, é descartada.
+ */
+function camposDaManifestacao(
+  config: LotesJSON,
+): Pick<LotesJSON, "margemPrudencial" | "justificacaoMargem" | "juri"> {
+  const bruto = config as Partial<LotesJSON>;
+  const margem =
+    Number.isFinite(bruto.margemPrudencial) &&
+    (bruto.margemPrudencial as number) >= 0
+      ? (bruto.margemPrudencial as number)
+      : 0;
+  return {
+    margemPrudencial: margem,
+    justificacaoMargem:
+      typeof bruto.justificacaoMargem === "string"
+        ? bruto.justificacaoMargem
+        : justificacaoPorOmissao(margem),
+    juri: lerJuri(bruto.juri),
+  };
+}
+
+function semCamposRetirados(config: LotesJSON): LotesJSON {
+  const copia = { ...config } as LotesJSON & { contratoProgramaAcss?: unknown };
+  delete copia.contratoProgramaAcss;
+  return copia;
 }
 
 // --------------------------------------------------------------------------
@@ -284,7 +423,9 @@ export function importarLotesJSON(texto: string): LotesJSON {
     throw new ErroImportacao("O ficheiro não contém JSON válido.");
   }
   if (typeof bruto !== "object" || bruto === null || Array.isArray(bruto)) {
-    throw new ErroImportacao("O ficheiro não corresponde a uma configuração válida.");
+    throw new ErroImportacao(
+      "O ficheiro não corresponde a uma configuração válida.",
+    );
   }
 
   const registo = bruto as Record<string, unknown>;
@@ -307,17 +448,27 @@ export function importarLotesJSON(texto: string): LotesJSON {
   // acrescentados depois: ficheiros anteriores não os têm.
   const config = bruto as unknown as LotesJSON;
   return comRepartricaoPostaEmDia({
-    ...config,
+    ...semCamposRetirados(config),
     taxaIva: Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO,
-    nBlocos: Number.isInteger(config.nBlocos) && config.nBlocos > 0 ? config.nBlocos : N_BLOCOS_PADRAO,
+    nBlocos:
+      Number.isInteger(config.nBlocos) && config.nBlocos > 0
+        ? config.nBlocos
+        : N_BLOCOS_PADRAO,
     nomeProjeto: config.nomeProjeto ?? "",
     descricaoProjeto: config.descricaoProjeto ?? "",
-    justificacao: normalizarJustificacao((registo as { justificacao?: unknown }).justificacao),
+    justificacao: normalizarJustificacao(
+      (registo as { justificacao?: unknown }).justificacao,
+    ),
     nomeProcedimento: config.nomeProcedimento ?? "",
     umLotePorConcorrente: config.umLotePorConcorrente === true,
-    contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
-    numeroInformacao: typeof config.numeroInformacao === "string" ? config.numeroInformacao : "",
-    postoTrabalho: normalizarPostoTrabalho((registo as { postoTrabalho?: unknown }).postoTrabalho),
+    ...camposDaManifestacao(config),
+    numeroInformacao:
+      typeof config.numeroInformacao === "string"
+        ? config.numeroInformacao
+        : "",
+    postoTrabalho: normalizarPostoTrabalho(
+      (registo as { postoTrabalho?: unknown }).postoTrabalho,
+    ),
     eavalia: normalizarEavalia((registo as { eavalia?: unknown }).eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(
       (registo as { encargosPlurianuais?: unknown }).encargosPlurianuais,
@@ -328,7 +479,10 @@ export function importarLotesJSON(texto: string): LotesJSON {
         ...entrada,
         perfil: comCategoriasEavalia({
           ...entrada.perfil,
-          id: typeof entrada.perfil.id === "string" && entrada.perfil.id !== "" ? entrada.perfil.id : gerarId(),
+          id:
+            typeof entrada.perfil.id === "string" && entrada.perfil.id !== ""
+              ? entrada.perfil.id
+              : gerarId(),
         }),
       })),
     })),
@@ -345,17 +499,25 @@ export function importarLotesJSON(texto: string): LotesJSON {
  */
 export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
   return comRepartricaoPostaEmDia({
-    ...config,
+    ...semCamposRetirados(config),
     descricaoProjeto: config.descricaoProjeto ?? "",
     justificacao: normalizarJustificacao(config.justificacao),
-    contratoProgramaAcss: lerContratoPrograma(config.contratoProgramaAcss),
-    numeroInformacao: typeof config.numeroInformacao === "string" ? config.numeroInformacao : "",
+    ...camposDaManifestacao(config),
+    numeroInformacao:
+      typeof config.numeroInformacao === "string"
+        ? config.numeroInformacao
+        : "",
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
-    encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),
+    encargosPlurianuais: normalizarEncargosPlurianuais(
+      config.encargosPlurianuais,
+    ),
     lotes: config.lotes.map((lote) => ({
       ...lote,
-      perfis: lote.perfis.map((entrada) => ({ ...entrada, perfil: comCategoriasEavalia(entrada.perfil) })),
+      perfis: lote.perfis.map((entrada) => ({
+        ...entrada,
+        perfil: comCategoriasEavalia(entrada.perfil),
+      })),
     })),
   });
 }
@@ -371,7 +533,9 @@ const RESPOSTAS_EAVALIA: RespostaEavalia[] = [
 ];
 
 function lerResposta(valor: unknown): RespostaEavalia {
-  return RESPOSTAS_EAVALIA.includes(valor as RespostaEavalia) ? (valor as RespostaEavalia) : "";
+  return RESPOSTAS_EAVALIA.includes(valor as RespostaEavalia)
+    ? (valor as RespostaEavalia)
+    : "";
 }
 
 /**
@@ -381,7 +545,8 @@ function lerResposta(valor: unknown): RespostaEavalia {
  * um valor que não abre.
  */
 function normalizarEavalia(bruto: unknown): InformacaoEavalia {
-  if (typeof bruto !== "object" || bruto === null) return informacaoEavaliaInicial();
+  if (typeof bruto !== "object" || bruto === null)
+    return informacaoEavaliaInicial();
   const e = bruto as Record<string, unknown>;
   // Um agrupamento gravado antes de estas medidas existirem não as traz: ficam
   // por responder, que é o estado inicial de qualquer uma.
@@ -400,10 +565,19 @@ function lerSelo(bruto: unknown): RespostaSelo {
   return SELOS.includes(bruto as RespostaSelo) ? (bruto as RespostaSelo) : "";
 }
 
-const SELOS: RespostaSelo[] = ["", "Não aplicável", "Selo Ouro", "Selo Prata", "Selo Bronze"];
+const SELOS: RespostaSelo[] = [
+  "",
+  "Não aplicável",
+  "Selo Ouro",
+  "Selo Prata",
+  "Selo Bronze",
+];
 
 /** Só as opções que constam da lista, e sem repetições, pela ordem da lista. */
-function lerOpcoes<T extends string>(bruto: unknown, admitidas: readonly T[]): T[] {
+function lerOpcoes<T extends string>(
+  bruto: unknown,
+  admitidas: readonly T[],
+): T[] {
   if (!Array.isArray(bruto)) return [];
   return admitidas.filter((opcao) => bruto.includes(opcao));
 }
@@ -414,9 +588,16 @@ function lerOpcoes<T extends string>(bruto: unknown, admitidas: readonly T[]): T
  * tenha entretanto deixado de existir — o antigo regime de teletrabalho — cai
  * no valor de partida, que é o que o utilizador veria se começasse agora.
  */
-function lerEscolha<T extends string>(bruto: unknown, admitidas: readonly T[], omissao: T): T {
+function lerEscolha<T extends string>(
+  bruto: unknown,
+  admitidas: readonly T[],
+  omissao: T,
+): T {
   const candidatos = Array.isArray(bruto) ? bruto : [bruto];
-  return (candidatos.find((c) => admitidas.includes(c as T)) as T | undefined) ?? omissao;
+  return (
+    (candidatos.find((c) => admitidas.includes(c as T)) as T | undefined) ??
+    omissao
+  );
 }
 
 /**
@@ -434,20 +615,26 @@ function normalizarEncargosPlurianuais(bruto: unknown): EncargosPlurianuais {
 
   return {
     ativo: e.ativo === true,
-    anoInicio: Number.isInteger(e.anoInicio) ? (e.anoInicio as number) : partida.anoInicio,
+    anoInicio: Number.isInteger(e.anoInicio)
+      ? (e.anoInicio as number)
+      : partida.anoInicio,
   };
 }
 
-
 function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
-  if (typeof bruto !== "object" || bruto === null) return postoTrabalhoInicial();
+  if (typeof bruto !== "object" || bruto === null)
+    return postoTrabalhoInicial();
   const p = bruto as Record<string, unknown>;
   const partida = postoTrabalhoInicial();
   return {
     regime: lerEscolha(p.regime ?? p.regimes, REGIMES_POSTO, partida.regime),
     locais: lerOpcoes(p.locais, LOCAIS_POSTO),
     outroLocal: typeof p.outroLocal === "string" ? p.outroLocal : "",
-    equipamento: lerEscolha(p.equipamento ?? p.equipamentos, EQUIPAMENTOS_POSTO, partida.equipamento),
+    equipamento: lerEscolha(
+      p.equipamento ?? p.equipamentos,
+      EQUIPAMENTOS_POSTO,
+      partida.equipamento,
+    ),
     requisitosEquipamento:
       typeof p.requisitosEquipamento === "string"
         ? requisitosEquipamentoAtualizados(p.requisitosEquipamento)
@@ -462,7 +649,11 @@ function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
  * Vive aqui, e não no ecrã do Módulo 2, porque é preciso em dois sítios: no
  * botão que gera os formulários e no pacote das peças do procedimento.
  */
-export function especificacao(perfil: PerfilJSON, nBlocos: number, lote?: Lote): EspecificacaoFormulario {
+export function especificacao(
+  perfil: PerfilJSON,
+  nBlocos: number,
+  lote?: Lote,
+): EspecificacaoFormulario {
   return {
     perfil: perfil.perfil,
     nBlocos,
@@ -473,7 +664,9 @@ export function especificacao(perfil: PerfilJSON, nBlocos: number, lote?: Lote):
 }
 
 export function perfisEmLotes(config: LotesJSON): PerfilJSON[] {
-  return config.lotes.flatMap((lote) => lote.perfis.map((entrada) => entrada.perfil));
+  return config.lotes.flatMap((lote) =>
+    lote.perfis.map((entrada) => entrada.perfil),
+  );
 }
 
 /** Um perfil do agrupamento que exige certificação, com o lote onde está. */
@@ -492,7 +685,9 @@ export interface PerfilComCertificacao {
  * risco é justamente passar despercebida por não aparecer em lado nenhum do
  * apuramento.
  */
-export function perfisComCertificacao(config: LotesJSON): PerfilComCertificacao[] {
+export function perfisComCertificacao(
+  config: LotesJSON,
+): PerfilComCertificacao[] {
   return config.lotes.flatMap((lote) =>
     lote.perfis
       .map((entrada) => ({
@@ -530,7 +725,10 @@ export function lotePorPerfilId(config: LotesJSON): Record<string, string> {
  * altera-o também no lote onde o perfil já esteja atribuído. Um perfil que
  * tenha desaparecido do catálogo é retirado do lote — deixou de existir.
  */
-export function sincronizarPerfisEmLotes(config: LotesJSON, perfis: PerfilJSON[]): LotesJSON {
+export function sincronizarPerfisEmLotes(
+  config: LotesJSON,
+  perfis: PerfilJSON[],
+): LotesJSON {
   const porId = new Map(perfis.map((p) => [p.id, p]));
   return {
     ...config,
@@ -543,7 +741,6 @@ export function sincronizarPerfisEmLotes(config: LotesJSON, perfis: PerfilJSON[]
     })),
   };
 }
-
 
 // --------------------------------------------------------------------------
 // Preço base
@@ -587,15 +784,27 @@ export interface LinhaTabelaValores {
  * Por isso cada modelo guarda o seu número, e desligar o pedido não estraga o
  * que lá estava — quem voltar a ligá-lo encontra os anos como os deixou.
  */
-export function horasContratadas(entrada: PerfilEmLote, plurianual: boolean): number {
+export function horasContratadas(
+  entrada: PerfilEmLote,
+  plurianual: boolean,
+): number {
   return plurianual
     ? horasPorAnoDe(entrada, true).reduce((soma, h) => soma + h, 0)
-    : (Number.isFinite(entrada.horas) ? entrada.horas : 0);
+    : Number.isFinite(entrada.horas)
+      ? entrada.horas
+      : 0;
 }
 
 /** Preço base de um perfil dentro de um lote, sem IVA: n.º mínimo de elementos × horas × preço/hora. */
-export function precoBaseEntrada(entrada: PerfilEmLote, plurianual: boolean): number {
-  return entrada.nMinimoElementos * horasContratadas(entrada, plurianual) * entrada.valorHora;
+export function precoBaseEntrada(
+  entrada: PerfilEmLote,
+  plurianual: boolean,
+): number {
+  return (
+    entrada.nMinimoElementos *
+    horasContratadas(entrada, plurianual) *
+    entrada.valorHora
+  );
 }
 
 export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
@@ -611,7 +820,10 @@ export function linhasTabelaValores(config: LotesJSON): LinhaTabelaValores[] {
       nMinimoElementos: entrada.nMinimoElementos,
       horas: horasContratadas(entrada, plurianual),
       valorHora: entrada.valorHora,
-      valores: aplicarIva(precoBaseEntrada(entrada, plurianual), taxaIva(config)),
+      valores: aplicarIva(
+        precoBaseEntrada(entrada, plurianual),
+        taxaIva(config),
+      ),
     })),
   );
 }
@@ -641,7 +853,9 @@ function distribuicaoPadrao(total: number): number[] {
   if (!Number.isFinite(total) || total <= 0) return horasEmBranco();
   const porAno = Math.floor(total / ANOS_PLURIANUAIS);
   return Array.from({ length: ANOS_PLURIANUAIS }, (_, i) =>
-    i === ANOS_PLURIANUAIS - 1 ? total - porAno * (ANOS_PLURIANUAIS - 1) : porAno,
+    i === ANOS_PLURIANUAIS - 1
+      ? total - porAno * (ANOS_PLURIANUAIS - 1)
+      : porAno,
   );
 }
 
@@ -676,14 +890,23 @@ function comRepartricaoPostaEmDia(config: LotesJSON): LotesJSON {
  * que faz a Vista Geral e o quadro dos anos lerem um agrupamento anual sem o
  * inventarem repartido por três.
  */
-export function horasPorAnoDe(entrada: PerfilEmLote, plurianual: boolean): number[] {
+export function horasPorAnoDe(
+  entrada: PerfilEmLote,
+  plurianual: boolean,
+): number[] {
   if (!plurianual) {
-    return horasEmBranco().map((zero, i) => (i === 0 ? horasContratadas(entrada, false) : zero));
+    return horasEmBranco().map((zero, i) =>
+      i === 0 ? horasContratadas(entrada, false) : zero,
+    );
   }
 
-  const guardadas = Array.isArray(entrada.horasPorAno) ? entrada.horasPorAno : [];
+  const guardadas = Array.isArray(entrada.horasPorAno)
+    ? entrada.horasPorAno
+    : [];
   return horasEmBranco().map((zero, i) =>
-    typeof guardadas[i] === "number" && Number.isFinite(guardadas[i]) ? guardadas[i] : zero,
+    typeof guardadas[i] === "number" && Number.isFinite(guardadas[i])
+      ? guardadas[i]
+      : zero,
   );
 }
 
@@ -694,8 +917,16 @@ export function horasPorAnoDe(entrada: PerfilEmLote, plurianual: boolean): numbe
  * Só toca no ano escrito. O total do modelo anual fica onde estava: são dois
  * modelos independentes — ver `horasContratadas`.
  */
-export function comHorasDoAno(entrada: PerfilEmLote, ano: number, horas: number): Partial<PerfilEmLote> {
-  return { horasPorAno: horasPorAnoDe(entrada, true).map((atual, i) => (i === ano ? horas : atual)) };
+export function comHorasDoAno(
+  entrada: PerfilEmLote,
+  ano: number,
+  horas: number,
+): Partial<PerfilEmLote> {
+  return {
+    horasPorAno: horasPorAnoDe(entrada, true).map((atual, i) =>
+      i === ano ? horas : atual,
+    ),
+  };
 }
 
 /** Uma linha do pedido, com o que vem do lote e o que dele se calcula. */
@@ -719,7 +950,9 @@ export interface LinhaPlurianualCompleta {
 }
 
 /** Uma linha por perfil dentro de cada lote, com as horas repartidas por ano. */
-export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] {
+export function linhasPlurianuais(
+  config: LotesJSON,
+): LinhaPlurianualCompleta[] {
   const taxa = taxaIva(config);
 
   return config.lotes.flatMap((lote) =>
@@ -737,17 +970,25 @@ export function linhasPlurianuais(config: LotesJSON): LinhaPlurianualCompleta[] 
         valorHoraComIva,
         horasContratadas: horasContratadas(entrada, true),
         horas,
-        totais: horas.map((h) => entrada.nMinimoElementos * h * valorHoraComIva),
+        totais: horas.map(
+          (h) => entrada.nMinimoElementos * h * valorHoraComIva,
+        ),
       };
     }),
   );
 }
 
 /** O total a assumir em cada ano, num lote só. */
-export function totaisPorAnoDoLote(config: LotesJSON, loteId: string): number[] {
+export function totaisPorAnoDoLote(
+  config: LotesJSON,
+  loteId: string,
+): number[] {
   return linhasPlurianuais(config)
     .filter((linha) => linha.loteId === loteId)
-    .reduce((soma, linha) => soma.map((valor, i) => valor + linha.totais[i]), horasEmBranco());
+    .reduce(
+      (soma, linha) => soma.map((valor, i) => valor + linha.totais[i]),
+      horasEmBranco(),
+    );
 }
 
 /** O total a assumir em cada ano, somando todas as linhas. */
@@ -764,7 +1005,10 @@ export function totaisPorAnoSemIva(config: LotesJSON): number[] {
     .flatMap((lote) => lote.perfis)
     .reduce((soma, entrada) => {
       const horas = horasPorAnoDe(entrada, true);
-      return soma.map((valor, i) => valor + entrada.nMinimoElementos * horas[i] * entrada.valorHora);
+      return soma.map(
+        (valor, i) =>
+          valor + entrada.nMinimoElementos * horas[i] * entrada.valorHora,
+      );
     }, horasEmBranco());
 }
 
@@ -809,7 +1053,11 @@ export function taxaIva(config: LotesJSON): number {
   return Number.isFinite(config.taxaIva) ? config.taxaIva : TAXA_IVA_PADRAO;
 }
 
-export function totalLote(lote: Lote, taxa: number, plurianual: boolean): Valores {
+export function totalLote(
+  lote: Lote,
+  taxa: number,
+  plurianual: boolean,
+): Valores {
   return aplicarIva(
     lote.perfis.reduce((soma, e) => soma + precoBaseEntrada(e, plurianual), 0),
     taxa,
@@ -819,7 +1067,10 @@ export function totalLote(lote: Lote, taxa: number, plurianual: boolean): Valore
 export function totalProcedimento(config: LotesJSON): Valores {
   const plurianual = config.encargosPlurianuais.ativo;
   return aplicarIva(
-    config.lotes.reduce((soma, lote) => soma + totalLote(lote, 0, plurianual).semIva, 0),
+    config.lotes.reduce(
+      (soma, lote) => soma + totalLote(lote, 0, plurianual).semIva,
+      0,
+    ),
     taxaIva(config),
   );
 }
@@ -835,7 +1086,9 @@ export function formatarMoeda(valor: number): string {
   return Number.isFinite(valor) ? formatadorMoeda.format(valor) : "—";
 }
 
-const formatadorNumero = new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 2 });
+const formatadorNumero = new Intl.NumberFormat("pt-PT", {
+  maximumFractionDigits: 2,
+});
 
 export function formatarNumero(valor: number): string {
   return Number.isFinite(valor) ? formatadorNumero.format(valor) : "—";

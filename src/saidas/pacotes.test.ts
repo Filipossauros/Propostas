@@ -92,7 +92,9 @@ describe("pacote das peças do procedimento", () => {
     expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(2);
     expect(lista.some((n) => n.includes("Requisitos_e_regras.docx"))).toBe(true);
     // O exemplo tem encargos plurianuais: a informação que sai é o pedido.
-    expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(true);
+    expect(lista.some((n) => n.includes("Manifestacao_de_Necessidades.docx"))).toBe(true);
+    // O pedido de encargos plurianuais deixou de existir: a manifestação leva a repartição por anos.
+    expect(lista.some((n) => n.includes("Pedido_Trienio"))).toBe(false);
     expect(lista.some((n) => n.startsWith("Pedido_PPP_eavalia_"))).toBe(true);
     expect(lista.some((n) => n.endsWith("_Lotes.json"))).toBe(true);
 
@@ -100,6 +102,19 @@ describe("pacote das peças do procedimento", () => {
     expect(lista.filter((n) => n.startsWith("Resumos Curriculares/"))).toHaveLength(2);
     // E os ficheiros do Módulo 1, numa pasta à parte.
     expect(lista.filter((n) => n.startsWith("Perfis/"))).toHaveLength(2);
+  });
+
+  it("com margem prudencial, as peças levam os valores com ela, e o JSON guarda os de referência", async () => {
+    const ficheiros = await ficheirosDasPecas(config({ margemPrudencial: 10 }), PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO);
+    const conteudo = (fim: string) => ficheiros.find((f) => f.nome.endsWith(fim))!.conteudo as Blob;
+
+    const lotes = JSON.parse(await conteudo("_Lotes.json").text()) as LotesJSON;
+    expect(lotes.margemPrudencial).toBe(10);
+    expect(lotes.lotes[0].perfis[0].valorHora).toBe(42);
+
+    const eavalia = await JSZip.loadAsync(await conteudo(".xlsx").arrayBuffer());
+    const custos = await eavalia.file("xl/worksheets/sheet4.xml")!.async("string");
+    expect(custos).toContain('<c r="B9" s="20"><v>46.2</v></c>');
   });
 
   it("sem encargos plurianuais sai a manifestação de necessidades, e não o pedido", async () => {
@@ -131,7 +146,7 @@ describe("pacote das peças do procedimento", () => {
     );
     const pdf = ficheiros.find((f) => f.nome.endsWith(".pdf"));
 
-    expect(pdf?.nome).toBe("Modernizacao_dos_Sistemas_de_Informacao_Pedido_Trienio.pdf");
+    expect(pdf?.nome).toBe("Modernizacao_dos_Sistemas_de_Informacao_Manifestacao_de_Necessidades.pdf");
     const bytes = new Uint8Array(await (pdf!.conteudo as Blob).arrayBuffer());
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     // Só um PDF: o da informação.

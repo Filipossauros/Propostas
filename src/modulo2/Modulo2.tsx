@@ -14,6 +14,7 @@ import {
   importarLotesJSON,
   lotesIniciais,
   anosPlurianuais,
+  formatarNumero,
   nomeProcedimentoDe,
   perfisEmLotes,
   PREFIXO_NOME_PROCEDIMENTO,
@@ -28,6 +29,7 @@ import {
   PERFIS_EXEMPLO,
 } from "../core/exemplo";
 import { justificacaoInicial, temJustificacao, validarJustificacao } from "../core/justificacao";
+import { comMargemPrudencial, ehJustificacaoPorOmissao, justificacaoPorOmissao, margemDe } from "../core/margem";
 import { ErroModeloEavalia } from "../excel/eavalia";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDasPecas, nomeDoPacoteDePecas } from "../saidas/pacotes";
@@ -337,26 +339,45 @@ export function Modulo2({
           os preços unitários são introduzidos sem IVA.
         </p>
 
-        <label className="campo-escolha">
-          <span className="rotulo">Integração no contrato programa com a ACSS</span>
-          <select
-            value={config.contratoProgramaAcss === null ? "" : config.contratoProgramaAcss ? "sim" : "nao"}
-            aria-invalid={config.contratoProgramaAcss === null}
-            onChange={(e) =>
-              onAlterarConfig((atual) => ({
-                ...atual,
-                contratoProgramaAcss: e.target.value === "" ? null : e.target.value === "sim",
-              }))
-            }
-          >
-            <option value="">— por escolher —</option>
-            <option value="sim">Está integrado</option>
-            <option value="nao">Não está integrado</option>
-          </select>
+        <div className="linha-campos linha-campos-numeros">
+          <label className="campo-numero-rotulado">
+            <span className="rotulo">Margem prudencial</span>
+            <CampoNumero
+              valor={config.margemPrudencial}
+              min={0}
+              step={1}
+              sufixo="%"
+              invalido={!(config.margemPrudencial >= 0)}
+              aria-label="Margem prudencial"
+              onChange={(margemPrudencial) =>
+                onAlterarConfig((atual) => ({
+                  ...atual,
+                  margemPrudencial,
+                  // O fundamento por omissão acompanha a margem; um escrito à mão fica.
+                  justificacaoMargem: ehJustificacaoPorOmissao(atual.justificacaoMargem)
+                    ? justificacaoPorOmissao(margemPrudencial)
+                    : atual.justificacaoMargem,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <label className="campo campo-justificacao-margem">
+          <span className="rotulo">
+            {config.margemPrudencial > 0 ? "Fundamento da margem prudencial" : "Fundamento da margem prudencial a 0 %"}
+          </span>
+          <textarea
+            rows={5}
+            value={config.justificacaoMargem}
+            aria-invalid={config.justificacaoMargem.trim() === ""}
+            onChange={(e) => onAlterarConfig((atual) => ({ ...atual, justificacaoMargem: e.target.value }))}
+          />
         </label>
         <p className="ajuda">
-          Obrigatório. Completa, no enquadramento da informação, a frase «O Projeto está / não está integrado no
-          contrato programa com a ACSS».
+          Obrigatório. Os valores hora são a média das propostas dos últimos procedimentos: a 0 %, a margem
+          considera-se neles incorporada e o fundamento di-lo. Acima de 0 %, a margem é aplicada ao valor hora de
+          cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, preço base e eAvalia. O
+          texto por omissão acompanha a margem enquanto não for alterado.
         </p>
 
         <label className="campo-opcao">
@@ -554,7 +575,13 @@ export function Modulo2({
           <header className="painel-cabecalho">
             <h3>Resumo do procedimento</h3>
           </header>
-          <TabelaValores config={config} />
+          <TabelaValores config={comMargemPrudencial(config)} />
+          {margemDe(config) > 0 && (
+            <p className="ajuda">
+              Valores com a margem prudencial de {formatarNumero(margemDe(config))} % já aplicada ao valor hora de
+              cada perfil — os mesmos que saem no Anexo Técnico.
+            </p>
+          )}
         </section>
       )}
 
@@ -587,6 +614,41 @@ export function Modulo2({
 
       <section className="painel">
         <header className="painel-cabecalho">
+          <h3>Júri técnico e assinatura</h3>
+          <p className="painel-nota">
+            Os três elementos que a manifestação de necessidades propõe para o júri. O coordenador assina a
+            informação, e a unidade sai na assinatura por baixo da direção.
+          </p>
+        </header>
+        <div className="grelha-juri">
+          {(
+            [
+              ["diretor", "Diretor", "Nome do diretor"],
+              ["coordenador", "Coordenador", "Nome do coordenador"],
+              ["unidade", "Unidade (coordenação)", "ex.: Unidade de Planeamento, Arquitetura, Conformidade e Engenharia"],
+              ["gestorProjeto", "Gestor de projeto", "Nome do gestor de projeto"],
+            ] as const
+          ).map(([campo, rotulo, exemplo]) => (
+            <label key={campo} className="campo">
+              <span className="rotulo">{rotulo}</span>
+              <input
+                type="text"
+                className={`campo-juri-${campo}`}
+                value={config.juri[campo]}
+                placeholder={exemplo}
+                aria-invalid={config.juri[campo].trim() === ""}
+                onChange={(e) =>
+                  onAlterarConfig((atual) => ({ ...atual, juri: { ...atual.juri, [campo]: e.target.value } }))
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <p className="ajuda">Obrigatórios.</p>
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
           <h3>Anexo Técnico</h3>
         </header>
 
@@ -615,11 +677,8 @@ export function Modulo2({
           </button>
         </div>
         <p className="ajuda">
-          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras,{" "}
-          {config.encargosPlurianuais.ativo
-            ? "o pedido de assunção de encargos plurianuais"
-            : "a manifestação de necessidades"}{" "}
-          no modelo formal da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
+          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, a manifestação de
+          necessidades no modelo da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
           declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 1.
         </p>
         {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}

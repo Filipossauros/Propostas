@@ -18,7 +18,8 @@ import { resultadosParaJSON } from "../core/resultadosJSON";
 import { anosDoOrcamento, orcamentoParaJSON } from "../core/vistaGeral";
 import { anosDaDirecao, vistaDirecaoParaJSON } from "../core/vistaGeralDirecao";
 import { gerarDocxBlob } from "../word/gerarDocx";
-import { gerarManifestacaoNecessidadesBlob, gerarPedidoPlurianualBlob } from "../word/informacaoSpms";
+import { gerarManifestacaoBlob } from "../word/manifestacaoNecessidades";
+import { comMargemPrudencial } from "../core/margem";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { imagensDosResumos } from "../excel/imagemDaFolha";
@@ -67,12 +68,9 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
 // --------------------------------------------------------------------------
 
 /**
- * A informação formal da organização que este procedimento pede.
- *
- * Com encargos plurianuais é o pedido para os assumir; sem eles a despesa cabe
- * num ano só, não há nada a pedir à tutela, e o que segue é a manifestação de
- * necessidades. Sai sempre uma, e nunca as duas: são a mesma informação vista
- * de dois sítios, e juntas obrigavam quem recebe o processo a escolher.
+ * A informação do procedimento: a manifestação de necessidades, no modelo da
+ * DAG. É a mesma com ou sem encargos plurianuais — a repartição por anos vai
+ * dentro dela.
  */
 async function informacaoDoProcedimento(
   config: LotesJSON,
@@ -80,15 +78,10 @@ async function informacaoDoProcedimento(
   quando: Date,
   imagens: ImagemDaFolha[],
 ): Promise<FicheiroDoPacote> {
-  return config.encargosPlurianuais.ativo
-    ? {
-        nome: `${base}_Pedido_Trienio.docx`,
-        conteudo: await gerarPedidoPlurianualBlob(config, quando, imagens),
-      }
-    : {
-        nome: `${base}_Manifestacao_de_Necessidades.docx`,
-        conteudo: await gerarManifestacaoNecessidadesBlob(config, quando, imagens),
-      };
+  return {
+    nome: `${base}_Manifestacao_de_Necessidades.docx`,
+    conteudo: await gerarManifestacaoBlob(config, quando, imagens),
+  };
 }
 
 /**
@@ -149,15 +142,19 @@ export async function ficheirosDasPecas(
   );
 
   const informacao = await informacaoDoProcedimento(config, base, quando, imagens);
+  // As restantes peças com preços levam-nos com a margem prudencial, como a
+  // informação: os valores têm de ser os mesmos em todas. O JSON guarda os de
+  // referência e a margem à parte.
+  const comMargem = comMargemPrudencial(config);
 
   return [
     {
       nome: `${base}_Requisitos_e_regras.docx`,
-      conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(config, imagens)]),
+      conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(comMargem, imagens)]),
     },
     informacao,
     ...(await informacaoEmPdf(config, informacao)),
-    { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(config) },
+    { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(comMargem) },
     { nome: `${base}_Lotes.json`, conteudo: comoJSON(lotesParaJSON(config)) },
     ...emPasta(PASTA_DOS_RESUMOS, formularios),
     ...emPasta(

@@ -2210,3 +2210,25 @@ tbody.grupo-projeto.projeto-alvo td {
 .linha-campos-eavalia select {
   width: 100%;
 }
+
+/* O júri técnico: quatro campos curtos, dois a dois. */
+.grelha-juri {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 16px;
+}
+
+.grelha-juri .campo,
+.campo-justificacao-margem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo-justificacao-margem {
+  margin-top: 12px;
+}
+
+.campo-justificacao-margem textarea {
+  width: 100%;
+}

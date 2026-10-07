@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { JUSTIFICACAO_SEM_MARGEM } from "./margem";
 import {
   LIMIAR_VALOR_SEM_IVA,
   anosAcimaDoLimiar,
@@ -316,7 +317,7 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     const config = lotesExemplo();
     const incompleto = {
       ...config,
-      contratoProgramaAcss: null,
+      justificacaoMargem: "",
       postoTrabalho: { ...config.postoTrabalho, locais: [] },
       eavalia: informacaoEavaliaInicial(),
     };
@@ -324,7 +325,7 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     expect(validarLotes(config)).toHaveLength(0);
     // Pela ordem por que os painéis aparecem no Módulo 2.
     expect(validarLotes(incompleto).map((e) => e.campo)).toEqual([
-      "contratoProgramaAcss",
+      "justificacaoMargem",
       "postoTrabalho.locais",
       "eavalia.iap",
       "eavalia.sms",
@@ -336,20 +337,37 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
   });
 });
 
-describe("contrato programa com a ACSS", () => {
-  it("é de escolha obrigatória, e um ficheiro anterior abre sem ela", () => {
-    const { contratoProgramaAcss: _sem, ...antigo } = lotesExemplo();
-    const lido = importarLotesJSON(JSON.stringify(antigo));
+describe("margem prudencial e júri técnico", () => {
+  it("um ficheiro anterior abre com a margem a 0 %, o fundamento por omissão e o júri por preencher", () => {
+    const { margemPrudencial: _m, justificacaoMargem: _j, juri: _juri, ...antigo } = lotesExemplo();
+    const lido = importarLotesJSON(JSON.stringify({ ...antigo, contratoProgramaAcss: true }));
 
-    expect(lido.contratoProgramaAcss).toBeNull();
-    expect(validarLotes(lido).map((e) => e.campo)).toContain("contratoProgramaAcss");
+    expect(lido.margemPrudencial).toBe(0);
+    expect(lido.justificacaoMargem).toBe(JUSTIFICACAO_SEM_MARGEM);
+    expect(lido.juri).toEqual({ diretor: "", coordenador: "", unidade: "", gestorProjeto: "" });
+    // A escolha da ACSS, que a informação deixou de levar, não se guarda.
+    expect("contratoProgramaAcss" in lido).toBe(false);
+    expect(validarLotes(lido).map((e) => e.campo)).toEqual([
+      "juri.diretor",
+      "juri.coordenador",
+      "juri.unidade",
+      "juri.gestorProjeto",
+    ]);
   });
 
-  it("guarda o «não» como escolha, e não como falta dela", () => {
-    const config = { ...lotesExemplo(), contratoProgramaAcss: false };
+  it("guarda a margem e o fundamento escritos", () => {
+    const config = { ...lotesExemplo(), margemPrudencial: 7.5, justificacaoMargem: "Porque sim." };
+    const lido = importarLotesJSON(lotesParaJSON(config));
 
-    expect(importarLotesJSON(lotesParaJSON(config)).contratoProgramaAcss).toBe(false);
+    expect([lido.margemPrudencial, lido.justificacaoMargem]).toEqual([7.5, "Porque sim."]);
     expect(validarLotes(config)).toHaveLength(0);
+  });
+
+  it("exige o fundamento, com ou sem margem, e uma margem não negativa", () => {
+    const sem = validarLotes({ ...lotesExemplo(), justificacaoMargem: "  " });
+    expect(sem.find((e) => e.campo === "justificacaoMargem")?.mensagem).toContain("0 %");
+    const negativa = validarLotes({ ...lotesExemplo(), margemPrudencial: -1 });
+    expect(negativa.map((e) => e.campo)).toContain("margemPrudencial");
   });
 });
 

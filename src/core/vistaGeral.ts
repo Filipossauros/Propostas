@@ -11,6 +11,7 @@
 // daqui. Ver `persistencia.ts`.
 
 import type { LotesJSON } from "./types";
+import { comMargemPrudencial } from "./margem";
 import { ANOS_PLURIANUAIS, SCHEMA_VERSION_ATUAL } from "./types";
 import { aplicarIva, horasPorAnoDe, taxaIva } from "./lotes";
 import { ErroImportacao } from "./perfil";
@@ -89,7 +90,10 @@ export function nomeDoProjeto(config: LotesJSON): string {
  * horas caem todas no de início. É o que permite à tabela ter as mesmas
  * colunas para todos os projetos, venham eles de um pedido plurianual ou não.
  */
-export function projetoDeAgrupamento(config: LotesJSON): ProjetoVistaGeral {
+export function projetoDeAgrupamento(original: LotesJSON): ProjetoVistaGeral {
+  // Os valores da vista são os do procedimento, com a margem prudencial: os
+  // mesmos que a informação pede autorização para assumir.
+  const config = comMargemPrudencial(original);
   const taxa = taxaIva(config);
 
   return {

@@ -4,6 +4,20 @@
   "nomeProjeto": "Modernização dos Sistemas de Informação",
   "descricaoProjeto": "substituir as aplicações de gestão clínica em fim de vida por uma plataforma única e interoperável, assegurando a continuidade do serviço durante a migração",
   "justificacao": {
+    "objetivos": [
+      {
+        "id": "objetivo-1",
+        "designacao": "Assegurar a continuidade do desenvolvimento e da manutenção das aplicações de gestão clínica até à sua substituição"
+      },
+      {
+        "id": "objetivo-2",
+        "designacao": "Concretizar a migração para uma plataforma única e interoperável, sem interrupção do serviço prestado às instituições"
+      },
+      {
+        "id": "objetivo-3",
+        "designacao": "Garantir a interoperabilidade da nova plataforma com os sistemas centrais do SNS"
+      }
+    ],
     "beneficios": [
       {
         "id": "beneficio-1",
@@ -37,7 +51,14 @@
   "taxaIva": 23,
   "nBlocos": 15,
   "umLotePorConcorrente": true,
-  "contratoProgramaAcss": true,
+  "margemPrudencial": 0,
+  "justificacaoMargem": "Não foi aplicada margem prudencial autónoma ao valor estimado. Os valores unitários por hora considerados correspondem à média das rates das propostas apresentadas nos últimos procedimentos aquisitivos de natureza equivalente promovidos pela SPMS, E.P.E., refletindo, por isso, os preços efetivamente praticados no mercado e a dispersão de valores entre concorrentes. Considera-se, assim, que a margem prudencial se encontra incorporada nos valores unitários adotados, os quais asseguram, com razoabilidade, a suficiência do valor estimado para a satisfação da necessidade identificada.",
+  "juri": {
+    "diretor": "Maria Exemplo",
+    "coordenador": "Filipe Mealha",
+    "unidade": "Unidade de Planeamento, Arquitetura, Conformidade e Engenharia",
+    "gestorProjeto": "João Exemplo"
+  },
   "numeroInformacao": "",
   "postoTrabalho": {
     "regime": "Híbrido",

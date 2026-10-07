@@ -16,13 +16,25 @@
 
 import JSZip from "jszip";
 import type { BlocoDocumento, Coluna } from "../core/documento";
-import { alineasDoItem, escalaDasImagens, marcaDeAlinea, partesDoParagrafo, textoDoItem } from "../core/documento";
-import type { LotesJSON } from "../core/types";
+import {
+  alineasDoItem,
+  escalaDasImagens,
+  marcaDeAlinea,
+  partesDoParagrafo,
+  textoDoItem,
+} from "../core/documento";
+import type { LotesJSON, PerfilEmLote } from "../core/types";
+import {
+  comMargemPrudencial,
+  justificacaoPorOmissao,
+  margemDe,
+} from "../core/margem";
 import { beneficiosDoProjeto } from "../core/justificacao";
 import {
   blocosAnexoTecnico,
   blocosDivisaoPorLotes,
   blocosEncargosPlurianuais,
+  tabelaPrecoBase,
 } from "../core/cadernoEncargos";
 import {
   anosPlurianuais,
@@ -37,11 +49,22 @@ import { conteudoFuncionalDoPerfil } from "../core/perfil";
 import { anexoDosResumos, type ImagemDaFolha } from "../core/resumoCurricular";
 import modeloBase64 from "./modelos/Manifestacao_Necessidades.docx?base64";
 import modeloAnteriorBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
-import { dataPorExtenso, RATES_DE_REFERENCIA, rodapeComLinhaUnica } from "./informacaoSpms";
+import {
+  dataPorExtenso,
+  RATES_DE_REFERENCIA,
+  rodapeComLinhaUnica,
+} from "./informacaoSpms";
 import { gerarEavaliaBlob } from "../excel/eavalia";
 import { lerFolhaDoAlinhamento } from "../excel/folhaDoAlinhamento";
-import { paginasDoAlinhamento, type PaginaDaFolha } from "../excel/imagemDoAlinhamento";
-import { lerFolhaDosCustos, numeroRomano, recursosDoProcedimento } from "../excel/custosServicos";
+import {
+  paginasDoAlinhamento,
+  type PaginaDaFolha,
+} from "../excel/imagemDoAlinhamento";
+import {
+  lerFolhaDosCustos,
+  numeroRomano,
+  recursosDoProcedimento,
+} from "../excel/custosServicos";
 
 // --------------------------------------------------------------------------
 // Os dados próprios da manifestação
@@ -53,72 +76,73 @@ export interface QuestaoDeSustentabilidade {
   justificacao: string;
 }
 
-/** O que a manifestação pede para lá do que o Módulo 1 e o Módulo 2 já têm. */
-export interface DadosManifestacao {
-  /** Objetivos da aquisição — enquadramento, n.º 1. */
-  objetivos: string[];
-  /** Margem prudencial, em percentagem. 0 exige justificação. */
-  margemPrudencial: number;
-  /** Fundamento da margem: com 0 %, porque não se aplica; acima, porque se aplica. */
-  justificacaoMargem: string;
-  beneficiarios: string;
-  riscosExecucao: string;
-  mitigacao: string;
-  conclusaoCustoBeneficio: string;
-  sustentabilidade: QuestaoDeSustentabilidade[];
-  /** Só com um lote: porque não se divide. */
-  justificacaoNaoDivisao: string;
-  /** Serviços anteriores de natureza similar em que assenta o volume de horas. Facultativo. */
-  servicosAnteriores: string;
-  juri: { diretor: string; coordenador: string; gestorProjeto: string };
-  /** A unidade (coordenação) do coordenador: assina, e integra o júri. */
-  unidade: string;
-}
-
 export const DIRECAO = "Direção de Arquitetura, Negócio e Análise de Dados";
 
-/** O fundamento da margem a 0 %, por omissão. */
-export const JUSTIFICACAO_SEM_MARGEM =
-  "Não foi aplicada margem prudencial autónoma ao valor estimado. Os valores unitários por hora considerados " +
-  "correspondem à média das rates das propostas apresentadas nos últimos procedimentos aquisitivos de natureza " +
-  "equivalente promovidos pela SPMS, E.P.E., refletindo, por isso, os preços efetivamente praticados no mercado e a " +
-  "dispersão de valores entre concorrentes. Considera-se, assim, que a margem prudencial se encontra incorporada nos " +
-  "valores unitários adotados, os quais asseguram, com razoabilidade, a suficiência do valor estimado para a " +
-  "satisfação da necessidade identificada.";
+// Os textos da avaliação custo-benefício e da sustentabilidade são os mesmos
+// em todas as manifestações desta natureza — prestação de serviços de
+// sistemas de informação em Bolsa de Horas —, e não se pedem a ninguém.
 
-/** O fundamento de uma margem acima de 0 %, por omissão. */
-export function justificacaoComMargem(margem: number): string {
-  return (
-    `A margem prudencial de ${formatarNumero(margem)} % destina-se a acautelar a variação dos preços de mercado ao ` +
-    "longo dos anos de execução do contrato, designadamente por efeito da inflação e da evolução das remunerações " +
-    "dos perfis técnicos especializados, e é aplicada ao valor unitário por hora de cada perfil, refletindo-se em " +
-    "todos os valores por perfil, por lote e por ano apresentados na presente informação."
-  );
-}
+export const BENEFICIARIOS =
+  "profissionais de saúde, utentes do Serviço Nacional de Saúde (SNS), entidades do SNS e serviços da SPMS, " +
+  "E.P.E. responsáveis pelos sistemas de informação abrangidos pelo projeto.";
 
-// --------------------------------------------------------------------------
-// A margem prudencial
-// --------------------------------------------------------------------------
+const RISCOS_DA_EXECUCAO =
+  "rotatividade dos recursos afetos, com perda de conhecimento; atrasos na disponibilização dos recursos; " +
+  "desajuste entre os perfis contratados e as necessidades do projeto; consumo de horas acima do planeado.";
+
+const MITIGACAO =
+  "exigência de requisitos mínimos de experiência por perfil; acompanhamento pelo gestor do contrato com base em " +
+  "relatórios mensais de atividade; controlo do consumo de horas face ao planeado; documentação técnica e " +
+  "transferência de conhecimento obrigatórias.";
+
+const CONCLUSAO_CUSTO_BENEFICIO =
+  "Da análise efetuada resulta que a contratação permite assegurar os benefícios operacionais identificados, " +
+  "mostrando-se o dimensionamento financeiro adotado adequado e proporcional à necessidade, sem prejuízo da " +
+  "monitorização do consumo de horas e dos encargos durante a execução.";
+
+export const SUSTENTABILIDADE: QuestaoDeSustentabilidade[] = [
+  {
+    pergunta: "Existem requisitos ambientais?",
+    resposta: false,
+    justificacao:
+      "A prestação de serviços é de natureza intelectual, não envolvendo o fornecimento de bens nem a produção de " +
+      "resíduos relevantes, pelo que não se justifica a fixação de requisitos ambientais específicos, sem prejuízo " +
+      "do cumprimento da legislação ambiental aplicável.",
+  },
+  {
+    pergunta: "Existem preocupações de economia circular?",
+    resposta: false,
+    justificacao:
+      "O objeto do contrato não contempla a aquisição de bens ou materiais, não se identificando oportunidades " +
+      "relevantes de aplicação de princípios de economia circular.",
+  },
+  {
+    pergunta: "Existem requisitos sociais ou de inclusão?",
+    resposta: false,
+    justificacao:
+      "Sem prejuízo do cumprimento, pelo adjudicatário, das obrigações legais em matéria laboral, de segurança " +
+      "social e de igualdade e não discriminação, não se identificam requisitos sociais ou de inclusão específicos " +
+      "a fixar, atenta a natureza técnica da prestação.",
+  },
+  {
+    pergunta: "Existe incentivo à inovação?",
+    resposta: false,
+    justificacao:
+      "Os serviços visam o desenvolvimento e a manutenção de soluções com recurso a tecnologias e metodologias " +
+      "consolidadas, pelo que não se justifica a adoção de mecanismos específicos de incentivo à inovação.",
+  },
+];
+
+/** Com um só lote: por que não se divide (artigo 46.º-A do CCP). */
+const JUSTIFICACAO_NAO_DIVISAO =
+  "Sem prejuízo da qualificação jurídica do instrumento, e para efeitos do artigo 46.º-A do CCP, a necessidade " +
+  "não se mostra adequada à divisão em lotes. As prestações apresentam unidade técnica e funcional, assentando " +
+  "numa equipa integrada cujos perfis concorrem para os mesmos resultados, pelo que a fragmentação introduziria " +
+  "riscos de descontinuidade, duplicação de esforços de coordenação e aumento dos custos de gestão, revelando-se " +
+  "a execução unitária mais eficiente e adequada à satisfação da necessidade.";
 
 function centimos(valor: number): number {
   return Math.round(valor * 100) / 100;
-}
-
-/**
- * O agrupamento com a margem já aplicada: o valor hora de cada perfil cresce
- * na percentagem da margem, arredondado ao cêntimo, e com ele tudo o que dele
- * decorre — o valor do perfil, do lote, de cada ano e do procedimento. É o
- * que faz os quadros todos baterem certo com o valor estimado.
- */
-export function comMargemPrudencial(config: LotesJSON, margem: number): LotesJSON {
-  if (!(margem > 0)) return config;
-  return {
-    ...config,
-    lotes: config.lotes.map((lote) => ({
-      ...lote,
-      perfis: lote.perfis.map((entrada) => ({ ...entrada, valorHora: centimos(entrada.valorHora * (1 + margem / 100)) })),
-    })),
-  };
 }
 
 // --------------------------------------------------------------------------
@@ -141,7 +165,10 @@ const RECUO = 720;
 const RECUO_ALINEA = 1440;
 
 function esc(texto: string): string {
-  return texto.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 interface OpcoesRun {
@@ -152,7 +179,10 @@ interface OpcoesRun {
   maiusculas?: boolean;
 }
 
-function run(texto: string, { negrito, italico, sz = CORPO, cor, maiusculas }: OpcoesRun = {}): string {
+function run(
+  texto: string,
+  { negrito, italico, sz = CORPO, cor, maiusculas }: OpcoesRun = {},
+): string {
   let rpr = `<w:rPr>${RFONTS}`;
   if (negrito) rpr += "<w:b/>";
   if (italico) rpr += "<w:i/>";
@@ -185,7 +215,10 @@ interface OpcoesParagrafo {
   entrelinha?: number;
 }
 
-function paragrafo(conteudo: string | string[], opcoes: OpcoesParagrafo = {}): string {
+function paragrafo(
+  conteudo: string | string[],
+  opcoes: OpcoesParagrafo = {},
+): string {
   const {
     jc = "both",
     antes = 0,
@@ -201,9 +234,13 @@ function paragrafo(conteudo: string | string[], opcoes: OpcoesParagrafo = {}): s
   let ppr = '<w:pPr><w:pStyle w:val="Normal"/>';
   if (comOSeguinte) ppr += "<w:keepNext/>";
   if (novaPagina) ppr += "<w:pageBreakBefore/>";
-  if (ind && pendente) ppr += `<w:tabs><w:tab w:val="left" w:pos="${ind}"/></w:tabs>`;
+  if (ind && pendente)
+    ppr += `<w:tabs><w:tab w:val="left" w:pos="${ind}"/></w:tabs>`;
   ppr += `<w:spacing w:before="${antes}" w:after="${depois}" w:line="${entrelinha}" w:lineRule="auto"/>`;
-  if (ind) ppr += pendente ? `<w:ind w:left="${ind}" w:hanging="${pendente}"/>` : `<w:ind w:left="${ind}"/>`;
+  if (ind)
+    ppr += pendente
+      ? `<w:ind w:left="${ind}" w:hanging="${pendente}"/>`
+      : `<w:ind w:left="${ind}"/>`;
   ppr += `<w:jc w:val="${jc}"/></w:pPr>`;
   return `<w:p>${ppr}${runs.join("")}</w:p>`;
 }
@@ -217,40 +254,75 @@ function vazio(depois = 0): string {
 
 /** «III.  VALOR ESTIMADO E MEMÓRIA DE CÁLCULO» — as secções do modelo. */
 function seccao(numero: number, texto: string): string {
-  return paragrafo([run(`${numeroRomano(numero)}.`, { negrito: true }), tabulador(), run(texto.toUpperCase(), { negrito: true })], {
-    jc: "left",
-    antes: 360,
-    depois: 160,
-    ind: RECUO,
-    pendente: RECUO,
-    comOSeguinte: true,
-  });
+  return paragrafo(
+    [
+      run(`${numeroRomano(numero)}.`, { negrito: true }),
+      tabulador(),
+      run(texto.toUpperCase(), { negrito: true }),
+    ],
+    {
+      jc: "left",
+      antes: 360,
+      depois: 160,
+      ind: RECUO,
+      pendente: RECUO,
+      comOSeguinte: true,
+    },
+  );
 }
 
 /** Um título dentro de um anexo, a negrito. */
 function subtitulo(texto: string, nivel: 1 | 2 = 1): string {
-  return paragrafo([run(texto, { negrito: true, italico: nivel === 2, sz: nivel === 1 ? CORPO : TABELA + 2 })], {
-    jc: "left",
-    antes: nivel === 1 ? 240 : 160,
-    depois: 120,
-    comOSeguinte: true,
-  });
+  return paragrafo(
+    [
+      run(texto, {
+        negrito: true,
+        italico: nivel === 2,
+        sz: nivel === 1 ? CORPO : TABELA + 2,
+      }),
+    ],
+    {
+      jc: "left",
+      antes: nivel === 1 ? 240 : 160,
+      depois: 120,
+      comOSeguinte: true,
+    },
+  );
 }
 
 /** Um ponto numerado: «6.  Para efeitos dos artigos 17.º …». */
-function numerado(marca: string, conteudo: string | string[], opcoes: OpcoesParagrafo = {}): string {
+function numerado(
+  marca: string,
+  conteudo: string | string[],
+  opcoes: OpcoesParagrafo = {},
+): string {
   const runs = typeof conteudo === "string" ? [run(conteudo)] : conteudo;
-  return paragrafo([run(marca), tabulador(), ...runs], { ind: RECUO, pendente: 360, ...opcoes });
+  return paragrafo([run(marca), tabulador(), ...runs], {
+    ind: RECUO,
+    pendente: 360,
+    ...opcoes,
+  });
 }
 
 /** Uma alínea, um degrau abaixo do ponto: «a.  …». */
-function alinea(marca: string, conteudo: string | string[], ind = RECUO_ALINEA): string {
+function alinea(
+  marca: string,
+  conteudo: string | string[],
+  ind = RECUO_ALINEA,
+): string {
   const runs = typeof conteudo === "string" ? [run(conteudo)] : conteudo;
-  return paragrafo([run(marca), tabulador(), ...runs], { ind, pendente: 360, depois: 80 });
+  return paragrafo([run(marca), tabulador(), ...runs], {
+    ind,
+    pendente: 360,
+    depois: 80,
+  });
 }
 
 /** Texto alinhado com o texto dos pontos numerados, sem número. */
-function recuado(conteudo: string | string[], opcoes: OpcoesParagrafo = {}): string {
+function recuado(
+  conteudo: string | string[],
+  opcoes: OpcoesParagrafo = {},
+): string {
   return paragrafo(conteudo, { ind: RECUO, ...opcoes });
 }
 
@@ -270,17 +342,32 @@ function letra(i: number): string {
 // Tabelas (a estrutura da aplicação, no tipo de letra do modelo)
 // --------------------------------------------------------------------------
 
-type LinhaDeCelula = string | { texto: string; suave: string } | { linhas: string[] };
+type LinhaDeCelula =
+  | string
+  | { texto: string; suave: string }
+  | { linhas: string[] };
 
-function conteudoEmRuns(conteudo: LinhaDeCelula, cabecalho: boolean, sz: number, negrito: boolean): string[] {
+function conteudoEmRuns(
+  conteudo: LinhaDeCelula,
+  cabecalho: boolean,
+  sz: number,
+  negrito: boolean,
+): string[] {
   const forte = cabecalho || negrito;
-  if (typeof conteudo === "string") return [run(conteudo, { negrito: forte, sz })];
+  if (typeof conteudo === "string")
+    return [run(conteudo, { negrito: forte, sz })];
   if ("linhas" in conteudo) {
     return conteudo.linhas.flatMap((l, i) =>
-      i === 0 ? [run(l, { negrito: forte, sz })] : [quebra(), run(l, { negrito: forte, sz })],
+      i === 0
+        ? [run(l, { negrito: forte, sz })]
+        : [quebra(), run(l, { negrito: forte, sz })],
     );
   }
-  return [run(conteudo.texto, { negrito: forte, sz }), quebra(), run(conteudo.suave, { sz: sz - 2, cor: SUAVE })];
+  return [
+    run(conteudo.texto, { negrito: forte, sz }),
+    quebra(),
+    run(conteudo.suave, { sz: sz - 2, cor: SUAVE }),
+  ];
 }
 
 function celula(
@@ -288,7 +375,9 @@ function celula(
   largura: number,
   { cabecalho = false, direita = false, sz = TABELA, negrito = false } = {},
 ): string {
-  const sombra = cabecalho ? `<w:shd w:val="clear" w:color="auto" w:fill="${CINZA}"/>` : "";
+  const sombra = cabecalho
+    ? `<w:shd w:val="clear" w:color="auto" w:fill="${CINZA}"/>`
+    : "";
   return (
     `<w:tc><w:tcPr><w:tcW w:w="${largura}" w:type="dxa"/>${sombra}<w:vAlign w:val="center"/></w:tcPr>` +
     paragrafo(conteudoEmRuns(conteudo, cabecalho, sz, negrito), {
@@ -306,14 +395,22 @@ function celula(
 function tabela(
   colunas: Coluna[],
   linhas: LinhaDeCelula[][],
-  { legenda, sz = TABELA, destaques = [] as boolean[] }: { legenda?: string; sz?: number; destaques?: boolean[] } = {},
+  {
+    legenda,
+    sz = TABELA,
+    destaques = [] as boolean[],
+  }: { legenda?: string; sz?: number; destaques?: boolean[] } = {},
 ): string {
   const pesos = colunas.map((c) => c.peso ?? 100 / colunas.length);
   const total = pesos.reduce((s, p) => s + p, 0);
   const larguras = pesos.map((p) => Math.round((LARGURA * p) / total));
-  larguras[larguras.length - 1] += LARGURA - larguras.reduce((s, w) => s + w, 0);
+  larguras[larguras.length - 1] +=
+    LARGURA - larguras.reduce((s, w) => s + w, 0);
   const bordas = ["top", "left", "bottom", "right", "insideH", "insideV"]
-    .map((lado) => `<w:${lado} w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>`)
+    .map(
+      (lado) =>
+        `<w:${lado} w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>`,
+    )
     .join("");
 
   let xml =
@@ -326,7 +423,13 @@ function tabela(
     "</w:tblGrid>" +
     "<w:tr><w:trPr><w:tblHeader/></w:trPr>" +
     colunas
-      .map((c, i) => celula(c.titulo, larguras[i], { cabecalho: true, sz, direita: c.alinhamento === "direita" }))
+      .map((c, i) =>
+        celula(c.titulo, larguras[i], {
+          cabecalho: true,
+          sz,
+          direita: c.alinhamento === "direita",
+        }),
+      )
       .join("") +
     "</w:tr>";
   linhas.forEach((linha, r) => {
@@ -334,7 +437,11 @@ function tabela(
       "<w:tr>" +
       linha
         .map((c, i) =>
-          celula(c, larguras[i], { sz, direita: colunas[i]?.alinhamento === "direita", negrito: destaques[r] === true }),
+          celula(c, larguras[i], {
+            sz,
+            direita: colunas[i]?.alinhamento === "direita",
+            negrito: destaques[r] === true,
+          }),
         )
         .join("") +
       "</w:tr>";
@@ -343,16 +450,28 @@ function tabela(
   return (
     xml +
     (legenda
-      ? paragrafo([run(legenda, { italico: true, sz: TABELA })], { jc: "left", antes: 60, depois: 200, entrelinha: 240 })
+      ? paragrafo([run(legenda, { italico: true, sz: TABELA })], {
+          jc: "left",
+          antes: 60,
+          depois: 200,
+          entrelinha: 240,
+        })
       : vazio(160))
   );
 }
 
-function tabelaDoBloco(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>, sz = TABELA): string {
+function tabelaDoBloco(
+  bloco: Extract<BlocoDocumento, { tipo: "tabela" }>,
+  sz = TABELA,
+): string {
   return tabela(
     bloco.colunas,
     bloco.linhas.map((l) => l.map((c) => c.texto)),
-    { legenda: bloco.legenda, sz, destaques: bloco.linhas.map((l) => l.some((c) => c.destaque === true)) },
+    {
+      legenda: bloco.legenda,
+      sz,
+      destaques: bloco.linhas.map((l) => l.some((c) => c.destaque === true)),
+    },
   );
 }
 
@@ -360,9 +479,14 @@ function tabelaDoBloco(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>, sz = 
  * O quadro dos anos, com as horas por baixo do valor: são oito colunas numa
  * página de retrato, e «181 843,20 € (1760 h)» numa linha só partia-se em três.
  */
-function tabelaPlurianual(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>): string {
+function tabelaPlurianual(
+  bloco: Extract<BlocoDocumento, { tipo: "tabela" }>,
+): string {
   const folga: Record<string, number> = { Perfil: 21, Lotes: 8 };
-  const colunas = bloco.colunas.map((c) => ({ ...c, peso: folga[c.titulo] ?? c.peso }));
+  const colunas = bloco.colunas.map((c) => ({
+    ...c,
+    peso: folga[c.titulo] ?? c.peso,
+  }));
   const linhas = bloco.linhas.map((linha) =>
     linha.map((c): LinhaDeCelula => {
       const m = /^(.+?) \((\d[\d\s]*) h\)$/.exec(c.texto);
@@ -376,14 +500,27 @@ function tabelaPlurianual(bloco: Extract<BlocoDocumento, { tipo: "tabela" }>): s
   });
 }
 
-function lista(bloco: Extract<BlocoDocumento, { tipo: "lista" }>, ind = RECUO): string {
+function lista(
+  bloco: Extract<BlocoDocumento, { tipo: "lista" }>,
+  ind = RECUO,
+): string {
   return bloco.itens
     .map((item, i) => {
       const marca = bloco.numerada ? `${i + 1}.` : "•";
       return (
-        paragrafo([run(marca), tabulador(), run(textoDoItem(item))], { ind, pendente: 360, depois: 80 }) +
+        paragrafo([run(marca), tabulador(), run(textoDoItem(item))], {
+          ind,
+          pendente: 360,
+          depois: 80,
+        }) +
         alineasDoItem(item)
-          .map((texto, j) => paragrafo([run(marcaDeAlinea(j)), tabulador(), run(texto)], { ind: ind + 504, pendente: 504, depois: 80 }))
+          .map((texto, j) =>
+            paragrafo([run(marcaDeAlinea(j)), tabulador(), run(texto)], {
+              ind: ind + 504,
+              pendente: 504,
+              depois: 80,
+            }),
+          )
           .join("")
       );
     })
@@ -396,9 +533,15 @@ function renderizar(bloco: BlocoDocumento): string {
     case "titulo":
       return subtitulo(bloco.texto, bloco.nivel === 1 ? 1 : 2);
     case "paragrafo":
-      return paragrafo(partesDoParagrafo(bloco).map((p) => run(p.texto, { negrito: p.destaque })));
+      return paragrafo(
+        partesDoParagrafo(bloco).map((p) =>
+          run(p.texto, { negrito: p.destaque }),
+        ),
+      );
     case "nota":
-      return paragrafo([run(bloco.texto, { italico: true, sz: TABELA })], { jc: "left" });
+      return paragrafo([run(bloco.texto, { italico: true, sz: TABELA })], {
+        jc: "left",
+      });
     case "lista":
       return lista(bloco);
     case "tabela":
@@ -416,7 +559,11 @@ function renderizar(bloco: BlocoDocumento): string {
 
 function semCampos(xml: string): string {
   let saida = xml;
-  for (let i = saida.indexOf("<w:sdt>"); i !== -1; i = saida.indexOf("<w:sdt>")) {
+  for (
+    let i = saida.indexOf("<w:sdt>");
+    i !== -1;
+    i = saida.indexOf("<w:sdt>")
+  ) {
     const abre = saida.indexOf("<w:sdtContent>", i) + "<w:sdtContent>".length;
     const fecha = saida.indexOf("</w:sdtContent>", abre);
     const fim = saida.indexOf("</w:sdt>", fecha) + "</w:sdt>".length;
@@ -435,11 +582,14 @@ function soCalibri(xml: string): string {
 function juntoAoSeguinte(xml: string): string {
   const total = [...xml.matchAll(/<w:pPr>/g)].length;
   let n = 0;
-  return xml.replace(/<w:pPr>(<w:pStyle [^>]*\/>)?/g, (inteiro, estilo: string | undefined) => {
-    n += 1;
-    if (n === total || inteiro.includes("keepNext")) return inteiro;
-    return `<w:pPr>${estilo ?? ""}<w:keepNext/>`;
-  });
+  return xml.replace(
+    /<w:pPr>(<w:pStyle [^>]*\/>)?/g,
+    (inteiro, estilo: string | undefined) => {
+      n += 1;
+      if (n === total || inteiro.includes("keepNext")) return inteiro;
+      return `<w:pPr>${estilo ?? ""}<w:keepNext/>`;
+    },
+  );
 }
 
 function entre(texto: string, abre: string, fecha: string): string {
@@ -452,13 +602,19 @@ function entre(texto: string, abre: string, fecha: string): string {
  * indicado no júri, por cima de «(Coordenador)», e a unidade por baixo da
  * direção.
  */
-function assinatura(modeloAnterior: string, dados: DadosManifestacao): string {
+function assinatura(modeloAnterior: string, juri: LotesJSON["juri"]): string {
   const i = modeloAnterior.lastIndexOf("<w:tbl>");
-  const tabelaAnterior = modeloAnterior.slice(i, modeloAnterior.indexOf("</w:tbl>", i) + "</w:tbl>".length);
-  const nome = dados.juri.coordenador.trim();
-  const unidade = dados.unidade.trim();
+  const tabelaAnterior = modeloAnterior.slice(
+    i,
+    modeloAnterior.indexOf("</w:tbl>", i) + "</w:tbl>".length,
+  );
+  const nome = juri.coordenador.trim();
+  const unidade = juri.unidade.trim();
   return soCalibri(semCampos(tabelaAnterior))
-    .replace(/<w:t>Filipe Mealha<\/w:t>/, `<w:t xml:space="preserve">${esc(nome === "" ? "[nome do coordenador]" : nome)}</w:t>`)
+    .replace(
+      /<w:t>Filipe Mealha<\/w:t>/,
+      `<w:t xml:space="preserve">${esc(nome === "" ? "[nome do coordenador]" : nome)}</w:t>`,
+    )
     .replace(
       /<w:t xml:space="preserve">Unidade de Planeamento,[^<]*<\/w:t>/,
       `<w:t xml:space="preserve">${esc(unidade === "" ? "[unidade]" : unidade)}</w:t>`,
@@ -466,9 +622,16 @@ function assinatura(modeloAnterior: string, dados: DadosManifestacao): string {
 }
 
 /** N.º, Data, N.º orçamento e Assunto. */
-function tabelaIdentificacao(numero: string, data: string, assunto: string): string {
+function tabelaIdentificacao(
+  numero: string,
+  data: string,
+  assunto: string,
+): string {
   const campo = (rotulo: string, valor: string[]): string =>
-    paragrafo([run(rotulo, { sz: TABELA }), tabulador(TABELA), ...valor], { jc: "left", depois: 80 });
+    paragrafo([run(rotulo, { sz: TABELA }), tabulador(TABELA), ...valor], {
+      jc: "left",
+      depois: 80,
+    });
   const semBordas =
     '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/>' +
     '<w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>';
@@ -480,7 +643,11 @@ function tabelaIdentificacao(numero: string, data: string, assunto: string): str
     '<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr>' +
     '<w:tblGrid><w:gridCol w:w="4455"/><w:gridCol w:w="4901"/></w:tblGrid>' +
     linha(
-      campo("N.º:", [numero === "" ? marcador("n.º do documento") : run(numero, { negrito: true, sz: TABELA })]),
+      campo("N.º:", [
+        numero === ""
+          ? marcador("n.º do documento")
+          : run(numero, { negrito: true, sz: TABELA }),
+      ]),
       campo("Data:", [run(data, { negrito: true, sz: TABELA })]),
     ) +
     linha(campo("N.º orçamento:", [marcador("n.º de orçamento")]), vazio()) +
@@ -509,10 +676,28 @@ interface Numeros {
   lotes: number;
 }
 
+/**
+ * As horas de um perfil em cada ano do contrato: com encargos plurianuais, as
+ * de cada ano; sem eles, o contrato cabe num ano e as horas são as do ano.
+ */
+function horasDosAnos(entrada: PerfilEmLote, plurianual: boolean): number[] {
+  return plurianual
+    ? horasPorAnoDe(entrada, true)
+    : [horasContratadas(entrada, false)];
+}
+
 function numeros(original: LotesJSON, config: LotesJSON): Numeros {
-  const anos = anosPlurianuais(config.encargosPlurianuais.anoInicio);
+  const plurianual = config.encargosPlurianuais.ativo;
+  const anos = plurianual
+    ? anosPlurianuais(config.encargosPlurianuais.anoInicio)
+    : [config.encargosPlurianuais.anoInicio];
   const entradas = config.lotes.flatMap((l) => l.perfis);
-  const horasPorAno = anos.map((_, i) => entradas.reduce((s, e) => s + e.nMinimoElementos * horasPorAnoDe(e, true)[i], 0));
+  const horasPorAno = anos.map((_, i) =>
+    entradas.reduce(
+      (s, e) => s + e.nMinimoElementos * horasDosAnos(e, plurianual)[i],
+      0,
+    ),
+  );
   const iva = totalProcedimento(config);
   // O valor de cada ano, sem IVA: a tabela dos anos da aplicação dá-o com IVA.
   const taxa = 1 + (config.taxaIva ?? 23) / 100;
@@ -524,22 +709,26 @@ function numeros(original: LotesJSON, config: LotesJSON): Numeros {
     referencia: totalProcedimento(original).semIva,
     estimado: iva.semIva,
     estimadoComIva: iva.comIva,
-    porAno: totaisPorAnoPlurianual(config).map((v) => centimos(v / taxa)),
+    porAno: plurianual
+      ? totaisPorAnoPlurianual(config).map((v) => centimos(v / taxa))
+      : [iva.semIva],
     perfis: new Set(entradas.map((e) => e.perfil.id)).size,
     lotes: config.lotes.length,
   };
 }
 
 function enumerar(itens: string[]): string {
-  return itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+  return itens.length <= 1
+    ? itens.join("")
+    : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 
 /** «a prestação de serviços de desenvolvimento e manutenção …», a partir do nome do procedimento. */
 function objetoDaAquisicao(config: LotesJSON): string {
-  const nome = (config.nomeProcedimento.trim() || `Aquisição de serviços para o projeto ${config.nomeProjeto}`).replace(
-    /^aquisição de\s+/i,
-    "",
-  );
+  const nome = (
+    config.nomeProcedimento.trim() ||
+    `Aquisição de serviços para o projeto ${config.nomeProjeto}`
+  ).replace(/^aquisição de\s+/i, "");
   const minusculo = nome.charAt(0).toLowerCase() + nome.slice(1);
   return `${minusculo}${/projeto/i.test(nome) ? "" : ` do projeto ${config.nomeProjeto.trim()}`}`;
 }
@@ -551,7 +740,6 @@ function objetoDaAquisicao(config: LotesJSON): string {
 function corpo(
   original: LotesJSON,
   config: LotesJSON,
-  dados: DadosManifestacao,
   modelo: string,
   modeloAnterior: string,
   quando: Date,
@@ -560,9 +748,11 @@ function corpo(
   const n = numeros(original, config);
   const objeto = objetoDaAquisicao(config);
   const projeto = config.nomeProjeto.trim();
-  const margem = dados.margemPrudencial > 0 ? dados.margemPrudencial : 0;
+  const margem = margemDe(config);
   const justificacaoMargem =
-    dados.justificacaoMargem.trim() || (margem > 0 ? justificacaoComMargem(margem) : JUSTIFICACAO_SEM_MARGEM);
+    config.justificacaoMargem.trim() || justificacaoPorOmissao(margem);
+  const plurianual = config.encargosPlurianuais.ativo;
+  const juri = config.juri;
   const periodo = `1 de janeiro de ${n.anos[0]} a 31 de dezembro de ${n.anos[n.anos.length - 1]}`;
   const temResumos = anexoDosResumos(config, imagens).corpo.length > 0;
 
@@ -571,7 +761,11 @@ function corpo(
   const proximo = () => `${++ponto}.`;
 
   // A caixa de parecer do modelo, e a identificação.
-  p.push(soCalibri(entre(modelo.slice(modelo.indexOf("<w:body>")), "<w:tbl>", "</w:tbl>")));
+  p.push(
+    soCalibri(
+      entre(modelo.slice(modelo.indexOf("<w:body>")), "<w:tbl>", "</w:tbl>"),
+    ),
+  );
   p.push(vazio(240));
   p.push(
     tabelaIdentificacao(
@@ -585,12 +779,20 @@ function corpo(
   p.push(seccao(1, "Enquadramento"));
   p.push(
     numerado(proximo(), [
-      run(`A presente informação visa concretizar o pedido de aquisição de ${objeto}, que possibilitará atingir os seguintes objetivos:`),
+      run(
+        `A presente informação visa concretizar o pedido de aquisição de ${objeto}, que possibilitará atingir os seguintes objetivos:`,
+      ),
     ]),
   );
-  const objetivos = dados.objetivos.filter((o) => o.trim() !== "");
-  if (objetivos.length === 0) p.push(alinea("a.", [marcador("objetivos da aquisição")]));
-  else comPontuacao(objetivos).forEach((o, i) => p.push(alinea(`${letra(i)}.`, o)));
+  const objetivos = config.justificacao.objetivos
+    .map((o) => o.designacao)
+    .filter((o) => o.trim() !== "");
+  if (objetivos.length === 0)
+    p.push(alinea("a.", [marcador("objetivos da aquisição")]));
+  else
+    comPontuacao(objetivos).forEach((o, i) =>
+      p.push(alinea(`${letra(i)}.`, o)),
+    );
 
   // II. Identificação da necessidade
   p.push(seccao(2, "Identificação clara, objetiva e funcional da necessidade"));
@@ -610,11 +812,22 @@ function corpo(
         "recursos próprios da SPMS.",
     ),
   );
-  p.push(numerado(proximo(), "A presente aquisição comporta os seguintes benefícios:", { depois: 80 }));
-  comPontuacao(beneficiosDoProjeto(config.justificacao).map((b) => b.designacao)).forEach((b, i) =>
-    p.push(alinea(`${letra(i)}.`, b)),
+  p.push(
+    numerado(
+      proximo(),
+      "A presente aquisição comporta os seguintes benefícios:",
+      { depois: 80 },
+    ),
   );
-  p.push(numerado(proximo(), "Concluindo assim que a necessidade visa:", { depois: 80, antes: 80 }));
+  comPontuacao(
+    beneficiosDoProjeto(config.justificacao).map((b) => b.designacao),
+  ).forEach((b, i) => p.push(alinea(`${letra(i)}.`, b)));
+  p.push(
+    numerado(proximo(), "Concluindo assim que a necessidade visa:", {
+      depois: 80,
+      antes: 80,
+    }),
+  );
   const descricao = config.descricaoProjeto.trim();
   p.push(
     alinea(
@@ -629,12 +842,16 @@ function corpo(
   p.push(seccao(3, "Valor estimado e memória de cálculo"));
   p.push(
     numerado(proximo(), [
-      run("Para efeitos dos artigos 17.º e 17.º-B do CCP, o valor estimado do contrato corresponde a "),
+      run(
+        "Para efeitos dos artigos 17.º e 17.º-B do CCP, o valor estimado do contrato corresponde a ",
+      ),
       run(formatarMoeda(n.estimado), { negrito: true }),
       run(
         ", sem IVA, determinado com base em critérios económicos objetivos, designadamente o número de horas " +
           `estimado e o custo unitário médio apurado${
-            margem > 0 ? `, acrescido de uma margem prudencial de ${formatarNumero(margem)} %` : ""
+            margem > 0
+              ? `, acrescido de uma margem prudencial de ${formatarNumero(margem)} %`
+              : ""
           }, nos termos da memória descritiva e de cálculo constante do Anexo I.`,
       ),
     ]),
@@ -642,7 +859,10 @@ function corpo(
   p.push(numerado(proximo(), justificacaoMargem));
   const linhasCalculo: string[][] = [
     ["Número total de horas estimado", `${formatarNumero(n.horasTotal)} h`],
-    ["Custo unitário médio ponderado (s/ IVA)", `${formatarMoeda(n.horasTotal === 0 ? 0 : n.referencia / n.horasTotal)}/h`],
+    [
+      "Custo unitário médio ponderado (s/ IVA)",
+      `${formatarMoeda(n.horasTotal === 0 ? 0 : n.referencia / n.horasTotal)}/h`,
+    ],
     ["Custo de referência (s/ IVA)", formatarMoeda(n.referencia)],
     [
       "Margem prudencial",
@@ -651,7 +871,10 @@ function corpo(
         : "0 % (incorporada nos valores unitários)",
     ],
     ["Valor estimado do contrato (s/ IVA)", formatarMoeda(n.estimado)],
-    [`Valor estimado do contrato (c/ IVA a ${config.taxaIva} %)`, formatarMoeda(n.estimadoComIva)],
+    [
+      `Valor estimado do contrato (c/ IVA a ${config.taxaIva} %)`,
+      formatarMoeda(n.estimadoComIva),
+    ],
   ];
   p.push(
     tabela(
@@ -664,21 +887,38 @@ function corpo(
     ),
   );
   if (n.estimado >= 5_000_000) {
-    p.push(recuado([marcador("valor igual ou superior a 5 M€: juntar o Anexo II – Fundamentação de valor superior a 5 M€")]));
+    p.push(
+      recuado([
+        marcador(
+          "valor igual ou superior a 5 M€: juntar o Anexo II – Fundamentação de valor superior a 5 M€",
+        ),
+      ]),
+    );
   }
 
   // IV. Avaliação custo-benefício
   p.push(seccao(4, "Avaliação custo-benefício"));
   p.push(
-    paragrafo("Atento o valor estimado e para efeitos do artigo 36.º do CCP, apresenta-se a seguinte avaliação custo-benefício:"),
+    paragrafo(
+      "Atento o valor estimado e para efeitos do artigo 36.º do CCP, apresenta-se a seguinte avaliação custo-benefício:",
+    ),
   );
-  const horasAno = enumerar(n.anos.map((ano, i) => `${formatarNumero(n.horasPorAno[i])} horas em ${ano}`));
+  const horasAno = enumerar(
+    n.anos.map(
+      (ano, i) => `${formatarNumero(n.horasPorAno[i])} horas em ${ano}`,
+    ),
+  );
   const anoMaximo = Math.max(...n.porAno);
   const beneficiosOperacionais = beneficiosDoProjeto(config.justificacao)
-    .map((b) => b.designacao.trim().replace(/^Permitirá\s+/i, "").replace(/[.;]+$/, ""))
+    .map((b) =>
+      b.designacao
+        .trim()
+        .replace(/^Permitirá\s+/i, "")
+        .replace(/[.;]+$/, ""),
+    )
     .map((b) => b.charAt(0).toLowerCase() + b.slice(1));
   const criterios: Array<[string, string]> = [
-    ["Beneficiários", dados.beneficiarios],
+    ["Beneficiários", BENEFICIARIOS],
     [
       "Utilização prevista",
       `bolsa de ${formatarNumero(n.horasTotal)} horas (${horasAno}), repartidas por ${n.perfis} ${
@@ -692,19 +932,28 @@ function corpo(
         n.estimado,
       )}, sem IVA.`,
     ],
-    ["Riscos", dados.riscosExecucao],
-    ["Mitigação", dados.mitigacao],
+    ["Riscos", RISCOS_DA_EXECUCAO],
+    ["Mitigação", MITIGACAO],
   ];
   criterios.forEach(([rotulo, texto], i) =>
     p.push(
-      alinea(`${letra(i)})`, [run(`${rotulo}: `), texto.trim() === "" ? marcador(rotulo.toLowerCase()) : run(texto.trim())], RECUO),
+      alinea(
+        `${letra(i)})`,
+        [
+          run(`${rotulo}: `),
+          texto.trim() === ""
+            ? marcador(rotulo.toLowerCase())
+            : run(texto.trim()),
+        ],
+        RECUO,
+      ),
     ),
   );
-  p.push(paragrafo(dados.conclusaoCustoBeneficio, { antes: 120 }));
+  p.push(paragrafo(CONCLUSAO_CUSTO_BENEFICIO, { antes: 120 }));
 
   // V. Sustentabilidade
   p.push(seccao(5, "Sustentabilidade e contratação estratégica"));
-  dados.sustentabilidade.forEach((q, i) =>
+  SUSTENTABILIDADE.forEach((q, i) =>
     p.push(
       alinea(
         `${letra(i)})`,
@@ -712,7 +961,9 @@ function corpo(
           run(`${q.pergunta} `),
           run(q.resposta ? "Sim." : "Não.", { negrito: true }),
           run(" "),
-          q.justificacao.trim() === "" ? marcador("justificação") : run(q.justificacao.trim()),
+          q.justificacao.trim() === ""
+            ? marcador("justificação")
+            : run(q.justificacao.trim()),
         ],
         RECUO,
       ),
@@ -722,20 +973,30 @@ function corpo(
   // VI. Divisão em lotes — o texto da aplicação.
   p.push(seccao(6, "Divisão em lotes"));
   if (config.lotes.length <= 1) {
-    p.push(paragrafo(dados.justificacaoNaoDivisao));
+    p.push(paragrafo(JUSTIFICACAO_NAO_DIVISAO));
   } else {
-    p.push(paragrafo("O procedimento é configurado por lotes, nos seguintes termos:", { depois: 80 }));
+    p.push(
+      paragrafo(
+        "O procedimento é configurado por lotes, nos seguintes termos:",
+        { depois: 80 },
+      ),
+    );
   }
   // O quadro dos lotes é o da aplicação, sem a frase que o anuncia — a
   // anterior já o faz. Com margem, os preços do quadro já a incluem, e a
   // legenda di-lo.
   for (const bloco of blocosDivisaoPorLotes(config)) {
-    if (bloco.tipo === "paragrafo" && bloco.texto.startsWith("A determinação dos lotes")) continue;
+    if (
+      bloco.tipo === "paragrafo" &&
+      bloco.texto.startsWith("A determinação dos lotes")
+    )
+      continue;
     if (bloco.tipo === "tabela" && margem > 0) {
       p.push(
         renderizar({
           ...bloco,
-          legenda: `${bloco.legenda ?? ""} O preço base inclui a margem prudencial de ${formatarNumero(margem)} %.`.trim(),
+          legenda:
+            `${bloco.legenda ?? ""} O preço base inclui a margem prudencial de ${formatarNumero(margem)} %.`.trim(),
         }),
       );
       continue;
@@ -775,10 +1036,21 @@ function corpo(
 
   // VIII. Riscos da não contratação
   p.push(seccao(8, "Riscos da não contratação"));
-  p.push(paragrafo("Caso não seja adjudicada a aquisição em apreço, as suas consequências serão as seguintes:", { depois: 80 }));
-  const riscos = config.justificacao.riscos.map((r) => r.designacao).filter((r) => r.trim() !== "");
-  if (riscos.length === 0) p.push(alinea("a.", [marcador("riscos da não contratação")], RECUO));
-  else comPontuacao(riscos).forEach((r, i) => p.push(alinea(`${letra(i)}.`, r, RECUO)));
+  p.push(
+    paragrafo(
+      "Caso não seja adjudicada a aquisição em apreço, as suas consequências serão as seguintes:",
+      { depois: 80 },
+    ),
+  );
+  const riscos = config.justificacao.riscos
+    .map((r) => r.designacao)
+    .filter((r) => r.trim() !== "");
+  if (riscos.length === 0)
+    p.push(alinea("a.", [marcador("riscos da não contratação")], RECUO));
+  else
+    comPontuacao(riscos).forEach((r, i) =>
+      p.push(alinea(`${letra(i)}.`, r, RECUO)),
+    );
 
   // IX. Júri técnico
   p.push(seccao(9, "Júri técnico"));
@@ -788,15 +1060,48 @@ function corpo(
       { depois: 80 },
     ),
   );
-  const nome = (valor: string, falta: string) => (valor.trim() === "" ? marcador(falta) : run(valor.trim()));
-  p.push(alinea("a)", [nome(dados.juri.diretor, "nome do diretor"), run(` – Diretor da ${DIRECAO}`)], RECUO));
-  p.push(alinea("b)", [nome(dados.juri.coordenador, "nome do coordenador"), run(" – Coordenador da "), nome(dados.unidade, "unidade")], RECUO));
-  p.push(alinea("c)", [nome(dados.juri.gestorProjeto, "nome do gestor de projeto"), run(` – Gestor do Projeto ${projeto}`)], RECUO));
+  const nome = (valor: string, falta: string) =>
+    valor.trim() === "" ? marcador(falta) : run(valor.trim());
+  p.push(
+    alinea(
+      "a)",
+      [nome(juri.diretor, "nome do diretor"), run(` – Diretor da ${DIRECAO}`)],
+      RECUO,
+    ),
+  );
+  p.push(
+    alinea(
+      "b)",
+      [
+        nome(juri.coordenador, "nome do coordenador"),
+        run(" – Coordenador da "),
+        nome(juri.unidade, "unidade"),
+      ],
+      RECUO,
+    ),
+  );
+  p.push(
+    alinea(
+      "c)",
+      [
+        nome(juri.gestorProjeto, "nome do gestor de projeto"),
+        run(` – Gestor do Projeto ${projeto}`),
+      ],
+      RECUO,
+    ),
+  );
 
   // X. Conclusão
   p.push(seccao(10, "Conclusão"));
-  p.push(paragrafo("Face ao exposto, propõe-se que o Conselho de Administração delibere:", { depois: 80 }));
-  const reparticao = enumerar(n.anos.map((ano, i) => `${formatarMoeda(n.porAno[i])} em ${ano}`));
+  p.push(
+    paragrafo(
+      "Face ao exposto, propõe-se que o Conselho de Administração delibere:",
+      { depois: 80 },
+    ),
+  );
+  const reparticao = enumerar(
+    n.anos.map((ano, i) => `${formatarMoeda(n.porAno[i])} em ${ano}`),
+  );
   const deliberacoes = [
     `Reconhecer a necessidade de assegurar a prestação de ${objeto}, no período de ${periodo};`,
     `Aprovar o valor estimado máximo de ${formatarMoeda(n.estimado)}, sem IVA, calculado nos termos da memória descritiva e de cálculo constante do Anexo I;`,
@@ -804,36 +1109,86 @@ function corpo(
     "Aprovar o conteúdo da presente manifestação de necessidades;",
     "Seja remetido o conteúdo da presente informação à Direção de Administração Geral, para acompanhamento e adoção das diligências procedimentais necessárias.",
   ];
-  deliberacoes.forEach((d, i) => p.push(paragrafo([run(`${letra(i)})`), tabulador(), run(d)], { ind: 680, pendente: 680, depois: 120 })));
+  deliberacoes.forEach((d, i) =>
+    p.push(
+      paragrafo([run(`${letra(i)})`), tabulador(), run(d)], {
+        ind: 680,
+        pendente: 680,
+        depois: 120,
+      }),
+    ),
+  );
   p.push(vazio(240));
-  p.push(paragrafo("À consideração superior,", { jc: "left", depois: 240, comOSeguinte: true }));
-  p.push(juntoAoSeguinte(assinatura(modeloAnterior, dados)));
+  p.push(
+    paragrafo("À consideração superior,", {
+      jc: "left",
+      depois: 240,
+      comOSeguinte: true,
+    }),
+  );
+  p.push(juntoAoSeguinte(assinatura(modeloAnterior, juri)));
 
   // A lista dos anexos.
-  p.push(paragrafo([run("Anexos:")], { antes: 360, depois: 80, comOSeguinte: true }));
+  p.push(
+    paragrafo([run("Anexos:")], { antes: 360, depois: 80, comOSeguinte: true }),
+  );
   const anexos = [
     "Anexo I – Memória descritiva e de cálculo do dimensionamento financeiro dos serviços",
-    ...(n.estimado >= 5_000_000 ? ["Anexo II – Fundamentação de valor superior a 5 M€"] : []),
+    ...(n.estimado >= 5_000_000
+      ? ["Anexo II – Fundamentação de valor superior a 5 M€"]
+      : []),
     "Anexo III – Especificações técnicas",
-    ...(temResumos ? ["Anexo IV – Modelos de apresentação da experiência profissional (Resumos Curriculares)"] : []),
+    ...(temResumos
+      ? [
+          "Anexo IV – Modelos de apresentação da experiência profissional (Resumos Curriculares)",
+        ]
+      : []),
     `Anexo ${temResumos ? "V" : "IV"} – Alinhamento Tecnológico (eAvalia)`,
     `Anexo ${temResumos ? "VI" : "V"} – Custos - Serviços (eAvalia)`,
   ];
-  anexos.forEach((a, i) => p.push(alinea(`${letra(i)})`, [run(a, { sz: TABELA + 2 })], RECUO)));
+  anexos.forEach((a, i) =>
+    p.push(alinea(`${letra(i)})`, [run(a, { sz: TABELA + 2 })], RECUO)),
+  );
 
   // Anexo I — memória descritiva e de cálculo
-  p.push(paragrafo([run("Anexo I – Memória descritiva e de cálculo do dimensionamento financeiro dos serviços", { negrito: true })], { jc: "center", novaPagina: true, depois: 240 }));
-  p.push(paragrafo([run("Sumário executivo:", { negrito: true })], { comOSeguinte: true }));
-  p.push(numerado("1.", [run("Objeto", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    paragrafo(
+      [
+        run(
+          "Anexo I – Memória descritiva e de cálculo do dimensionamento financeiro dos serviços",
+          { negrito: true },
+        ),
+      ],
+      { jc: "center", novaPagina: true, depois: 240 },
+    ),
+  );
+  p.push(
+    paragrafo([run("Sumário executivo:", { negrito: true })], {
+      comOSeguinte: true,
+    }),
+  );
+  p.push(
+    numerado("1.", [run("Objeto", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(
     recuado(
       `Aquisição de ${objeto}, na modalidade de Bolsa de Horas, pelo período de ${n.meses} meses (${periodo}), ` +
         `com o valor estimado de ${formatarMoeda(n.estimado)}, sem IVA.`,
     ),
   );
-  p.push(numerado("2.", [run("Pressupostos dos cálculos", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("2.", [run("Pressupostos dos cálculos", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   // Os parágrafos e o quadro dos anos da informação anterior: o enquadramento
   // do período, a repartição das horas e os encargos por ano, com IVA.
+  // Sem encargos plurianuais o contrato cabe num ano, e o quadro é o do preço base.
+  if (!plurianual) p.push(tabelaDoBloco(tabelaPrecoBase(config)));
   for (const bloco of blocosEncargosPlurianuais(config)) {
     if (bloco.tipo === "titulo") continue;
     if (bloco.tipo === "paragrafo" && bloco.destaque === true) continue;
@@ -855,23 +1210,38 @@ function corpo(
         [
           { titulo: "Lote", alinhamento: "direita", peso: 8 },
           { titulo: "Perfil", peso: 38 },
-          { titulo: "Valor hora de referência (s/ IVA)", alinhamento: "direita", peso: 20 },
+          {
+            titulo: "Valor hora de referência (s/ IVA)",
+            alinhamento: "direita",
+            peso: 20,
+          },
           { titulo: "Margem prudencial", alinhamento: "direita", peso: 14 },
-          { titulo: "Valor hora considerado (s/ IVA)", alinhamento: "direita", peso: 20 },
+          {
+            titulo: "Valor hora considerado (s/ IVA)",
+            alinhamento: "direita",
+            peso: 20,
+          },
         ],
         linhas,
-        { legenda: "Valor hora de cada perfil, antes e depois da margem prudencial." },
+        {
+          legenda:
+            "Valor hora de cada perfil, antes e depois da margem prudencial.",
+        },
       ),
     );
   }
 
-  p.push(numerado("3.", [run("Natureza do volume e da margem", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  const servicos = dados.servicosAnteriores.trim();
+  p.push(
+    numerado("3.", [run("Natureza do volume e da margem", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(
     recuado(
       "O número de horas foi determinado de acordo com a estimativa do esforço associado ao desenvolvimento das " +
         "tarefas inerentes à prestação de serviços, tendo em consideração a prestação de serviços anteriores de " +
-        `natureza similar${servicos === "" ? "" : `, designadamente ${servicos.replace(/[.;]+$/, "")}`}.`,
+        "natureza similar.",
     ),
   );
   p.push(
@@ -887,17 +1257,46 @@ function corpo(
         { titulo: "Perfil", peso: 22 },
         { titulo: "Procedimento(s)", peso: 11 },
         { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 10 },
-        { titulo: "Rate do valor base do procedimento (€/h)", alinhamento: "direita", peso: 15 },
-        { titulo: "Rate mais alta válida (proposta) (€/h)", alinhamento: "direita", peso: 14 },
-        { titulo: "Rate média das propostas (€/h)", alinhamento: "direita", peso: 14 },
-        { titulo: "Diferença da rate média para valor base", alinhamento: "direita", peso: 14 },
+        {
+          titulo: "Rate do valor base do procedimento (€/h)",
+          alinhamento: "direita",
+          peso: 15,
+        },
+        {
+          titulo: "Rate mais alta válida (proposta) (€/h)",
+          alinhamento: "direita",
+          peso: 14,
+        },
+        {
+          titulo: "Rate média das propostas (€/h)",
+          alinhamento: "direita",
+          peso: 14,
+        },
+        {
+          titulo: "Diferença da rate média para valor base",
+          alinhamento: "direita",
+          peso: 14,
+        },
       ],
-      RATES_DE_REFERENCIA.map((r) => [r.perfil, { linhas: r.procedimentos }, r.propostas, r.base, r.maisAlta, r.media, r.diferenca]),
+      RATES_DE_REFERENCIA.map((r) => [
+        r.perfil,
+        { linhas: r.procedimentos },
+        r.propostas,
+        r.base,
+        r.maisAlta,
+        r.media,
+        r.diferenca,
+      ]),
       { sz: ANOS },
     ),
   );
   p.push(recuado(justificacaoMargem));
-  p.push(numerado("4.", [run("Rastreabilidade da execução", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("4.", [run("Rastreabilidade da execução", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(
     recuado(
       "A execução deverá permitir a reconciliação entre as horas prestadas por cada recurso, as horas faturadas, o " +
@@ -923,43 +1322,83 @@ function corpo(
       { jc: "center", novaPagina: true, depois: 80 },
     ),
   );
-  p.push(paragrafo([run("Especificações Técnicas", { negrito: true })], { jc: "center", depois: 240 }));
+  p.push(
+    paragrafo([run("Especificações Técnicas", { negrito: true })], {
+      jc: "center",
+      depois: 240,
+    }),
+  );
 
   const anexoTecnico = blocosAnexoTecnico(config);
   const seccaoDoAnexo = (tituloInicial: string): BlocoDocumento[] => {
-    const i = anexoTecnico.findIndex((b) => b.tipo === "titulo" && b.nivel === 1 && b.texto === tituloInicial);
+    const i = anexoTecnico.findIndex(
+      (b) => b.tipo === "titulo" && b.nivel === 1 && b.texto === tituloInicial,
+    );
     if (i === -1) return [];
-    const fim = anexoTecnico.findIndex((b, j) => j > i && b.tipo === "titulo" && b.nivel === 1);
+    const fim = anexoTecnico.findIndex(
+      (b, j) => j > i && b.tipo === "titulo" && b.nivel === 1,
+    );
     return anexoTecnico.slice(i + 1, fim === -1 ? undefined : fim);
   };
 
-  p.push(numerado("1.", [run("Descrição", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("1.", [run("Descrição", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(
     recuado(
       descricao === ""
         ? [marcador("descrição do projeto")]
-        : [run(`O Projeto ${projeto} visa ${descricao.replace(/[.;]+$/, "")}.`)],
+        : [
+            run(
+              `O Projeto ${projeto} visa ${descricao.replace(/[.;]+$/, "")}.`,
+            ),
+          ],
     ),
   );
-  p.push(numerado("2.", [run("Prazo de execução", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("2.", [run("Prazo de execução", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(recuado(`${n.meses} meses, de ${periodo}.`));
-  p.push(numerado("3.", [run("Prazo de entrega", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("3.", [run("Prazo de entrega", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(recuado("Não aplicável, por se tratar de uma prestação de serviços."));
-  p.push(numerado("4.", [run("Local e modo de prestação de serviços", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  for (const bloco of seccaoDoAnexo("Posto de trabalho")) p.push(renderizar(bloco));
-  p.push(numerado("5.", [run("Equipa", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado(
+      "4.",
+      [run("Local e modo de prestação de serviços", { negrito: true })],
+      { comOSeguinte: true, depois: 80 },
+    ),
+  );
+  for (const bloco of seccaoDoAnexo("Posto de trabalho"))
+    p.push(renderizar(bloco));
+  p.push(
+    numerado("5.", [run("Equipa", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   {
     const linhas: string[][] = [];
     config.lotes.forEach((lote) =>
       lote.perfis.forEach((e) => {
-        const horas = horasPorAnoDe(e, true);
+        const horas = horasDosAnos(e, plurianual);
         linhas.push([
           lote.numero,
           e.perfil.perfil,
           String(e.nMinimoElementos),
           `${formatarMoeda(e.valorHora)}`,
           ...horas.map((h) => formatarNumero(h)),
-          formatarNumero(horasContratadas(e, true)),
+          formatarNumero(horasContratadas(e, plurianual)),
         ]);
       }),
     );
@@ -968,29 +1407,68 @@ function corpo(
         [
           { titulo: "Lote", alinhamento: "direita", peso: 6 },
           { titulo: "Perfil", peso: 30 },
-          { titulo: "N.º mínimo de recursos", alinhamento: "direita", peso: 11 },
+          {
+            titulo: "N.º mínimo de recursos",
+            alinhamento: "direita",
+            peso: 11,
+          },
           { titulo: "Valor/hora (s/ IVA)", alinhamento: "direita", peso: 12 },
-          ...n.anos.map((ano) => ({ titulo: `N.º horas ${ano}`, alinhamento: "direita" as const, peso: 10 })),
+          ...n.anos.map((ano) => ({
+            titulo: `N.º horas ${ano}`,
+            alinhamento: "direita" as const,
+            peso: 10,
+          })),
           { titulo: "N.º total de horas", alinhamento: "direita", peso: 11 },
         ],
         linhas,
-        { legenda: "Horas por recurso; o encargo de cada perfil resulta do n.º mínimo de recursos × horas × valor/hora." },
+        {
+          legenda:
+            "Horas por recurso; o encargo de cada perfil resulta do n.º mínimo de recursos × horas × valor/hora.",
+        },
       ),
     );
   }
-  p.push(numerado("6.", [run("Requisitos técnicos obrigatórios por perfil", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  for (const bloco of seccaoDoAnexo("Requisitos mínimos de experiência profissional")) {
-    if (bloco.tipo === "tabela" && bloco.colunas[0]?.titulo === "Conteúdo Funcional do Perfil") continue;
+  p.push(
+    numerado(
+      "6.",
+      [run("Requisitos técnicos obrigatórios por perfil", { negrito: true })],
+      { comOSeguinte: true, depois: 80 },
+    ),
+  );
+  for (const bloco of seccaoDoAnexo(
+    "Requisitos mínimos de experiência profissional",
+  )) {
+    if (
+      bloco.tipo === "tabela" &&
+      bloco.colunas[0]?.titulo === "Conteúdo Funcional do Perfil"
+    )
+      continue;
     p.push(renderizar(bloco));
   }
-  p.push(numerado("7.", [run("Descrição dos serviços a prestar", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado(
+      "7.",
+      [run("Descrição dos serviços a prestar", { negrito: true })],
+      { comOSeguinte: true, depois: 80 },
+    ),
+  );
   config.lotes.forEach((lote) =>
     lote.perfis.forEach((e) => {
       p.push(subtitulo(`Lote ${lote.numero} — ${e.perfil.perfil}`, 2));
-      p.push(tabela([{ titulo: "Conteúdo Funcional do Perfil", peso: 100 }], conteudoFuncionalDoPerfil(e.perfil).map((a) => [a])));
+      p.push(
+        tabela(
+          [{ titulo: "Conteúdo Funcional do Perfil", peso: 100 }],
+          conteudoFuncionalDoPerfil(e.perfil).map((a) => [a]),
+        ),
+      );
     }),
   );
-  p.push(numerado("8.", [run("Entregáveis", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado("8.", [run("Entregáveis", { negrito: true })], {
+      comOSeguinte: true,
+      depois: 80,
+    }),
+  );
   p.push(
     recuado(
       "O acompanhamento da prestação de serviços terá por base os relatórios mensais de atividade, a apresentar pelo " +
@@ -1004,33 +1482,72 @@ function corpo(
     "Não aplicável. A prestação de serviços é executada na modalidade de Bolsa de Horas, sob a orientação técnica " +
     "da entidade adjudicante, sendo o acompanhamento assegurado pelos relatórios mensais de atividade referidos no " +
     "ponto 8.";
-  ["SLA’s e níveis de serviço", "Indicadores de desempenho", "Mecanismos de monitorização", "Modelo de reporte"].forEach(
-    (t, i) => {
-      p.push(numerado(`${9 + i}.`, [run(t, { negrito: true })], { comOSeguinte: true, depois: 80 }));
-      p.push(recuado(i === 3 ? "Relatórios mensais de atividade, no modelo a fornecer pela entidade adjudicante (ver ponto 8)." : naoAplicavel));
-    },
-  );
+  [
+    "SLA’s e níveis de serviço",
+    "Indicadores de desempenho",
+    "Mecanismos de monitorização",
+    "Modelo de reporte",
+  ].forEach((t, i) => {
+    p.push(
+      numerado(`${9 + i}.`, [run(t, { negrito: true })], {
+        comOSeguinte: true,
+        depois: 80,
+      }),
+    );
+    p.push(
+      recuado(
+        i === 3
+          ? "Relatórios mensais de atividade, no modelo a fornecer pela entidade adjudicante (ver ponto 8)."
+          : naoAplicavel,
+      ),
+    );
+  });
   let pontoAnexo = 13;
   const regrasAdjudicacao = seccaoDoAnexo("Regras de Adjudicação dos Lotes");
   if (regrasAdjudicacao.length > 0) {
-    p.push(numerado(`${pontoAnexo++}.`, [run("Regras de adjudicação dos lotes", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-    for (const bloco of regrasAdjudicacao) p.push(bloco.tipo === "lista" ? lista(bloco, RECUO_ALINEA) : renderizar(bloco));
+    p.push(
+      numerado(
+        `${pontoAnexo++}.`,
+        [run("Regras de adjudicação dos lotes", { negrito: true })],
+        { comOSeguinte: true, depois: 80 },
+      ),
+    );
+    for (const bloco of regrasAdjudicacao)
+      p.push(
+        bloco.tipo === "lista" ? lista(bloco, RECUO_ALINEA) : renderizar(bloco),
+      );
   }
-  p.push(numerado(`${pontoAnexo}.`, [run("Regras de apuramento da experiência", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    numerado(
+      `${pontoAnexo}.`,
+      [run("Regras de apuramento da experiência", { negrito: true })],
+      { comOSeguinte: true, depois: 80 },
+    ),
+  );
   for (const bloco of seccaoDoAnexo("Regras de apuramento da experiência")) {
-    p.push(bloco.tipo === "lista" ? lista(bloco, RECUO_ALINEA) : renderizar(bloco));
+    p.push(
+      bloco.tipo === "lista" ? lista(bloco, RECUO_ALINEA) : renderizar(bloco),
+    );
   }
 
   // Anexo IV — os resumos (a abertura; as folhas vão na secção deitada).
   const resumos = anexoDosResumos(config, imagens);
   if (resumos.corpo.length > 0) {
     p.push(
-      paragrafo([run("Anexo IV – Modelos de apresentação da experiência profissional (Resumos Curriculares)", { negrito: true })], {
-        jc: "center",
-        novaPagina: true,
-        depois: 240,
-        comOSeguinte: true,
-      }),
+      paragrafo(
+        [
+          run(
+            "Anexo IV – Modelos de apresentação da experiência profissional (Resumos Curriculares)",
+            { negrito: true },
+          ),
+        ],
+        {
+          jc: "center",
+          novaPagina: true,
+          depois: 240,
+          comOSeguinte: true,
+        },
+      ),
     );
     for (const bloco of resumos.corpo) p.push(renderizar(bloco));
   }
@@ -1048,9 +1565,18 @@ const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417 - 240;
 const LARGURA_EM_RETRATO = 11906 - 1701 - 849;
 const ALTURA_EM_RETRATO = 16838 - 1970 - 1417 - 240;
 const RESERVA_DO_TITULO = 1800;
-const TIPO_IMAGEM = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+const TIPO_IMAGEM =
+  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
 
-function paragrafoDeImagem(cx: number, cy: number, nome: string, id: number, relacao: string, novaPagina: boolean, fechaSeccao = ""): string {
+function paragrafoDeImagem(
+  cx: number,
+  cy: number,
+  nome: string,
+  id: number,
+  relacao: string,
+  novaPagina: boolean,
+  fechaSeccao = "",
+): string {
   const desenho =
     "<w:drawing>" +
     '<wp:inline distT="0" distB="0" distL="0" distR="0">' +
@@ -1086,7 +1612,11 @@ function paginasDeImagem(
         pagina.altura * EMU_POR_PIXEL,
         `${nome} (${i + 1}/${paginas.length})`,
         ids.docPr + i,
-        relacao(`${ids.relacao}${i + 1}`, `${ids.ficheiro}${i + 1}.png`, pagina.dados),
+        relacao(
+          `${ids.relacao}${i + 1}`,
+          `${ids.ficheiro}${i + 1}.png`,
+          pagina.dados,
+        ),
         i > 0,
       ),
     )
@@ -1095,8 +1625,10 @@ function paginasDeImagem(
 
 /** O cabeçalho sem as linhas «Template DAG» e «Setembro de 2026» — os parágrafos ficam, vazios. */
 export function semVersaoDoModelo(cabecalho: string): string {
-  return cabecalho.replace(/<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?(?:Template DAG|Setembro de)[\s\S]*?<\/w:p>/g, (paragrafo) =>
-    paragrafo.replace(/<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g, ""),
+  return cabecalho.replace(
+    /<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?(?:Template DAG|Setembro de)[\s\S]*?<\/w:p>/g,
+    (paragrafo) =>
+      paragrafo.replace(/<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g, ""),
   );
 }
 
@@ -1107,39 +1639,60 @@ function decodificar(base64: string): Uint8Array {
   return bytes;
 }
 
+/**
+ * A manifestação de necessidades de um agrupamento.
+ *
+ * Recebe o agrupamento como está gravado — com os valores hora de referência —
+ * e aplica-lhe a margem prudencial antes de escrever qualquer número.
+ */
 export async function gerarManifestacaoBlob(
   original: LotesJSON,
-  dados: DadosManifestacao,
   quando = new Date(),
   imagens: ImagemDaFolha[] = [],
 ): Promise<Blob> {
-  const config = comMargemPrudencial(original, dados.margemPrudencial);
+  const config = comMargemPrudencial(original);
   const zip = await JSZip.loadAsync(modeloBase64, { base64: true });
   const modelo = await zip.file("word/document.xml")!.async("string");
-  const anterior = await (await JSZip.loadAsync(decodificar(modeloAnteriorBase64))).file("word/document.xml")!.async("string");
+  const anterior = await (
+    await JSZip.loadAsync(decodificar(modeloAnteriorBase64))
+  )
+    .file("word/document.xml")!
+    .async("string");
 
   // A secção do modelo que traz o cabeçalho e o rodapé — a primeira; as
   // seguintes herdam-nos no Word e não os repetem.
   const primeira = modelo.indexOf("<w:headerReference");
   const inicioSect = modelo.lastIndexOf("<w:sectPr", primeira);
-  const sect = modelo.slice(inicioSect, modelo.indexOf("</w:sectPr>", inicioSect) + "</w:sectPr>".length);
-  const sectPaisagem = sect.replace(/<w:pgSz[^>]*\/>/, '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>');
+  const sect = modelo.slice(
+    inicioSect,
+    modelo.indexOf("</w:sectPr>", inicioSect) + "</w:sectPr>".length,
+  );
+  const sectPaisagem = sect.replace(
+    /<w:pgSz[^>]*\/>/,
+    '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>',
+  );
 
   const relacoesNovas: string[] = [];
   const relacao = (id: string, ficheiro: string, dados: Uint8Array) => {
     zip.file(`word/media/${ficheiro}`, dados);
-    relacoesNovas.push(`<Relationship Id="${id}" Type="${TIPO_IMAGEM}" Target="media/${ficheiro}"/>`);
+    relacoesNovas.push(
+      `<Relationship Id="${id}" Type="${TIPO_IMAGEM}" Target="media/${ficheiro}"/>`,
+    );
     return id;
   };
 
-  let xml = corpo(original, config, dados, modelo, anterior, quando, imagens);
+  let xml = corpo(original, config, modelo, anterior, quando, imagens);
   const resumos = anexoDosResumos(config, imagens);
   const temResumos = resumos.corpo.length > 0;
 
   // As folhas dos resumos, deitadas.
   if (resumos.paisagem.length > 0) {
     const escala = escalaDasImagens(
-      imagens.map((imagem) => ({ tipo: "imagem", ...imagem, descricao: imagem.perfil })),
+      imagens.map((imagem) => ({
+        tipo: "imagem",
+        ...imagem,
+        descricao: imagem.perfil,
+      })),
       LARGURA_EM_PAISAGEM / DXA_POR_PIXEL,
       ALTURA_EM_PAISAGEM / DXA_POR_PIXEL,
     );
@@ -1161,80 +1714,135 @@ export async function gerarManifestacaoBlob(
   }
 
   // As duas folhas do eAvalia, de pé.
-  const eavalia = new Uint8Array(await (await gerarEavaliaBlob(config, quando)).arrayBuffer());
+  const eavalia = new Uint8Array(
+    await (await gerarEavaliaBlob(config, quando)).arrayBuffer(),
+  );
   const espaco = {
     largura: LARGURA_EM_RETRATO / DXA_POR_PIXEL,
     alturaPrimeira: (ALTURA_EM_RETRATO - RESERVA_DO_TITULO) / DXA_POR_PIXEL,
     alturaSeguintes: ALTURA_EM_RETRATO / DXA_POR_PIXEL,
   };
-  const alinhamento = await paginasDoAlinhamento(await lerFolhaDoAlinhamento(eavalia), espaco);
+  const alinhamento = await paginasDoAlinhamento(
+    await lerFolhaDoAlinhamento(eavalia),
+    espaco,
+  );
   const recursos = recursosDoProcedimento(config);
-  const custos = await paginasDoAlinhamento(await lerFolhaDosCustos(eavalia, recursos.length), espaco);
+  const custos = await paginasDoAlinhamento(
+    await lerFolhaDosCustos(eavalia, recursos.length),
+    espaco,
+  );
   const [nAlinhamento, nCustos] = temResumos ? ["V", "VI"] : ["IV", "V"];
 
   const tituloAnexo = (texto: string) =>
-    paragrafo([run(texto, { negrito: true })], { jc: "center", novaPagina: true, depois: 240, comOSeguinte: true });
-  xml += tituloAnexo(`Anexo ${nAlinhamento} – Alinhamento Tecnológico (eAvalia)`);
+    paragrafo([run(texto, { negrito: true })], {
+      jc: "center",
+      novaPagina: true,
+      depois: 240,
+      comOSeguinte: true,
+    });
+  xml += tituloAnexo(
+    `Anexo ${nAlinhamento} – Alinhamento Tecnológico (eAvalia)`,
+  );
   xml += paragrafo(
     "Reprodução da folha «Alinhamento Tecnológico» do pedido de parecer prévio eAvalia que acompanha a presente " +
       "informação, com as respostas às medidas de alinhamento tecnológico.",
   );
-  xml += alinhamento.length > 0
-    ? paginasDeImagem(alinhamento, "eAvalia — Alinhamento Tecnológico", { docPr: 1000, relacao: "rIdEavalia", ficheiro: "eavalia" }, relacao)
-    : paragrafo([marcador("folha do alinhamento tecnológico — desenhada no browser")]);
+  xml +=
+    alinhamento.length > 0
+      ? paginasDeImagem(
+          alinhamento,
+          "eAvalia — Alinhamento Tecnológico",
+          { docPr: 1000, relacao: "rIdEavalia", ficheiro: "eavalia" },
+          relacao,
+        )
+      : paragrafo([
+          marcador("folha do alinhamento tecnológico — desenhada no browser"),
+        ]);
   xml += tituloAnexo(`Anexo ${nCustos} – Custos - Serviços (eAvalia)`);
   xml += paragrafo(
     "Reprodução da folha «Custos - Serviços» do pedido de parecer prévio eAvalia que acompanha a presente " +
       "informação, com o tipo de serviço, a designação, o preço por hora e as horas de cada perfil a contratar.",
   );
-  xml += custos.length > 0
-    ? paginasDeImagem(custos, "eAvalia — Custos - Serviços", { docPr: 2000, relacao: "rIdCustos", ficheiro: "custos" }, relacao)
-    : tabela(
-        [
-          { titulo: "Recurso", peso: 8 },
-          { titulo: "Tipo", peso: 17 },
-          { titulo: "Perfil", peso: 17 },
-          { titulo: "Descrição", peso: 22 },
-          { titulo: "Valor/hora", alinhamento: "direita", peso: 11 },
-          { titulo: "N.º horas", alinhamento: "direita", peso: 10 },
-          { titulo: "Custo total", alinhamento: "direita", peso: 15 },
-        ],
-        recursos.map((r, i) => [
-          numeroRomano(i + 1),
-          r.tipo,
-          r.perfil,
-          r.descricao,
-          formatarMoeda(r.valorHora),
-          formatarNumero(r.horas),
-          formatarMoeda(r.valorHora * r.horas),
-        ]),
-      );
+  xml +=
+    custos.length > 0
+      ? paginasDeImagem(
+          custos,
+          "eAvalia — Custos - Serviços",
+          { docPr: 2000, relacao: "rIdCustos", ficheiro: "custos" },
+          relacao,
+        )
+      : tabela(
+          [
+            { titulo: "Recurso", peso: 8 },
+            { titulo: "Tipo", peso: 17 },
+            { titulo: "Perfil", peso: 17 },
+            { titulo: "Descrição", peso: 22 },
+            { titulo: "Valor/hora", alinhamento: "direita", peso: 11 },
+            { titulo: "N.º horas", alinhamento: "direita", peso: 10 },
+            { titulo: "Custo total", alinhamento: "direita", peso: 15 },
+          ],
+          recursos.map((r, i) => [
+            numeroRomano(i + 1),
+            r.tipo,
+            r.perfil,
+            r.descricao,
+            formatarMoeda(r.valorHora),
+            formatarNumero(r.horas),
+            formatarMoeda(r.valorHora * r.horas),
+          ]),
+        );
   xml += sect;
 
   if (relacoesNovas.length > 0) {
     const caminho = "word/_rels/document.xml.rels";
     const relacoes = await zip.file(caminho)!.async("string");
-    zip.file(caminho, relacoes.replace("</Relationships>", `${relacoesNovas.join("")}</Relationships>`));
+    zip.file(
+      caminho,
+      relacoes.replace(
+        "</Relationships>",
+        `${relacoesNovas.join("")}</Relationships>`,
+      ),
+    );
     const tipos = await zip.file("[Content_Types].xml")!.async("string");
     if (!/Extension="png"/i.test(tipos)) {
-      zip.file("[Content_Types].xml", tipos.replace("<Types", "<Types").replace(/(<Types[^>]*>)/, '$1<Default Extension="png" ContentType="image/png"/>'));
+      zip.file(
+        "[Content_Types].xml",
+        tipos
+          .replace("<Types", "<Types")
+          .replace(
+            /(<Types[^>]*>)/,
+            '$1<Default Extension="png" ContentType="image/png"/>',
+          ),
+      );
     }
   }
 
   const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
   const fim = modelo.lastIndexOf("</w:body>");
-  zip.file("word/document.xml", modelo.slice(0, inicio) + xml + modelo.slice(fim));
+  zip.file(
+    "word/document.xml",
+    modelo.slice(0, inicio) + xml + modelo.slice(fim),
+  );
 
   // O cabeçalho do modelo traz a marca da versão do template («Template DAG /
   // Setembro de 2026»): é do modelo, não da informação, e sai.
   const cabecalho = zip.file("word/header1.xml");
-  if (cabecalho !== null) zip.file("word/header1.xml", semVersaoDoModelo(await cabecalho.async("string")));
+  if (cabecalho !== null)
+    zip.file(
+      "word/header1.xml",
+      semVersaoDoModelo(await cabecalho.async("string")),
+    );
 
   const rodape = zip.file("word/footer1.xml");
-  if (rodape !== null) zip.file("word/footer1.xml", rodapeComLinhaUnica(await rodape.async("string")));
+  if (rodape !== null)
+    zip.file(
+      "word/footer1.xml",
+      rodapeComLinhaUnica(await rodape.async("string")),
+    );
 
   return zip.generateAsync({
     type: "blob",
-    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
 }

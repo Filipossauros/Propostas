@@ -13,28 +13,42 @@ import { JUSTIFICACAO_EXEMPLO, LOTES_EXEMPLO, PERFIS_EXEMPLO } from "./exemplo";
 import { itens } from "./fixtures";
 
 describe("validarJustificacao", () => {
-  it("exige pelo menos um benefício e um risco", () => {
-    const erros = validarJustificacao({ beneficios: [], riscos: [] });
+  it("exige pelo menos um objetivo, um benefício e um risco", () => {
+    const erros = validarJustificacao({ objetivos: [], beneficios: [], riscos: [] });
 
-    expect(erros.map((e) => e.campo)).toEqual(["justificacao.beneficios", "justificacao.riscos"]);
+    expect(erros.map((e) => e.campo)).toEqual([
+      "justificacao.objetivos",
+      "justificacao.beneficios",
+      "justificacao.riscos",
+    ]);
+  });
+
+  it("um ficheiro anterior aos objetivos abre com a lista vazia, e a validação pede-os", () => {
+    const lida = normalizarJustificacao({ beneficios: itens("Poupança"), riscos: itens("Atraso") });
+    expect(lida.objetivos).toEqual([]);
+    expect(validarJustificacao(lida)[0].mensagem).toBe("Indique pelo menos um objetivo da aquisição.");
   });
 
   it("não aceita linhas vazias nem repetidas", () => {
-    const erros = validarJustificacao({ beneficios: itens("Poupança", " "), riscos: itens("Atraso", "Atraso") });
+    const erros = validarJustificacao({
+      objetivos: itens("Continuidade"),
+      beneficios: itens("Poupança", " "),
+      riscos: itens("Atraso", "Atraso"),
+    });
 
     expect(erros.map((e) => e.campo)).toEqual(["justificacao.beneficios[1].designacao", "justificacao.riscos[1].designacao"]);
     expect(erros[0].mensagem).toContain("benefício 2");
     expect(erros[1].mensagem).toBe('Risco repetido: "Atraso".');
   });
 
-  it("aceita as duas listas preenchidas", () => {
+  it("aceita as três listas preenchidas", () => {
     expect(validarJustificacao(JUSTIFICACAO_EXEMPLO)).toEqual([]);
   });
 });
 
 describe("benefício fixo", () => {
   it("fecha a lista dos benefícios, depois dos escritos", () => {
-    const lista = beneficiosDoProjeto({ beneficios: itens("Um", "Dois"), riscos: [] });
+    const lista = beneficiosDoProjeto({ objetivos: [], beneficios: itens("Um", "Dois"), riscos: [] });
     expect(lista.map((b) => b.designacao)).toEqual(["Um", "Dois", BENEFICIO_FIXO]);
   });
 
@@ -47,7 +61,7 @@ describe("benefício fixo", () => {
   });
 
   it("não conta como benefício escrito: continua a pedir pelo menos um além dele", () => {
-    const erros = validarJustificacao({ beneficios: [], riscos: itens("Atraso") });
+    const erros = validarJustificacao({ objetivos: itens("Continuidade"), beneficios: [], riscos: itens("Atraso") });
     expect(erros.map((e) => e.campo)).toEqual(["justificacao.beneficios"]);
     expect(erros[0].mensagem).toContain("além do benefício de fecho");
   });
@@ -84,11 +98,11 @@ describe("a justificação viaja nos ficheiros", () => {
     expect(importarLotesJSON(lotesParaJSON(LOTES_EXEMPLO)).justificacao).toEqual(JUSTIFICACAO_EXEMPLO);
   });
 
-  it("um ficheiro de antes destes campos abre com as duas listas vazias", () => {
+  it("um ficheiro de antes destes campos abre com as listas vazias", () => {
     const { justificacao: _semJustificacao, ...antigo } = LOTES_EXEMPLO;
     const lido = importarLotesJSON(JSON.stringify(antigo));
 
-    expect(lido.justificacao).toEqual({ beneficios: [], riscos: [] });
+    expect(lido.justificacao).toEqual({ objetivos: [], beneficios: [], riscos: [] });
     expect(temJustificacao(lido.justificacao)).toBe(false);
   });
 

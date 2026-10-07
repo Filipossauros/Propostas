@@ -62,6 +62,12 @@ export type Atividade = ItemPerfil;
  * e é a linha que a delimita, não a pontuação que o texto traga.
  */
 export interface JustificacaoProjeto {
+  /**
+   * Objetivos da aquisição: o que o projeto se propõe atingir com ela. Abrem o
+   * enquadramento da manifestação de necessidades («…que possibilitará atingir
+   * os seguintes objetivos:»).
+   */
+  objetivos: ItemPerfil[];
   beneficios: ItemPerfil[];
   riscos: ItemPerfil[];
 }
@@ -265,6 +271,23 @@ export interface Lote {
   perfis: PerfilEmLote[];
 }
 
+/**
+ * O júri técnico que a manifestação de necessidades propõe: o diretor, o
+ * coordenador da unidade e o gestor do projeto. O coordenador assina a
+ * informação, e a unidade sai na assinatura por baixo da direção.
+ */
+export interface JuriTecnico {
+  diretor: string;
+  coordenador: string;
+  /** A unidade (coordenação) do coordenador. */
+  unidade: string;
+  gestorProjeto: string;
+}
+
+export function juriInicial(): JuriTecnico {
+  return { diretor: "", coordenador: "", unidade: "", gestorProjeto: "" };
+}
+
 /** Saída do Módulo 2. Também não identifica o procedimento — ver PerfilJSON. */
 // --------------------------------------------------------------------------
 // Pedido de encargos plurianuais
@@ -356,14 +379,17 @@ export interface LotesJSON {
    */
   umLotePorConcorrente: boolean;
   /**
-   * Se o projeto está integrado no contrato programa com a ACSS.
-   *
-   * Escolha obrigatória, sem valor por omissão: `null` enquanto ninguém a fez.
-   * É ela que escreve, no enquadramento das informações, «O Projeto está /
-   * não está integrado…» — e presumir uma das duas era pôr na boca de quem
-   * assina uma afirmação que não fez.
+   * Margem prudencial, em percentagem do valor hora. A 0 % por omissão: os
+   * valores hora são a média das propostas dos últimos procedimentos, e a
+   * margem considera-se neles incorporada. Acima de 0 %, aplica-se ao valor
+   * hora de cada perfil e passa a todos os valores das peças — ver
+   * `comMargemPrudencial`.
    */
-  contratoProgramaAcss: boolean | null;
+  margemPrudencial: number;
+  /** O fundamento da margem — obrigatório, e com texto por omissão para 0 % e para acima. */
+  justificacaoMargem: string;
+  /** O júri técnico do procedimento, e quem assina a manifestação de necessidades. */
+  juri: JuriTecnico;
   /**
    * O n.º da informação da SPMS, quando já foi atribuído. Facultativo: sem ele
    * a informação sai com o espaço a vermelho para o preencher no Word, e o

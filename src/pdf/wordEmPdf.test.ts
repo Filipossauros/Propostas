@@ -4,7 +4,7 @@ import { inflateSync } from "node:zlib";
 import JSZip from "jszip";
 import { PDFArray, PDFDocument, PDFRawStream, PDFRef, type PDFPage } from "pdf-lib";
 import { wordEmPdf } from "./wordEmPdf";
-import { gerarManifestacaoNecessidadesBlob, gerarPedidoPlurianualBlob } from "../word/informacaoSpms";
+import { gerarManifestacaoBlob } from "../word/manifestacaoNecessidades";
 import { LOTES_EXEMPLO } from "../core/exemplo";
 import { normalizarLotesGuardados } from "../core/lotes";
 import type { LotesJSON } from "../core/types";
@@ -90,8 +90,8 @@ function soCorpo(paginas: string[]): string {
 }
 
 describe("wordEmPdf", () => {
-  it("leva todo o texto do pedido do triénio, pela ordem do Word", async () => {
-    const docx = await gerarPedidoPlurianualBlob(exemplo(), QUANDO);
+  it("leva todo o texto da manifestação, pela ordem do Word", async () => {
+    const docx = await gerarManifestacaoBlob(exemplo(), QUANDO);
     const pdf = soCorpo(await textoDasPaginas(await wordEmPdf(docx, "Pedido")));
 
     let desde = 0;
@@ -103,7 +103,7 @@ describe("wordEmPdf", () => {
   });
 
   it("preenche o n.º da informação e a numeração das páginas", async () => {
-    const docx = await gerarPedidoPlurianualBlob(exemplo(), QUANDO);
+    const docx = await gerarManifestacaoBlob(exemplo(), QUANDO);
     const paginas = await textoDasPaginas(await wordEmPdf(docx));
 
     expect(paginas.length).toBeGreaterThan(2);
@@ -115,16 +115,16 @@ describe("wordEmPdf", () => {
     expect(semEspacos(paginas[0])).toContain("CapitalEstatutário");
   });
 
-  it("faz o mesmo com a manifestação de necessidades", async () => {
+  it("faz o mesmo sem encargos plurianuais", async () => {
     const config = exemplo({ encargosPlurianuais: { ativo: false, anoInicio: 2026 } });
-    const docx = await gerarManifestacaoNecessidadesBlob(config, QUANDO);
+    const docx = await gerarManifestacaoBlob(config, QUANDO);
     const pdf = soCorpo(await textoDasPaginas(await wordEmPdf(docx)));
 
     for (const paragrafo of await paragrafosDoWord(docx)) expect(pdf).toContain(paragrafo);
   });
 
   it("a assinatura fica na mesma página que «À consideração superior»", async () => {
-    const docx = await gerarPedidoPlurianualBlob(exemplo(), QUANDO);
+    const docx = await gerarManifestacaoBlob(exemplo(), QUANDO);
     const paginas = (await textoDasPaginas(await wordEmPdf(docx))).map(semEspacos);
 
     const fecho = paginas.findIndex((p) => p.includes("Àconsideraçãosuperior"));
@@ -136,13 +136,13 @@ describe("wordEmPdf", () => {
   it("não põe em maiúsculas o texto de um parágrafo cuja marca as tem", async () => {
     // O modelo marca com maiúsculas o parágrafo da direção, na assinatura; o
     // texto em si não as tem, e o Word mostra-o como está escrito.
-    const docx = await gerarPedidoPlurianualBlob(exemplo(), QUANDO);
+    const docx = await gerarManifestacaoBlob(exemplo(), QUANDO);
     const pdf = soCorpo(await textoDasPaginas(await wordEmPdf(docx)));
     expect(pdf).toContain("DireçãodeArquitetura,NegócioeAnálisedeDados");
   });
 
   it("guarda o título nas propriedades do PDF, em A4", async () => {
-    const docx = await gerarPedidoPlurianualBlob(exemplo(), QUANDO);
+    const docx = await gerarManifestacaoBlob(exemplo(), QUANDO);
     const doc = await PDFDocument.load(await wordEmPdf(docx, "Informação I/1234/2026"));
 
     expect(doc.getTitle()).toBe("Informação I/1234/2026");

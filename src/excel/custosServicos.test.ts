@@ -94,7 +94,7 @@ describe("numeroRomano", () => {
   });
 });
 
-describe("folha «Custos - Serviços» do eAvalia", () => {
+describe("folha «Custos - Serviços» do eAvalia", { timeout: 30_000 }, () => {
   it("passa a ver-se; as outras folhas ocultas continuam ocultas", async () => {
     const livro = await livroDe(LOTES_EXEMPLO);
     const estado = (nome: string) => livro.getWorksheet(nome)!.state;

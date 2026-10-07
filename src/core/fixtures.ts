@@ -112,6 +112,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     nomeProjeto: "Projeto Teste",
     descricaoProjeto: "Descrição do projeto de teste",
     justificacao: {
+      objetivos: [{ id: "objetivo-1", designacao: "Objetivo de teste" }],
       beneficios: [{ id: "beneficio-1", designacao: "Benefício de teste" }],
       riscos: [{ id: "risco-1", designacao: "Risco de teste" }],
     },
@@ -119,7 +120,9 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     taxaIva: TAXA_IVA_PADRAO,
     nBlocos: 3,
     umLotePorConcorrente: false,
-    contratoProgramaAcss: true,
+    margemPrudencial: 0,
+    justificacaoMargem: "Fundamento de teste",
+    juri: { diretor: "Diretor", coordenador: "Coordenador", unidade: "Unidade", gestorProjeto: "Gestor" },
     numeroInformacao: "",
     postoTrabalho: postoTrabalhoInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
