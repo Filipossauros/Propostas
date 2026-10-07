@@ -624,6 +624,7 @@ function assinatura(modeloAnterior: string, juri: LotesJSON["juri"]): string {
 /** N.º, Data, N.º orçamento e Assunto. */
 function tabelaIdentificacao(
   numero: string,
+  orcamento: string,
   data: string,
   assunto: string,
 ): string {
@@ -650,7 +651,14 @@ function tabelaIdentificacao(
       ]),
       campo("Data:", [run(data, { negrito: true, sz: TABELA })]),
     ) +
-    linha(campo("N.º orçamento:", [marcador("n.º de orçamento")]), vazio()) +
+    linha(
+      campo("N.º orçamento:", [
+        orcamento === ""
+          ? marcador("n.º de orçamento")
+          : run(orcamento, { negrito: true, sz: TABELA }),
+      ]),
+      vazio(),
+    ) +
     `<w:tr><w:tc><w:tcPr><w:tcW w:w="${LARGURA}" w:type="dxa"/><w:gridSpan w:val="2"/></w:tcPr>` +
     campo("Assunto:", [run(assunto, { negrito: true, sz: TABELA })]) +
     "</w:tc></w:tr></w:tbl>"
@@ -770,6 +778,7 @@ function corpo(
   p.push(
     tabelaIdentificacao(
       config.numeroInformacao.trim(),
+      config.numeroOrcamento.trim(),
       dataPorExtenso(quando),
       `MANIFESTAÇÃO DE NECESSIDADES PARA A AQUISIÇÃO DE ${objeto.toUpperCase()}`,
     ),

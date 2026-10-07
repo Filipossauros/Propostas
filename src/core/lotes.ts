@@ -93,6 +93,7 @@ export function lotesIniciais(): LotesJSON {
     justificacaoMargem: JUSTIFICACAO_SEM_MARGEM,
     juri: juriInicial(),
     numeroInformacao: "",
+    numeroOrcamento: "",
     postoTrabalho: postoTrabalhoInicial(),
     eavalia: informacaoEavaliaInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
@@ -491,6 +492,8 @@ export function importarLotesJSON(texto: string): LotesJSON {
       typeof config.numeroInformacao === "string"
         ? config.numeroInformacao
         : "",
+    numeroOrcamento:
+      typeof config.numeroOrcamento === "string" ? config.numeroOrcamento : "",
     postoTrabalho: normalizarPostoTrabalho(
       (registo as { postoTrabalho?: unknown }).postoTrabalho,
     ),
@@ -532,6 +535,8 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
       typeof config.numeroInformacao === "string"
         ? config.numeroInformacao
         : "",
+    numeroOrcamento:
+      typeof config.numeroOrcamento === "string" ? config.numeroOrcamento : "",
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(

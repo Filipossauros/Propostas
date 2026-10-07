@@ -666,19 +666,31 @@ export function Modulo2({
           <h3>Anexo Técnico</h3>
         </header>
 
-        <label className="campo-numero-informacao">
-          <span className="rotulo">N.º da informação</span>
-          <input
-            type="text"
-            value={config.numeroInformacao}
-            placeholder="facultativo"
-            onChange={(e) => onAlterarConfig((atual) => ({ ...atual, numeroInformacao: e.target.value }))}
-          />
-        </label>
+        <div className="linha-campos">
+          <label className="campo-numero-informacao">
+            <span className="rotulo">N.º da informação</span>
+            <input
+              type="text"
+              value={config.numeroInformacao}
+              placeholder="facultativo"
+              onChange={(e) => onAlterarConfig((atual) => ({ ...atual, numeroInformacao: e.target.value }))}
+            />
+          </label>
+          <label className="campo-numero-informacao">
+            <span className="rotulo">N.º de orçamento</span>
+            <input
+              type="text"
+              className="campo-numero-orcamento"
+              value={config.numeroOrcamento}
+              placeholder="facultativo"
+              onChange={(e) => onAlterarConfig((atual) => ({ ...atual, numeroOrcamento: e.target.value }))}
+            />
+          </label>
+        </div>
         <p className="ajuda">
-          Facultativo. Preenche o «N.º» da informação no Word. Com ele preenchido, o ZIP leva também a informação
-          em PDF, com o mesmo conteúdo do Word; sem ele, o PDF não é gerado, porque ficaria com o número por
-          preencher.
+          Facultativos. Preenchem, no Word, o «N.º» e o «N.º orçamento» da informação; o que ficar por preencher
+          sai a vermelho. Só com os dois preenchidos o ZIP leva também a informação em PDF, com o mesmo conteúdo
+          do Word; faltando um, o PDF não é gerado, porque ficaria com esse número por preencher.
         </p>
         <div className="acoes">
           <button

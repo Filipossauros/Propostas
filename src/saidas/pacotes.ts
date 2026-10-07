@@ -85,18 +85,20 @@ async function informacaoDoProcedimento(
 }
 
 /**
- * A informação em PDF — só quando já tem número.
+ * A informação em PDF — só quando já tem os dois números: o da informação e o
+ * de orçamento.
  *
  * O PDF é desenhado a partir do próprio Word que segue no pacote, e é o que se
- * submete tal e qual: sem o n.º da informação ficaria com o espaço a vermelho,
- * que no Word ainda se preenche e no PDF já não. Por isso, sem número, não sai.
+ * submete tal e qual: sem um dos números ficaria com o espaço a vermelho, que
+ * no Word ainda se preenche e no PDF já não. Por isso, faltando um, não sai.
  *
  * O conversor carrega-se só aqui: a biblioteca de PDF não pesa no arranque da
  * aplicação para quem nunca o chega a usar.
  */
 async function informacaoEmPdf(config: LotesJSON, informacao: FicheiroDoPacote): Promise<FicheiroDoPacote[]> {
   const numero = config.numeroInformacao.trim();
-  if (numero === "" || !(informacao.conteudo instanceof Blob)) return [];
+  const orcamento = config.numeroOrcamento.trim();
+  if (numero === "" || orcamento === "" || !(informacao.conteudo instanceof Blob)) return [];
 
   const { wordEmPdf } = await import("../pdf/wordEmPdf");
   const titulo = `Informação ${numero} — ${config.nomeProcedimento.trim() || config.nomeProjeto.trim()}`;

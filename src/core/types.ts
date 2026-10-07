@@ -396,6 +396,12 @@ export interface LotesJSON {
    * pacote não leva a versão em PDF — que já não se podia completar.
    */
   numeroInformacao: string;
+  /**
+   * O n.º de orçamento (cabimento) a que a despesa vai. Facultativo, como o n.º
+   * da informação: sem ele, o Word deixa o espaço a vermelho; e o PDF só sai
+   * com os dois números preenchidos — sem um deles já não se completava.
+   */
+  numeroOrcamento: string;
   /** Condições de execução: onde, em que regime e com que equipamento. */
   postoTrabalho: PostoTrabalho;
   /** Respostas às medidas de alinhamento tecnológico do pedido de parecer eAvalia. */

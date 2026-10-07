@@ -134,6 +134,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
     gestorProjeto: "João Exemplo",
   },
   numeroInformacao: "",
+  numeroOrcamento: "",
   postoTrabalho: postoTrabalhoInicial(),
   eavalia: {
     iap: "Já cumpre",

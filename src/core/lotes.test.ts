@@ -370,6 +370,14 @@ describe("margem prudencial e júri técnico", () => {
     ]);
   });
 
+  it("um ficheiro anterior ao n.º de orçamento abre com ele por preencher, e o escrito guarda-se", () => {
+    const { numeroOrcamento: _o, ...antigo } = lotesExemplo();
+    expect(importarLotesJSON(JSON.stringify(antigo)).numeroOrcamento).toBe("");
+    expect(normalizarLotesGuardados(antigo as LotesJSON).numeroOrcamento).toBe("");
+    const com = { ...lotesExemplo(), numeroOrcamento: "ORC-2026/123" };
+    expect(importarLotesJSON(lotesParaJSON(com)).numeroOrcamento).toBe("ORC-2026/123");
+  });
+
   it("guarda a margem e o fundamento escritos", () => {
     const config = { ...lotesExemplo(), margemPrudencial: 7.5, justificacaoMargem: "Porque sim." };
     const lido = importarLotesJSON(lotesParaJSON(config));

@@ -124,6 +124,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     justificacaoMargem: "Fundamento de teste",
     juri: { diretor: "Diretor", coordenador: "Coordenador", unidade: "Unidade", gestorProjeto: "Gestor" },
     numeroInformacao: "",
+    numeroOrcamento: "",
     postoTrabalho: postoTrabalhoInicial(),
     encargosPlurianuais: encargosPlurianuaisIniciais(),
     // Respondido: o agrupamento das fixtures representa um procedimento

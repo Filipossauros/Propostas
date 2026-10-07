@@ -86,6 +86,12 @@ describe("gerarManifestacaoBlob — estrutura do modelo", () => {
     );
   });
 
+  it("escreve o n.º de orçamento quando indicado, em vez do marcador", async () => {
+    const texto = await textoDe(exemplo({ numeroOrcamento: "ORC-2026/123" }));
+    expect(texto).toContain("N.º orçamento: ORC-2026/123");
+    expect(texto).not.toContain("[n.º de orçamento]");
+  });
+
   it("mantém o modelo: estilos, numeração e imagens; o cabeçalho sem a marca da versão", async () => {
     const zip = await zipDe(exemplo());
     for (const parte of ["word/styles.xml", "word/header1.xml", "word/footer1.xml", "word/media/image1.png"]) {

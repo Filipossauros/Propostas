@@ -128,18 +128,25 @@ describe("pacote das peças do procedimento", () => {
     expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(false);
   });
 
-  it("sem o n.º da informação, não leva o PDF — ficaria com o número por preencher", async () => {
-    const lista = nomes(await ficheirosDasPecas(config({ numeroInformacao: "  " }), PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO));
-    expect(lista.some((n) => n.endsWith(".pdf"))).toBe(false);
+  it("sem um dos dois números — informação ou orçamento —, não leva o PDF; só o Word", async () => {
+    for (const numeros of [
+      { numeroInformacao: "  ", numeroOrcamento: "ORC-2026/123" },
+      { numeroInformacao: "I/1234/2026", numeroOrcamento: "" },
+      { numeroInformacao: "", numeroOrcamento: "" },
+    ]) {
+      const lista = nomes(await ficheirosDasPecas(config(numeros), PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO));
+      expect(lista.some((n) => n.endsWith(".pdf")), JSON.stringify(numeros)).toBe(false);
+      expect(lista.some((n) => n.endsWith("Manifestacao_de_Necessidades.docx"))).toBe(true);
+    }
   });
 
-  it("com o n.º da informação, leva também a informação em PDF, ao lado do Word", async () => {
+  it("com o n.º da informação e o n.º de orçamento, leva também a informação em PDF, ao lado do Word", async () => {
     // O conversor lê o Word com o DOMParser do browser; aqui, o do jsdom.
     const { JSDOM } = await import("jsdom");
     globalThis.DOMParser = new JSDOM().window.DOMParser;
 
     const ficheiros = await ficheirosDasPecas(
-      config({ numeroInformacao: "I/1234/2026" }),
+      config({ numeroInformacao: "I/1234/2026", numeroOrcamento: "ORC-2026/123" }),
       PERFIS_EXEMPLO,
       NOME_PROJETO_EXEMPLO,
       QUANDO,
