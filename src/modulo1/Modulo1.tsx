@@ -1,6 +1,13 @@
 import { useRef, useState } from "react";
-import type { JustificacaoProjeto, PerfilJSON } from "../core/types";
-import { ATIVIDADE_FIXA, BENEFICIO_FIXO, ROTULO_CERTIFICACAO, ROTULO_CERTIFICACOES } from "../core/types";
+import type { DesignacaoPerfil, JustificacaoProjeto, PerfilJSON, TipoServico } from "../core/types";
+import {
+  ATIVIDADE_FIXA,
+  BENEFICIO_FIXO,
+  DESIGNACOES_PERFIL,
+  ROTULO_CERTIFICACAO,
+  ROTULO_CERTIFICACOES,
+  TIPOS_SERVICO,
+} from "../core/types";
 import {
   ErroImportacao,
   duplicarPerfil,
@@ -350,8 +357,47 @@ export function Modulo1({
                   aria-invalid={emEdicao.perfil.trim() === ""}
                 />
               </label>
-
             </div>
+
+            <div className="linha-campos linha-campos-eavalia">
+              <label className="campo-crescente">
+                <span className="rotulo">Designação do perfil</span>
+                <select
+                  className="campo-designacao-perfil"
+                  value={emEdicao.designacao}
+                  aria-invalid={emEdicao.designacao === ""}
+                  onChange={(e) => alterarEmEdicao({ designacao: e.target.value as DesignacaoPerfil | "" })}
+                >
+                  <option value="">— por escolher —</option>
+                  {DESIGNACOES_PERFIL.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="campo-crescente">
+                <span className="rotulo">Tipo de Serviço</span>
+                <select
+                  className="campo-tipo-servico"
+                  value={emEdicao.tipoServico}
+                  aria-invalid={emEdicao.tipoServico === ""}
+                  onChange={(e) => alterarEmEdicao({ tipoServico: e.target.value as TipoServico | "" })}
+                >
+                  <option value="">— por escolher —</option>
+                  {TIPOS_SERVICO.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p className="ajuda">
+              Obrigatórios. São as listas fechadas do eAvalia: preenchem, com as horas e o preço/hora do Módulo 2, a
+              folha «Custos - Serviços».
+            </p>
           </section>
 
           <RequisitosEditor

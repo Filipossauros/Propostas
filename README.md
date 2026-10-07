@@ -218,6 +218,16 @@ teste confirma-o — só essas duas folhas mudam, byte a byte. As respostas
 oferecidas na interface são exatamente as da lista de validação do formulário,
 porque um valor de fora seria recusado por ele.
 
+A folha **«Custos - Serviços»**, que o modelo traz oculta, passa a ver-se e sai
+preenchida: um bloco «Recurso» por perfil em cada lote, com o tipo de serviço e
+a designação do perfil escolhidos no Módulo 1 (as listas fechadas da folha
+«Backup» do modelo, letra a letra), o nome do perfil como descrição, o preço/hora
+e as horas de todos os elementos e de todos os anos do Módulo 2. O custo total é
+a fórmula do modelo, escrita com o resultado; somados, os blocos dão o preço base
+sem IVA. Havendo mais perfis do que os onze blocos do modelo, acrescentam-se
+blocos iguais ao último, como a nota da folha pede. A informação (Word e PDF)
+reproduz esta folha num anexo próprio, a seguir ao do alinhamento tecnológico.
+
 As três respostas são de preenchimento obrigatório. Não é a aplicação a exigi-lo:
 o pedido de parecer segue com elas, e uma medida por responder deixaria a célula
 em branco no formulário oficial — pelo que, enquanto faltar alguma, o Módulo 2

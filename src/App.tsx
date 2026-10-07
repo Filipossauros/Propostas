@@ -14,7 +14,7 @@ import {
   normalizarJustificacao,
   temJustificacao,
 } from "./core/justificacao";
-import { ehListaDePerfisGuardada } from "./core/perfil";
+import { ehListaDePerfisGuardada, normalizarPerfisGuardados } from "./core/perfil";
 import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { ProtecaoExemplos } from "./ui/ProtecaoExemplos";
@@ -86,7 +86,12 @@ function App() {
   // Módulo 2 agrupa-os e também os pode carregar de ficheiro. Ter um só dono
   // para cada um é o que permite que uma alteração feita num módulo se reflita
   // no outro — ver `aplicarPerfis`.
-  const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(CHAVE_PERFIS, () => [], ehListaDePerfisGuardada);
+  const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(
+    CHAVE_PERFIS,
+    () => [],
+    ehListaDePerfisGuardada,
+    normalizarPerfisGuardados,
+  );
   const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(
     CHAVE_LOTES,
     lotesIniciais,

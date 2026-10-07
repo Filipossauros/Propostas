@@ -249,6 +249,9 @@ export const PERFIS_NORMALIZADOS: PerfilJSON[] = BASE.map((base) => {
     tipo: "perfil",
     id,
     perfil: base.nome,
+    // As categorias do eAvalia escolhem-se em cada projeto, como o preço.
+    designacao: "",
+    tipoServico: "",
     // A atividade de fecho é acrescentada onde o conteúdo funcional sai, e não
     // se guarda aqui — ver ATIVIDADE_FIXA.
     conteudoFuncional: base.atividades

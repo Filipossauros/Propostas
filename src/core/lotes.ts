@@ -31,7 +31,7 @@ import {
   postoTrabalhoInicial,
   regimeTemLocal,
 } from "./types";
-import { ErroImportacao, certificacoesDoPerfil, type ErroValidacao } from "./perfil";
+import { ErroImportacao, certificacoesDoPerfil, comCategoriasEavalia, type ErroValidacao } from "./perfil";
 import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
 import { gerarId } from "./id";
 
@@ -326,10 +326,10 @@ export function importarLotesJSON(texto: string): LotesJSON {
       ...lote,
       perfis: lote.perfis.map((entrada) => ({
         ...entrada,
-        perfil: {
+        perfil: comCategoriasEavalia({
           ...entrada.perfil,
           id: typeof entrada.perfil.id === "string" && entrada.perfil.id !== "" ? entrada.perfil.id : gerarId(),
-        },
+        }),
       })),
     })),
   });
@@ -353,6 +353,10 @@ export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
     postoTrabalho: normalizarPostoTrabalho(config.postoTrabalho),
     eavalia: normalizarEavalia(config.eavalia),
     encargosPlurianuais: normalizarEncargosPlurianuais(config.encargosPlurianuais),
+    lotes: config.lotes.map((lote) => ({
+      ...lote,
+      perfis: lote.perfis.map((entrada) => ({ ...entrada, perfil: comCategoriasEavalia(entrada.perfil) })),
+    })),
   });
 }
 

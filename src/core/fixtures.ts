@@ -42,6 +42,8 @@ export function perfil(parcial: Partial<PerfilJSON> = {}): PerfilJSON {
     tipo: "perfil",
     id: `perfil-${proximoIdPerfil++}`,
     perfil: "Perfil Teste",
+    designacao: "Programador",
+    tipoServico: "Desenvolvimento de SW",
     conteudoFuncional: itens("Atividade A", "Atividade B"),
     certificacoes: [],
     requisitos: [requisito()],

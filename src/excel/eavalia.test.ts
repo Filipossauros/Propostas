@@ -135,7 +135,7 @@ describe("gerarEavaliaBlob", () => {
 });
 
 describe("integridade do modelo", () => {
-  it("não toca em mais nada: só as duas folhas preenchidas mudam", async () => {
+  it("não toca em mais nada: só as três folhas preenchidas mudam, e o livro, que mostra a dos custos", async () => {
     const original = await modelo();
     const gerado = await gerar(
       config({ ...informacaoEavaliaInicial(), iap: "Já cumpre", chaveMovelDigital: "Não aplicável", idiomas: "Cumpre Parcialmente" }),
@@ -152,7 +152,7 @@ describe("integridade do modelo", () => {
       if (antes !== depois) alterados.push(nome);
     }
 
-    expect(alterados).toEqual([DESPESA, ALINHAMENTO]);
+    expect(alterados.sort()).toEqual(["xl/workbook.xml", DESPESA, ALINHAMENTO, "xl/worksheets/sheet4.xml"].sort());
   });
 
   it("não acrescenta cadeias partilhadas ao modelo", async () => {

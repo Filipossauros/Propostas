@@ -30,6 +30,11 @@ describe("validarPerfil", () => {
     expect(validarPerfil(perfil({ perfil: "" })).some((e) => e.campo === "perfil")).toBe(true);
   });
 
+  it("exige as duas listas do eAvalia: designação do perfil e tipo de serviço", () => {
+    const erros = validarPerfil(perfil({ designacao: "", tipoServico: "" }));
+    expect(erros.map((e) => e.campo)).toEqual(["designacao", "tipoServico"]);
+  });
+
   it("rejeita designações de requisito repetidas", () => {
     const repetidos = [requisito("r1", 12, "Java"), requisito("r2", 24, "Java")];
     const erros = validarPerfil(perfil({ requisitos: repetidos }));
@@ -115,6 +120,21 @@ describe("importação/exportação de perfis", () => {
     const [importado] = importarPerfisJSON(JSON.stringify(semId)).perfis;
     expect(typeof importado.id).toBe("string");
     expect(importado.id).not.toBe("");
+  });
+
+  it("abre um ficheiro anterior às listas do eAvalia com elas por escolher", () => {
+    const antigo = { ...perfil({ perfil: "Antigo" }) } as Record<string, unknown>;
+    delete antigo.designacao;
+    delete antigo.tipoServico;
+
+    const [importado] = importarPerfisJSON(JSON.stringify(antigo)).perfis;
+    expect([importado.designacao, importado.tipoServico]).toEqual(["", ""]);
+  });
+
+  it("descarta uma escolha que não conste das listas do eAvalia", () => {
+    const estranho = { ...perfil(), designacao: "Astronauta", tipoServico: "Outros" };
+    const [importado] = importarPerfisJSON(JSON.stringify(estranho)).perfis;
+    expect([importado.designacao, importado.tipoServico]).toEqual(["", "Outros"]);
   });
 
   it("rejeita schemaVersion desconhecida", () => {

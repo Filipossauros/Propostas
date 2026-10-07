@@ -7,8 +7,14 @@
 // opções. As de resposta fixa vão já respondidas, e o resto da folha do
 // alinhamento tecnológico fica trancado.
 //
-// As restantes folhas — a despesa, os custos — ficam como estão: também são
-// para preencher, e não é aqui que se decide o que lá vai.
+// A folha «Custos - Serviços», que o modelo traz oculta, passa a ver-se — é a
+// que a aplicação preenche com os perfis — e fecha-se do mesmo modo: abertos,
+// a amarelo, só os campos de cada recurso (tipo, perfil, descrição, valor/hora
+// e horas), com as listas do modelo, que são as da aplicação; o custo total é
+// fórmula e fica trancado.
+//
+// As restantes folhas — a despesa, os outros custos — ficam como estão: também
+// são para preencher, e não é aqui que se decide o que lá vai.
 //
 // Recebe os bytes do modelo em vez de os importar: assim serve tanto a
 // aplicação como o script que gera o ficheiro para distribuir.
@@ -19,12 +25,14 @@ import {
   ErroModeloEavalia,
   escreverCelula,
   FOLHA_ALINHAMENTO,
+  FOLHA_CUSTOS_SERVICOS,
   lerCadeiasPartilhadas,
   MEDIDAS,
   medidasPerguntadas,
   RESPOSTAS_COM_DATA,
   textoDaMedida,
 } from "./eavaliaModelo";
+import { comFolhaVisivel, linhaDoRecurso, preencherCustosServicos, RECURSOS_NO_MODELO } from "./custosServicos";
 
 /**
  * As células que ficam abertas, e a lista de escolha de cada uma.
@@ -47,6 +55,17 @@ function datasDoFormulario(): string[] {
   return medidasPerguntadas()
     .filter((medida) => medida.opcoes.some((opcao) => RESPOSTAS_COM_DATA.includes(opcao)))
     .map((medida) => `F${medida.linha}`);
+}
+
+/** Os campos de cada recurso da folha dos custos dos serviços — tudo menos o custo total, que é fórmula. */
+function camposDosRecursos(): string[] {
+  return Array.from({ length: RECURSOS_NO_MODELO }, (_v, i) => linhaDoRecurso(i)).flatMap((linha) => [
+    `B${linha + 1}`,
+    `D${linha + 1}`,
+    `F${linha + 1}`,
+    `B${linha + 3}`,
+    `D${linha + 3}`,
+  ]);
 }
 
 /**
@@ -259,9 +278,11 @@ const PROTECAO =
 export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8Array> {
   const zip = await JSZip.loadAsync(modelo);
   const folha = zip.file(FOLHA_ALINHAMENTO);
+  const folhaCustos = zip.file(FOLHA_CUSTOS_SERVICOS);
+  const livro = zip.file("xl/workbook.xml");
   const cadeias = zip.file("xl/sharedStrings.xml");
   const ficheiroEstilos = zip.file("xl/styles.xml");
-  if (folha === null || cadeias === null || ficheiroEstilos === null) {
+  if (folha === null || folhaCustos === null || livro === null || cadeias === null || ficheiroEstilos === null) {
     throw new ErroModeloEavalia("O modelo eAvalia não tem a estrutura esperada.");
   }
 
@@ -306,6 +327,16 @@ export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8A
   }
   xml = xml.replace("</sheetData>", `</sheetData>${PROTECAO}`);
   zip.file(FOLHA_ALINHAMENTO, xml);
+
+  // 5. A folha dos custos dos serviços: à vista, com os blocos numerados, e
+  //    fechada do mesmo modo — só os campos de cada recurso ficam abertos.
+  let custos = preencherCustosServicos(await folhaCustos.async("string"), [], partilhadas);
+  custos = comProtecaoDeclarada(custos, new Set(camposDosRecursos()), estilos);
+  if (custos.includes("<sheetProtection")) {
+    throw new ErroModeloEavalia("A folha dos custos dos serviços já vinha protegida no modelo.");
+  }
+  zip.file(FOLHA_CUSTOS_SERVICOS, custos.replace("</sheetData>", `</sheetData>${PROTECAO}`));
+  zip.file("xl/workbook.xml", comFolhaVisivel(await livro.async("string")));
 
   const total = xfs.length + estilos.acrescentados.length;
   zip.file(

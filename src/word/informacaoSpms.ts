@@ -29,12 +29,18 @@ import {
   blocosEncargosPlurianuais,
   tabelaPrecoBase,
 } from "../core/cadernoEncargos";
-import { anosPlurianuais, formatarMoeda, totalProcedimento } from "../core/lotes";
+import { anosPlurianuais, formatarMoeda, formatarNumero, totalProcedimento } from "../core/lotes";
 import { anexoDosResumos, TITULO_ANEXO_RESUMOS, type ImagemDaFolha } from "../core/resumoCurricular";
 import modeloBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 import { gerarEavaliaBlob } from "../excel/eavalia";
 import { lerFolhaDoAlinhamento, type CelulaDaFolha, type FolhaDesenhavel } from "../excel/folhaDoAlinhamento";
-import { paginasDoAlinhamento } from "../excel/imagemDoAlinhamento";
+import { paginasDoAlinhamento, type PaginaDaFolha } from "../excel/imagemDoAlinhamento";
+import {
+  lerFolhaDosCustos,
+  numeroRomano,
+  recursosDoProcedimento,
+  type RecursoDeServico,
+} from "../excel/custosServicos";
 
 // --------------------------------------------------------------------------
 // Tipografia
@@ -995,12 +1001,67 @@ export function rodapeComLinhaUnica(rodape: string): string {
   );
 }
 
-/** O título do anexo do eAvalia, que é sempre o último. */
+/** Os títulos dos anexos do eAvalia, que são sempre os dois últimos. */
 export const TITULO_ANEXO_EAVALIA = "Alinhamento Tecnológico (eAvalia)";
+export const TITULO_ANEXO_CUSTOS = "Custos - Serviços (eAvalia)";
 
-/** O número do anexo do eAvalia: o que vier a seguir ao dos resumos, quando os há. */
-function numeroDoAnexoEavalia(config: LotesJSON, imagens: ImagemDaFolha[]): string {
-  return anexoDosResumos(config, imagens).corpo.length > 0 ? "VI" : "V";
+/** Os números dos anexos do eAvalia: os que vierem a seguir ao dos resumos, quando os há. */
+function numerosDosAnexosEavalia(config: LotesJSON, imagens: ImagemDaFolha[]): [string, string] {
+  return anexoDosResumos(config, imagens).corpo.length > 0 ? ["VI", "VII"] : ["V", "VI"];
+}
+
+/** Um título que abre página: o anexo dos custos começa numa folha sua. */
+function tituloEmPaginaNova(texto: string): string {
+  return titulo(texto).replace("<w:keepNext/>", "<w:keepNext/><w:pageBreakBefore/>");
+}
+
+/** As páginas de uma folha do eAvalia desenhada, cada uma no seu parágrafo. */
+function paginasDeImagem(
+  paginas: PaginaDaFolha[],
+  nome: string,
+  ids: { docPr: number; relacao: string; ficheiro: string },
+  relacao: (id: string, ficheiro: string, dados: Uint8Array) => string,
+): string {
+  return paginas
+    .map((pagina, i) =>
+      paragrafoDeImagem({
+        cx: pagina.largura * EMU_POR_PIXEL,
+        cy: pagina.altura * EMU_POR_PIXEL,
+        nome: `${nome} (${i + 1}/${paginas.length})`,
+        id: ids.docPr + i,
+        relacao: relacao(`${ids.relacao}${i + 1}`, `${ids.ficheiro}${i + 1}.png`, pagina.dados),
+        novaPagina: i > 0,
+      }),
+    )
+    .join("");
+}
+
+/**
+ * A folha dos custos em tabela, quando não pôde ser desenhada — fora do
+ * browser. Um recurso por linha, com o que se escreveu em cada bloco.
+ */
+function tabelaDosCustos(recursos: RecursoDeServico[]): string {
+  return tabelaDoBloco({
+    tipo: "tabela",
+    colunas: [
+      { titulo: "Recurso", peso: 8 },
+      { titulo: "Tipo", peso: 17 },
+      { titulo: "Perfil", peso: 17 },
+      { titulo: "Descrição", peso: 22 },
+      { titulo: "Valor/hora", alinhamento: "direita", peso: 11 },
+      { titulo: "N.º horas", alinhamento: "direita", peso: 10 },
+      { titulo: "Custo total", alinhamento: "direita", peso: 15 },
+    ],
+    linhas: recursos.map((r, i) => [
+      { texto: numeroRomano(i + 1) },
+      { texto: r.tipo },
+      { texto: r.perfil },
+      { texto: r.descricao },
+      { texto: r.valorHora > 0 ? formatarMoeda(r.valorHora) : "", alinhamento: "direita" },
+      { texto: r.horas > 0 ? formatarNumero(r.horas) : "", alinhamento: "direita" },
+      { texto: r.valorHora > 0 && r.horas > 0 ? formatarMoeda(r.valorHora * r.horas) : "", alinhamento: "direita" },
+    ]),
+  });
 }
 
 /**
@@ -1054,16 +1115,20 @@ async function gerarInformacaoBlob(
   const sect = entre(modelo, "<w:sectPr", "</w:sectPr>");
   const folhas = anexoDosResumos(config, imagens).paisagem.length === 0 ? [] : imagens;
 
-  // O último anexo é a folha do alinhamento do eAvalia que segue com a
-  // informação: gera-se aqui, do mesmo modo que no pacote, para a imagem ser a
-  // do ficheiro e não uma reconstrução à parte.
-  const eavalia = await gerarEavaliaBlob(config, quando);
-  const alinhamento = await lerFolhaDoAlinhamento(new Uint8Array(await eavalia.arrayBuffer()));
-  const paginasEavalia = await paginasDoAlinhamento(alinhamento, {
+  // Os dois últimos anexos são as folhas do eAvalia que segue com a
+  // informação — o alinhamento tecnológico e os custos dos serviços: gera-se
+  // aqui, do mesmo modo que no pacote, para a imagem ser a do ficheiro e não
+  // uma reconstrução à parte.
+  const eavalia = new Uint8Array(await (await gerarEavaliaBlob(config, quando)).arrayBuffer());
+  const recursos = recursosDoProcedimento(config);
+  const alinhamento = await lerFolhaDoAlinhamento(eavalia);
+  const espacoEmRetrato = {
     largura: LARGURA_EM_RETRATO / DXA_POR_PIXEL,
     alturaPrimeira: (ALTURA_EM_RETRATO - RESERVA_DO_TITULO) / DXA_POR_PIXEL,
     alturaSeguintes: ALTURA_EM_RETRATO / DXA_POR_PIXEL,
-  });
+  };
+  const paginasEavalia = await paginasDoAlinhamento(alinhamento, espacoEmRetrato);
+  const paginasCustos = await paginasDoAlinhamento(await lerFolhaDosCustos(eavalia, recursos.length), espacoEmRetrato);
 
   const relacoesNovas: string[] = [];
   const relacao = (id: string, ficheiro: string, dados: Uint8Array) => {
@@ -1100,7 +1165,8 @@ async function gerarInformacaoBlob(
         .join("");
   }
 
-  corpo += titulo(`${numeroDoAnexoEavalia(config, imagens)} – ${TITULO_ANEXO_EAVALIA}`);
+  const [anexoEavalia, anexoCustos] = numerosDosAnexosEavalia(config, imagens);
+  corpo += titulo(`${anexoEavalia} – ${TITULO_ANEXO_EAVALIA}`);
   corpo += paragrafo(
     "Reprodução da folha «Alinhamento Tecnológico» do pedido de parecer prévio eAvalia que acompanha a presente " +
       "informação, com as respostas às medidas de alinhamento tecnológico.",
@@ -1108,18 +1174,27 @@ async function gerarInformacaoBlob(
   corpo +=
     paginasEavalia.length === 0
       ? tabelaDoAlinhamento(alinhamento)
-      : paginasEavalia
-          .map((pagina, i) =>
-            paragrafoDeImagem({
-              cx: pagina.largura * EMU_POR_PIXEL,
-              cy: pagina.altura * EMU_POR_PIXEL,
-              nome: `eAvalia — Alinhamento Tecnológico (${i + 1}/${paginasEavalia.length})`,
-              id: 1000 + i,
-              relacao: relacao(`rIdEavalia${i + 1}`, `eavalia${i + 1}.png`, pagina.dados),
-              novaPagina: i > 0,
-            }),
-          )
-          .join("");
+      : paginasDeImagem(
+          paginasEavalia,
+          "eAvalia — Alinhamento Tecnológico",
+          { docPr: 1000, relacao: "rIdEavalia", ficheiro: "eavalia" },
+          relacao,
+        );
+
+  corpo += tituloEmPaginaNova(`${anexoCustos} – ${TITULO_ANEXO_CUSTOS}`);
+  corpo += paragrafo(
+    "Reprodução da folha «Custos - Serviços» do pedido de parecer prévio eAvalia que acompanha a presente " +
+      "informação, com o tipo de serviço, a designação, o preço por hora e as horas de cada perfil a contratar.",
+  );
+  corpo +=
+    paginasCustos.length === 0
+      ? tabelaDosCustos(recursos)
+      : paginasDeImagem(
+          paginasCustos,
+          "eAvalia — Custos - Serviços",
+          { docPr: 2000, relacao: "rIdCustos", ficheiro: "custos" },
+          relacao,
+        );
   corpo += sect;
 
   if (relacoesNovas.length > 0) {

@@ -2,14 +2,16 @@
 //
 // Ao contrário do formulário de declaração e do relatório de avaliação, este
 // ficheiro não é gerado: é um modelo fornecido pela entidade que o recebe, e
-// aqui apenas se escrevem valores em oito células. Tudo o resto — folhas
+// aqui apenas se escrevem valores nas células a preencher — as medidas do
+// alinhamento, o objeto da despesa e os custos dos serviços —, e se mostra a
+// folha destes, que o modelo traz oculta. Tudo o resto — as outras folhas
 // ocultas, listas de validação, formatação condicional, fórmulas, XML
 // personalizado, definições de impressão — tem de sair exatamente como entrou.
 //
 // Daí não se usar o exceljs, que reescreveria o livro inteiro a partir da sua
 // própria leitura e perderia pelo caminho o que não sabe representar. Abre-se o
-// ZIP, substituem-se as células nos dois XML que as contêm, e volta a fechar-se
-// com as restantes entradas intactas.
+// ZIP, substituem-se as células nos XML que as contêm, e volta a fechar-se com
+// as restantes entradas intactas.
 
 import JSZip from "jszip";
 import type { LotesJSON } from "../core/types";
@@ -21,6 +23,7 @@ import {
   ErroModeloEavalia,
   escreverCelula,
   FOLHA_ALINHAMENTO,
+  FOLHA_CUSTOS_SERVICOS,
   FOLHA_DESPESA,
   lerCadeiasPartilhadas,
   MEDIDAS,
@@ -29,6 +32,7 @@ import {
   textoDaMedida,
   type RespostaDoFormulario,
 } from "./eavaliaModelo";
+import { comFolhaVisivel, preencherCustosServicos, recursosDoProcedimento } from "./custosServicos";
 
 export { ErroModeloEavalia, serieDeData };
 
@@ -44,8 +48,8 @@ function decodificarBase64(base64: string): Uint8Array {
 }
 
 /**
- * Preenche o modelo eAvalia com o nome do projeto, as três respostas do Módulo
- * 2 e a resposta fixa da medida de cibersegurança.
+ * Preenche o modelo eAvalia com o nome do projeto, as respostas do Módulo 2,
+ * as respostas fixas e, na folha «Custos - Serviços», os perfis dos lotes.
  *
  * Uma medida por responder fica em branco, que é como o modelo já vem — e a
  * formatação condicional do próprio formulário assinala-a. A data só acompanha
@@ -60,8 +64,10 @@ export async function gerarEavaliaBlob(
 
   const folhaAlinhamento = zip.file(FOLHA_ALINHAMENTO);
   const folhaDespesa = zip.file(FOLHA_DESPESA);
+  const folhaCustos = zip.file(FOLHA_CUSTOS_SERVICOS);
+  const livro = zip.file("xl/workbook.xml");
   const cadeias = zip.file("xl/sharedStrings.xml");
-  if (folhaAlinhamento === null || folhaDespesa === null || cadeias === null) {
+  if (folhaAlinhamento === null || folhaDespesa === null || folhaCustos === null || livro === null || cadeias === null) {
     throw new ErroModeloEavalia("O modelo eAvalia não tem a estrutura esperada.");
   }
 
@@ -102,6 +108,14 @@ export async function gerarEavaliaBlob(
     celulaDeTexto(CELULA_OBJETO, attrs, config.nomeProjeto),
   );
   zip.file(FOLHA_DESPESA, despesa);
+
+  // Os custos dos serviços: um bloco por perfil em cada lote. A folha vem
+  // oculta no modelo e passa a ver-se — é o que se pede preenchido.
+  zip.file(
+    FOLHA_CUSTOS_SERVICOS,
+    preencherCustosServicos(await folhaCustos.async("string"), recursosDoProcedimento(config), partilhadas),
+  );
+  zip.file("xl/workbook.xml", comFolhaVisivel(await livro.async("string")));
 
   // O `loadAsync` cria entradas de pasta ao interpretar os caminhos; o modelo
   // não as tem, e o arquivo há de sair com as mesmas entradas com que entrou.

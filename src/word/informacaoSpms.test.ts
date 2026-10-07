@@ -376,17 +376,35 @@ describe("gerarPedidoPlurianualBlob", () => {
     expect(texto).toContain("Regras de apuramento da experiência");
   });
 
-  it("fecha sempre com o anexo da folha do alinhamento do eAvalia", async () => {
+  it("fecha sempre com os anexos das folhas do eAvalia: o alinhamento e os custos dos serviços", async () => {
     const texto = await textoDoDocumento(exemplo());
     const anexo = texto.indexOf("VI – Alinhamento Tecnológico (eAvalia)");
+    const custos = texto.indexOf("VII – Custos - Serviços (eAvalia)");
 
     expect(anexo).toBeGreaterThan(texto.indexOf("V – "));
+    expect(custos).toBeGreaterThan(anexo);
     expect(texto.slice(anexo)).toContain("Reprodução da folha «Alinhamento Tecnológico» do pedido de parecer prévio");
+    expect(texto.slice(custos)).toContain("Reprodução da folha «Custos - Serviços» do pedido de parecer prévio");
     // Nenhum outro anexo depois dele.
-    expect(texto.slice(anexo + 1)).not.toMatch(/VI?I – /);
+    expect(texto.slice(custos + 1)).not.toMatch(/VI{1,3} – /);
 
     const manifestacao = await textoDaManifestacao(semPlurianual());
     expect(manifestacao).toContain("VI – Alinhamento Tecnológico (eAvalia)");
+    expect(manifestacao).toContain("VII – Custos - Serviços (eAvalia)");
+  });
+
+  it("fora do browser, os custos dos serviços saem em tabela: um recurso por perfil", async () => {
+    const texto = await textoDoDocumento(exemplo());
+    const custos = texto.slice(texto.indexOf("VII – Custos - Serviços (eAvalia)"));
+
+    expect(custos).toMatch(/Programador Sénior — Java[^]*?42,00\s€[^]*?7040[^]*?295\s680,00\s€/);
+    expect(custos).toContain("Especialistas de sistemas (redes, base de dados e ambientes)");
+    expect(custos).toContain("Trabalhos especializados - SW");
+  });
+
+  it("o anexo dos custos começa numa página sua", async () => {
+    const xml = await xmlDoDocumento(exemplo());
+    expect(xml).toMatch(/<w:keepNext\/><w:pageBreakBefore\/>(?:(?!<\/w:p>).)*VII – Custos - Serviços/);
   });
 
   it("fora do browser, a folha sai em tabela: as secções e as respostas do eAvalia", async () => {

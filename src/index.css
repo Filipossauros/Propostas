@@ -2201,3 +2201,12 @@ tbody.grupo-projeto.projeto-alvo td {
 .intervalo-rate {
   white-space: nowrap;
 }
+
+/* As duas listas do eAvalia, por baixo do nome do perfil. */
+.linha-campos-eavalia {
+  margin-top: 12px;
+}
+
+.linha-campos-eavalia select {
+  width: 100%;
+}

@@ -7,12 +7,14 @@
 import type {
   Bloco,
   Declaracao,
+  DesignacaoPerfil,
   JustificacaoProjeto,
   LotesJSON,
   MesAno,
   PerfilEmLote,
   PerfilJSON,
   Requisito,
+  TipoServico,
 } from "./types";
 import { N_BLOCOS_PADRAO, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
@@ -28,12 +30,16 @@ function perfil(
   requisitos: Requisito[],
   /** Campo opcional: só dois dos perfis do exemplo exigem certificação. */
   certificacoes: string[] = [],
+  designacao: DesignacaoPerfil = "Programador",
+  tipoServico: TipoServico = "Desenvolvimento de SW",
 ): PerfilJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "perfil",
     id,
     perfil: nome,
+    designacao,
+    tipoServico,
     conteudoFuncional: conteudoFuncional.map((designacao, i) => ({ id: `${id}-a${i + 1}`, designacao })),
     certificacoes: certificacoes.map((designacao, i) => ({ id: `${id}-c${i + 1}`, designacao })),
     requisitos: requisitos.map((r) => ({ ...r, id: `${id}-${r.id}` })),
@@ -71,7 +77,7 @@ const PERFIL_INTEGRACAO = perfil("p3", "Arquiteto de Integração", [
   req("r1", "Desenvolvimento de software (geral)", 120),
   req("r2", "Integração de sistemas de informação", 60),
   req("r3", "Normas de interoperabilidade em saúde (HL7 / FHIR)", 36),
-], ["HL7 FHIR Foundation (HL7 International)", "TOGAF Enterprise Architecture Foundation"]);
+], ["HL7 FHIR Foundation (HL7 International)", "TOGAF Enterprise Architecture Foundation"], "Arquiteto", "Trabalhos especializados - SW");
 
 const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
   "Modelação de dados e otimização de consultas",
@@ -81,7 +87,7 @@ const PERFIL_DADOS = perfil("p4", "Engenheiro de Dados", [
 ], [
   req("r1", "Modelação e exploração de bases de dados relacionais", 60),
   req("r2", "Processos de extração, transformação e carregamento (ETL)", 36),
-]);
+], [], "Especialistas de sistemas (redes, base de dados e ambientes)", "Trabalhos especializados - SW");
 
 export const NOME_PROJETO_EXEMPLO = "Modernização dos Sistemas de Informação";
 

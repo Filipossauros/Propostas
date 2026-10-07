@@ -1,6 +1,7 @@
-// A folha «Alinhamento Tecnológico» do eAvalia, lida para ser desenhada.
+// Uma folha do eAvalia, lida para ser desenhada — a «Alinhamento Tecnológico»
+// e a «Custos - Serviços».
 //
-// O Word leva a folha em imagem, e a imagem tem de ser a do ficheiro que segue
+// O Word leva cada uma em imagem, e a imagem tem de ser a do ficheiro que segue
 // com ela — as respostas escritas, a largura das colunas, as fusões, as cores e
 // as caixas que o formulário acende conforme a resposta. Em vez de redesenhar a
 // folha à mão, lê-se tudo isso do próprio xlsx gerado: se o modelo mudar, a
@@ -52,6 +53,14 @@ export interface FolhaDesenhavel {
   /** Altura de cada linha, em píxeis a 96 ppp. */
   alturas: number[];
   celulas: CelulaDaFolha[];
+  /** Grupos de linhas (da primeira à última, a contar de 0) que não se partem entre páginas. */
+  juntas?: Array<[number, number]>;
+}
+
+export interface OpcoesDaLeitura {
+  /** A última linha a ler (a contar de 1): o que vem abaixo dela fica de fora. */
+  ateLinha?: number;
+  juntas?: Array<[number, number]>;
 }
 
 // --------------------------------------------------------------------------
@@ -200,14 +209,22 @@ function lerPreenchimento(xml: string, paleta: string[], condicional: boolean): 
   return { fundo: lerCor(escolhida, paleta, "#FFFFFF") };
 }
 
+/** Como se escreve um número da célula: como data, com casas e milhares, ou tal como está. */
+type Formato =
+  | { tipo: "data" }
+  | { tipo: "numero"; casas: number; milhares: boolean; sufixo: string }
+  | { tipo: "geral" };
+
 interface Xf {
   fonte: Fonte;
   preenchimento: Preenchimento;
   bordas: Bordas;
   horizontal: EstiloDeCelula["horizontal"];
+  /** Se o alinhamento horizontal vem do estilo; sem ele, o Excel encosta os números à direita. */
+  horizontalDoEstilo: boolean;
   vertical: EstiloDeCelula["vertical"];
   quebra: boolean;
-  data: boolean;
+  formato: Formato;
 }
 
 function elementos(xml: string, bloco: string, elemento: string): string[] {
@@ -215,21 +232,52 @@ function elementos(xml: string, bloco: string, elemento: string): string[] {
   return conteudo.match(new RegExp(`<${elemento}\\b[^>]*/>|<${elemento}\\b[^>]*>[\\s\\S]*?</${elemento}>`, "g")) ?? [];
 }
 
-/** Os formatos de data: os internos (14 a 22, 45 a 47) e os próprios que falem em dias, meses ou anos. */
-function formatosDeData(estilos: string): Set<number> {
-  const datas = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47]);
+/** Os formatos internos do Excel que a folha pode usar sem os declarar. */
+const FORMATOS_INTERNOS: Record<number, string> = { 1: "0", 2: "0.00", 3: "#,##0", 4: "#,##0.00" };
+
+/**
+ * Um código de formato numérico, reduzido ao que interessa para o escrever:
+ * as datas (os internos 14 a 22 e 45 a 47, e os próprios que falem em dias,
+ * meses ou anos), e nos números as casas decimais, os milhares e a moeda.
+ */
+function lerFormato(id: number, codigo: string | undefined): Formato {
+  if ((id >= 14 && id <= 22) || (id >= 45 && id <= 47)) return { tipo: "data" };
+  const bruto = codigo ?? FORMATOS_INTERNOS[id];
+  if (bruto === undefined) return { tipo: "geral" };
+  // A secção dos positivos; o texto entre aspas e os [modificadores] não contam.
+  const positivos = desescapar(bruto).split(";")[0];
+  const sem = positivos.replace(/"[^"]*"|\[[^\]]*\]|\\.|_.|\*./g, "");
+  if (/[dmy]/i.test(sem)) return { tipo: "data" };
+  if (!/[0#]/.test(sem)) return { tipo: "geral" };
+  const sufixo = /"([^"]*)"\s*[^0#.,]*$/.exec(positivos)?.[1] ?? "";
+  return {
+    tipo: "numero",
+    casas: /\.(0+)/.exec(sem)?.[1].length ?? 0,
+    milhares: /[0#],[0#]/.test(sem),
+    sufixo: sufixo === "" ? "" : ` ${sufixo}`,
+  };
+}
+
+function lerFormatos(estilos: string): Map<number, string> {
+  const codigos = new Map<number, string>();
   for (const fmt of elementos(estilos, "numFmts", "numFmt")) {
-    const codigo = desescapar(atributo(fmt, "formatCode") ?? "").replace(/"[^"]*"|\[[^\]]*\]/g, "");
-    if (/[dmy]/i.test(codigo)) datas.add(Number(atributo(fmt, "numFmtId")));
+    codigos.set(Number(atributo(fmt, "numFmtId")), atributo(fmt, "formatCode") ?? "");
   }
-  return datas;
+  return codigos;
+}
+
+/** Um número como o Excel o mostra cá: vírgula decimal e espaço nos milhares. */
+function numeroFormatado(valor: number, formato: Extract<Formato, { tipo: "numero" }>): string {
+  const [inteira, decimal] = Math.abs(valor).toFixed(formato.casas).split(".");
+  const agrupada = formato.milhares ? inteira.replace(/\B(?=(\d{3})+(?!\d))/g, " ") : inteira;
+  return `${valor < 0 ? "-" : ""}${agrupada}${decimal === undefined ? "" : `,${decimal}`}${formato.sufixo}`;
 }
 
 function lerEstilos(estilos: string, paleta: string[]): { xfs: Xf[]; dxfs: Array<Preenchimento & { bordas: Bordas }> } {
   const fontes = elementos(estilos, "fonts", "font").map((f) => lerFonte(f, paleta));
   const fills = elementos(estilos, "fills", "fill").map((f) => lerPreenchimento(f, paleta, false));
   const bordas = elementos(estilos, "borders", "border").map((b) => lerBordas(b, paleta));
-  const datas = formatosDeData(estilos);
+  const formatos = lerFormatos(estilos);
 
   const xfs = elementos(estilos, "cellXfs", "xf").map((xf): Xf => {
     const alinhamento = /<alignment\b[^>]*\/>/.exec(xf)?.[0] ?? "";
@@ -240,10 +288,11 @@ function lerEstilos(estilos: string, paleta: string[]): { xfs: Xf[]; dxfs: Array
       preenchimento: fills[Number(atributo(xf, "fillId") ?? 0)] ?? {},
       bordas: bordas[Number(atributo(xf, "borderId") ?? 0)] ?? {},
       horizontal: horizontal === "center" || horizontal === "right" ? horizontal : "left",
+      horizontalDoEstilo: horizontal !== undefined && horizontal !== "general",
       // O Excel alinha ao fundo quando nada diz.
       vertical: vertical === "center" ? "middle" : vertical === "top" ? "top" : "bottom",
       quebra: atributo(alinhamento, "wrapText") === "1",
-      data: datas.has(Number(atributo(xf, "numFmtId") ?? 0)),
+      formato: lerFormato(Number(atributo(xf, "numFmtId") ?? 0), formatos.get(Number(atributo(xf, "numFmtId") ?? 0))),
     };
   });
 
@@ -322,21 +371,30 @@ function dataPorExtenso(serie: number): string {
   return `${dois(data.getUTCDate())}/${dois(data.getUTCMonth() + 1)}/${data.getUTCFullYear()}`;
 }
 
+/** Lê a folha do alinhamento de um eAvalia gerado — ver `lerFolhaDoEavalia`. */
+export function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Promise<FolhaDesenhavel> {
+  return lerFolhaDoEavalia(xlsx, FOLHA_ALINHAMENTO);
+}
+
 /**
- * Lê a folha do alinhamento de um eAvalia gerado.
+ * Lê uma folha de um eAvalia gerado.
  *
  * Só as colunas e as linhas que o formulário usa — as que a dimensão da folha
- * declara —, e cada fusão como uma célula só.
+ * declara, ou menos, se `ateLinha` o pedir —, e cada fusão como uma célula só.
  */
-export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Promise<FolhaDesenhavel> {
+export async function lerFolhaDoEavalia(
+  xlsx: Uint8Array | ArrayBuffer,
+  caminho: string,
+  opcoes: OpcoesDaLeitura = {},
+): Promise<FolhaDesenhavel> {
   const zip = await JSZip.loadAsync(xlsx);
   const [folha, estilosXml, cadeiasXml, temaXml] = await Promise.all(
-    [FOLHA_ALINHAMENTO, "xl/styles.xml", "xl/sharedStrings.xml", "xl/theme/theme1.xml"].map(
+    [caminho, "xl/styles.xml", "xl/sharedStrings.xml", "xl/theme/theme1.xml"].map(
       (nome) => zip.file(nome)?.async("string"),
     ),
   );
   if (folha === undefined || estilosXml === undefined) {
-    throw new ErroModeloEavalia("O eAvalia gerado não tem a folha do alinhamento tecnológico.");
+    throw new ErroModeloEavalia(`O eAvalia gerado não tem a folha ${caminho}.`);
   }
 
   const paleta = paletaDoTema(temaXml);
@@ -346,7 +404,7 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
   const dimensao = atributo(/<dimension\b[^>]*\/>/.exec(folha)?.[0] ?? "", "ref") ?? "A1:F1";
   const fim = lerRef(dimensao.split(":").pop()!);
   const nColunas = fim.coluna + 1;
-  const nLinhas = fim.linha + 1;
+  const nLinhas = Math.min(fim.linha + 1, opcoes.ateLinha ?? Infinity);
 
   // Larguras: as das `<col>`, e a omissão da folha nas que não tenham.
   const omissaoColuna = Number(atributo(folha, "defaultColWidth") ?? 8.43);
@@ -361,6 +419,7 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
   const alturas = Array.from({ length: nLinhas }, () => alturaDeLinha(omissaoLinha));
   const valores = new Map<string, string>();
   const estiloDe = new Map<string, number>();
+  const numericas = new Set<string>();
 
   for (const linha of folha.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>|<row\b([^>]*)\/>/g)) {
     const atributos = linha[1] ?? linha[3];
@@ -380,7 +439,16 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
       let texto = "";
       if (tipo === "s" && v !== undefined) texto = cadeias[Number(v)] ?? "";
       else if (tipo === "inlineStr") texto = textoDosT(/<is>([\s\S]*?)<\/is>/.exec(corpo)?.[1] ?? "");
-      else if (v !== undefined) texto = xfs[s]?.data && tipo === undefined ? dataPorExtenso(Number(v)) : desescapar(v);
+      else if (v !== undefined && tipo === undefined && v !== "") {
+        const formato = xfs[s]?.formato ?? { tipo: "geral" };
+        texto =
+          formato.tipo === "data"
+            ? dataPorExtenso(Number(v))
+            : formato.tipo === "numero"
+              ? numeroFormatado(Number(v), formato)
+              : v.replace(".", ",");
+        numericas.add(ref);
+      } else if (v !== undefined) texto = desescapar(v);
       valores.set(ref, texto);
     }
   }
@@ -392,7 +460,7 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
   }));
   const absorvidas = new Set<string>();
   const fusaoDe = new Map<string, { linha: number; coluna: number }>();
-  for (const { de, ate } of fusoes) {
+  for (const { de, ate } of fusoes.filter((f) => f.de.linha < nLinhas)) {
     for (let r = de.linha; r <= ate.linha; r++) {
       for (let c = de.coluna; c <= ate.coluna; c++) {
         if (r !== de.linha || c !== de.coluna) absorvidas.add(`${r}:${c}`);
@@ -414,7 +482,7 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
       negrito: xf.fonte.negrito,
       italico: xf.fonte.italico,
       tamanho: xf.fonte.tamanho,
-      horizontal: xf.horizontal,
+      horizontal: !xf.horizontalDoEstilo && numericas.has(ref) ? "right" : xf.horizontal,
       vertical: xf.vertical,
       quebra: xf.quebra,
       bordas: { ...xf.bordas },
@@ -458,5 +526,5 @@ export async function lerFolhaDoAlinhamento(xlsx: Uint8Array | ArrayBuffer): Pro
     }
   }
 
-  return { larguras, alturas, celulas };
+  return { larguras, alturas, celulas, juntas: opcoes.juntas };
 }

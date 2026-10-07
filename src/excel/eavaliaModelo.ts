@@ -60,6 +60,11 @@ export const FOLHA_ALINHAMENTO = "xl/worksheets/sheet3.xml";
 /** Folha "Informação Base da despesa" — a segunda. */
 export const FOLHA_DESPESA = "xl/worksheets/sheet2.xml";
 
+/** Folha "Custos - Serviços" — a quarta, oculta no modelo. */
+export const FOLHA_CUSTOS_SERVICOS = "xl/worksheets/sheet4.xml";
+/** O nome da mesma folha no livro, que é por onde se lhe muda a visibilidade. */
+export const NOME_FOLHA_CUSTOS_SERVICOS = "Custos - Serviços";
+
 /** Célula do objeto da aquisição, fundida de B17 a F17. */
 export const CELULA_OBJETO = "B17";
 

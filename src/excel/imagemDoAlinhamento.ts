@@ -1,10 +1,12 @@
-// A folha «Alinhamento Tecnológico» do eAvalia, desenhada em páginas.
+// Uma folha do eAvalia desenhada em páginas — a «Alinhamento Tecnológico» e a
+// «Custos - Serviços».
 //
 // Recebe a folha já lida (`folhaDoAlinhamento.ts`) e desenha-a num canvas, à
-// maneira do Excel: fundo, texto e, por cima, as bordas. A folha é alta — setenta
-// e cinco linhas —, e reduzida a uma página só ficava ilegível; por isso sai à
-// largura da página e partida em tantas páginas quantas precise, sempre entre
-// linhas, e sem separar o cabeçalho de uma secção da primeira pergunta dela.
+// maneira do Excel: fundo, texto e, por cima, as bordas. A folha é alta — a do
+// alinhamento tem setenta e cinco linhas —, e reduzida a uma página só ficava
+// ilegível; por isso sai à largura da página e partida em tantas páginas quantas
+// precise, sempre entre linhas, sem separar o cabeçalho de uma secção da
+// primeira pergunta dela, nem um recurso dos custos ao meio.
 //
 // Só corre no browser: depende de `document.createElement("canvas")`.
 
@@ -87,8 +89,9 @@ function alturasQueCabem(ctx: CanvasRenderingContext2D, folha: FolhaDesenhavel):
 
 /**
  * As linhas agrupadas em blocos que não se partem entre páginas: as de uma
- * fusão vertical ficam juntas, e o cabeçalho de uma secção — a linha com
- * «Resposta» e «Data» — fica com a primeira pergunta.
+ * fusão vertical ficam juntas, o cabeçalho de uma secção — a linha com
+ * «Resposta» e «Data» — fica com a primeira pergunta, e os grupos que a folha
+ * declare (`juntas`) ficam inteiros.
  */
 function blocosDeLinhas(folha: FolhaDesenhavel): Array<[number, number]> {
   const n = folha.alturas.length;
@@ -96,6 +99,9 @@ function blocosDeLinhas(folha: FolhaDesenhavel): Array<[number, number]> {
   for (const c of folha.celulas) {
     for (let r = c.linha; r < c.ateLinha; r++) juntaComASeguinte[r] = true;
     if (c.texto.trim().toLowerCase() === "resposta") juntaComASeguinte[c.linha] = true;
+  }
+  for (const [de, ate] of folha.juntas ?? []) {
+    for (let r = de; r < Math.min(ate, n - 1); r++) juntaComASeguinte[r] = true;
   }
 
   const blocos: Array<[number, number]> = [];
@@ -229,7 +235,7 @@ function paraPng(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   return new Promise((resolver, rejeitar) => {
     canvas.toBlob((blob) => {
       if (blob === null) {
-        rejeitar(new Error("Não foi possível desenhar a folha do alinhamento."));
+        rejeitar(new Error("Não foi possível desenhar a folha do eAvalia."));
         return;
       }
       void blob.arrayBuffer().then((b) => resolver(new Uint8Array(b)));

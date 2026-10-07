@@ -9,6 +9,7 @@ import { medidasPerguntadas } from "./eavaliaModelo";
 import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
 
 const ALINHAMENTO = "xl/worksheets/sheet3.xml";
+const CUSTOS = "xl/worksheets/sheet4.xml";
 const ESTILOS = "xl/styles.xml";
 
 const modelo = () => new Uint8Array(Buffer.from(modeloBase64, "base64"));
@@ -147,7 +148,7 @@ describe("eAvalia-padrão", () => {
     const zip = await padrao();
     const analisador = new DOMParser();
 
-    for (const nome of [ALINHAMENTO, ESTILOS]) {
+    for (const nome of [ALINHAMENTO, CUSTOS, ESTILOS, "xl/workbook.xml"]) {
       const xml = analisador.parseFromString(await zip.file(nome)!.async("string"), "application/xml");
       expect(xml.querySelector("parsererror")).toBeNull();
     }
@@ -156,6 +157,44 @@ describe("eAvalia-padrão", () => {
     const declarado = Number(/<cellXfs count="(\d+)"/.exec(estilos)![1]);
     const bloco = /<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/.exec(estilos)![1];
     expect(bloco.match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g)).toHaveLength(declarado);
+  });
+
+  it("mostra a folha dos custos dos serviços, e só essa das que vinham ocultas", async () => {
+    const livro = await (await padrao()).file("xl/workbook.xml")!.async("string");
+    const estado = (nome: string) => new RegExp(`<sheet name="${nome}"[^>]*/>`).exec(livro)![0].includes('state="hidden"');
+
+    expect(estado("Custos - Serviços")).toBe(false);
+    expect(estado("Custos - Bens")).toBe(true);
+    expect(estado("Custos - Lic_Hist")).toBe(true);
+    expect(estado("Backup")).toBe(true);
+  });
+
+  it("nos custos dos serviços, abre a amarelo os campos de cada recurso, e só esses", async () => {
+    const zip = await padrao();
+    const folha = await zip.file(CUSTOS)!.async("string");
+    const estilos = await zip.file(ESTILOS)!.async("string");
+
+    const esperadas = Array.from({ length: 11 }, (_v, i) => 6 + 5 * i).flatMap((l) => [
+      `B${l + 1}`,
+      `D${l + 1}`,
+      `F${l + 1}`,
+      `B${l + 3}`,
+      `D${l + 3}`,
+    ]);
+    expect(editaveis(folha, estilosAbertos(estilos)).sort()).toEqual(esperadas.sort());
+    expect(editaveis(folha, estilosRealcados(estilos)).sort()).toEqual(esperadas.sort());
+    // O custo total é fórmula: fica trancado.
+    expect(editaveis(folha, estilosAbertos(estilos))).not.toContain("F9");
+    expect(folha).toContain("</sheetData><sheetProtection");
+  });
+
+  it("nos custos dos serviços, mantém as listas do modelo e numera os recursos", async () => {
+    const folha = await (await padrao()).file(CUSTOS)!.async("string");
+
+    expect(folha).toContain("Backup!$B$19:$B$24");
+    expect(folha).toContain("Backup!$B$26:$B$34");
+    expect(valorDaCelula(folha, "A26")).toBe("Recurso V");
+    expect(valorDaCelula(folha, "A56")).toBe("Recurso XI");
   });
 
   it("mantém as entradas do arquivo, sem pastas a mais", async () => {

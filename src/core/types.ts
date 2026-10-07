@@ -115,6 +115,35 @@ export function mesesDeAnos(anos: number): number {
 // --------------------------------------------------------------------------
 
 /**
+ * Designações de perfil admitidas pelo eAvalia, tal como constam da lista da
+ * folha «Backup» do modelo (B26:B34). Têm de coincidir letra a letra: é o que
+ * a validação da célula aceita.
+ */
+export const DESIGNACOES_PERFIL = [
+  "Arquiteto",
+  "Consultor Estratégico",
+  "Consultor Funcional",
+  "Consultor Tecnológico",
+  "Especialistas de sistemas (redes, base de dados e ambientes)",
+  "Gestor de projeto",
+  "Programador",
+  "Técnico de facilities",
+  "WebDesigner",
+] as const;
+export type DesignacaoPerfil = (typeof DESIGNACOES_PERFIL)[number];
+
+/** Tipos de serviço admitidos pelo eAvalia — folha «Backup», B19:B24. */
+export const TIPOS_SERVICO = [
+  "Trabalhos especializados - HW",
+  "Trabalhos especializados - Redes",
+  "Trabalhos especializados - SW",
+  "Desenvolvimento de SW",
+  "Estudos/Consultoria",
+  "Outros",
+] as const;
+export type TipoServico = (typeof TIPOS_SERVICO)[number];
+
+/**
  * Um perfil do Módulo 1.
  *
  * Não contém procedimento nem lote: nesta fase pré-contratual nenhum dos dois
@@ -132,6 +161,14 @@ export interface PerfilJSON {
   id: string;
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
   perfil: string;
+  /**
+   * Categoria do perfil na tabela fechada do eAvalia — a coluna «Perfil» da
+   * folha «Custos - Serviços». Vazia enquanto não for escolhida, e nos
+   * ficheiros gerados antes de o campo existir.
+   */
+  designacao: DesignacaoPerfil | "";
+  /** Tipo de serviço, também da tabela fechada do eAvalia — a coluna «Tipo». */
+  tipoServico: TipoServico | "";
   /**
    * Atividades que se espera que o perfil desempenhe, uma por entrada. Só
    * entra no documento Word: descreve o trabalho a contratar, e não é matéria

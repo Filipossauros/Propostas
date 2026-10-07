@@ -39,6 +39,8 @@
       "tipo": "perfil",
       "id": "p1",
       "perfil": "Programador Sénior — Java",
+      "designacao": "Programador",
+      "tipoServico": "Desenvolvimento de SW",
       "conteudoFuncional": [
         {
           "id": "p1-a1",
@@ -86,6 +88,8 @@
       "tipo": "perfil",
       "id": "p2",
       "perfil": "Programador Front-end",
+      "designacao": "Programador",
+      "tipoServico": "Desenvolvimento de SW",
       "conteudoFuncional": [
         {
           "id": "p2-a1",
@@ -128,6 +132,8 @@
       "tipo": "perfil",
       "id": "p3",
       "perfil": "Arquiteto de Integração",
+      "designacao": "Arquiteto",
+      "tipoServico": "Trabalhos especializados - SW",
       "conteudoFuncional": [
         {
           "id": "p3-a1",
@@ -179,6 +185,8 @@
       "tipo": "perfil",
       "id": "p4",
       "perfil": "Engenheiro de Dados",
+      "designacao": "Especialistas de sistemas (redes, base de dados e ambientes)",
+      "tipoServico": "Trabalhos especializados - SW",
       "conteudoFuncional": [
         {
           "id": "p4-a1",

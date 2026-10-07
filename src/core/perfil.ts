@@ -1,7 +1,14 @@
 // Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
 
 import type { ItemPerfil, JustificacaoProjeto, PerfilJSON, PerfisJSON, Requisito } from "./types";
-import { ATIVIDADE_FIXA, MESES_POR_ANO, SCHEMA_VERSION_ATUAL, anosDeMeses } from "./types";
+import {
+  ATIVIDADE_FIXA,
+  DESIGNACOES_PERFIL,
+  MESES_POR_ANO,
+  SCHEMA_VERSION_ATUAL,
+  TIPOS_SERVICO,
+  anosDeMeses,
+} from "./types";
 import { gerarId } from "./id";
 import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
 
@@ -16,6 +23,8 @@ export function perfilInicial(): PerfilJSON {
     tipo: "perfil",
     id: gerarId(),
     perfil: "",
+    designacao: "",
+    tipoServico: "",
     conteudoFuncional: [],
     certificacoes: [],
     requisitos: [],
@@ -95,7 +104,13 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
 
   if (perfil.perfil.trim() === "") {
-    erros.push({ campo: "perfil", mensagem: "Indique a designação do perfil." });
+    erros.push({ campo: "perfil", mensagem: "Indique o nome do perfil." });
+  }
+  if (perfil.designacao === "") {
+    erros.push({ campo: "designacao", mensagem: "Escolha a designação do perfil (lista do eAvalia)." });
+  }
+  if (perfil.tipoServico === "") {
+    erros.push({ campo: "tipoServico", mensagem: "Escolha o tipo de serviço (lista do eAvalia)." });
   }
   if (perfil.conteudoFuncional.length === 0) {
     erros.push({
@@ -255,6 +270,27 @@ export function normalizarItens(bruto: unknown): ItemPerfil[] {
 }
 
 /**
+ * Põe em dia as duas categorias do eAvalia de um perfil guardado.
+ *
+ * Perfis gravados antes de os campos existirem não as trazem, e um valor que
+ * não conste das listas do modelo não abriria lá: em ambos os casos ficam por
+ * escolher, e a validação do Módulo 1 pede-as.
+ */
+export function comCategoriasEavalia(perfil: PerfilJSON): PerfilJSON {
+  const { designacao, tipoServico } = perfil as Partial<PerfilJSON>;
+  return {
+    ...perfil,
+    designacao: DESIGNACOES_PERFIL.includes(designacao as never) ? (designacao as PerfilJSON["designacao"]) : "",
+    tipoServico: TIPOS_SERVICO.includes(tipoServico as never) ? (tipoServico as PerfilJSON["tipoServico"]) : "",
+  };
+}
+
+/** Os perfis guardados no navegador, postos em dia — ver `comCategoriasEavalia`. */
+export function normalizarPerfisGuardados(perfis: PerfilJSON[]): PerfilJSON[] {
+  return perfis.map(comCategoriasEavalia);
+}
+
+/**
  * Normaliza um perfil vindo de ficheiro. Ficheiros gerados antes de o perfil
  * ter identidade própria não trazem `id`: damos-lhe um, para que passe a
  * participar na propagação de alterações como qualquer outro.
@@ -265,7 +301,7 @@ function normalizarPerfil(bruto: Record<string, unknown>): PerfilJSON {
   }
   const perfil = bruto as unknown as PerfilJSON;
   return {
-    ...perfil,
+    ...comCategoriasEavalia(perfil),
     tipo: "perfil",
     id: typeof perfil.id === "string" && perfil.id !== "" ? perfil.id : gerarId(),
     conteudoFuncional: semAtividadeFixa(normalizarItens((bruto as { conteudoFuncional?: unknown }).conteudoFuncional)),

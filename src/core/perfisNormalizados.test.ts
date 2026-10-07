@@ -20,8 +20,19 @@ describe("PERFIS_NORMALIZADOS", () => {
     ]);
   });
 
-  it("está pronto a usar: passa a validação do Módulo 1 sem retoques", () => {
-    expect(validarPerfis(PERFIS_NORMALIZADOS)).toEqual([]);
+  it("está pronto a usar: só falta escolher as duas listas do eAvalia", () => {
+    // O catálogo transcreve o ficheiro de origem, que não as traz; escolhem-se
+    // no projeto, como o preço/hora.
+    const campos = validarPerfis(PERFIS_NORMALIZADOS).map((e) => e.campo.replace(/^perfis\[\d+\]\./, ""));
+    expect(new Set(campos)).toEqual(new Set(["designacao", "tipoServico"]));
+    expect(campos).toHaveLength(2 * PERFIS_NORMALIZADOS.length);
+
+    const escolhidos = PERFIS_NORMALIZADOS.map((p) => ({
+      ...p,
+      designacao: "Programador" as const,
+      tipoServico: "Desenvolvimento de SW" as const,
+    }));
+    expect(validarPerfis(escolhidos)).toEqual([]);
   });
 
   it("as exigências vêm em anos completos, como a interface e o caderno de encargos exigem", () => {
