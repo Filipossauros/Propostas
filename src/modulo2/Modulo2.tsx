@@ -9,6 +9,7 @@ import {
   type ErroValidacao,
 } from "../core/perfil";
 import { anosDeInicioAdmitidos } from "../core/types";
+import { N_BLOCOS_PADRAO } from "../core/types";
 import {
   criarLote,
   criarPerfilEmLote,
@@ -211,7 +212,8 @@ export function Modulo2({
 
   async function carregarLotes(ficheiro: File) {
     try {
-      const importado = importarLotesJSON(await ficheiro.text());
+      // O n.º de projetos por formulário é fixo: um agrupamento antigo passa aos 15.
+      const importado = { ...importarLotesJSON(await ficheiro.text()), nBlocos: N_BLOCOS_PADRAO };
       onAlterarConfig(() => importado);
       onAdotarNomeProjeto(importado.nomeProjeto);
       onAdotarDescricaoProjeto(importado.descricaoProjeto);
@@ -305,9 +307,7 @@ export function Modulo2({
         <header className="painel-cabecalho">
           <h3>Parâmetros do procedimento</h3>
         </header>
-        {/* O nome do procedimento é longo e formado por regra: ocupa a linha
-            toda. Os dois números ficam lado a lado por baixo, cada um com a
-            largura do seu rótulo, para nenhum deles se partir em duas linhas. */}
+        {/* O nome do procedimento é longo e formado por regra: ocupa a linha toda. */}
         <label>
           <span className="rotulo">Nome do procedimento</span>
           <input
@@ -321,79 +321,12 @@ export function Modulo2({
           />
         </label>
 
-        <div className="linha-campos linha-campos-numeros">
-          <label className="campo-numero-rotulado">
-            <span className="rotulo" title="Quantos projetos distintos cada candidato poderá declarar por ficheiro">
-              N.º de projetos por Excel
-            </span>
-            <CampoNumero
-              valor={config.nBlocos}
-              min={1}
-              step={1}
-              invalido={!Number.isInteger(config.nBlocos) || config.nBlocos < 1}
-              aria-label="N.º de projetos por Excel"
-              onChange={(nBlocos) => onAlterarConfig((atual) => ({ ...atual, nBlocos }))}
-            />
-          </label>
-
-          <label className="campo-numero-rotulado">
-            <span className="rotulo">Taxa de IVA</span>
-            <CampoNumero
-              valor={taxaIva(config)}
-              min={0}
-              step={1}
-              sufixo="%"
-              invalido={!(taxaIva(config) >= 0)}
-              onChange={(valor) => onAlterarConfig((atual) => ({ ...atual, taxaIva: valor }))}
-            />
-          </label>
-        </div>
         <p className="ajuda">
           O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO.trim()}» seguido do nome do projeto, e altera-se
-          alterando esse nome no Módulo 1. O n.º de projetos é o mesmo em todos os formulários de declaração. Todos
+          alterando esse nome no Módulo 1. Cada formulário de declaração comporta {N_BLOCOS_PADRAO} projetos. Todos
           os preços unitários são introduzidos sem IVA.
         </p>
 
-        <div className="linha-campos linha-campos-numeros">
-          <label className="campo-numero-rotulado">
-            <span className="rotulo">Margem prudencial</span>
-            <CampoNumero
-              valor={config.margemPrudencial}
-              min={0}
-              step={1}
-              sufixo="%"
-              invalido={!(config.margemPrudencial >= 0)}
-              aria-label="Margem prudencial"
-              onChange={(margemPrudencial) =>
-                onAlterarConfig((atual) => ({
-                  ...atual,
-                  margemPrudencial,
-                  // O fundamento por omissão acompanha a margem; um escrito à mão fica.
-                  justificacaoMargem: ehJustificacaoPorOmissao(atual.justificacaoMargem)
-                    ? justificacaoPorOmissao(margemPrudencial)
-                    : atual.justificacaoMargem,
-                }))
-              }
-            />
-          </label>
-        </div>
-        <label className="campo campo-justificacao-margem">
-          <span className="rotulo">
-            {config.margemPrudencial > 0 ? "Fundamento da margem prudencial" : "Fundamento da margem prudencial a 0 %"}
-          </span>
-          <textarea
-            rows={5}
-            value={config.justificacaoMargem}
-            aria-invalid={config.justificacaoMargem.trim() === ""}
-            onChange={(e) => onAlterarConfig((atual) => ({ ...atual, justificacaoMargem: e.target.value }))}
-          />
-        </label>
-        <p className="ajuda">
-          Obrigatório. Os valores hora são a média das propostas dos últimos procedimentos: a 0 %, a margem
-          considera-se neles incorporada e o fundamento di-lo. Acima de 0 %, a margem é aplicada ao valor hora de
-          cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, preço base e eAvalia. O
-          texto por omissão acompanha a margem enquanto não for alterado.
-        </p>
 
         <label className="campo-opcao">
           <input
@@ -585,20 +518,76 @@ export function Modulo2({
         </section>
       )}
 
-      {config.lotes.length > 0 && (
-        <section className="painel">
-          <header className="painel-cabecalho">
-            <h3>Resumo do procedimento</h3>
-          </header>
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Resumo do procedimento</h3>
+        </header>
+        {config.lotes.length > 0 ? (
           <TabelaValores config={comMargemPrudencial(config)} />
+        ) : (
+          <p className="estado-vazio">A tabela aparece quando houver lotes.</p>
+        )}
           {margemDe(config) > 0 && (
             <p className="ajuda">
               Valores com a margem prudencial de {formatarNumero(margemDe(config))} % já aplicada ao valor hora de
               cada perfil — os mesmos que saem no Anexo Técnico.
             </p>
           )}
-        </section>
-      )}
+        <div className="linha-campos linha-campos-numeros">
+          <label className="campo-numero-rotulado">
+            <span className="rotulo">Taxa de IVA</span>
+            <CampoNumero
+              valor={taxaIva(config)}
+              min={0}
+              step={1}
+              sufixo="%"
+              invalido={!(taxaIva(config) >= 0)}
+              onChange={(valor) => onAlterarConfig((atual) => ({ ...atual, taxaIva: valor }))}
+            />
+          </label>
+          <label className="campo-numero-rotulado">
+            <span className="rotulo">Margem prudencial</span>
+            <CampoNumero
+              valor={config.margemPrudencial}
+              min={0}
+              step={1}
+              sufixo="%"
+              invalido={!(config.margemPrudencial >= 0)}
+              aria-label="Margem prudencial"
+              onChange={(margemPrudencial) =>
+                onAlterarConfig((atual) => ({
+                  ...atual,
+                  margemPrudencial,
+                  // O fundamento por omissão acompanha a margem; um escrito à mão fica.
+                  justificacaoMargem: ehJustificacaoPorOmissao(atual.justificacaoMargem)
+                    ? justificacaoPorOmissao(margemPrudencial)
+                    : atual.justificacaoMargem,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <label className="campo campo-justificacao-margem">
+          <span className="rotulo">
+            {config.margemPrudencial > 0 ? "Fundamento da margem prudencial" : "Fundamento da margem prudencial a 0 %"}
+          </span>
+          <textarea
+            rows={5}
+            value={config.justificacaoMargem}
+            aria-invalid={config.justificacaoMargem.trim() === ""}
+            onChange={(e) => onAlterarConfig((atual) => ({ ...atual, justificacaoMargem: e.target.value }))}
+          />
+        </label>
+        <p className="ajuda">
+          A margem prudencial é uma percentagem acrescentada ao valor hora de referência de cada perfil para
+          acautelar variações de preço até à adjudicação e durante a execução do contrato (por exemplo, inflação ou
+          atualizações salariais), de modo a que o preço base não fique abaixo do que o mercado praticará. O
+          fundamento é obrigatório. Os valores hora são a média das propostas dos últimos procedimentos: a 0 %, a margem
+          considera-se neles incorporada e o fundamento di-lo. Acima de 0 %, a margem é aplicada ao valor hora de
+          cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, preço base e eAvalia. O
+          texto por omissão acompanha a margem enquanto não for alterado.
+        </p>
+      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">

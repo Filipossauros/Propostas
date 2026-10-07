@@ -528,6 +528,8 @@ export function importarLotesJSON(texto: string): LotesJSON {
 export function normalizarLotesGuardados(config: LotesJSON): LotesJSON {
   return comRepartricaoPostaEmDia({
     ...semCamposRetirados(config),
+    // O n.º de projetos por formulário deixou de se escolher: é sempre o padrão.
+    nBlocos: N_BLOCOS_PADRAO,
     descricaoProjeto: config.descricaoProjeto ?? "",
     justificacao: normalizarJustificacao(config.justificacao),
     ...camposDaManifestacao(config),

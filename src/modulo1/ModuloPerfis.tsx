@@ -105,7 +105,7 @@ export function ModuloPerfis({
   /**
    * O Excel do Módulo 2 é o registo de quem prepara o procedimento, e não o
    * formulário que os concorrentes preenchem — esse sai do Módulo 3, já com os
-   * lotes e o n.º de projetos que o procedimento fixou.
+   * lotes e os 15 projetos de cada formulário.
    */
   async function descarregarPerfis() {
     setMensagem(null);
