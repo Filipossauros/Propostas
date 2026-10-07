@@ -395,8 +395,10 @@ export function Modulo1({
               </label>
             </div>
             <p className="ajuda">
-              Obrigatórios. São as listas fechadas do eAvalia: preenchem, com as horas e o preço/hora do Módulo 2, a
-              folha «Custos - Serviços».
+              Obrigatórios. As opções destas duas listas são as disponibilizadas pela ARTE no formulário eAvalia e não
+              admitem outras: escolha, em cada uma, a que melhor corresponda às funções efetivamente desempenhadas
+              pelo perfil, ainda que a designação não coincida com o nome que lhe deu. Com as horas e o preço/hora
+              do Módulo 2, preenchem a folha «Custos - Serviços» do eAvalia.
             </p>
           </section>
 
