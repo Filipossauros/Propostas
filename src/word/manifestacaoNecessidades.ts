@@ -725,11 +725,23 @@ function corpo(
     p.push(paragrafo(dados.justificacaoNaoDivisao));
   } else {
     p.push(paragrafo("O procedimento é configurado por lotes, nos seguintes termos:", { depois: 80 }));
-    config.lotes.forEach((lote) =>
-      p.push(recuado(`O Lote ${lote.numero} corresponde a ${lote.designacao.trim()}.`, { depois: 80 })),
-    );
   }
-  for (const bloco of blocosDivisaoPorLotes(config)) p.push(renderizar(bloco));
+  // O quadro dos lotes é o da aplicação, sem a frase que o anuncia — a
+  // anterior já o faz. Com margem, os preços do quadro já a incluem, e a
+  // legenda di-lo.
+  for (const bloco of blocosDivisaoPorLotes(config)) {
+    if (bloco.tipo === "paragrafo" && bloco.texto.startsWith("A determinação dos lotes")) continue;
+    if (bloco.tipo === "tabela" && margem > 0) {
+      p.push(
+        renderizar({
+          ...bloco,
+          legenda: `${bloco.legenda ?? ""} O preço base inclui a margem prudencial de ${formatarNumero(margem)} %.`.trim(),
+        }),
+      );
+      continue;
+    }
+    p.push(renderizar(bloco));
+  }
   if (config.lotes.length > 1) {
     p.push(
       paragrafo([
