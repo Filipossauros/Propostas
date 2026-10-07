@@ -170,7 +170,7 @@ function endereco(linha: number, coluna: number): string {
  * A fórmula usa TODAY() em vez de uma data fixa para o teto acompanhar o
  * momento do preenchimento — o formulário é distribuído uma vez e preenchido
  * ao longo de semanas. A validação do Excel é um guarda de conveniência: o
- * apuramento do Módulo 3 volta a impor a mesma regra, e é esse que decide.
+ * apuramento do Módulo 4 volta a impor a mesma regra, e é esse que decide.
  */
 function validarMes(sheet: ExcelJS.Worksheet, linha: number, coluna: number, colunaAno: number): void {
   const cell = sheet.getCell(linha, coluna);
@@ -325,7 +325,7 @@ function construirFolhaExperiencia(
   tituloCell.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(LINHA_TITULO).height = ALTURA_TITULO;
 
-  // O subtítulo é a designação do perfil, e é por ele que o Módulo 3 localiza
+  // O subtítulo é a designação do perfil, e é por ele que o Módulo 4 localiza
   // esta folha ao ler a declaração — ver `encontrarFolhaExperiencia`.
   sheet.mergeCells(LINHA_SUBTITULO, 1, LINHA_SUBTITULO, 8);
   const subtituloCell = sheet.getCell(LINHA_SUBTITULO, 1);

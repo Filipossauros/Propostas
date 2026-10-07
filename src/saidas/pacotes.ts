@@ -1,8 +1,8 @@
 // O que vai dentro do pacote de cada módulo.
 //
 // Vive à parte dos ecrãs porque há conjuntos que se reaproveitam: as peças do
-// procedimento (Módulo 2) levam também os ficheiros dos perfis (Módulo 1), e a
-// ordenação (Módulo 4) leva os da avaliação (Módulo 3). Ter a lista escrita uma
+// procedimento (Módulo 3) levam também os ficheiros dos perfis (Módulo 2), e a
+// ordenação (Módulo 5) leva os da avaliação (Módulo 4). Ter a lista escrita uma
 // só vez é o que garante que o pacote maior não fica a divergir do menor.
 
 import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "../core/types";
@@ -40,7 +40,7 @@ function comoJSON(texto: string): Blob {
 }
 
 // --------------------------------------------------------------------------
-// Módulo 1 — perfis
+// Módulo 2 — perfis
 // --------------------------------------------------------------------------
 
 export async function ficheirosDosPerfis(
@@ -64,7 +64,7 @@ export function nomeDoPacoteDePerfis(nomeProjeto: string, quando?: Date): string
 }
 
 // --------------------------------------------------------------------------
-// Módulo 2 — Anexo Técnico (as peças do procedimento)
+// Módulo 3 — Anexo Técnico (as peças do procedimento)
 // --------------------------------------------------------------------------
 
 /**
@@ -114,7 +114,7 @@ async function informacaoEmPdf(config: LotesJSON, informacao: FicheiroDoPacote):
 /**
  * Tudo o que sai do procedimento: os dois documentos Word, o JSON dos lotes, o
  * pedido eAvalia, um formulário de declaração por lote — e, numa pasta à parte,
- * os ficheiros dos perfis do Módulo 1.
+ * os ficheiros dos perfis do Módulo 2.
  *
  * Os perfis vão numa subpasta e não à mistura: são o que define os perfis, e
  * não peça do procedimento; quem abre o pacote tem de distinguir uma coisa da
@@ -167,12 +167,12 @@ export async function ficheirosDasPecas(
 }
 
 export function nomeDoPacoteDePecas(nomeProjeto: string, quando?: Date): string {
-  // O pacote chama-se como o painel que o gera no Módulo 2.
+  // O pacote chama-se como o painel que o gera no Módulo 3.
   return nomeDoPacote(nomeProjeto, "Anexo_Tecnico", quando);
 }
 
 // --------------------------------------------------------------------------
-// Módulo 3 — análise de propostas
+// Módulo 4 — análise de propostas
 // --------------------------------------------------------------------------
 
 export async function ficheirosDaAvaliacao(
@@ -191,7 +191,7 @@ export function nomeDoPacoteDeAvaliacao(nomeProjeto: string, quando?: Date): str
 }
 
 // --------------------------------------------------------------------------
-// Módulo 4 — ordenação de propostas
+// Módulo 5 — ordenação de propostas
 // --------------------------------------------------------------------------
 
 /** Os ficheiros da avaliação, mais o relatório que já traz a ordenação. */

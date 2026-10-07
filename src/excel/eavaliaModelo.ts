@@ -16,7 +16,7 @@ import type { InformacaoEavalia, RespostaEavalia, RespostaSelo } from "../core/t
  * mudado de sítio, escrever às cegas em E6 poria a resposta na medida errada.
  * Confirma-se antes que a linha ainda é aquela.
  *
- * A resposta ou vem de um campo respondido no Módulo 2 (`campo`), ou é sempre
+ * A resposta ou vem de um campo respondido no Módulo 3 (`campo`), ou é sempre
  * a mesma neste procedimento (`fixa`) e não se pergunta a ninguém.
  */
 export interface MedidaBase {
@@ -25,11 +25,11 @@ export interface MedidaBase {
 }
 
 /**
- * Uma medida que se pergunta: a pergunta como aparece no Módulo 2 e as
+ * Uma medida que se pergunta: a pergunta como aparece no Módulo 3 e as
  * respostas que admite.
  *
  * As opções vivem aqui, e não no ecrã, porque há dois sítios que têm de as ter
- * iguais: o `select` do Módulo 2 e a lista de escolha do ficheiro-padrão. Quem
+ * iguais: o `select` do Módulo 3 e a lista de escolha do ficheiro-padrão. Quem
  * preenche o padrão à mão há de poder responder o mesmo — nem mais, nem menos
  * — do que quem usa a aplicação.
  *

@@ -117,7 +117,7 @@ export function mesesDeAnos(anos: number): number {
 }
 
 // --------------------------------------------------------------------------
-// Módulo 1 — perfil
+// Módulo 2 — perfil
 // --------------------------------------------------------------------------
 
 /**
@@ -150,7 +150,7 @@ export const TIPOS_SERVICO = [
 export type TipoServico = (typeof TIPOS_SERVICO)[number];
 
 /**
- * Um perfil do Módulo 1.
+ * Um perfil do Módulo 2.
  *
  * Não contém procedimento nem lote: nesta fase pré-contratual nenhum dos dois
  * existe ainda. O número do procedimento aparece apenas no formulário entregue
@@ -162,7 +162,7 @@ export interface PerfilJSON {
   /**
    * Identidade estável do perfil, atribuída na criação e preservada na
    * importação/exportação. É o que permite que uma alteração aos requisitos
-   * feita no Módulo 1 se propague ao mesmo perfil já atribuído a um lote.
+   * feita no Módulo 2 se propague ao mesmo perfil já atribuído a um lote.
    */
   id: string;
   /** Designação do perfil, ex.: "Arquiteto / Programador Sénior — Integração". */
@@ -201,7 +201,7 @@ export interface PerfilJSON {
 }
 
 /**
- * Saída do Módulo 1: um ficheiro único com todos os perfis definidos.
+ * Saída do Módulo 2: um ficheiro único com todos os perfis definidos.
  *
  * A importação continua a aceitar ficheiros de perfil isolado (`tipo: "perfil"`),
  * gerados por versões anteriores, e admite carregar vários ficheiros de uma vez.
@@ -225,16 +225,16 @@ export interface EspecificacaoFormulario {
   requisitos: Requisito[];
   /**
    * Número e designação do lote, quando já se conhecem (formulário descarregado
-   * a partir do Módulo 2, dentro de um lote). Pré-preenchem e bloqueiam os
+   * a partir do Módulo 3, dentro de um lote). Pré-preenchem e bloqueiam os
    * campos de lote no formulário. Ausentes quando o formulário é gerado a
-   * partir do Módulo 1, antes de o perfil ser agrupado em qualquer lote.
+   * partir do Módulo 2, antes de o perfil ser agrupado em qualquer lote.
    */
   lote?: string;
   loteDesignacao?: string;
 }
 
 // --------------------------------------------------------------------------
-// Módulo 2 — lotes
+// Módulo 3 — lotes
 // --------------------------------------------------------------------------
 
 /** Um perfil colocado dentro de um lote, com os parâmetros económicos do lote. */
@@ -288,7 +288,7 @@ export function juriInicial(): JuriTecnico {
   return { diretor: "", coordenador: "", unidade: "", gestorProjeto: "" };
 }
 
-/** Saída do Módulo 2. Também não identifica o procedimento — ver PerfilJSON. */
+/** Saída do Módulo 3. Também não identifica o procedimento — ver PerfilJSON. */
 // --------------------------------------------------------------------------
 // Pedido de encargos plurianuais
 // --------------------------------------------------------------------------
@@ -583,7 +583,7 @@ export function informacaoEavaliaInicial(): InformacaoEavalia {
 export const TAXA_IVA_PADRAO = 23;
 
 // --------------------------------------------------------------------------
-// Módulo 3 — avaliação
+// Módulo 4 — avaliação
 // --------------------------------------------------------------------------
 
 /**

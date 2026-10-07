@@ -32,7 +32,7 @@ function requisitosPorId(config: LotesJSON): Map<string, string> {
 }
 
 interface Props {
-  /** Entrega os resultados apurados ao Módulo 4, sem passar por ficheiro. */
+  /** Entrega os resultados apurados ao Módulo 5, sem passar por ficheiro. */
   onIrParaOrdenacao: (resultado: ResultadoProcedimento, config: LotesJSON) => void;
 }
 
@@ -234,7 +234,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
     <div className="modulo">
       <header className="modulo-cabecalho">
         <div className="modulo-titulo-linha">
-          <h2>Módulo 3 · Avaliação de declarações</h2>
+          <h2>Módulo 4 · Avaliação de declarações</h2>
           <div className="acoes-linha">
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo
@@ -252,7 +252,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Passo 1 · Agrupamento do procedimento</h3>
-          <p className="painel-nota">Carregue o JSON do agrupamento (Módulo 2).</p>
+          <p className="painel-nota">Carregue o JSON do agrupamento (Módulo 3).</p>
         </header>
 
         <div className="acoes">
@@ -473,7 +473,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             </div>
             <p className="ajuda">
               Um ZIP com o relatório Excel e o JSON dos resultados. O JSON leva o apuramento inteiro e é o que o
-              Módulo 4 lê para ordenar as propostas. Como o relatório Excel, contém dados pessoais dos elementos
+              Módulo 5 lê para ordenar as propostas. Como o relatório Excel, contém dados pessoais dos elementos
               propostos: guarde-o com o mesmo cuidado.
             </p>
           </section>
@@ -481,10 +481,10 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
           <section className="painel painel-avancar">
             <div>
               <h3>Continuar para a ordenação das propostas</h3>
-              <p className="painel-nota">Envia este apuramento diretamente para o Módulo 4, sem passar por ficheiro.</p>
+              <p className="painel-nota">Envia este apuramento diretamente para o Módulo 5, sem passar por ficheiro.</p>
             </div>
             <button type="button" className="botao-principal" onClick={() => onIrParaOrdenacao(resultado, config)}>
-              Ir para o Módulo 4 →
+              Ir para o Módulo 5 →
             </button>
           </section>
         </>

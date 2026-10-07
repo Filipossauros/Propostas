@@ -76,7 +76,7 @@ describe("gerarWorkbookDeclaracao", () => {
     expect(sheet.getCell(linhaPerfil.linha, 2).value).toBe(NOME_PERFIL);
   });
 
-  it("deixa os campos de lote em branco e editáveis quando o formulário vem do Módulo 1", () => {
+  it("deixa os campos de lote em branco e editáveis quando o formulário vem do Módulo 2", () => {
     const sheet = folhaDe(gerarWorkbookDeclaracao([perfilExemplo()]));
 
     for (const campo of ["lote", "loteDesignacao"] as const) {
@@ -86,7 +86,7 @@ describe("gerarWorkbookDeclaracao", () => {
     }
   });
 
-  it("pré-preenche e bloqueia o número e a designação do lote quando o formulário vem do Módulo 2", () => {
+  it("pré-preenche e bloqueia o número e a designação do lote quando o formulário vem do Módulo 3", () => {
     const especificacao = perfilExemplo({ lote: "3", loteDesignacao: "Integração e dados" });
     const sheet = folhaDe(gerarWorkbookDeclaracao([especificacao]));
     const linhaLote = CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!;

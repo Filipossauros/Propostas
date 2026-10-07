@@ -10,7 +10,7 @@
 //   10
 //
 // Cada perfil de cada lote ocupa um bloco: o tipo de serviço e a designação
-// vêm do Módulo 1, o preço/hora e as horas do Módulo 2. O custo total é a
+// vêm do Módulo 2, o preço/hora e as horas do Módulo 3. O custo total é a
 // fórmula do próprio modelo, e a soma dos blocos dá o preço base sem IVA.
 //
 // Quando há mais perfis do que blocos, a nota do modelo pede que se
@@ -43,7 +43,7 @@ export const RECURSOS_NO_MODELO = 11;
 export interface RecursoDeServico {
   tipo: TipoServico | "";
   perfil: DesignacaoPerfil | "";
-  /** A designação do perfil no Anexo Técnico — o nome que lhe foi dado no Módulo 1. */
+  /** A designação do perfil no Anexo Técnico — o nome que lhe foi dado no Módulo 2. */
   descricao: string;
   valorHora: number;
   /** Horas de todos os elementos, em todos os anos: n.º de elementos × horas contratadas. */

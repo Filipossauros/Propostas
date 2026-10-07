@@ -1,5 +1,5 @@
 // Âncoras e geometria da folha "Experiência" — PLANO.md secção 5.2.
-// Módulo partilhado entre o gerador (Módulo 1) e o leitor (Módulo 2): a mesma
+// Módulo partilhado entre o gerador (Módulo 2) e o leitor (Módulo 3): a mesma
 // fonte de verdade evita que gerador e leitor divirjam sobre a estrutura.
 
 export const NOME_FOLHA_LEIAME = "Leia-me";
@@ -20,7 +20,7 @@ const MAX_NOME_FOLHA = 31;
  *
  * `usados` garante nomes distintos quando duas designações colidem depois de
  * truncadas aos 31 carateres do Excel. A leitura não depende deste nome: o
- * Módulo 3 localiza a folha pelo subtítulo, que traz a designação por inteiro.
+ * Módulo 4 localiza a folha pelo subtítulo, que traz a designação por inteiro.
  */
 export function nomeFolhaPerfil(designacao: string, usados: Set<string> = new Set()): string {
   const limpo = designacao.replace(PROIBIDOS_EM_NOME_DE_FOLHA, " ").trim() || NOME_FOLHA_EXPERIENCIA;
@@ -45,8 +45,8 @@ export const LINHA_FAIXA_IDENTIFICACAO = 4;
  * Linhas 5–10: rótulo em A, campo fundido B:H — nesta ordem exata.
  *
  * "Lote n.º" e "Designação do lote" ficam em branco (editáveis) quando o
- * formulário é gerado a partir do Módulo 1, e pré-preenchidos e bloqueados
- * quando gerado a partir de um lote já definido no Módulo 2. "Perfil a que
+ * formulário é gerado a partir do Módulo 2, e pré-preenchidos e bloqueados
+ * quando gerado a partir de um lote já definido no Módulo 3. "Perfil a que
  * se candidata" é sempre pré-preenchido e bloqueado: é a entidade emitente
  * quem o define, nunca o candidato.
  */

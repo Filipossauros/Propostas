@@ -1,6 +1,6 @@
-// Resumo dos perfis definidos no Módulo 1, em Excel.
+// Resumo dos perfis definidos no Módulo 2, em Excel.
 //
-// Não é o formulário que os concorrentes preenchem — esse sai do Módulo 2, já
+// Não é o formulário que os concorrentes preenchem — esse sai do Módulo 3, já
 // com os lotes. É o registo de quem prepara o procedimento: uma folha por
 // perfil, com o que ficou escrito nele, para conferir e para arquivar.
 //

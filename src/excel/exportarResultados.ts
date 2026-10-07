@@ -533,7 +533,7 @@ function adicionarTraco(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, 
 }
 
 // --------------------------------------------------------------------------
-// Ordenação das propostas — Módulo 4
+// Ordenação das propostas — Módulo 5
 // --------------------------------------------------------------------------
 
 function preco(valor: number | null): Valor {
@@ -646,7 +646,7 @@ function adicionarNotaDaRegra(sheet: ExcelJS.Worksheet, nColunas: number): void 
 export function construirWorkbookResultados(
   resultado: ResultadoProcedimento,
   config: LotesJSON,
-  /** Quando presente, o relatório leva também a ordenação das propostas (Módulo 4). */
+  /** Quando presente, o relatório leva também a ordenação das propostas (Módulo 5). */
   ordenacao?: Ordenacao,
 ): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();

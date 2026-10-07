@@ -100,7 +100,7 @@ describe("pacote das peças do procedimento", () => {
 
     // Um formulário por lote com perfis: o exemplo tem dois.
     expect(lista.filter((n) => n.startsWith("Resumos Curriculares/"))).toHaveLength(2);
-    // E os ficheiros do Módulo 1, numa pasta à parte.
+    // E os ficheiros do Módulo 2, numa pasta à parte.
     expect(lista.filter((n) => n.startsWith("Perfis/"))).toHaveLength(2);
   });
 

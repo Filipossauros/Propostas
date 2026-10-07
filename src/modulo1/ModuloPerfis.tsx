@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import type { DesignacaoPerfil, JustificacaoProjeto, PerfilJSON, TipoServico } from "../core/types";
 import {
   ATIVIDADE_FIXA,
-  BENEFICIO_FIXO,
   DESIGNACOES_PERFIL,
   ROTULO_CERTIFICACAO,
   ROTULO_CERTIFICACOES,
@@ -13,17 +12,10 @@ import {
   duplicarPerfil,
   importarPerfisJSON,
   perfilInicial,
-  validarDescricaoProjeto,
-  validarNomeProjeto,
   validarPerfis,
 } from "../core/perfil";
-import {
-  DESCRICAO_PROJETO_EXEMPLO,
-  JUSTIFICACAO_EXEMPLO,
-  NOME_PROJETO_EXEMPLO,
-  PERFIS_EXEMPLO,
-} from "../core/exemplo";
-import { justificacaoInicial, temJustificacao, validarJustificacao } from "../core/justificacao";
+import { PERFIS_EXEMPLO } from "../core/exemplo";
+import { justificacaoInicial, temJustificacao } from "../core/justificacao";
 import { PERFIS_NORMALIZADOS } from "../core/perfisNormalizados";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDosPerfis, nomeDoPacoteDePerfis } from "../saidas/pacotes";
@@ -35,35 +27,33 @@ import { ListaItensEditor } from "./ListaItensEditor";
 interface Props {
   perfis: PerfilJSON[];
   onAlterarPerfis: (perfis: PerfilJSON[]) => void;
+  /**
+   * O projeto escreve-se no Módulo 1; aqui só segue nos ficheiros dos perfis,
+   * e é adotado dos ficheiros importados se ainda não estiver escrito.
+   */
   nomeProjeto: string;
-  onAlterarNomeProjeto: (nome: string) => void;
   /** Aceita o nome vindo de um ficheiro importado, se ainda não houver um definido. */
   onAdotarNomeProjeto: (nome: string) => void;
   descricaoProjeto: string;
-  onAlterarDescricaoProjeto: (descricao: string) => void;
   /** Aceita a descrição vinda de um ficheiro importado, se ainda não houver uma. */
   onAdotarDescricaoProjeto: (descricao: string) => void;
-  /** Benefícios do projeto e riscos da não contratação. */
+  /** Objetivos, benefícios do projeto e riscos da não contratação. */
   justificacao: JustificacaoProjeto;
-  onAlterarJustificacao: (justificacao: JustificacaoProjeto) => void;
-  /** Aceita os benefícios e riscos vindos de um ficheiro, se ainda não houver nenhum escrito. */
+  /** Aceita os objetivos, benefícios e riscos vindos de um ficheiro, se ainda não houver nenhum escrito. */
   onAdotarJustificacao: (justificacao: JustificacaoProjeto) => void;
   /** Número do lote a que cada perfil já está atribuído, indexado pelo id do perfil. */
   lotePorPerfilId: Record<string, string>;
   onIrParaLotes: () => void;
 }
 
-export function Modulo1({
+export function ModuloPerfis({
   perfis,
   onAlterarPerfis,
   nomeProjeto,
-  onAlterarNomeProjeto,
   onAdotarNomeProjeto,
   descricaoProjeto,
-  onAlterarDescricaoProjeto,
   onAdotarDescricaoProjeto,
   justificacao,
-  onAlterarJustificacao,
   onAdotarJustificacao,
   lotePorPerfilId,
   onIrParaLotes,
@@ -73,12 +63,7 @@ export function Modulo1({
   const [aGerar, setAGerar] = useState(false);
   const inputImportarRef = useRef<HTMLInputElement>(null);
 
-  const erros = [
-    ...validarNomeProjeto(nomeProjeto),
-    ...validarDescricaoProjeto(descricaoProjeto),
-    ...validarPerfis(perfis),
-    ...validarJustificacao(justificacao),
-  ];
+  const erros = validarPerfis(perfis);
   const podeExportar = erros.length === 0;
 
   // O perfil em edição é sempre um dos do catálogo: se o id guardado deixar de
@@ -118,8 +103,8 @@ export function Modulo1({
   }
 
   /**
-   * O Excel do Módulo 1 é o registo de quem prepara o procedimento, e não o
-   * formulário que os concorrentes preenchem — esse sai do Módulo 2, já com os
+   * O Excel do Módulo 2 é o registo de quem prepara o procedimento, e não o
+   * formulário que os concorrentes preenchem — esse sai do Módulo 3, já com os
    * lotes e o n.º de projetos que o procedimento fixou.
    */
   async function descarregarPerfis() {
@@ -179,9 +164,6 @@ export function Modulo1({
   async function carregarExemplo() {
     if (!(await podeCarregarExemplo())) return;
     onAlterarPerfis(structuredClone(PERFIS_EXEMPLO));
-    onAlterarNomeProjeto(NOME_PROJETO_EXEMPLO);
-    onAlterarDescricaoProjeto(DESCRICAO_PROJETO_EXEMPLO);
-    onAlterarJustificacao(structuredClone(JUSTIFICACAO_EXEMPLO));
     setIdEmEdicao(null);
     setMensagem({ tipo: "sucesso", texto: `${PERFIS_EXEMPLO.length} perfis de exemplo carregados.` });
   }
@@ -209,23 +191,18 @@ export function Modulo1({
   }
 
   function recomecar() {
-    if (!confirm("Apagar todos os perfis em edição e a identificação do projeto, e recomeçar do zero?")) return;
+    // Só os perfis: o projeto tem o seu próprio «Recomeçar», no Módulo 1.
+    if (!confirm("Apagar todos os perfis em edição e recomeçar do zero?")) return;
     onAlterarPerfis([]);
-    // O nome do projeto vai com eles: sem dados, a aplicação apresenta-se como
-    // se fosse a primeira vez — e o nome de um projeto anterior num campo
-    // preenchido é o género de resto que acaba dentro de uma peça.
-    onAlterarNomeProjeto("");
-    onAlterarDescricaoProjeto("");
-    onAlterarJustificacao(justificacaoInicial());
     setIdEmEdicao(null);
-    setMensagem({ tipo: "sucesso", texto: "Perfis e identificação do projeto repostos." });
+    setMensagem({ tipo: "sucesso", texto: "Perfis repostos." });
   }
 
   return (
     <div className="modulo">
       <header className="modulo-cabecalho">
         <div className="modulo-titulo-linha">
-          <h2>Módulo 1 · Definição dos perfis</h2>
+          <h2>Módulo 2 · Perfis</h2>
           <div className="acoes-linha">
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo
@@ -235,39 +212,13 @@ export function Modulo1({
             </button>
           </div>
         </div>
-        <p className="modulo-subtitulo">Define os requisitos mínimos de experiência de um perfil.</p>
+        <p className="modulo-subtitulo">
+          Define cada perfil: a identificação, os requisitos mínimos de experiência, as formações ou certificações e
+          o conteúdo funcional.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
-
-      <section className="painel">
-        <label className="campo-largo">
-          <span className="rotulo">Nome do projeto</span>
-          <input
-            type="text"
-            value={nomeProjeto}
-            placeholder="ex.: Modernização dos sistemas de informação"
-            onChange={(e) => onAlterarNomeProjeto(e.target.value)}
-            aria-invalid={nomeProjeto.trim() === ""}
-          />
-        </label>
-        <p className="ajuda">Identifica o projeto e dá nome a todos os ficheiros descarregados, nos dois módulos.</p>
-
-        <label className="campo-largo">
-          <span className="rotulo">Descrição do projeto</span>
-          <textarea
-            rows={3}
-            value={descricaoProjeto}
-            placeholder="ex.: substituir as aplicações de gestão clínica por uma plataforma única e interoperável"
-            onChange={(e) => onAlterarDescricaoProjeto(e.target.value)}
-            aria-invalid={descricaoProjeto.trim() === ""}
-          />
-        </label>
-        <p className="ajuda">
-          O que o projeto se propõe fazer. Sai na manifestação de necessidades («…a necessidade visa:») e na
-          descrição das especificações técnicas, pelo que uma ou duas frases bastam.
-        </p>
-      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
@@ -398,7 +349,7 @@ export function Modulo1({
               Obrigatórios. As opções destas duas listas são as disponibilizadas pela ARTE no formulário eAvalia e não
               admitem outras: escolha, em cada uma, a que melhor corresponda às funções efetivamente desempenhadas
               pelo perfil, ainda que a designação não coincida com o nome que lhe deu. Com as horas e o preço/hora
-              do Módulo 2, preenchem a folha «Custos - Serviços» do eAvalia.
+              do Módulo 3, preenchem a folha «Custos - Serviços» do eAvalia.
             </p>
           </section>
 
@@ -441,56 +392,6 @@ export function Modulo1({
         </>
       )}
 
-      {/* Do projeto, e não do perfil em edição: ficam à vista mesmo sem perfil
-          escolhido, e são os mesmos seja qual for o perfil aberto em cima. */}
-      <ListaItensEditor
-        titulo="Objetivos da aquisição"
-        nota={
-          "Obrigatório. Um objetivo por linha. Abrem o «Enquadramento» da manifestação de necessidades, como " +
-          "alíneas a., b., c.…, a seguir à frase «…que possibilitará atingir os seguintes objetivos»."
-        }
-        nomeItem="objetivo"
-        rotuloColuna="Objetivo"
-        placeholder="ex.: Assegurar a continuidade da manutenção das aplicações até à sua substituição"
-        textoVazio="Ainda não há objetivos. Acrescente o primeiro."
-        rotuloAdicionar="+ Adicionar objetivo"
-        itens={justificacao.objetivos}
-        onChange={(objetivos) => onAlterarJustificacao({ ...justificacao, objetivos })}
-      />
-
-      <ListaItensEditor
-        titulo="Benefícios do projeto"
-        nota={
-          "Obrigatório. Um benefício por linha. Saem na manifestação de necessidades, como alíneas a., b., c.…, " +
-          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício. O último é " +
-          "fixo e fecha a lista em todos os projetos: acrescente pelo menos um antes dele."
-        }
-        nomeItem="benefício"
-        rotuloColuna="Benefício"
-        placeholder="ex.: Redução do tempo de registo clínico, com uma única aplicação em vez de várias"
-        textoVazio="Ainda não há benefícios. Acrescente o primeiro."
-        rotuloAdicionar="+ Adicionar benefício"
-        itemFixo={BENEFICIO_FIXO}
-        rotuloFixo="fixo"
-        itens={justificacao.beneficios}
-        onChange={(beneficios) => onAlterarJustificacao({ ...justificacao, beneficios })}
-      />
-
-      <ListaItensEditor
-        titulo="Riscos da não contratação"
-        nota={
-          "Obrigatório. Um risco por linha: o que acontece se estes serviços não forem contratados. Saem na " +
-          "secção «Riscos da não contratação» da manifestação de necessidades, também como alíneas."
-        }
-        nomeItem="risco"
-        rotuloColuna="Risco"
-        placeholder="ex.: Interrupção do suporte às aplicações em fim de vida"
-        textoVazio="Ainda não há riscos. Acrescente o primeiro."
-        rotuloAdicionar="+ Adicionar risco"
-        itens={justificacao.riscos}
-        onChange={(riscos) => onAlterarJustificacao({ ...justificacao, riscos })}
-      />
-
       {erros.length > 0 && (
         <section className="painel painel-erros">
           <h3>
@@ -521,18 +422,23 @@ export function Modulo1({
         <p className="ajuda">
           Um ZIP com o Excel e o JSON dos perfis. O Excel é o registo de quem prepara o procedimento: uma folha por
           perfil, com os requisitos, as formações ou certificações e o conteúdo funcional que aqui ficaram escritos.
-          Não é o formulário que os concorrentes preenchem — esse sai do Módulo 2, já com os lotes. O JSON leva todos
+          Não é o formulário que os concorrentes preenchem — esse sai do Módulo 3, já com os lotes. O JSON leva todos
           os perfis, para os retomar depois.
         </p>
+        {nomeProjeto.trim() === "" && (
+          <p className="aviso aviso-atencao" role="status">
+            Ainda não há nome do projeto (Módulo 1 · Projeto): os ficheiros saem com um nome genérico.
+          </p>
+        )}
       </section>
 
       <section className="painel painel-avancar">
         <div>
           <h3>Continuar para o agrupamento em lotes</h3>
-          <p className="painel-nota">Envia este perfil diretamente para o Módulo 2, sem passar por ficheiro.</p>
+          <p className="painel-nota">Envia os perfis diretamente para o Módulo 3, sem passar por ficheiro.</p>
         </div>
         <button type="button" className="botao-principal" disabled={!podeExportar} onClick={onIrParaLotes}>
-          Ir para o Módulo 2 →
+          Continuar para o agrupamento em lotes →
         </button>
       </section>
     </div>

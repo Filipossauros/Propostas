@@ -28,7 +28,7 @@ import { DIAS_DE_FERIADO_MUNICIPAL, DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteis } 
 const DIREITA = "direita" as const;
 
 /**
- * O preço base por lote e perfil — a mesma tabela que o Módulo 2 apresenta no
+ * O preço base por lote e perfil — a mesma tabela que o Módulo 3 apresenta no
  * «Resumo do procedimento» quando não há pedido plurianual, da mesma fonte.
  */
 export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { tipo: "tabela" }> {
@@ -166,7 +166,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
 /** Preço base e requisitos por lote e perfil. */
 /**
  * Se as horas de todos os perfis, em todos os anos, são as horas úteis desse
- * ano — as que o botão «Preencher com as horas úteis» do Módulo 2 escreve.
+ * ano — as que o botão «Preencher com as horas úteis» do Módulo 3 escreve.
  *
  * Basta um perfil corrigido à mão (a meio tempo, a entrar a meio do contrato)
  * para já não serem, e a frase do documento não pode afirmar um cálculo que as
@@ -218,7 +218,7 @@ function fraseDaReparticao(config: LotesJSON, anos: number[]): string {
 /**
  * Pedido de autorização para assumir encargos em anos económicos futuros.
  *
- * Só sai quando o procedimento o leva. A tabela repete a do Módulo 2 linha por
+ * Só sai quando o procedimento o leva. A tabela repete a do Módulo 3 linha por
  * linha, com os anos já resolvidos em datas: quem lê a peça não tem de saber o
  * que é o «ano n+1».
  */

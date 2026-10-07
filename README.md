@@ -6,27 +6,33 @@ procedimento de contratação pública com o preço como critério único.
 Aplicação 100% cliente: sem backend e sem qualquer chamada de rede. Os ficheiros de propostas
 em avaliação nunca saem do posto de trabalho.
 
-## Os três módulos
+## Os cinco módulos
 
-O fluxo acompanha três papéis distintos, que raramente são a mesma pessoa:
+O fluxo acompanha papéis distintos, que raramente são a mesma pessoa:
 
 | Módulo | Quem usa | O que faz | Saídas |
 |---|---|---|---|
-| **1 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Excel de resumo (uma folha por perfil), JSON com todos os perfis |
-| **2 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, pedido de parecer eAvalia, formulários de declaração (um Excel por lote) |
-| **3 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
-| **4 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 3, mais a ordenação de cada lote e os vencedores |
+| **1 · Projeto** | Responsável do projeto | Identifica o projeto (nome e descrição) e justifica a aquisição: objetivos, benefícios e riscos da não contratação | Nenhuma própria: segue nos ficheiros dos perfis e dos lotes |
+| **2 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Excel de resumo (uma folha por perfil), JSON com todos os perfis |
+| **3 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, pedido de parecer eAvalia, formulários de declaração (um Excel por lote) |
+| **4 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
+| **5 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 4, mais a ordenação de cada lote e os vencedores |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
-agrupados — por isso o Módulo 1 não os pede. No formulário entregue ao candidato, o número
+agrupados — por isso o Módulo 2 não os pede. No formulário entregue ao candidato, o número
 do procedimento é sempre campo de preenchimento livre; o lote vem pré-preenchido e bloqueado
-quando o formulário é gerado a partir de um lote já definido no Módulo 2, e fica em branco
-quando é gerado no Módulo 1.
+quando o formulário é gerado a partir de um lote já definido no Módulo 3, e fica em branco
+quando é gerado no Módulo 2.
+
+O projeto não tem ficheiro próprio: o nome, a descrição, os objetivos, os benefícios e os
+riscos vão dentro do JSON dos perfis e do dos lotes, e ao importar um desses ficheiros são
+adotados se o Módulo 1 ainda estiver em branco. Cada módulo tem o seu «Carregar exemplo» e o
+seu «Recomeçar», que só tocam no que é desse módulo.
 
 ### Um catálogo de perfis, partilhado
 
-Os perfis vivem num único catálogo, partilhado pelos Módulos 1 e 2. Carregar um ficheiro no
-Módulo 2 acrescenta os perfis a esse catálogo, e corrigir um requisito no Módulo 1 reflete-se
+Os perfis vivem num único catálogo, partilhado pelos Módulos 2 e 3. Carregar um ficheiro no
+Módulo 3 acrescenta os perfis a esse catálogo, e corrigir um requisito no Módulo 2 reflete-se
 de imediato no lote onde o perfil já esteja atribuído — não há cópias a divergir. É o `id` de
 cada perfil, preservado na importação e na exportação, que sustenta essa correspondência;
 duplicar um perfil dá-lhe identidade nova, precisamente para que passe a ser outro.
@@ -36,8 +42,8 @@ duplicar um perfil dá-lhe identidade nova, precisamente para que passe a ser ou
 Cada módulo tem um botão **Carregar exemplo** que preenche tudo com dados realistas.
 Os mesmos dados estão em `exemplos/` como ficheiros JSON:
 
-- `exemplos/perfis-exemplo.json` — quatro perfis, para o Módulo 1.
-- `exemplos/lotes-exemplo.json` — dois lotes com quatro perfis, para os Módulos 2 e 3.
+- `exemplos/perfis-exemplo.json` — quatro perfis, para o Módulo 2.
+- `exemplos/lotes-exemplo.json` — dois lotes com quatro perfis, para os Módulos 3 e 4.
 
 São gerados a partir de `src/core/exemplo.ts` (fonte única) com `npm run exemplos`.
 
@@ -50,19 +56,19 @@ O preço base de cada perfil dentro de um lote é
 
 **Nenhuma data pode ser posterior ao mês corrente.** Experiência ainda por
 decorrer não é experiência adquirida. O formulário Excel trava-a na validação
-(com `TODAY()`, para o teto acompanhar o preenchimento) e o Módulo 3 volta a
+(com `TODAY()`, para o teto acompanhar o preenchimento) e o Módulo 4 volta a
 impô-la no apuramento — é este último que decide, porque a validação do Excel
 pode sempre ser contornada.
 
-**Um lote por concorrente**, quando ativada no Módulo 2. A regra sai no
+**Um lote por concorrente**, quando ativada no Módulo 3. A regra sai no
 documento Word com título próprio, e é aplicada em dois tempos, porque em dois
 tempos chega a informação de que depende:
 
-- No **Módulo 3** ainda não há preço — o formulário de declaração não o traz —,
+- No **Módulo 4** ainda não há preço — o formulário de declaração não o traz —,
   pelo que não se pode dizer quem fica com o quê. Assinala-se apenas o
   *impedimento potencial*: quem é admitido em mais do que um lote só pode ficar
   com um deles. Ninguém é excluído por esta via.
-- No **Módulo 4**, com os preços na mão, os lotes decidem-se pela ordem
+- No **Módulo 5**, com os preços na mão, os lotes decidem-se pela ordem
   crescente do número: quem vence o lote 1 sai da corrida nos seguintes, ainda
   que aí apresente o preço mais baixo.
 
@@ -70,14 +76,14 @@ tempos chega a informação de que depende:
 
 São dois ficheiros com propósitos opostos, e convém não os confundir.
 
-O do **Módulo 1** é o registo de quem prepara o procedimento: uma folha por
+O do **Módulo 2** é o registo de quem prepara o procedimento: uma folha por
 perfil, com os requisitos e a exigência em anos e meses, as certificações e o
 conteúdo funcional. Serve para conferir e para arquivar o que ficou escrito. Leva
 as certificações, que o formulário não pode levar, e não tem um único campo por
 preencher — daí não ter amarelo nenhum, que nesta aplicação é a cor reservada ao
 que alguém escreve.
 
-O do **Módulo 2** é o formulário que os concorrentes preenchem, um por lote, com
+O do **Módulo 3** é o formulário que os concorrentes preenchem, um por lote, com
 os blocos de projeto e as validações. Só existe depois de haver lotes, porque é
 o lote que o identifica.
 
@@ -95,7 +101,7 @@ com a cláusula de fecho não descreve trabalho nenhum.
 
 ### Os perfis normalizados
 
-O Módulo 1 tem um ponto de partida além do «Novo perfil»: o catálogo de
+O Módulo 2 tem um ponto de partida além do «Novo perfil»: o catálogo de
 perfis-base da entidade (`src/core/perfisNormalizados.ts`), com o conteúdo
 funcional, os requisitos transversais e — onde as haja — as formações ou
 certificações exigidas.
@@ -110,19 +116,19 @@ pelo que voltar a carregar o catálogo atualiza os perfis que já estejam num lo
 em vez de criar cópias ao lado — a mesma regra da importação de ficheiros JSON.
 
 O catálogo não traz preços. O preço/hora é decisão de cada procedimento e
-escreve-se à mão no Módulo 2, ao colocar o perfil no lote — como sempre foi, e
+escreve-se à mão no Módulo 3, ao colocar o perfil no lote — como sempre foi, e
 para todos os perfis por igual.
 
 ### O nome do procedimento
 
 Não se escreve: forma-se a partir do nome do projeto, precedido de «Aquisição de
-Serviços de Desenvolvimento e Manutenção do projeto». O campo do Módulo 2 mostra-o e não o
+Serviços de Desenvolvimento e Manutenção do projeto». O campo do Módulo 3 mostra-o e não o
 deixa editar, e o nome altera-se alterando o do projeto, no Módulo 1. É uma peça
 que aparece no documento Word, no agrupamento e no pedido de parecer: escrita
 três vezes à mão, mais tarde ou mais cedo ficaria diferente numa delas.
 
 Sem nome de projeto não há nome de procedimento — fica vazio, e não meio nome.
-Pela mesma razão, «Recomeçar» no Módulo 1 apaga também o nome do projeto: sem
+Pela mesma razão, «Recomeçar» no Módulo 1 apaga o nome do projeto com o resto da identificação: sem
 dados, a aplicação apresenta-se como na primeira vez, e o nome de um projeto
 anterior num campo preenchido é o género de resto que acaba dentro de uma peça.
 
@@ -160,7 +166,7 @@ quem se arrepender.
 
 Nada disto é opcional: o posto de trabalho vai para o Caderno de Encargos e
 vincula quem executa, pelo que um local por indicar, um «Outro» sem sítio ou os
-requisitos do equipamento em branco travam os descarregamentos do Módulo 2, como
+requisitos do equipamento em branco travam os descarregamentos do Módulo 3, como
 qualquer outra questão por resolver. Só se exige o que a escolha do regime e do
 equipamento tornou aplicável.
 
@@ -186,7 +192,7 @@ um zero se leia como o que é.
 
 Sem a opção ligada, tudo fica exatamente como estava: um campo de horas por
 perfil e a tabela do preço base de sempre. Com ela ligada, a tabela dos anos
-**substitui** a do preço base — no resumo do Módulo 2 e no documento Word. Ou
+**substitui** a do preço base — no resumo do Módulo 3 e no documento Word. Ou
 uma, ou outra: dizem o mesmo preço base por caminhos diferentes, e apresentá-las
 juntas obrigava a lê-las uma contra a outra. A tabela dos anos leva os subtotais
 de cada lote, e o resumo é só de leitura, como sempre foi.
@@ -197,7 +203,7 @@ IVA.
 
 ### A manifestação de necessidades
 
-O ZIP do Módulo 2 leva a informação do procedimento no modelo da DAG para o
+O ZIP do Módulo 3 leva a informação do procedimento no modelo da DAG para o
 novo CCP — a manifestação de necessidades —, em Word e, com o n.º da informação
 preenchido, também em PDF. Substitui o pedido de encargos plurianuais e a
 manifestação anterior: a repartição por anos vai dentro dela, no Anexo I.
@@ -211,23 +217,23 @@ assinala-o a vermelho. As tabelas são as da aplicação.
 
 O conteúdo vem do que já está escrito: os **objetivos da aquisição**, os
 benefícios e os riscos do Módulo 1; os lotes, o posto de trabalho e o eAvalia do
-Módulo 2. Os textos da avaliação custo-benefício (beneficiários, riscos da
+Módulo 3. Os textos da avaliação custo-benefício (beneficiários, riscos da
 execução, mitigação) e da sustentabilidade são fixos, os mesmos em todas as
 manifestações desta natureza. O **júri técnico** — diretor, coordenador,
-unidade e gestor de projeto — escreve-se no Módulo 2: o coordenador assina a
+unidade e gestor de projeto — escreve-se no Módulo 3: o coordenador assina a
 informação, e a unidade sai na assinatura por baixo da direção.
 
 **Margem prudencial.** Os valores hora são a média das propostas dos últimos
 procedimentos equivalentes. A 0 % (por omissão), a margem considera-se neles
 incorporada, e o fundamento — obrigatório — di-lo. Acima de 0 %, a margem
 aplica-se ao valor hora de cada perfil, arredondado ao cêntimo, e passa a todos
-os valores: perfis, lotes, anos, preço base, eAvalia, o resumo do Módulo 2 e a
+os valores: perfis, lotes, anos, preço base, eAvalia, o resumo do Módulo 3 e a
 vista geral. O JSON do agrupamento guarda os valores de referência e a margem à
 parte.
 
 ### O pedido de parecer eAvalia
 
-O Módulo 2 preenche o modelo oficial do pedido de parecer prévio
+O Módulo 3 preenche o modelo oficial do pedido de parecer prévio
 (`src/excel/modelos/`), que é ficheiro de terceiros: sai como entrou, com oito
 células escritas — o nome do projeto no objeto da aquisição, três respostas de
 alinhamento tecnológico com as datas que as acompanham, e a conformidade com o
@@ -250,9 +256,9 @@ porque um valor de fora seria recusado por ele.
 
 A folha **«Custos - Serviços»**, que o modelo traz oculta, passa a ver-se e sai
 preenchida: um bloco «Recurso» por perfil em cada lote, com o tipo de serviço e
-a designação do perfil escolhidos no Módulo 1 (as listas fechadas da folha
+a designação do perfil escolhidos no Módulo 2 (as listas fechadas da folha
 «Backup» do modelo, letra a letra), o nome do perfil como descrição, o preço/hora
-e as horas de todos os elementos e de todos os anos do Módulo 2. O custo total é
+e as horas de todos os elementos e de todos os anos do Módulo 3. O custo total é
 a fórmula do modelo, escrita com o resultado; somados, os blocos dão o preço base
 sem IVA. Havendo mais perfis do que os onze blocos do modelo, acrescentam-se
 blocos iguais ao último, como a nota da folha pede. A informação (Word e PDF)
@@ -260,7 +266,7 @@ reproduz esta folha num anexo próprio, a seguir ao do alinhamento tecnológico.
 
 As três respostas são de preenchimento obrigatório. Não é a aplicação a exigi-lo:
 o pedido de parecer segue com elas, e uma medida por responder deixaria a célula
-em branco no formulário oficial — pelo que, enquanto faltar alguma, o Módulo 2
+em branco no formulário oficial — pelo que, enquanto faltar alguma, o Módulo 3
 não deixa descarregar nada.
 
 ### O que não passa pelo Excel
@@ -276,7 +282,7 @@ fora desta ferramenta. Pedi-los em Excel só produziria respostas que ninguém
 apuraria.
 
 Como a certificação não entra em nenhum quadro do apuramento, o risco é passar
-despercebida. Por isso o Módulo 3, ao carregar o agrupamento, assinala cada
+despercebida. Por isso o Módulo 4, ao carregar o agrupamento, assinala cada
 perfil que a exija — chamada de atenção, não verificação.
 
 ## Princípios
@@ -292,11 +298,11 @@ perfil que a exija — chamada de atenção, não verificação.
 
 ## Persistência
 
-O trabalho de configuração — o catálogo de perfis (Módulo 1) e o agrupamento de lotes
-(Módulo 2) — é guardado no `localStorage` do navegador e reaparece na sessão seguinte.
+O trabalho de configuração — o catálogo de perfis (Módulo 2) e o agrupamento de lotes
+(Módulo 3) — é guardado no `localStorage` do navegador e reaparece na sessão seguinte.
 
-As declarações carregadas no Módulo 3, o apuramento que delas resulta e os preços
-indicados no Módulo 4 **nunca** são guardados: contêm dados pessoais de candidatos
+As declarações carregadas no Módulo 4, o apuramento que delas resulta e os preços
+indicados no Módulo 5 **nunca** são guardados: contêm dados pessoais de candidatos
 e matéria de proposta, e vivem apenas em memória, desaparecendo ao fechar o
 separador. O mesmo vale para o JSON de resultados e para o relatório Excel — são
 descarregamentos deliberados, e devem ser guardados com o cuidado devido.

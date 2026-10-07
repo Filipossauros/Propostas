@@ -162,7 +162,7 @@ export function ResultadosTabelas({ resultado }: Props) {
             A limitação de um lote por concorrente está ativa. Esta ferramenta verifica apenas o cumprimento dos
             requisitos mínimos: a adjudicação decide-se pelo preço, que não consta do formulário de declaração de
             experiência. Por isso quem é admitido em mais do que um lote fica aqui assinalado como impedimento
-            potencial — só poderá ficar com um deles, e é a ordenação por preço, no Módulo 4, que determina qual.
+            potencial — só poderá ficar com um deles, e é a ordenação por preço, no Módulo 5, que determina qual.
           </p>
         )}
       </section>

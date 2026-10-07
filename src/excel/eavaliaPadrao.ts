@@ -3,7 +3,7 @@
 // As equipas que não passam por aqui preenchem o pedido de parecer à mão, e
 // nada as impede de responder ao lado do que a organização já decidiu. Este
 // ficheiro fecha essa porta: o que se pode responder no padrão é exatamente o
-// que se responde no Módulo 2 — as mesmas medidas e, em cada uma, as mesmas
+// que se responde no Módulo 3 — as mesmas medidas e, em cada uma, as mesmas
 // opções. As de resposta fixa vão já respondidas, e o resto da folha do
 // alinhamento tecnológico fica trancado.
 //
@@ -37,7 +37,7 @@ import { comFolhaVisivel, linhaDoRecurso, preencherCustosServicos, RECURSOS_NO_M
 /**
  * As células que ficam abertas, e a lista de escolha de cada uma.
  *
- * São as das medidas que o Módulo 2 pergunta, e mais nenhuma: as restantes ou
+ * São as das medidas que o Módulo 3 pergunta, e mais nenhuma: as restantes ou
  * têm resposta fixa, ou não se respondem na aplicação — e o padrão não há de
  * admitir o que a aplicação não admite.
  */
@@ -306,7 +306,7 @@ export async function construirEavaliaPadrao(modelo: Uint8Array): Promise<Uint8A
     xml = escreverCelula(xml, ref, (attrs) => celulaDeTexto(ref, attrs, medida.fixa), true);
   }
 
-  // 2. As medidas que o Módulo 2 pergunta passam a ter, no ficheiro, a lista de
+  // 2. As medidas que o Módulo 3 pergunta passam a ter, no ficheiro, a lista de
   //    escolha que o ecrã oferece — nem mais opções, nem outras.
   const escolhas = escolhasDoFormulario();
   const datas = datasDoFormulario();

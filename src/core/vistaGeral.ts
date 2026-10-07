@@ -1,7 +1,7 @@
 // Vista Geral — o orçamento da unidade, visto de cima.
 //
 // Os quatro módulos trabalham um procedimento de cada vez. Este trabalha muitos:
-// recebe os agrupamentos já feitos (o JSON do Módulo 2), põe-nos lado a lado e
+// recebe os agrupamentos já feitos (o JSON do Módulo 3), põe-nos lado a lado e
 // responde à pergunta que nenhum deles responde — onde é que a unidade está a
 // pôr as pessoas e o dinheiro.
 //

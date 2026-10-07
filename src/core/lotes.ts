@@ -1,4 +1,4 @@
-// Agrupamento de perfis em lotes e preço base — Módulo 2.
+// Agrupamento de perfis em lotes e preço base — Módulo 3.
 //
 // Nota de método sobre o preço base: o valor de cada perfil dentro de um lote é
 // `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
@@ -296,7 +296,7 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
   });
 
   // No fim, e por esta ordem, porque é a ordem por que os painéis aparecem no
-  // Módulo 2: quem percorre a lista de erros percorre a página de cima a baixo.
+  // Módulo 3: quem percorre a lista de erros percorre a página de cima a baixo.
   return [
     ...erros,
     ...validarNBlocos(config),
@@ -310,7 +310,7 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
 
 /**
  * As duas listas do eAvalia de cada perfil colocado num lote — a designação e
- * o tipo de serviço. Escolhem-se no Módulo 1, e é a partir delas que se
+ * o tipo de serviço. Escolhem-se no Módulo 2, e é a partir delas que se
  * preenche a folha «Custos - Serviços» do eAvalia que segue no Anexo Técnico:
  * sem elas, a folha sairia com as células em branco.
  */
@@ -676,7 +676,7 @@ function normalizarPostoTrabalho(bruto: unknown): PostoTrabalho {
 /**
  * A especificação do formulário de declaração de um perfil dentro de um lote.
  *
- * Vive aqui, e não no ecrã do Módulo 2, porque é preciso em dois sítios: no
+ * Vive aqui, e não no ecrã do Módulo 3, porque é preciso em dois sítios: no
  * botão que gera os formulários e no pacote das peças do procedimento.
  */
 export function especificacao(
@@ -710,7 +710,7 @@ export interface PerfilComCertificacao {
 /**
  * Perfis do agrupamento que exigem certificação.
  *
- * O Módulo 3 usa isto para chamar a atenção do júri: a certificação não é
+ * O Módulo 4 usa isto para chamar a atenção do júri: a certificação não é
  * apurada por esta aplicação — verifica-se contra as peças da proposta — e o
  * risco é justamente passar despercebida por não aparecer em lado nenhum do
  * apuramento.
@@ -749,9 +749,9 @@ export function lotePorPerfilId(config: LotesJSON): Record<string, string> {
 }
 
 /**
- * Repõe nos lotes a versão atual de cada perfil do catálogo do Módulo 1.
+ * Repõe nos lotes a versão atual de cada perfil do catálogo do Módulo 2.
  *
- * É isto que torna a edição transversal: alterar um requisito no Módulo 1
+ * É isto que torna a edição transversal: alterar um requisito no Módulo 2
  * altera-o também no lote onde o perfil já esteja atribuído. Um perfil que
  * tenha desaparecido do catálogo é retirado do lote — deixou de existir.
  */

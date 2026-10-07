@@ -1,6 +1,6 @@
-// Ordenação das propostas pelo preço — Módulo 4.
+// Ordenação das propostas pelo preço — Módulo 5.
 //
-// O Módulo 3 apura quem cumpre os requisitos mínimos; aqui entra o único fator
+// O Módulo 4 apura quem cumpre os requisitos mínimos; aqui entra o único fator
 // submetido à concorrência, que é o preço. É por isso que a ordenação vive
 // noutro módulo: os dados vêm de sítios diferentes — o apuramento, do
 // formulário de declaração; o preço, da proposta — e chegam em momentos

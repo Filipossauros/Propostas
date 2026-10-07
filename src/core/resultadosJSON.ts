@@ -1,8 +1,8 @@
-// Serialização dos resultados do Módulo 3, para alimentar o Módulo 4.
+// Serialização dos resultados do Módulo 4, para alimentar o Módulo 5.
 //
-// O ficheiro leva o apuramento inteiro, e não um resumo: o Módulo 4 tem de
-// poder gerar o mesmo relatório Excel do Módulo 3, acrescido da ordenação, e
-// para isso precisa de tudo o que o Módulo 3 tinha. É por isso, também, que
+// O ficheiro leva o apuramento inteiro, e não um resumo: o Módulo 5 tem de
+// poder gerar o mesmo relatório Excel do Módulo 4, acrescido da ordenação, e
+// para isso precisa de tudo o que o Módulo 4 tinha. É por isso, também, que
 // este ficheiro contém dados pessoais dos elementos propostos — como o Excel
 // dos resultados — e nunca é guardado no navegador.
 
@@ -49,7 +49,7 @@ export function importarResultadosJSON(texto: string): ResultadosJSON {
   if (ficheiro.tipo !== "resultados") {
     throw new ErroImportacao(
       `Este ficheiro é do tipo "${String(ficheiro.tipo)}", não resultados de avaliação. ` +
-        "Carregue o JSON de resultados descarregado do Módulo 3.",
+        "Carregue o JSON de resultados descarregado do Módulo 4.",
     );
   }
   if (ficheiro.config === undefined || !Array.isArray(ficheiro.resultado?.lotes)) {

@@ -122,7 +122,7 @@ describe("formatação do relatório", () => {
   });
 });
 
-describe("relatório com a ordenação do Módulo 4", () => {
+describe("relatório com a ordenação do Módulo 5", () => {
   const resultado = resultadoDoExemplo();
 
   function comOrdenacao() {
@@ -137,7 +137,7 @@ describe("relatório com a ordenação do Módulo 4", () => {
     return construirWorkbookResultados(resultado, LOTES_EXEMPLO, ordenarPropostas(resultado, precos));
   }
 
-  it("sem ordenação, o relatório é o do Módulo 3", () => {
+  it("sem ordenação, o relatório é o do Módulo 4", () => {
     const nomes = construirWorkbookResultados(resultado, LOTES_EXEMPLO).worksheets.map((s) => s.name);
     expect(nomes).not.toContain("Ordenação por lote");
     expect(nomes).not.toContain("Vencedores");
@@ -148,7 +148,7 @@ describe("relatório com a ordenação do Módulo 4", () => {
 
     expect(nomes).toContain("Ordenação por lote");
     expect(nomes).toContain("Vencedores");
-    // As folhas do Módulo 3 continuam todas lá.
+    // As folhas do Módulo 4 continuam todas lá.
     expect(nomes).toContain("Traço de apuramento");
     expect(nomes).toContain("Alfa Sistemas, S.A.");
   });

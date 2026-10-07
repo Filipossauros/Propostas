@@ -1,6 +1,6 @@
 // Margem prudencial do valor estimado.
 //
-// Os valores hora escritos no Módulo 2 são a média das rates das propostas dos
+// Os valores hora escritos no Módulo 3 são a média das rates das propostas dos
 // últimos procedimentos de natureza equivalente. A margem, quando a há, é uma
 // percentagem aplicada a cada um deles; com ela crescem o valor de cada perfil,
 // de cada lote, de cada ano e do procedimento. Por isso aplica-se num sítio só,

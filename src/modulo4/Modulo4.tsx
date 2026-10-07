@@ -15,14 +15,14 @@ import { ficheirosDaOrdenacao, nomeDoPacoteDeOrdenacao } from "../saidas/pacotes
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { TabelaOrdenacao } from "./TabelaOrdenacao";
 
-/** O apuramento sobre o qual se ordena — vindo do Módulo 3 ou de ficheiro. */
+/** O apuramento sobre o qual se ordena — vindo do Módulo 4 ou de ficheiro. */
 export interface Apuramento {
   resultado: ResultadoProcedimento;
   config: LotesJSON;
 }
 
 interface Props {
-  /** Apuramento entregue pelo Módulo 3 nesta sessão, se o utilizador veio por aí. */
+  /** Apuramento entregue pelo Módulo 4 nesta sessão, se o utilizador veio por aí. */
   recebido: Apuramento | null;
   onLimparRecebido: () => void;
 }
@@ -53,7 +53,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
   const [aExportar, setAExportar] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // O que veio de ficheiro tem precedência sobre o que veio do Módulo 3: se o
+  // O que veio de ficheiro tem precedência sobre o que veio do Módulo 4: se o
   // utilizador carregou um ficheiro, foi esse que quis ver.
   const apuramento = carregado ?? recebido;
 
@@ -100,7 +100,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
   }
 
   /**
-   * O pacote da ordenação: o que o Módulo 3 já entregava, mais o relatório que
+   * O pacote da ordenação: o que o Módulo 4 já entregava, mais o relatório que
    * traz a ordenação. Quem decide precisa dos três lado a lado.
    */
   async function exportar() {
@@ -124,7 +124,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
     <div className="modulo">
       <header className="modulo-cabecalho">
         <div className="modulo-titulo-linha">
-          <h2>Módulo 4 · Ordenação das propostas</h2>
+          <h2>Módulo 5 · Ordenação das propostas</h2>
           <div className="acoes-linha">
             <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar}>
               Recomeçar
@@ -138,9 +138,9 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Passo 1 · Apuramento do Módulo 3</h3>
+          <h3>Passo 1 · Apuramento do Módulo 4</h3>
           <p className="painel-nota">
-            Venha do Módulo 3 nesta sessão, ou carregue aqui o JSON de resultados que ele descarrega.
+            Venha do Módulo 4 nesta sessão, ou carregue aqui o JSON de resultados que ele descarrega.
           </p>
         </header>
 
@@ -163,7 +163,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
 
         {apuramento === null ? (
           <p className="estado-vazio">
-            Ainda não há apuramento. Conclua o Módulo 3 e siga daí, ou carregue o JSON de resultados.
+            Ainda não há apuramento. Conclua o Módulo 4 e siga daí, ou carregue o JSON de resultados.
           </p>
         ) : (
           <ul className="lista-erros lista-sem-erro">
@@ -185,7 +185,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
             <h3>Passo 2 · Preço de cada proposta</h3>
             <p className="painel-nota">
               O preço não consta do formulário de declaração de experiência: indique-o aqui, sem IVA, tal como vem
-              na proposta. Só aparecem as propostas admitidas no Módulo 3.
+              na proposta. Só aparecem as propostas admitidas no Módulo 4.
             </p>
           </header>
 
@@ -264,7 +264,7 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
             <header className="painel-cabecalho">
               <h3>Exportação</h3>
               <p className="painel-nota">
-                Um ZIP com os ficheiros da análise do Módulo 3 e o relatório da ordenação, que leva o do Módulo 3 por
+                Um ZIP com os ficheiros da análise do Módulo 4 e o relatório da ordenação, que leva o do Módulo 4 por
                 inteiro mais duas folhas: a ordenação de cada lote e os vencedores.
               </p>
             </header>

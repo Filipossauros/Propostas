@@ -1,4 +1,4 @@
-// Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 1.
+// Validação, (des)serialização e texto de caderno de encargos dos PERFIS — Módulo 2.
 
 import type { ItemPerfil, JustificacaoProjeto, PerfilJSON, PerfisJSON, Requisito } from "./types";
 import {
@@ -132,7 +132,7 @@ export function validarPerfil(perfil: PerfilJSON): ErroValidacao[] {
 }
 
 /**
- * Valida o conjunto de perfis do Módulo 1.
+ * Valida o conjunto de perfis do Módulo 2.
  *
  * Além dos erros de cada perfil, exige designações distintas: é a designação
  * que dá nome à folha do perfil no formulário Excel e que identifica o perfil
@@ -274,7 +274,7 @@ export function normalizarItens(bruto: unknown): ItemPerfil[] {
  *
  * Perfis gravados antes de os campos existirem não as trazem, e um valor que
  * não conste das listas do modelo não abriria lá: em ambos os casos ficam por
- * escolher, e a validação do Módulo 1 pede-as.
+ * escolher, e a validação do Módulo 2 pede-as.
  */
 export function comCategoriasEavalia(perfil: PerfilJSON): PerfilJSON {
   const { designacao, tipoServico } = perfil as Partial<PerfilJSON>;
@@ -355,7 +355,7 @@ export function importarPerfisJSON(texto: string): PerfisImportados {
   }
 
   throw new ErroImportacao(
-    `Este ficheiro é do tipo "${String(bruto.tipo)}", não um perfil. Carregue um ficheiro de perfil (Módulo 1).`,
+    `Este ficheiro é do tipo "${String(bruto.tipo)}", não um perfil. Carregue um ficheiro de perfil (Módulo 2).`,
   );
 }
 

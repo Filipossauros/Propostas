@@ -148,7 +148,7 @@ export function VistaGeral() {
         <header className="painel-cabecalho">
           <h3>Orçamento da unidade</h3>
           <p className="painel-nota">
-            Carregue os JSON de lotes gerados no Módulo 2 — um por projeto, ou vários de uma vez. Reimportar um
+            Carregue os JSON de lotes gerados no Módulo 3 — um por projeto, ou vários de uma vez. Reimportar um
             projeto atualiza-o, em vez de o duplicar.
           </p>
         </header>

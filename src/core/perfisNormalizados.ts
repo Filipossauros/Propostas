@@ -6,7 +6,7 @@
 // específicos de cada projeto.
 //
 // Não trazem preço: o preço/hora é decisão de cada procedimento e escreve-se à
-// mão no Módulo 2, ao colocar o perfil no lote.
+// mão no Módulo 3, ao colocar o perfil no lote.
 //
 // GERADO a partir de Perfis_Base_Requisitos_Transversais_v3.xlsx — o texto é
 // transcrição, não reescrita. Alterações à redação fazem-se no ficheiro de
@@ -236,7 +236,7 @@ const BASE: Base[] = [
 ];
 
 /**
- * Os perfis normalizados, prontos a entrar no catálogo do Módulo 1.
+ * Os perfis normalizados, prontos a entrar no catálogo do Módulo 2.
  *
  * Os identificadores são estáveis e derivados do número do perfil: voltar a
  * carregar o catálogo atualiza os perfis que já estejam atribuídos a um lote,

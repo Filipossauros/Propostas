@@ -178,7 +178,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   ],
 };
 
-/** Os perfis do exemplo, soltos — para experimentar o passo de atribuição do Módulo 2. */
+/** Os perfis do exemplo, soltos — para experimentar o passo de atribuição do Módulo 3. */
 export const PERFIS_EXEMPLO: PerfilJSON[] = [
   PERFIL_EXEMPLO,
   PERFIL_FRONTEND,
@@ -188,7 +188,7 @@ export const PERFIS_EXEMPLO: PerfilJSON[] = [
 
 
 // --------------------------------------------------------------------------
-// Declarações de exemplo — Módulo 3
+// Declarações de exemplo — Módulo 4
 // --------------------------------------------------------------------------
 
 /**

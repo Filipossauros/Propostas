@@ -89,7 +89,7 @@ export function construirMapaReconciliacao(grupos: GrupoConcorrentes[]): Map<str
 }
 
 // --------------------------------------------------------------------------
-// Atribuição nome-a-nome — a forma que o passo 3 do Módulo 3 apresenta
+// Atribuição nome-a-nome — a forma que o passo 3 do Módulo 4 apresenta
 // --------------------------------------------------------------------------
 
 /**

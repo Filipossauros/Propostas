@@ -48,7 +48,7 @@ function decodificarBase64(base64: string): Uint8Array {
 }
 
 /**
- * Preenche o modelo eAvalia com o nome do projeto, as respostas do Módulo 2,
+ * Preenche o modelo eAvalia com o nome do projeto, as respostas do Módulo 3,
  * as respostas fixas e, na folha «Custos - Serviços», os perfis dos lotes.
  *
  * Uma medida por responder fica em branco, que é como o modelo já vem — e a

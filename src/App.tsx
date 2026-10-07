@@ -18,28 +18,31 @@ import { ehListaDePerfisGuardada, normalizarPerfisGuardados } from "./core/perfi
 import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { ProtecaoExemplos } from "./ui/ProtecaoExemplos";
-import { Modulo1 } from "./modulo1/Modulo1";
+import { ModuloProjeto } from "./projeto/ModuloProjeto";
+import { ModuloPerfis } from "./modulo1/ModuloPerfis";
 import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
 import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
 
-type Aba = "modulo1" | "modulo2" | "modulo3" | "modulo4" | "vistaGeral" | "vistaDirecao";
+type Aba = "projeto" | "perfis" | "lotes" | "avaliacao" | "ordenacao" | "vistaGeral" | "vistaDirecao";
 
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
-  { chave: "modulo1", numero: "1", titulo: "Perfis", descricao: "Requisitos e formulário" },
-  { chave: "modulo2", numero: "2", titulo: "Lotes", descricao: "Agrupamento e preço base" },
-  { chave: "modulo3", numero: "3", titulo: "Avaliação", descricao: "Apuramento das declarações" },
-  { chave: "modulo4", numero: "4", titulo: "Ordenação", descricao: "Preço e classificação" },
+  { chave: "projeto", numero: "1", titulo: "Projeto", descricao: "Descrição e justificação" },
+  { chave: "perfis", numero: "2", titulo: "Perfis", descricao: "Requisitos e conteúdo" },
+  { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Agrupamento e preço base" },
+  { chave: "avaliacao", numero: "4", titulo: "Avaliação", descricao: "Apuramento das declarações" },
+  { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e classificação" },
 ];
 
 /**
- * As vistas gerais não são o quinto passo de nada.
+ * As vistas gerais não são o sexto passo de nada.
  *
- * Os quatro módulos são um caminho: perfis, lotes, avaliação, ordenação, sempre
- * do mesmo procedimento. Estas olham para muitos procedimentos ao mesmo tempo,
- * e por isso ficam à parte — numa linha própria, por baixo dos quatro, e com
+ * Os cinco módulos são um caminho: projeto, perfis, lotes, avaliação,
+ * ordenação, sempre do mesmo procedimento. Estas olham para muitos
+ * procedimentos ao mesmo tempo, e por isso ficam à parte — numa linha própria,
+ * por baixo dos cinco, e com
  * cor própria, para não se lerem como o passo a seguir à ordenação.
  *
  * São duas, uma por cada altura a que a pergunta se faz: a da unidade junta os
@@ -74,16 +77,16 @@ function ehLotesGuardado(valor: unknown): valor is LotesJSON {
 }
 
 function App() {
-  const [aba, setAba] = useState<Aba>("modulo1");
+  const [aba, setAba] = useState<Aba>("projeto");
 
-  // O apuramento entregue pelo Módulo 3 ao Módulo 4 vive aqui, em memória e
+  // O apuramento entregue pelo Módulo 4 ao Módulo 5 vive aqui, em memória e
   // nunca no navegador: traz as declarações dos candidatos, que são dados
   // pessoais e desaparecem ao fechar o separador.
   const [apuramentoParaOrdenar, setApuramentoParaOrdenar] = useState<Apuramento | null>(null);
 
   // O catálogo de perfis e o agrupamento em lotes vivem aqui, e não dentro dos
-  // respetivos módulos, porque são partilhados: o Módulo 1 define os perfis, o
-  // Módulo 2 agrupa-os e também os pode carregar de ficheiro. Ter um só dono
+  // respetivos módulos, porque são partilhados: o Módulo 2 define os perfis, o
+  // Módulo 3 agrupa-os e também os pode carregar de ficheiro. Ter um só dono
   // para cada um é o que permite que uma alteração feita num módulo se reflita
   // no outro — ver `aplicarPerfis`.
   const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(
@@ -173,7 +176,7 @@ function App() {
             <button
               key={a.chave}
               type="button"
-              className={aba === a.chave ? "aba aba-ativa" : "aba"}
+              className={aba === a.chave ? "aba aba-modulo aba-ativa" : "aba aba-modulo"}
               aria-current={aba === a.chave ? "page" : undefined}
               onClick={() => setAba(a.chave)}
             >
@@ -185,7 +188,7 @@ function App() {
             </button>
           ))}
 
-          {/* Força a vista para uma linha própria, por baixo dos quatro módulos. */}
+          {/* Força a vista para uma linha própria, por baixo dos cinco módulos. */}
           <span className="abas-quebra" aria-hidden="true" />
 
           {ABAS_DE_VISTA.map((v) => (
@@ -209,24 +212,32 @@ function App() {
       </header>
 
       <main>
-        {aba === "modulo1" && (
-          <Modulo1
+        {aba === "projeto" && (
+          <ModuloProjeto
+            nomeProjeto={nomeProjeto}
+            onAlterarNomeProjeto={setNomeProjeto}
+            descricaoProjeto={descricaoProjeto}
+            onAlterarDescricaoProjeto={setDescricaoProjeto}
+            justificacao={justificacao}
+            onAlterarJustificacao={setJustificacao}
+            onIrParaPerfis={() => irPara("perfis")}
+          />
+        )}
+        {aba === "perfis" && (
+          <ModuloPerfis
             perfis={perfis}
             onAlterarPerfis={aplicarPerfis}
             nomeProjeto={nomeProjeto}
-            onAlterarNomeProjeto={setNomeProjeto}
             onAdotarNomeProjeto={adotarNomeProjeto}
             descricaoProjeto={descricaoProjeto}
-            onAlterarDescricaoProjeto={setDescricaoProjeto}
             onAdotarDescricaoProjeto={adotarDescricaoProjeto}
             justificacao={justificacao}
-            onAlterarJustificacao={setJustificacao}
             onAdotarJustificacao={adotarJustificacao}
             lotePorPerfilId={lotePorPerfilId(lotes)}
-            onIrParaLotes={() => irPara("modulo2")}
+            onIrParaLotes={() => irPara("lotes")}
           />
         )}
-        {aba === "modulo2" && (
+        {aba === "lotes" && (
           <Modulo2
             perfis={perfis}
             config={lotes}
@@ -244,16 +255,16 @@ function App() {
             onSubstituirPerfis={aplicarPerfis}
           />
         )}
-        {aba === "modulo3" && (
+        {aba === "avaliacao" && (
           <Modulo3
             onIrParaOrdenacao={(resultado, config) => {
               setApuramentoParaOrdenar({ resultado, config });
-              irPara("modulo4");
+              irPara("ordenacao");
             }}
           />
         )}
 
-        {aba === "modulo4" && (
+        {aba === "ordenacao" && (
           <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
         )}
 

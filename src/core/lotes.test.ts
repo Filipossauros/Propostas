@@ -159,7 +159,7 @@ describe("perfisComCertificacao", () => {
     ]);
   });
 
-  it("o agrupamento exportado leva as certificações, para o Módulo 3 poder avisar", () => {
+  it("o agrupamento exportado leva as certificações, para o Módulo 4 poder avisar", () => {
     const config = lotesComPerfis([
       { numero: "1", perfis: [perfil({ certificacoes: certificacoes("Certificação A") })] },
     ]);
@@ -324,7 +324,7 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
     };
 
     expect(validarLotes(config)).toHaveLength(0);
-    // Pela ordem por que os painéis aparecem no Módulo 2.
+    // Pela ordem por que os painéis aparecem no Módulo 3.
     expect(validarLotes(incompleto).map((e) => e.campo)).toEqual([
       "justificacaoMargem",
       "postoTrabalho.locais",

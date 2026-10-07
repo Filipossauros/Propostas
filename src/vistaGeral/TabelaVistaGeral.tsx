@@ -69,7 +69,7 @@ export function TabelaVistaGeral({
   const arrasto = useArrastoDeProjetos({ onMover: onMoverProjeto, onDeslocar: onDeslocarProjeto });
 
   if (orcamento.projetos.length === 0) {
-    return <p className="estado-vazio">Importe os JSON de lotes do Módulo 2 para começar a vista.</p>;
+    return <p className="estado-vazio">Importe os JSON de lotes do Módulo 3 para começar a vista.</p>;
   }
 
   const totaisAnos = totaisPorAnoDaUnidade(orcamento);

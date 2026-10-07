@@ -3,8 +3,8 @@
 // ATENÇÃO — desvio deliberado ao princípio "sem persistência" do plano original,
 // pedido explicitamente para não se perder trabalho entre sessões. O que é
 // guardado está limitado ao trabalho da entidade adjudicante: perfis do Módulo
-// 1, lotes do Módulo 2 e a Vista Geral da unidade. Os dados das declarações
-// carregadas no Módulo 3 — que contêm dados pessoais de CANDIDATOS — NUNCA são
+// 1, lotes do Módulo 3 e a Vista Geral da unidade. Os dados das declarações
+// carregadas no Módulo 4 — que contêm dados pessoais de CANDIDATOS — NUNCA são
 // guardados: continuam a viver apenas em memória e desaparecem ao fechar o
 // separador.
 //
@@ -16,10 +16,10 @@
 
 const PREFIXO = "propostas.v2.";
 
-/** Catálogo de perfis do Módulo 1, partilhado com o Módulo 2. */
+/** Catálogo de perfis do Módulo 2, partilhado com o Módulo 3. */
 export const CHAVE_PERFIS = `${PREFIXO}perfis`;
 export const CHAVE_LOTES = `${PREFIXO}lotes`;
-/** Nome do projeto, comum aos dois módulos e a todos os ficheiros gerados. */
+/** Nome do projeto, comum a todos os módulos e a todos os ficheiros gerados. */
 export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
 /** Descrição do projeto, escrita no Módulo 1 e usada no pedido de encargos. */
 export const CHAVE_DESCRICAO_PROJETO = `${PREFIXO}descricaoProjeto`;

@@ -46,7 +46,7 @@ import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
 
 interface Props {
-  /** Catálogo de perfis do Módulo 1 — a fonte única de verdade dos requisitos. */
+  /** Catálogo de perfis do Módulo 2 — a fonte única de verdade dos requisitos. */
   perfis: PerfilJSON[];
   config: LotesJSON;
   onAlterarConfig: (atualizar: (atual: LotesJSON) => LotesJSON) => void;
@@ -65,7 +65,7 @@ interface Props {
   onDefinirJustificacao: (justificacao: JustificacaoProjeto) => void;
   /** Aceita os benefícios e riscos vindos de um ficheiro, se ainda não houver nenhum escrito. */
   onAdotarJustificacao: (justificacao: JustificacaoProjeto) => void;
-  /** Junta perfis ao catálogo do Módulo 1, substituindo os que já existam. */
+  /** Junta perfis ao catálogo do Módulo 2, substituindo os que já existam. */
   onAcrescentarPerfis: (perfis: PerfilJSON[]) => void;
   /** Substitui o catálogo inteiro (usado ao carregar o exemplo). */
   onSubstituirPerfis: (perfis: PerfilJSON[]) => void;
@@ -114,17 +114,18 @@ export function Modulo2({
   // não haver duas cópias a divergir.
   const configExportavel: LotesJSON = { ...config, nomeProjeto, descricaoProjeto, justificacao };
 
-  // O que se escreve no Módulo 1 também trava o Anexo Técnico, mas não se
-  // corrige aqui: a mensagem di-lo, para ninguém o procurar nesta página.
-  const noModulo1 = (lista: ErroValidacao[]) =>
-    lista.map((e) => ({ ...e, mensagem: `${e.mensagem} (Módulo 1)` }));
+  // O que se escreve nos módulos do projeto e dos perfis também trava o Anexo
+  // Técnico, mas não se corrige aqui: a mensagem diz onde, para ninguém o
+  // procurar nesta página.
+  const noModulo = (sufixo: string, lista: ErroValidacao[]) =>
+    lista.map((e) => ({ ...e, mensagem: `${e.mensagem} (${sufixo})` }));
   const erros = [
-    ...noModulo1([
+    ...noModulo("Módulo 1 · Projeto", [
       ...validarNomeProjeto(nomeProjeto),
       ...validarDescricaoProjeto(descricaoProjeto),
       ...validarJustificacao(justificacao),
-      ...validarCategoriasEavalia(config),
     ]),
+    ...noModulo("Módulo 2 · Perfis", validarCategoriasEavalia(config)),
     ...validarLotes(config),
   ];
   const podeExportar = erros.length === 0;
@@ -203,7 +204,7 @@ export function Modulo2({
         ? { tipo: "erro", texto: `Não foi possível carregar: ${falhados.join(" · ")}` }
         : {
             tipo: "sucesso",
-            texto: `${carregados.length} perfil(is) carregado(s). Ficam também disponíveis no Módulo 1.`,
+            texto: `${carregados.length} perfil(is) carregado(s). Ficam também disponíveis no Módulo 2.`,
           },
     );
   }
@@ -216,9 +217,9 @@ export function Modulo2({
       onAdotarDescricaoProjeto(importado.descricaoProjeto);
       onAdotarJustificacao(importado.justificacao);
       // Os perfis vêm dentro do ficheiro de lotes: passam a fazer parte do
-      // catálogo, para poderem ser corrigidos no Módulo 1 como os restantes.
+      // catálogo, para poderem ser corrigidos no Módulo 2 como os restantes.
       onAcrescentarPerfis(perfisEmLotes(importado));
-      setMensagem({ tipo: "sucesso", texto: "Agrupamento importado. Os perfis ficam disponíveis no Módulo 1." });
+      setMensagem({ tipo: "sucesso", texto: "Agrupamento importado. Os perfis ficam disponíveis no Módulo 2." });
     } catch (erro) {
       setMensagem({
         tipo: "erro",
@@ -246,7 +247,7 @@ export function Modulo2({
    * Os dois documentos Word — o das regras, e a informação formal que o
    * procedimento pede —, o pedido eAvalia, o JSON dos lotes, um formulário
    * de declaração por lote e — numa pasta à parte — os ficheiros dos perfis do
-   * Módulo 1. Andam sempre juntos: seguem para a mesma pasta partilhada e
+   * Módulo 2. Andam sempre juntos: seguem para a mesma pasta partilhada e
    * instruem o mesmo processo.
    */
   async function descarregarPecas() {
@@ -282,7 +283,7 @@ export function Modulo2({
     <div className="modulo">
       <header className="modulo-cabecalho">
         <div className="modulo-titulo-linha">
-          <h2>Módulo 2 · Agrupamento em lotes</h2>
+          <h2>Módulo 3 · Agrupamento em lotes</h2>
           <div className="acoes-linha">
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo
@@ -293,7 +294,7 @@ export function Modulo2({
           </div>
         </div>
         <p className="modulo-subtitulo">
-          Recebe os perfis definidos no Módulo 1 enviados diretamente ou carregados de ficheiro, agrupa-os em lotes e
+          Recebe os perfis definidos no Módulo 2 enviados diretamente ou carregados de ficheiro, agrupa-os em lotes e
           atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos.
         </p>
       </header>
@@ -404,7 +405,7 @@ export function Modulo2({
             <strong>Cada concorrente não pode ficar com mais do que um lote</strong>
             <span className="ajuda">
               Os lotes são apreciados por ordem do número: quem ficar com o lote 1 fica impedido nos seguintes. A
-              regra sai no documento Word, com título próprio, e é aplicada na avaliação do Módulo 3.
+              regra sai no documento Word, com título próprio, e é aplicada na avaliação do Módulo 4.
             </span>
           </span>
         </label>
@@ -474,7 +475,7 @@ export function Modulo2({
         <header className="painel-cabecalho">
           <h3>Perfis por atribuir</h3>
           <p className="painel-nota">
-            Aparecem aqui os perfis do Módulo 1 que ainda não estão em nenhum lote. Também pode carregar ficheiros
+            Aparecem aqui os perfis do Módulo 2 que ainda não estão em nenhum lote. Também pode carregar ficheiros
             JSON de perfil, se o agrupamento for feito por outra pessoa ou noutro momento.
           </p>
         </header>
@@ -710,7 +711,7 @@ export function Modulo2({
         <p className="ajuda">
           Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, a manifestação de
           necessidades no modelo da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
-          declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 1.
+          declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 2.
         </p>
         {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
       </section>
