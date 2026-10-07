@@ -474,7 +474,7 @@ export type Variante = "plurianual" | "manifestacao";
  * É um quadro de referência da organização, e não algo que a aplicação apure:
  * vem dos procedimentos já realizados, e atualiza-se aqui quando houver mais.
  */
-const RATES_DE_REFERENCIA: Array<{
+export const RATES_DE_REFERENCIA: Array<{
   perfil: string;
   procedimentos: string[];
   propostas: string;
