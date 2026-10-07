@@ -6,6 +6,7 @@ import {
   importarPerfisJSON,
   validarDescricaoProjeto,
   validarNomeProjeto,
+  type ErroValidacao,
 } from "../core/perfil";
 import { anosDeInicioAdmitidos } from "../core/types";
 import {
@@ -19,6 +20,7 @@ import {
   perfisEmLotes,
   PREFIXO_NOME_PROCEDIMENTO,
   taxaIva,
+  validarCategoriasEavalia,
   validarLotes,
 } from "../core/lotes";
 import {
@@ -112,10 +114,17 @@ export function Modulo2({
   // não haver duas cópias a divergir.
   const configExportavel: LotesJSON = { ...config, nomeProjeto, descricaoProjeto, justificacao };
 
+  // O que se escreve no Módulo 1 também trava o Anexo Técnico, mas não se
+  // corrige aqui: a mensagem di-lo, para ninguém o procurar nesta página.
+  const noModulo1 = (lista: ErroValidacao[]) =>
+    lista.map((e) => ({ ...e, mensagem: `${e.mensagem} (Módulo 1)` }));
   const erros = [
-    ...validarNomeProjeto(nomeProjeto),
-    ...validarDescricaoProjeto(descricaoProjeto),
-    ...validarJustificacao(justificacao),
+    ...noModulo1([
+      ...validarNomeProjeto(nomeProjeto),
+      ...validarDescricaoProjeto(descricaoProjeto),
+      ...validarJustificacao(justificacao),
+      ...validarCategoriasEavalia(config),
+    ]),
     ...validarLotes(config),
   ];
   const podeExportar = erros.length === 0;
@@ -249,9 +258,14 @@ export function Modulo2({
         await ficheirosDasPecas(configExportavel, perfis, nomeProjeto),
       );
     } catch (erro) {
+      // O motivo vai também para a consola, onde se pode ler o percurso inteiro.
+      console.error(erro);
       setMensagem({
         tipo: "erro",
-        texto: erro instanceof ErroModeloEavalia ? erro.message : "Não foi possível gerar o Anexo Técnico.",
+        texto:
+          erro instanceof ErroModeloEavalia
+            ? erro.message
+            : `Não foi possível gerar o Anexo Técnico${erro instanceof Error && erro.message ? `: ${erro.message}` : "."}`,
       });
     } finally {
       setAGerar(false);
@@ -676,6 +690,11 @@ export function Modulo2({
             {aGerar ? "A gerar…" : "Descarregar Anexo Técnico (ZIP)"}
           </button>
         </div>
+        {!podeExportar && (
+          <p className="aviso aviso-atencao" role="status">
+            Para descarregar, resolva primeiro: {erros.map((e) => e.mensagem).join(" · ")}
+          </p>
+        )}
         <p className="ajuda">
           Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, a manifestação de
           necessidades no modelo da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de

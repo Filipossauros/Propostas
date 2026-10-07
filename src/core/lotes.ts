@@ -308,6 +308,31 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
 }
 
 /**
+ * As duas listas do eAvalia de cada perfil colocado num lote — a designação e
+ * o tipo de serviço. Escolhem-se no Módulo 1, e é a partir delas que se
+ * preenche a folha «Custos - Serviços» do eAvalia que segue no Anexo Técnico:
+ * sem elas, a folha sairia com as células em branco.
+ */
+export function validarCategoriasEavalia(config: LotesJSON): ErroValidacao[] {
+  return config.lotes.flatMap((lote, idxLote) =>
+    lote.perfis.flatMap((entrada, idxPerfil) => {
+      const falta = [
+        entrada.perfil.designacao === "" ? "a designação do perfil" : "",
+        entrada.perfil.tipoServico === "" ? "o tipo de serviço" : "",
+      ].filter((f) => f !== "");
+      if (falta.length === 0) return [];
+      const nome = entrada.perfil.perfil.trim() || `Perfil ${idxPerfil + 1}`;
+      return [
+        {
+          campo: `lotes[${idxLote}].perfis[${idxPerfil}].perfil.categorias`,
+          mensagem: `Lote ${lote.numero} — ${nome}: escolha ${falta.join(" e ")} (listas do eAvalia).`,
+        },
+      ];
+    }),
+  );
+}
+
+/**
  * A margem prudencial e o seu fundamento. O fundamento é obrigatório: com 0 %
  * é ele que explica por que não há margem, e acima de 0 % por que a há.
  */

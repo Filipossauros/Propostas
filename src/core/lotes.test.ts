@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { JUSTIFICACAO_SEM_MARGEM } from "./margem";
 import {
+  validarCategoriasEavalia,
   LIMIAR_VALOR_SEM_IVA,
   anosAcimaDoLimiar,
   comHorasDoAno,
@@ -334,6 +335,20 @@ describe("o agrupamento só está completo com o posto de trabalho e o eAvalia",
       "eavalia.usabilidade",
       "eavalia.idiomas",
     ]);
+  });
+});
+
+describe("validarCategoriasEavalia", () => {
+  it("pede, para cada perfil num lote, as duas listas do eAvalia que lhe faltem", () => {
+    const config = lotesExemplo();
+    config.lotes[0].perfis[0].perfil = { ...config.lotes[0].perfis[0].perfil, designacao: "", tipoServico: "" };
+    config.lotes[1].perfis[0].perfil = { ...config.lotes[1].perfis[0].perfil, tipoServico: "" };
+
+    expect(validarCategoriasEavalia(config).map((e) => e.mensagem)).toEqual([
+      "Lote 1 — Programador Sénior: escolha a designação do perfil e o tipo de serviço (listas do eAvalia).",
+      "Lote 2 — Analista: escolha o tipo de serviço (listas do eAvalia).",
+    ]);
+    expect(validarCategoriasEavalia(lotesExemplo())).toEqual([]);
   });
 });
 
