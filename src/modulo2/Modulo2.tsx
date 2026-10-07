@@ -246,8 +246,8 @@ export function Modulo2({
   /**
    * O Anexo Técnico: todas as peças do procedimento num pacote só.
    *
-   * Os dois documentos Word — o das regras, e a informação formal que o
-   * procedimento pede —, o pedido eAvalia, o JSON dos lotes, um formulário
+   * A manifestação de necessidades (em Word e, com os dois números, em PDF),
+   * o pedido eAvalia, o JSON dos lotes, um formulário
    * de declaração por lote e — numa pasta à parte — os ficheiros dos perfis do
    * Módulo 2. Andam sempre juntos: seguem para a mesma pasta partilhada e
    * instruem o mesmo processo.
@@ -698,7 +698,7 @@ export function Modulo2({
           </p>
         )}
         <p className="ajuda">
-          Um ZIP com tudo o que o procedimento precisa: o documento Word dos requisitos e regras, a manifestação de
+          Um ZIP com tudo o que o procedimento precisa: a manifestação de
           necessidades no modelo da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
           declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 2.
         </p>

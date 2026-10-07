@@ -13,11 +13,9 @@ import type { VistaDirecao } from "../core/vistaGeralDirecao";
 import { perfisParaJSON } from "../core/perfil";
 import { especificacao, lotesParaJSON } from "../core/lotes";
 import type { ImagemDaFolha } from "../core/resumoCurricular";
-import { documentoRegrasEPrecoBase } from "../core/cadernoEncargos";
 import { resultadosParaJSON } from "../core/resultadosJSON";
 import { anosDoOrcamento, orcamentoParaJSON } from "../core/vistaGeral";
 import { anosDaDirecao, vistaDirecaoParaJSON } from "../core/vistaGeralDirecao";
-import { gerarDocxBlob } from "../word/gerarDocx";
 import { gerarManifestacaoBlob } from "../word/manifestacaoNecessidades";
 import { comMargemPrudencial } from "../core/margem";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
@@ -112,7 +110,7 @@ async function informacaoEmPdf(config: LotesJSON, informacao: FicheiroDoPacote):
 }
 
 /**
- * Tudo o que sai do procedimento: os dois documentos Word, o JSON dos lotes, o
+ * Tudo o que sai do procedimento: a manifestação de necessidades, o JSON dos lotes, o
  * pedido eAvalia, um formulário de declaração por lote — e, numa pasta à parte,
  * os ficheiros dos perfis do Módulo 2.
  *
@@ -129,9 +127,7 @@ export async function ficheirosDasPecas(
   const base = nomeSeguro(nomeProjeto, "Projeto");
   const comPerfis = config.lotes.filter((lote) => lote.perfis.length > 0);
 
-  // As folhas do Resumo Curricular são desenhadas uma só vez: entram no anexo
-  // dos dois documentos Word, e desenhá-las duas vezes seria o mesmo trabalho a
-  // dobrar.
+  // As folhas do Resumo Curricular, desenhadas para o anexo da manifestação.
   const imagens = await imagensDosResumos(config);
 
   const formularios = await Promise.all(
@@ -150,10 +146,6 @@ export async function ficheirosDasPecas(
   const comMargem = comMargemPrudencial(config);
 
   return [
-    {
-      nome: `${base}_Requisitos_e_regras.docx`,
-      conteudo: await gerarDocxBlob([documentoRegrasEPrecoBase(comMargem, imagens)]),
-    },
     informacao,
     ...(await informacaoEmPdf(config, informacao)),
     { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaBlob(comMargem) },

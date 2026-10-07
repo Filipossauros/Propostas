@@ -85,12 +85,13 @@ describe("pacote dos perfis", () => {
 });
 
 describe("pacote das peças do procedimento", () => {
-  it("leva os dois Word, o eAvalia, o JSON dos lotes, um formulário por lote e os perfis", async () => {
+  it("leva a manifestação em Word, o eAvalia, o JSON dos lotes, um formulário por lote e os perfis", async () => {
     const ficheiros = await ficheirosDasPecas(config(), PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO);
     const lista = nomes(ficheiros);
 
-    expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(2);
-    expect(lista.some((n) => n.includes("Requisitos_e_regras.docx"))).toBe(true);
+    expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(1);
+    // O documento «Requisitos e regras» deixou de sair: a manifestação leva os requisitos e as regras.
+    expect(lista.some((n) => n.includes("Requisitos_e_regras"))).toBe(false);
     // O exemplo tem encargos plurianuais: a informação que sai é o pedido.
     expect(lista.some((n) => n.includes("Manifestacao_de_Necessidades.docx"))).toBe(true);
     // O pedido de encargos plurianuais deixou de existir: a manifestação leva a repartição por anos.
@@ -123,7 +124,7 @@ describe("pacote das peças do procedimento", () => {
 
     const lista = nomes(await ficheirosDasPecas(semPlurianual, PERFIS_EXEMPLO, NOME_PROJETO_EXEMPLO, QUANDO));
 
-    expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(2);
+    expect(lista.filter((n) => n.endsWith(".docx"))).toHaveLength(1);
     expect(lista.some((n) => n.includes("Manifestacao_de_Necessidades.docx"))).toBe(true);
     expect(lista.some((n) => n.includes("Pedido_Trienio.docx"))).toBe(false);
   });
@@ -252,7 +253,7 @@ describe("empacotamento", () => {
     expect(dentro.some((n) => n.startsWith("Perfis/"))).toBe(true);
     expect(dentro.some((n) => n.startsWith("Resumos Curriculares/"))).toBe(true);
     // Os .docx e .xlsx continuam a ser ZIP válidos depois de aninhados.
-    const word = dentro.find((n) => n.endsWith("Requisitos_e_regras.docx"))!;
+    const word = dentro.find((n) => n.endsWith("Manifestacao_de_Necessidades.docx"))!;
     const interior = await JSZip.loadAsync(await relido.file(word)!.async("arraybuffer"));
     expect(Object.keys(interior.files)).toContain("word/document.xml");
   });
