@@ -230,16 +230,16 @@ describe("gerarManifestacaoBlob — conteúdo", () => {
     expect([...posicoes].sort((a, b) => a - b)).toEqual(posicoes);
   });
 
-  it("sem encargos plurianuais, o contrato cabe num ano: 12 meses e o quadro do preço base", async () => {
+  it("sem encargos plurianuais, o contrato cabe num ano: 12 meses e o quadro do valor estimado", async () => {
     const texto = await textoDe(exemplo({ encargosPlurianuais: { ativo: false, anoInicio: 2027 } }));
     expect(texto).toContain("durante 12 meses");
     expect(texto).toContain("no período de 1 de janeiro de 2027 a 31 de dezembro de 2027");
-    expect(texto).toContain("Preço base total do procedimento");
+    expect(texto).toContain("Valor estimado do contrato");
   });
 });
 
 describe("gerarManifestacaoBlob — margem prudencial", () => {
-  it("a 0 %, o valor estimado é o preço base, e o fundamento diz por que não há margem", async () => {
+  it("a 0 %, o valor estimado é o valor estimado, e o fundamento diz por que não há margem", async () => {
     const config = exemplo();
     const texto = await textoDe(config);
     expect(texto).toContain(`o valor estimado do contrato corresponde a ${euros(totalProcedimento(config).semIva)}`);
@@ -259,7 +259,7 @@ describe("gerarManifestacaoBlob — margem prudencial", () => {
     // O quadro dos lotes, com o total do procedimento já com a margem, e a legenda a dizê-lo.
     const lotes = texto.slice(texto.indexOf("VI. DIVISÃO EM LOTES"), texto.indexOf("VII. GESTÃO"));
     expect(lotes).toContain(euros(comMargem));
-    expect(lotes).toContain("O preço base inclui a margem prudencial de 10 %.");
+    expect(lotes).toContain("O valor estimado inclui a margem prudencial de 10 %.");
     // E o quadro dos valores hora antes e depois.
     expect(texto).toContain("Valor hora de cada perfil, antes e depois da margem prudencial.");
     expect(texto).toContain("46,20 €/h");

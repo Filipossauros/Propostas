@@ -47,9 +47,9 @@ Os mesmos dados estão em `exemplos/` como ficheiros JSON:
 
 São gerados a partir de `src/core/exemplo.ts` (fonte única) com `npm run exemplos`.
 
-### Preço base
+### Valor estimado
 
-O preço base de cada perfil dentro de um lote é
+O valor estimado de cada perfil dentro de um lote é
 `n.º mínimo de elementos × horas × preço unitário/hora`, sem IVA.
 
 ### Duas regras que atravessam a aplicação
@@ -180,7 +180,7 @@ anos do pedido são esse e os dois a seguir.
 
 **As horas passam a escrever-se ano a ano, nos lotes.** É a única alteração ao
 que já se fazia: em vez de um total por perfil, três campos, um por ano
-económico. O total do perfil é a soma, e é dele que sai o preço base como sempre
+económico. O total do perfil é a soma, e é dele que sai o valor estimado como sempre
 saiu — não há um número que possa discordar do outro, porque só existe um.
 
 Um ano a zero é uma decisão, não um lapso: significa que o perfil não é
@@ -191,13 +191,13 @@ resumo e o documento Word levam as horas ao lado do valor de cada ano, para que
 um zero se leia como o que é.
 
 Sem a opção ligada, tudo fica exatamente como estava: um campo de horas por
-perfil e a tabela do preço base de sempre. Com ela ligada, a tabela dos anos
-**substitui** a do preço base — no resumo do Módulo 3 e no documento Word. Ou
-uma, ou outra: dizem o mesmo preço base por caminhos diferentes, e apresentá-las
+perfil e a tabela do valor estimado de sempre. Com ela ligada, a tabela dos anos
+**substitui** a do valor estimado — no resumo do Módulo 3 e no documento Word. Ou
+uma, ou outra: dizem o mesmo valor estimado por caminhos diferentes, e apresentá-las
 juntas obrigava a lê-las uma contra a outra. A tabela dos anos leva os subtotais
 de cada lote, e o resumo é só de leitura, como sempre foi.
 
-A tabela dos anos exprime-se toda com IVA, pelo que o preço base do procedimento
+A tabela dos anos exprime-se toda com IVA, pelo que o valor estimado do procedimento
 — que é elemento da peça — sai numa linha própria por baixo dela, sem IVA e com
 IVA.
 
@@ -227,7 +227,7 @@ informação, e a unidade sai na assinatura por baixo da direção.
 procedimentos equivalentes. A 0 % (por omissão), a margem considera-se neles
 incorporada, e o fundamento — obrigatório — di-lo. Acima de 0 %, a margem
 aplica-se ao valor hora de cada perfil, arredondado ao cêntimo, e passa a todos
-os valores: perfis, lotes, anos, preço base, eAvalia, o resumo do Módulo 3 e a
+os valores: perfis, lotes, anos, valor estimado, eAvalia, o resumo do Módulo 3 e a
 vista geral. O JSON do agrupamento guarda os valores de referência e a margem à
 parte.
 
@@ -259,7 +259,7 @@ preenchida: um bloco «Recurso» por perfil em cada lote, com o tipo de serviço
 a designação do perfil escolhidos no Módulo 2 (as listas fechadas da folha
 «Backup» do modelo, letra a letra), o nome do perfil como descrição, o preço/hora
 e as horas de todos os elementos e de todos os anos do Módulo 3. O custo total é
-a fórmula do modelo, escrita com o resultado; somados, os blocos dão o preço base
+a fórmula do modelo, escrita com o resultado; somados, os blocos dão o valor estimado
 sem IVA. Havendo mais perfis do que os onze blocos do modelo, acrescentam-se
 blocos iguais ao último, como a nota da folha pede. A informação (Word e PDF)
 reproduz esta folha num anexo próprio, a seguir ao do alinhamento tecnológico.

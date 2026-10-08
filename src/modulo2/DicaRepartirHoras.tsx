@@ -21,7 +21,7 @@ export function DicaRepartirHoras() {
         <strong>Como funciona a repartição</strong>
         <ul>
           <li>As horas de cada perfil escrevem-se no lote, ano a ano, em vez de num total.</li>
-          <li>O total do perfil é a soma dos três anos, e é dele que sai o preço base.</li>
+          <li>O total do perfil é a soma dos três anos, e é dele que sai o valor estimado.</li>
           <li>
             Um ano a zero significa que o perfil não é contratado nesse ano — é o que permite acomodar um contrato
             ainda em vigor.

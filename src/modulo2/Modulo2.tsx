@@ -581,10 +581,10 @@ export function Modulo2({
         <p className="ajuda">
           A margem prudencial é uma percentagem acrescentada ao valor hora de referência de cada perfil para
           acautelar variações de preço até à adjudicação e durante a execução do contrato (por exemplo, inflação ou
-          atualizações salariais), de modo a que o preço base não fique abaixo do que o mercado praticará. O
+          atualizações salariais), de modo a que o valor estimado não fique abaixo do que o mercado praticará. O
           fundamento é obrigatório. Os valores hora são a média das propostas dos últimos procedimentos: a 0 %, a margem
           considera-se neles incorporada e o fundamento di-lo. Acima de 0 %, a margem é aplicada ao valor hora de
-          cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, preço base e eAvalia. O
+          cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, valor estimado e eAvalia. O
           texto por omissão acompanha a margem enquanto não for alterado.
         </p>
       </section>

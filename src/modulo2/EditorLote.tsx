@@ -111,7 +111,7 @@ export function EditorLote({
             <span>N.º mín.</span>
             {anos === undefined ? <span>Horas</span> : anos.map((ano) => <span key={ano}>Horas {ano}</span>)}
             <span>Preço/hora</span>
-            <span>Preço base s/ IVA</span>
+            <span>Valor estimado s/ IVA</span>
             <span />
           </div>
 
@@ -225,7 +225,7 @@ export function EditorLote({
       )}
 
       <footer className="cartao-lote-rodape">
-        <span>Preço base do lote (sem IVA)</span>
+        <span>Valor estimado do lote (sem IVA)</span>
         <strong>{formatarMoeda(totalLote(lote, 0, anos !== undefined).semIva)}</strong>
       </footer>
     </article>

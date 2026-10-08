@@ -1,6 +1,6 @@
-// Agrupamento de perfis em lotes e preço base — Módulo 3.
+// Agrupamento de perfis em lotes e valor estimado — Módulo 3.
 //
-// Nota de método sobre o preço base: o valor de cada perfil dentro de um lote é
+// Nota de método sobre o valor estimado: o valor de cada perfil dentro de um lote é
 // `n.º mínimo de elementos × horas × preço/hora`, sem IVA.
 
 import type {
@@ -775,7 +775,7 @@ export function sincronizarPerfisEmLotes(
 }
 
 // --------------------------------------------------------------------------
-// Preço base
+// Valor estimado
 // --------------------------------------------------------------------------
 
 export interface Valores {
@@ -827,7 +827,7 @@ export function horasContratadas(
       : 0;
 }
 
-/** Preço base de um perfil dentro de um lote, sem IVA: n.º mínimo de elementos × horas × preço/hora. */
+/** Valor estimado de um perfil dentro de um lote, sem IVA: n.º mínimo de elementos × horas × preço/hora. */
 export function precoBaseEntrada(
   entrada: PerfilEmLote,
   plurianual: boolean,

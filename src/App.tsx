@@ -31,7 +31,7 @@ type Aba = "projeto" | "perfis" | "lotes" | "avaliacao" | "ordenacao" | "vistaGe
 const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
   { chave: "projeto", numero: "1", titulo: "Projeto", descricao: "Descrição e justificação" },
   { chave: "perfis", numero: "2", titulo: "Perfis", descricao: "Requisitos e conteúdo" },
-  { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Agrupamento e preço base" },
+  { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Agrupamento e valor estimado" },
   { chave: "avaliacao", numero: "4", titulo: "Avaliação", descricao: "Apuramento das declarações" },
   { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e classificação" },
 ];

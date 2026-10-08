@@ -122,7 +122,7 @@ describe("folha «Custos - Serviços» do eAvalia", { timeout: 30_000 }, () => {
     expect(folha.getCell("F29").value).toMatchObject({ formula: 'IF(OR(B29="",D29=""),"",B29*D29)' });
   });
 
-  it("a soma dos custos totais é o preço base sem IVA", async () => {
+  it("a soma dos custos totais é o valor estimado sem IVA", async () => {
     const folha = await folhaDosCustos(LOTES_EXEMPLO);
     const custos = [9, 14, 19, 24].map((l) => (folha.getCell(`F${l}`).value as { result: number }).result);
     // 42×7040 + 38×1760 + 55×1760 + 45×2×1760

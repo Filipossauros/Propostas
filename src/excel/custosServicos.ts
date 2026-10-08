@@ -11,7 +11,7 @@
 //
 // Cada perfil de cada lote ocupa um bloco: o tipo de serviço e a designação
 // vêm do Módulo 2, o preço/hora e as horas do Módulo 3. O custo total é a
-// fórmula do próprio modelo, e a soma dos blocos dá o preço base sem IVA.
+// fórmula do próprio modelo, e a soma dos blocos dá o valor estimado sem IVA.
 //
 // Quando há mais perfis do que blocos, a nota do modelo pede que se
 // acrescentem linhas: acrescentam-se blocos iguais ao último, com as mesmas

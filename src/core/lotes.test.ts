@@ -80,14 +80,14 @@ describe("validarLotes", () => {
   });
 });
 
-describe("preço base", () => {
+describe("valor estimado", () => {
   it("calcula o valor de cada perfil como n.º mínimo de elementos × horas × valor/hora", () => {
     const linhas = linhasTabelaValores(lotesExemplo());
     expect(linhas).toHaveLength(2);
     expect(linhas[0].valores.semIva).toBe(2 * 100 * 50);
   });
 
-  it("o n.º mínimo de elementos multiplica o preço base", () => {
+  it("o n.º mínimo de elementos multiplica o valor estimado", () => {
     const config = lotesExemplo();
     config.lotes[0].perfis[0].nMinimoElementos = 7;
     expect(linhasTabelaValores(config)[0].valores.semIva).toBe(7 * 100 * 50);
@@ -418,7 +418,7 @@ describe("horas: dois modelos independentes", () => {
     expect(horasContratadas(comOsDois(), false)).toBe(1840);
   });
 
-  it("o preço base segue o modelo em vigor, e muda com ele", () => {
+  it("o valor estimado segue o modelo em vigor, e muda com ele", () => {
     const e = comOsDois();
 
     expect(precoBaseEntrada(e, true)).toBe(2 * 5512 * 42);
@@ -565,7 +565,7 @@ describe("limiar de valor", () => {
     expect(anosAcimaDoLimiar(repartido)).toEqual([]);
   });
 
-  it("sem o pedido plurianual não há alerta nenhum, por alto que seja o preço base", () => {
+  it("sem o pedido plurianual não há alerta nenhum, por alto que seja o valor estimado", () => {
     // O limiar é o da competência para assumir encargos futuros: sem pedido,
     // a despesa cabe num ano e não há compromisso futuro a autorizar.
     const config = comValores(100, [6000, 6000, 6000]);

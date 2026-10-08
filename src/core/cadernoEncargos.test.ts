@@ -9,7 +9,7 @@ import type { LotesJSON } from "./types";
 
 describe("documentoRegrasEPrecoBase", () => {
   // O exemplo leva pedido de encargos plurianuais, que substitui a tabela do
-  // preço base pela dos anos. Estes testes são sobre o documento sem pedido.
+  // valor estimado pela dos anos. Estes testes são sobre o documento sem pedido.
   const SEM_PLURIANUAL: LotesJSON = {
     ...LOTES_EXEMPLO,
     encargosPlurianuais: { ...LOTES_EXEMPLO.encargosPlurianuais, ativo: false },
@@ -22,14 +22,14 @@ describe("documentoRegrasEPrecoBase", () => {
     expect(doc.subtitulo).toBeUndefined();
   });
 
-  it("apresenta o preço base numa tabela, com e sem IVA", () => {
+  it("apresenta o valor estimado numa tabela, com e sem IVA", () => {
     const tabela = doc.blocos.find((b) => b.tipo === "tabela");
     expect(tabela).toBeDefined();
 
     const titulos = tabela!.tipo === "tabela" ? tabela!.colunas.map((c) => c.titulo) : [];
     expect(titulos).toContain("Preço/hora (s/ IVA)");
-    expect(titulos).toContain("Preço base (s/ IVA)");
-    expect(titulos).toContain("Preço base (c/ IVA)");
+    expect(titulos).toContain("Valor estimado (s/ IVA)");
+    expect(titulos).toContain("Valor estimado (c/ IVA)");
   });
 
   it("diz explicitamente que os preços unitários são sem IVA", () => {
@@ -69,18 +69,18 @@ describe("documentoRegrasEPrecoBase", () => {
     expect(aSeguir[0].tipo === "lista" && aSeguir[0].numerada).toBe(true);
   });
 
-  it("mantém o preço base e os requisitos como secções próprias", () => {
-    expect(texto).toContain("Preço base");
+  it("mantém o valor estimado e os requisitos como secções próprias", () => {
+    expect(texto).toContain("Valor estimado");
     expect(texto).toContain("Requisitos mínimos de experiência profissional");
   });
 
-  it("com pedido plurianual, a tabela do preço base dá lugar à dos anos", () => {
+  it("com pedido plurianual, a tabela do valor estimado dá lugar à dos anos", () => {
     const comPedido = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
 
     expect(comPedido).toContain("Pedido de encargos plurianuais");
-    expect(comPedido).not.toContain("Preço base (c/ IVA)");
-    // O preço base do procedimento continua a constar, porque é elemento da peça.
-    expect(comPedido).toContain("O preço base do procedimento é de");
+    expect(comPedido).not.toContain("Valor estimado (c/ IVA)");
+    // O valor estimado do procedimento continua a constar, porque é elemento da peça.
+    expect(comPedido).toContain("O valor estimado do contrato é de");
   });
 
   it("conserva as matérias das secções que deixaram de ter título próprio", () => {
@@ -134,7 +134,7 @@ describe("documentoRegrasEPrecoBase", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
     const preferencia = "A adjudicação está limitada a 1 (um) lote por concorrente";
 
-    expect(texto.indexOf("o preço base é sem IVA.")).toBeLessThan(texto.indexOf(preferencia));
+    expect(texto.indexOf("o valor estimado é sem IVA.")).toBeLessThan(texto.indexOf(preferencia));
     expect(texto.indexOf(preferencia)).toBeLessThan(texto.indexOf("Regras de Adjudicação dos Lotes"));
     expect(texto).not.toContain(`1. ${preferencia}`);
   });
@@ -164,10 +164,10 @@ describe("documentoRegrasEPrecoBase", () => {
   });
 });
 
-describe("preço base", () => {
-  it("a frase do preço base vai assinalada, para sair a negrito no Word", () => {
+describe("valor estimado", () => {
+  it("a frase do valor estimado vai assinalada, para sair a negrito no Word", () => {
     const blocos = documentoRegrasEPrecoBase(LOTES_EXEMPLO).blocos;
-    const frase = blocos.find((b) => b.tipo === "paragrafo" && b.texto.startsWith("O preço base do procedimento"));
+    const frase = blocos.find((b) => b.tipo === "paragrafo" && b.texto.startsWith("O valor estimado do contrato"));
 
     expect(frase?.tipo).toBe("paragrafo");
     expect(frase?.tipo === "paragrafo" && frase.destaque).toBe(true);
@@ -207,12 +207,12 @@ describe("n.º mínimo de elementos por perfil", () => {
 });
 
 describe("divisão por lotes", () => {
-  it("dá uma linha por lote, com as horas e o preço base", () => {
+  it("dá uma linha por lote, com as horas e o valor estimado", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
 
     expect(texto).toContain("Divisão por lotes");
     expect(texto).toContain("A determinação dos lotes para efeito de adjudicação é a seguinte:");
-    for (const coluna of ["Lote n.º", "Descrição", "Total horas", "Preço base (s/ IVA)"]) {
+    for (const coluna of ["Lote n.º", "Descrição", "Total horas", "Valor estimado (s/ IVA)"]) {
       expect(texto).toContain(coluna);
     }
     for (const lote of LOTES_EXEMPLO.lotes) expect(texto).toContain(lote.designacao);
@@ -250,7 +250,7 @@ describe("divisão por lotes", () => {
       "Horas 2028",
       "Horas 2029",
       "Total horas",
-      "Preço base (s/ IVA)",
+      "Valor estimado (s/ IVA)",
     ]);
     // Cada ano conta os elementos do perfil, como o total.
     expect(tabela.linhas[0].slice(2, 6).map((c) => c.texto)).toEqual(["200", "400", "600", "1200"]);
@@ -266,10 +266,10 @@ describe("divisão por lotes", () => {
     });
 
     const tabela = blocosDivisaoPorLotes(config).find((b) => b.tipo === "tabela")!;
-    expect(tabela.colunas.map((c) => c.titulo)).toEqual(["Lote n.º", "Descrição", "Total horas", "Preço base (s/ IVA)"]);
+    expect(tabela.colunas.map((c) => c.titulo)).toEqual(["Lote n.º", "Descrição", "Total horas", "Valor estimado (s/ IVA)"]);
   });
 
-  it("as tabelas de preço base deixam de levar subtotais por lote", () => {
+  it("as tabelas de valor estimado deixam de levar subtotais por lote", () => {
     const texto = documentoParaTexto(documentoRegrasEPrecoBase(LOTES_EXEMPLO));
     expect(texto).not.toContain("Subtotal do lote");
   });

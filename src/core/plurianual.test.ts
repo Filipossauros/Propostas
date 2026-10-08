@@ -115,7 +115,7 @@ describe("comHorasDoAno", () => {
     const alterada = { ...entrada, ...comHorasDoAno(entrada, 0, 200) };
 
     expect(alterada.horas).toBe(100);
-    // Com pedido, o preço base sai da soma dos anos — 200 + 33 + 34; sem ele,
+    // Com pedido, o valor estimado sai da soma dos anos — 200 + 33 + 34; sem ele,
     // do total anual, que ficou onde estava.
     expect(precoBaseEntrada(alterada, true)).toBe(2 * 267 * 50);
     expect(precoBaseEntrada(alterada, false)).toBe(2 * 100 * 50);

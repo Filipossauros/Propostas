@@ -14,7 +14,7 @@ describe("comMargemPrudencial", () => {
     expect(comMargemPrudencial(LOTES_EXEMPLO)).toBe(LOTES_EXEMPLO);
   });
 
-  it("aplica a margem ao valor hora de cada perfil, ao cêntimo, e com ele ao preço base", () => {
+  it("aplica a margem ao valor hora de cada perfil, ao cêntimo, e com ele ao valor estimado", () => {
     const com = comMargemPrudencial({ ...LOTES_EXEMPLO, margemPrudencial: 10 });
     expect(com.lotes.flatMap((l) => l.perfis.map((e) => e.valorHora))).toEqual([46.2, 41.8, 60.5, 49.5]);
     expect(totalProcedimento(com).semIva).toBeCloseTo(totalProcedimento(LOTES_EXEMPLO).semIva * 1.1, 2);

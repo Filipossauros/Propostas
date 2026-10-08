@@ -257,7 +257,7 @@ export interface PerfilEmLote {
    * `horasContratadas`, que escolhe o que vale.
    */
   horasPorAno: number[];
-  /** Preço/hora unitário considerado para o preço base. */
+  /** Preço/hora unitário considerado para o valor estimado. */
   valorHora: number;
   /** N.º mínimo de elementos que o concorrente tem de apresentar para este perfil. */
   nMinimoElementos: number;
@@ -306,7 +306,7 @@ export interface EncargosPlurianuais {
    * Ano de início do contrato. Os anos do pedido são este e os dois seguintes.
    *
    * As horas de cada ano não estão aqui: estão em cada perfil dentro do lote,
-   * que é onde se escrevem e onde formam o preço base.
+   * que é onde se escrevem e onde formam o valor estimado.
    */
   anoInicio: number;
 }
@@ -362,7 +362,7 @@ export interface LotesJSON {
    * é conhecido nesta fase (à semelhança do perfil e do próprio agrupamento).
    */
   nomeProcedimento: string;
-  /** Taxa de IVA em percentagem, aplicada aos preços base. */
+  /** Taxa de IVA em percentagem, aplicada aos valores estimados. */
   taxaIva: number;
   /**
    * N.º de blocos de projeto de cada formulário de declaração.

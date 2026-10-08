@@ -33,7 +33,7 @@ const listaDeAnos = new Intl.ListFormat("pt-PT", { style: "long", type: "conjunc
  * competência nenhuma. Sem pedido plurianual não há anos a aferir, e o alerta
  * não aparece de todo.
  *
- * Aparecendo, diz também qual é o preço base do procedimento: é esse o valor
+ * Aparecendo, diz também qual é o valor estimado do procedimento: é esse o valor
  * que instrui o processo, e quem confirma a competência precisa dos dois.
  */
 function AlertaLimiar({ config }: Props) {
@@ -53,7 +53,7 @@ function AlertaLimiar({ config }: Props) {
       </p>
 
       <p>
-        O preço base do procedimento é <strong>{formatarMoeda(total.semIva)}</strong> sem IVA.
+        O valor estimado do contrato é <strong>{formatarMoeda(total.semIva)}</strong> sem IVA.
       </p>
 
       <p className="aviso-limiar-nota">
@@ -155,10 +155,10 @@ function TabelaPlurianual({ config }: Props) {
         </tfoot>
       </table>
 
-      {/* O preço base do procedimento é elemento da peça, e a tabela dos anos
+      {/* O valor estimado do contrato é elemento da peça, e a tabela dos anos
           exprime-se toda com IVA: fica aqui, para não desaparecer com ela. */}
       <p className="ajuda">
-        Preço base total do procedimento: <strong>{formatarMoeda(total.semIva)}</strong> sem IVA,{" "}
+        Valor estimado do contrato: <strong>{formatarMoeda(total.semIva)}</strong> sem IVA,{" "}
         <strong>{formatarMoeda(total.comIva)}</strong> com IVA.
       </p>
     </div>
@@ -173,7 +173,7 @@ export function TabelaValores({ config }: Props) {
   return (
     <>
       <AlertaLimiar config={config} />
-      {/* Ou uma, ou outra: as duas tabelas dizem o mesmo preço base por caminhos
+      {/* Ou uma, ou outra: as duas tabelas dizem o mesmo valor estimado por caminhos
           diferentes, e apresentá-las juntas obrigava a lê-las uma contra a outra. */}
       {config.encargosPlurianuais.ativo ? <TabelaPlurianual config={config} /> : <TabelaPrecoBase config={config} />}
     </>
@@ -202,13 +202,13 @@ function TabelaPrecoBase({ config }: Props) {
               Preço/hora <span className="cabecalho-nota">sem IVA</span>
             </th>
             <th scope="col" className="numerico">
-              Preço base <span className="cabecalho-nota">sem IVA</span>
+              Valor estimado <span className="cabecalho-nota">sem IVA</span>
             </th>
             <th scope="col" className="numerico">
               IVA <span className="cabecalho-nota">{formatarNumero(taxa)}%</span>
             </th>
             <th scope="col" className="numerico">
-              Preço base <span className="cabecalho-nota">com IVA</span>
+              Valor estimado <span className="cabecalho-nota">com IVA</span>
             </th>
           </tr>
         </thead>
@@ -247,7 +247,7 @@ function TabelaPrecoBase({ config }: Props) {
         <tfoot>
           <tr>
             <th scope="row" colSpan={5}>
-              Preço base total do procedimento
+              Valor estimado do contrato
             </th>
             <td className="numerico">
               <strong>{formatarMoeda(total.semIva)}</strong>

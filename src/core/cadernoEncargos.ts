@@ -28,7 +28,7 @@ import { DIAS_DE_FERIADO_MUNICIPAL, DIAS_DE_FERIAS, HORAS_POR_DIA, horasUteis } 
 const DIREITA = "direita" as const;
 
 /**
- * O preço base por lote e perfil — a mesma tabela que o Módulo 3 apresenta no
+ * O valor estimado por lote e perfil — a mesma tabela que o Módulo 3 apresenta no
  * «Resumo do procedimento» quando não há pedido plurianual, da mesma fonte.
  */
 export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { tipo: "tabela" }> {
@@ -48,7 +48,7 @@ export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { ti
   const total = totalProcedimento(config);
   linhas.push([
     celula("", undefined, true),
-    celula("Preço base total do procedimento", undefined, true),
+    celula("Valor estimado do contrato", undefined, true),
     celula("", DIREITA, true),
     celula("", DIREITA, true),
     celula("", DIREITA, true),
@@ -58,15 +58,15 @@ export function tabelaPrecoBase(config: LotesJSON): Extract<BlocoDocumento, { ti
 
   return {
     tipo: "tabela",
-    legenda: `Preço base por lote e perfil. Os preços unitários por hora são apresentados sem IVA; a taxa aplicada é de ${formatarNumero(taxa)}%.`,
+    legenda: `Valor estimado por lote e perfil. Os preços unitários por hora são apresentados sem IVA; a taxa aplicada é de ${formatarNumero(taxa)}%.`,
     colunas: [
       { titulo: "Lote", peso: 6 },
       { titulo: "Perfil", peso: 26 },
       { titulo: "N.º mín. elementos", alinhamento: DIREITA, peso: 12 },
       { titulo: "Horas", alinhamento: DIREITA, peso: 10 },
       { titulo: "Preço/hora (s/ IVA)", alinhamento: DIREITA, peso: 14 },
-      { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 16 },
-      { titulo: "Preço base (c/ IVA)", alinhamento: DIREITA, peso: 16 },
+      { titulo: "Valor estimado (s/ IVA)", alinhamento: DIREITA, peso: 16 },
+      { titulo: "Valor estimado (c/ IVA)", alinhamento: DIREITA, peso: 16 },
     ],
     linhas,
   };
@@ -163,7 +163,7 @@ function blocosDeRequisitos(config: LotesJSON): BlocoDocumento[] {
   });
 }
 
-/** Preço base e requisitos por lote e perfil. */
+/** Valor estimado e requisitos por lote e perfil. */
 /**
  * Se as horas de todos os perfis, em todos os anos, são as horas úteis desse
  * ano — as que o botão «Preencher com as horas úteis» do Módulo 3 escreve.
@@ -285,20 +285,20 @@ export function blocosEncargosPlurianuais(config: LotesJSON): BlocoDocumento[] {
       linhas,
     },
     {
-      // A tabela dos anos exprime-se toda com IVA. O preço base do procedimento
+      // A tabela dos anos exprime-se toda com IVA. O valor estimado do procedimento
       // é elemento da peça e não pode sair dela por essa via — e sai a negrito,
       // que é o número que se procura ao folhear o documento.
       tipo: "paragrafo",
       destaque: true,
       texto:
-        `O preço base do procedimento é de ${formatarMoeda(totalProcedimento(config).semIva)}, sem IVA, ` +
+        `O valor estimado do contrato é de ${formatarMoeda(totalProcedimento(config).semIva)}, sem IVA, ` +
         `correspondendo a ${formatarMoeda(totalProcedimento(config).comIva)} com IVA à taxa legal em vigor.`,
     },
   ];
 }
 
 /**
- * O que cada lote leva: horas e preço base.
+ * O que cada lote leva: horas e valor estimado.
  *
  * É a leitura que interessa a quem adjudica — um lote é o que se adjudica de
  * uma vez —, e vem sem título próprio porque cada documento lhe dá o seu: nas
@@ -336,13 +336,13 @@ export function blocosDivisaoPorLotes(config: LotesJSON): BlocoDocumento[] {
         { titulo: "Descrição", peso: 27 },
         ...anos.map((ano) => ({ titulo: `Horas ${ano}`, alinhamento: DIREITA, peso: 12 })),
         { titulo: "Total horas", alinhamento: DIREITA, peso: 13 },
-        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 16 },
+        { titulo: "Valor estimado (s/ IVA)", alinhamento: DIREITA, peso: 16 },
       ]
     : [
         { titulo: "Lote n.º", alinhamento: DIREITA, peso: 10 },
         { titulo: "Descrição", peso: 46 },
         { titulo: "Total horas", alinhamento: DIREITA, peso: 18 },
-        { titulo: "Preço base (s/ IVA)", alinhamento: DIREITA, peso: 26 },
+        { titulo: "Valor estimado (s/ IVA)", alinhamento: DIREITA, peso: 26 },
       ];
 
   return [
@@ -351,8 +351,8 @@ export function blocosDivisaoPorLotes(config: LotesJSON): BlocoDocumento[] {
       tipo: "tabela",
       legenda: plurianual
         ? "As horas de cada lote são as de todos os elementos que o compõem, por ano económico e no total; o " +
-          "preço base é sem IVA."
-        : "As horas de cada lote são as de todos os elementos que o compõem; o preço base é sem IVA.",
+          "valor estimado é sem IVA."
+        : "As horas de cada lote são as de todos os elementos que o compõem; o valor estimado é sem IVA.",
       colunas,
       linhas,
     },
@@ -394,7 +394,7 @@ function horasDoLote(lote: LotesJSON["lotes"][number], plurianual: boolean): num
 }
 
 /**
- * O preço base do procedimento: ou a repartição por anos, ou a tabela simples.
+ * O valor estimado do procedimento: ou a repartição por anos, ou a tabela simples.
  *
  * Ou uma, ou outra: com pedido plurianual, a repartição por anos é o preço
  * base, e as duas juntas obrigavam a lê-las uma contra a outra.
@@ -402,7 +402,7 @@ function horasDoLote(lote: LotesJSON["lotes"][number], plurianual: boolean): num
 function blocosPrecoBase(config: LotesJSON): BlocoDocumento[] {
   const precoBase: BlocoDocumento[] = config.encargosPlurianuais.ativo
     ? blocosEncargosPlurianuais(config)
-    : [{ tipo: "titulo", nivel: 1, texto: "Preço base" }, tabelaPrecoBase(config)];
+    : [{ tipo: "titulo", nivel: 1, texto: "Valor estimado" }, tabelaPrecoBase(config)];
 
   return [
     ...precoBase,
@@ -564,7 +564,7 @@ function listaPorExtenso(itens: string[]): string {
 /**
  * O anexo técnico: o que se contrata e como se prova.
  *
- * Vive à parte do preço base porque é a parte que segue igual nos dois
+ * Vive à parte do valor estimado porque é a parte que segue igual nos dois
  * documentos Word — o desta aplicação, onde é o corpo, e o do modelo formal da
  * organização, onde entra debaixo do «IV – Anexo Técnico».
  */
@@ -612,7 +612,7 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
 }
 
 /**
- * Documento único do procedimento: preço base, requisitos e regras.
+ * Documento único do procedimento: valor estimado, requisitos e regras.
  *
  * Um só título — o das regras — e todo o resto em secções debaixo dele. As
  * regras vão em secções e não em artigos: a numeração e a inserção sistemática

@@ -7,7 +7,7 @@
 // os anexos (memória de cálculo, especificações técnicas, resumos curriculares
 // e as duas folhas do eAvalia).
 //
-// As tabelas são as da aplicação, e não as do modelo: o quadro do preço base,
+// As tabelas são as da aplicação, e não as do modelo: o quadro do valor estimado,
 // o da divisão por lotes, os dos requisitos e o do posto de trabalho saem como
 // saíam na informação anterior, só no tipo de letra do novo modelo.
 //
@@ -1005,7 +1005,7 @@ function corpo(
         renderizar({
           ...bloco,
           legenda:
-            `${bloco.legenda ?? ""} O preço base inclui a margem prudencial de ${formatarNumero(margem)} %.`.trim(),
+            `${bloco.legenda ?? ""} O valor estimado inclui a margem prudencial de ${formatarNumero(margem)} %.`.trim(),
         }),
       );
       continue;
@@ -1196,7 +1196,7 @@ function corpo(
   );
   // Os parágrafos e o quadro dos anos da informação anterior: o enquadramento
   // do período, a repartição das horas e os encargos por ano, com IVA.
-  // Sem encargos plurianuais o contrato cabe num ano, e o quadro é o do preço base.
+  // Sem encargos plurianuais o contrato cabe num ano, e o quadro é o do valor estimado.
   if (!plurianual) p.push(tabelaDoBloco(tabelaPrecoBase(config)));
   for (const bloco of blocosEncargosPlurianuais(config)) {
     if (bloco.tipo === "titulo") continue;

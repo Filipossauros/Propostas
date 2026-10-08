@@ -864,7 +864,7 @@ input.campo-derivado {
   gap: 10px;
 }
 
-/* O preço base é dinheiro: alinha à direita, cabeçalho incluído. */
+/* O valor estimado é dinheiro: alinha à direita, cabeçalho incluído. */
 .grelha-perfil-lote > :nth-child(6) {
   text-align: right;
 }
