@@ -232,7 +232,7 @@ function App() {
       <header className="app-cabecalho">
         <div className="cabecalho-topo">
           <div className="marca">
-            <h1>Procedimento Pré-contratual</h1>
+            <h1>Manifestações de Necessidades</h1>
             <p>Aquisição de serviços de desenvolvimento e manutenção</p>
           </div>
 
