@@ -2,7 +2,7 @@
 //
 // Vive à parte dos ecrãs porque há conjuntos que se reaproveitam: as peças do
 // procedimento (Módulo 3) levam também os ficheiros dos perfis (Módulo 2), e a
-// ordenação (Módulo 5) leva os da avaliação (Módulo 4). Ter a lista escrita uma
+// ordenação (Módulo 5) leva os da análise (Módulo 4). Ter a lista escrita uma
 // só vez é o que garante que o pacote maior não fica a divergir do menor.
 
 import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "../core/types";

@@ -341,7 +341,7 @@ export function Modulo2({
             <strong>Cada concorrente não pode ficar com mais do que um lote</strong>
             <span className="ajuda">
               Os lotes são apreciados por ordem do número: quem ficar com o lote 1 fica impedido nos seguintes. A
-              regra sai no documento Word, com título próprio, e é aplicada na avaliação do Módulo 4.
+              regra sai no documento Word, com título próprio, e é aplicada na análise do Módulo 4.
             </span>
           </span>
         </label>

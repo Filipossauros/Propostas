@@ -1,4 +1,4 @@
-// Relatório Excel dos resultados de avaliação — todos os lotes de uma vez.
+// Relatório Excel dos resultados da análise — todos os lotes de uma vez.
 //
 // Usa exceljs, e não SheetJS, pela mesma razão que o formulário: é preciso
 // formatar. Um relatório que sai do júri para outras mãos tem de se ler sem
@@ -249,7 +249,7 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
 
   sheet.mergeCells(1, 1, 1, 2);
   const titulo = sheet.getCell(1, 1);
-  titulo.value = "RELATÓRIO DE AVALIAÇÃO DA EXPERIÊNCIA PROFISSIONAL";
+  titulo.value = "RELATÓRIO DE ANÁLISE DA EXPERIÊNCIA PROFISSIONAL";
   titulo.font = { bold: true, size: 14, color: { argb: COR_FAIXA } };
   titulo.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(1).height = 26;
@@ -257,7 +257,7 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
   const campos: Array<[string, string | number]> = [
     ["Projeto", config.nomeProjeto],
     ["Procedimento", config.nomeProcedimento],
-    ["Lotes avaliados", resultado.lotes.length],
+    ["Lotes analisados", resultado.lotes.length],
     ["Concorrentes", concorrentesDoProcedimento(resultado).length],
     ["Um lote por concorrente", resultado.umLotePorConcorrente ? "Sim" : "Não"],
     ["Declarações por atribuir", resultado.naoAtribuidas.length],

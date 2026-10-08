@@ -36,7 +36,7 @@ export function importarResultadosJSON(texto: string): ResultadosJSON {
     throw new ErroImportacao("O ficheiro não contém JSON válido.");
   }
   if (typeof bruto !== "object" || bruto === null || Array.isArray(bruto)) {
-    throw new ErroImportacao("O ficheiro não corresponde a resultados de avaliação.");
+    throw new ErroImportacao("O ficheiro não corresponde a resultados de análise.");
   }
 
   const ficheiro = bruto as Partial<ResultadosJSON>;
@@ -48,7 +48,7 @@ export function importarResultadosJSON(texto: string): ResultadosJSON {
   }
   if (ficheiro.tipo !== "resultados") {
     throw new ErroImportacao(
-      `Este ficheiro é do tipo "${String(ficheiro.tipo)}", não resultados de avaliação. ` +
+      `Este ficheiro é do tipo "${String(ficheiro.tipo)}", não resultados de análise. ` +
         "Carregue o JSON de resultados descarregado do Módulo 4.",
     );
   }

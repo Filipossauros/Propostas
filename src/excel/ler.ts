@@ -73,7 +73,7 @@ function identificacaoVazia(): Identificacao {
 }
 
 /**
- * Localiza a folha do perfil que se está a avaliar.
+ * Localiza a folha do perfil que se está a analisar.
  *
  * O formulário passou a ter uma folha por perfil, e o nome da folha é a
  * designação truncada aos 31 carateres do Excel — não serve de chave fiável.
@@ -200,7 +200,7 @@ export async function lerWorkbookDeFicheiro(ficheiro: File): Promise<XLSX.WorkBo
  *
  * O ficheiro de um lote traz uma folha por perfil, e o candidato preenche
  * apenas a sua: as restantes vêm em branco e não devem contar como propostas
- * por avaliar.
+ * por analisar.
  */
 function temConteudo(declaracao: Declaracao): boolean {
   const { nome, entidadeConcorrente, procedimento } = declaracao.identificacao;

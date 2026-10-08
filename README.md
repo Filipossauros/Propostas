@@ -1,10 +1,10 @@
 # Manifestações de Necessidades
 
-Ferramenta interna para preparar e avaliar a componente de experiência profissional de um
+Ferramenta interna para preparar e analisar a componente de experiência profissional de um
 procedimento de contratação pública com o preço como critério único.
 
 Aplicação 100% cliente: sem backend e sem qualquer chamada de rede. Os ficheiros de propostas
-em avaliação nunca saem do posto de trabalho.
+em análise nunca saem do posto de trabalho.
 
 ## Os cinco módulos
 
@@ -15,7 +15,7 @@ O fluxo acompanha papéis distintos, que raramente são a mesma pessoa:
 | **1 · Projeto** | Responsável do projeto | Identifica o projeto (nome e descrição) e justifica a aquisição: objetivos, benefícios e riscos da não contratação | Nenhuma própria: segue nos ficheiros dos perfis e dos lotes |
 | **2 · Perfis** | Elemento técnico | Define os requisitos mínimos de experiência, o conteúdo funcional e as certificações de cada perfil | Excel de resumo (uma folha por perfil), JSON com todos os perfis |
 | **3 · Lotes** | Responsável do procedimento | Agrupa perfis em lotes e atribui horas, preço/hora e n.º mínimo de elementos | Documento Word, JSON do agrupamento, pedido de parecer eAvalia, formulários de declaração (um Excel por lote) |
-| **4 · Avaliação** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
+| **4 · Análise** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
 | **5 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 4, mais a ordenação de cada lote e os vencedores |
 
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão

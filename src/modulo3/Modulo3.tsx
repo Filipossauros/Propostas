@@ -122,10 +122,10 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   }
 
   function recomecar() {
-    if (!confirm("Apagar a avaliação em curso e recomeçar do zero?")) return;
+    if (!confirm("Apagar a análise em curso e recomeçar do zero?")) return;
     setConfig(null);
     limparAvaliacao();
-    setMensagem({ tipo: "sucesso", texto: "Avaliação reposta." });
+    setMensagem({ tipo: "sucesso", texto: "Análise reposta." });
   }
 
   async function carregarDeclaracoes(ficheiros: FileList) {
@@ -162,7 +162,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   }
 
   /**
-   * Retira uma declaração da avaliação.
+   * Retira uma declaração da análise.
    *
    * Chega ficheiro trocado, versão repetida, folha que afinal não era daquele
    * concorrente — e sem isto a única saída era recarregar tudo. Sai também o
@@ -189,7 +189,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
       ).map((a) => ({ ...a, nomeCanonico: escolhido.get(a.nomeOriginal) ?? a.nomeCanonico }));
     });
 
-    setMensagem({ tipo: "sucesso", texto: "Declaração removida da avaliação." });
+    setMensagem({ tipo: "sucesso", texto: "Declaração removida da análise." });
   }
 
   /** Retira só a comparação com o PDF, deixando a declaração onde está. */
@@ -313,7 +313,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             <h3>Passo 2 · Declarações recebidas</h3>
             <p className="painel-nota">
               Carregue de uma vez todos os formulários entregues. Cada folha preenchida é associada ao lote e ao
-              perfil que identifica, e todos os lotes são avaliados em conjunto.
+              perfil que identifica, e todos os lotes são analisados em conjunto.
             </p>
           </header>
 
