@@ -234,7 +234,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
     <div className="modulo">
       <header className="modulo-cabecalho">
         <div className="modulo-titulo-linha">
-          <h2>Módulo 4 · Avaliação de declarações</h2>
+          <h2>Módulo 4 · Análise das declarações</h2>
           <div className="acoes-linha">
             <button type="button" className="botao-discreto" onClick={carregarExemplo}>
               Carregar exemplo

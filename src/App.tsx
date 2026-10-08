@@ -66,7 +66,7 @@ const GRUPOS_DE_ABAS: Array<{ titulo: string; abas: AbaDeModulo[] }> = [
   {
     titulo: "Análise das propostas",
     abas: [
-      { chave: "avaliacao", numero: "4", titulo: "Avaliação", descricao: "Apuramento" },
+      { chave: "avaliacao", numero: "4", titulo: "Análise", descricao: "Apuramento" },
       { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e vencedores" },
     ],
   },
