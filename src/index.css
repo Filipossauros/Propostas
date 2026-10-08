@@ -126,11 +126,110 @@ body {
 }
 
 .marca p {
-  margin: 2px 0 20px;
+  margin: 2px 0 0;
   color: var(--texto-suave);
 }
 
 /* ------------------------------------------------------------------- Abas */
+
+/* O nome à esquerda e as vistas de gestão à direita; por baixo, o menu dos
+   cinco módulos numa barra só, dividida entre preparação e análise. */
+.cabecalho-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.vistas-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vistas-topo .aba {
+  padding: 6px 12px 6px 8px;
+}
+
+.grupo-abas-titulo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.menu-modulos {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.grupo-abas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px 12px;
+}
+
+.grupo-abas + .grupo-abas {
+  border-left: 1px solid var(--borda);
+}
+
+.grupo-abas .abas {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.grupo-abas .aba {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 8px;
+  gap: 8px;
+}
+
+.grupo-abas .aba-numero {
+  width: 22px;
+  height: 22px;
+  font-size: 0.72rem;
+}
+
+.grupo-abas .aba-texto {
+  min-width: 0;
+}
+
+.grupo-abas .aba-titulo,
+.grupo-abas .aba-descricao {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aba .aba-descricao.aba-estado-falta,
+.aba.aba-ativa .aba-descricao.aba-estado-falta {
+  color: var(--ambar);
+}
+
+@media (max-width: 760px) {
+  .menu-modulos {
+    grid-template-columns: 1fr;
+  }
+
+  .grupo-abas + .grupo-abas {
+    border-left: 0;
+    border-top: 1px solid var(--borda);
+  }
+
+  .grupo-abas .abas {
+    flex-direction: column;
+  }
+}
 
 .abas {
   display: flex;
@@ -156,19 +255,6 @@ body {
   border-color: var(--borda-forte);
 }
 
-/* Os cinco módulos partilham a primeira linha em partes iguais: o caminho lê-se
-   de uma vez, sem a ordenação a cair sozinha para a linha de baixo. */
-.aba.aba-modulo {
-  flex: 1 1 0;
-  min-width: 0;
-  padding-right: 10px;
-}
-
-@media (max-width: 760px) {
-  .aba.aba-modulo {
-    flex: 1 1 auto;
-  }
-}
 
 .aba-numero {
   display: grid;
@@ -292,6 +378,12 @@ body {
   margin: 0;
   font-size: 1.3rem;
   letter-spacing: -0.01em;
+}
+
+.modulo-quem {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
 }
 
 .modulo-subtitulo {
@@ -2246,4 +2338,70 @@ tbody.grupo-projeto.projeto-alvo td {
 
 .campo-justificacao-margem textarea {
   width: 100%;
+}
+
+/* ------------------------------------------------ Como funciona (Módulo 1) */
+
+.passos-preparacao {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.passos-preparacao li {
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.passos-preparacao strong {
+  display: block;
+  color: var(--texto);
+}
+
+@media (max-width: 760px) {
+  .passos-preparacao {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* O que falta diz-se junto ao campo e na lista, a âmbar: é por fazer, não erro. */
+.aviso-inline.aviso-inline-falta,
+.estado-perfil-falta {
+  color: var(--ambar);
+}
+
+/* ------------------------------------------- Verificação do Anexo Técnico */
+
+.verificacao-anexo {
+  margin: 12px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.verificacao-anexo li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--borda);
+}
+
+.verificacao-anexo li:first-child {
+  border-top: 0;
+}
+
+.estado-verificacao {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  text-align: right;
+}
+
+.estado-verificacao-falta {
+  color: var(--ambar);
 }

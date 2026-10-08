@@ -132,6 +132,9 @@ export function Modulo4({ recebido, onLimparRecebido }: Props) {
           </div>
         </div>
         <p className="modulo-subtitulo">Ordena pelo preço as propostas admitidas em cada lote.</p>
+        <p className="modulo-quem">
+          <strong>Quem preenche:</strong> o júri, com os preços das propostas admitidas.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />

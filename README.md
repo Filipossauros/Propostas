@@ -1,4 +1,4 @@
-# Propostas
+# Procedimento Pré-contratual
 
 Ferramenta interna para preparar e avaliar a componente de experiência profissional de um
 procedimento de contratação pública com o preço como critério único.

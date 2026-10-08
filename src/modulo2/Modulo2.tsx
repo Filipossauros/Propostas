@@ -120,15 +120,15 @@ export function Modulo2({
   // procurar nesta página.
   const noModulo = (sufixo: string, lista: ErroValidacao[]) =>
     lista.map((e) => ({ ...e, mensagem: `${e.mensagem} (${sufixo})` }));
-  const erros = [
-    ...noModulo("Módulo 1 · Projeto", [
-      ...validarNomeProjeto(nomeProjeto),
-      ...validarDescricaoProjeto(descricaoProjeto),
-      ...validarJustificacao(justificacao),
-    ]),
-    ...noModulo("Módulo 2 · Perfis", validarCategoriasEavalia(config)),
-    ...validarLotes(config),
-  ];
+  const errosDoProjeto = noModulo("Módulo 1 · Projeto", [
+    ...validarNomeProjeto(nomeProjeto),
+    ...validarDescricaoProjeto(descricaoProjeto),
+    ...validarJustificacao(justificacao),
+  ]);
+  const errosDosPerfis = noModulo("Módulo 2 · Perfis", validarCategoriasEavalia(config));
+  const errosDosLotes = validarLotes(config);
+  const erros = [...errosDoProjeto, ...errosDosPerfis, ...errosDosLotes];
+  const comPdf = config.numeroInformacao.trim() !== "" && config.numeroOrcamento.trim() !== "";
   const podeExportar = erros.length === 0;
 
   // "Por atribuir" é derivado, não é estado próprio: são os perfis do catálogo
@@ -296,8 +296,11 @@ export function Modulo2({
           </div>
         </div>
         <p className="modulo-subtitulo">
-          Recebe os perfis definidos no Módulo 2 enviados diretamente ou carregados de ficheiro, agrupa-os em lotes e
-          atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos.
+          Agrupa os perfis do Módulo 2 em lotes,
+          atribui a cada um as horas, o preço unitário e o n.º mínimo de elementos, e gera o Anexo Técnico.
+        </p>
+        <p className="modulo-quem">
+          <strong>Quem preenche:</strong> o responsável do procedimento.
         </p>
       </header>
 
@@ -682,6 +685,38 @@ export function Modulo2({
           sai a vermelho. Só com os dois preenchidos o ZIP leva também a informação em PDF, com o mesmo conteúdo
           do Word; faltando um, o PDF não é gerado, porque ficaria com esse número por preencher.
         </p>
+        {/* Antes do botão, o ponto da situação: quem chega aqui sem conhecer a
+            aplicação vê de uma vez o que está feito, o que falta e onde. */}
+        <ul className="verificacao-anexo">
+          {[
+            { nome: "Projeto (Módulo 1)", lista: errosDoProjeto },
+            { nome: "Perfis (Módulo 2)", lista: errosDosPerfis },
+            { nome: "Lotes, parâmetros e júri (este módulo)", lista: errosDosLotes },
+          ].map((linha) => (
+            <li key={linha.nome}>
+              <span>{linha.nome}</span>
+              {linha.lista.length === 0 ? (
+                <span className="estado-verificacao">completo</span>
+              ) : (
+                <span className="estado-verificacao estado-verificacao-falta" title={linha.lista.map((e) => e.mensagem).join("\n")}>
+                  {linha.lista.length === 1 ? "1 questão por resolver" : `${linha.lista.length} questões por resolver`}
+                </span>
+              )}
+            </li>
+          ))}
+          <li>
+            <span>N.º da informação e n.º de orçamento</span>
+            <span className="estado-verificacao">
+              {comPdf ? "preenchidos · sai também o PDF" : "facultativos · sem os dois não sai o PDF"}
+            </span>
+          </li>
+        </ul>
+        <p className="ajuda">
+          <strong>O ZIP vai conter:</strong> a manifestação de necessidades em Word{comPdf ? " e em PDF" : ""}, o pedido
+          de parecer prévio eAvalia, {lotesComPerfis.length === 1 ? "1 formulário" : `${lotesComPerfis.length} formulários`}{" "}
+          de declaração de experiência (um por lote), o JSON dos lotes e, na pasta «Perfis», o Excel e o JSON do
+          Módulo 2.
+        </p>
         <div className="acoes">
           <button
             type="button"
@@ -697,11 +732,6 @@ export function Modulo2({
             Para descarregar, resolva primeiro: {erros.map((e) => e.mensagem).join(" · ")}
           </p>
         )}
-        <p className="ajuda">
-          Um ZIP com tudo o que o procedimento precisa: a manifestação de
-          necessidades no modelo da organização, o pedido de parecer prévio eAvalia, o JSON dos lotes, um formulário de
-          declaração de experiência por lote — e, na pasta «Perfis», o Excel e o JSON do Módulo 2.
-        </p>
         {lotesComPerfis.length === 0 && <p className="estado-vazio">Ainda não há perfis atribuídos a lotes.</p>}
       </section>
 

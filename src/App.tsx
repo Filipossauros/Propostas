@@ -13,9 +13,23 @@ import {
   justificacaoInicial,
   normalizarJustificacao,
   temJustificacao,
+  validarJustificacao,
 } from "./core/justificacao";
-import { ehListaDePerfisGuardada, normalizarPerfisGuardados } from "./core/perfil";
-import { lotePorPerfilId, lotesIniciais, normalizarLotesGuardados, sincronizarPerfisEmLotes } from "./core/lotes";
+import {
+  ehListaDePerfisGuardada,
+  normalizarPerfisGuardados,
+  validarDescricaoProjeto,
+  validarNomeProjeto,
+  validarPerfis,
+} from "./core/perfil";
+import {
+  lotePorPerfilId,
+  lotesIniciais,
+  normalizarLotesGuardados,
+  sincronizarPerfisEmLotes,
+  validarCategoriasEavalia,
+  validarLotes,
+} from "./core/lotes";
 import { useEstadoPersistente } from "./core/useEstadoPersistente";
 import { ProtecaoExemplos } from "./ui/ProtecaoExemplos";
 import { ModuloProjeto } from "./projeto/ModuloProjeto";
@@ -28,21 +42,55 @@ import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
 
 type Aba = "projeto" | "perfis" | "lotes" | "avaliacao" | "ordenacao" | "vistaGeral" | "vistaDirecao";
 
-const ABAS: Array<{ chave: Aba; numero: string; titulo: string; descricao: string }> = [
-  { chave: "projeto", numero: "1", titulo: "Projeto", descricao: "Descrição e justificação" },
-  { chave: "perfis", numero: "2", titulo: "Perfis", descricao: "Requisitos e conteúdo" },
-  { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Agrupamento e valor estimado" },
-  { chave: "avaliacao", numero: "4", titulo: "Avaliação", descricao: "Apuramento das declarações" },
-  { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e classificação" },
+interface AbaDeModulo {
+  chave: Aba;
+  numero: string;
+  titulo: string;
+  descricao: string;
+}
+
+/**
+ * Os cinco módulos, em dois grupos: a preparação do procedimento, feita por
+ * quem o lança, e a análise das propostas, feita pelo júri. São momentos e
+ * pessoas diferentes, e o menu mostra-o.
+ */
+const GRUPOS_DE_ABAS: Array<{ titulo: string; abas: AbaDeModulo[] }> = [
+  {
+    titulo: "Preparação do procedimento",
+    abas: [
+      { chave: "projeto", numero: "1", titulo: "Projeto", descricao: "Descrição e justificação" },
+      { chave: "perfis", numero: "2", titulo: "Perfis", descricao: "Requisitos e conteúdo" },
+      { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Valor e Anexo Técnico" },
+    ],
+  },
+  {
+    titulo: "Análise das propostas",
+    abas: [
+      { chave: "avaliacao", numero: "4", titulo: "Avaliação", descricao: "Apuramento" },
+      { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e vencedores" },
+    ],
+  },
 ];
+
+/** O estado de um módulo, dito no próprio separador: o que falta, ou que está completo. */
+interface EstadoDaAba {
+  texto: string;
+  falta: boolean;
+}
+
+function estadoPorErros(n: number): EstadoDaAba {
+  return n === 0
+    ? { texto: "completo", falta: false }
+    : { texto: n === 1 ? "1 questão por resolver" : `${n} questões por resolver`, falta: true };
+}
 
 /**
  * As vistas gerais não são o sexto passo de nada.
  *
  * Os cinco módulos são um caminho: projeto, perfis, lotes, avaliação,
  * ordenação, sempre do mesmo procedimento. Estas olham para muitos
- * procedimentos ao mesmo tempo, e por isso ficam à parte — numa linha própria,
- * por baixo dos cinco, e com
+ * procedimentos ao mesmo tempo, e por isso ficam à parte — no canto do
+ * cabeçalho, fora do menu dos módulos, e com
  * cor própria, para não se lerem como o passo a seguir à ordenação.
  *
  * São duas, uma por cada altura a que a pergunta se faz: a da unidade junta os
@@ -54,15 +102,15 @@ const ABAS_DE_VISTA: Array<{ chave: Aba; marca: string; classe: string; titulo: 
     chave: "vistaGeral",
     marca: "Σ",
     classe: "aba-unidade",
-    titulo: "Vista Geral da Unidade",
-    descricao: "Orçamento e pessoas da unidade",
+    titulo: "Unidade",
+    descricao: "Vista Geral da Unidade: orçamento e pessoas da unidade",
   },
   {
     chave: "vistaDirecao",
     marca: "ΣΣ",
     classe: "aba-direcao",
-    titulo: "Vista Geral da Direção",
-    descricao: "As unidades da direção lado a lado",
+    titulo: "Direção",
+    descricao: "Vista Geral da Direção: as unidades da direção lado a lado",
   },
 ];
 
@@ -157,6 +205,22 @@ function App() {
     if (temJustificacao(doFicheiro) && !temJustificacao(justificacao)) setJustificacao(doFicheiro);
   }
 
+  // O estado de cada módulo de preparação, para o separador o dizer sem ser
+  // preciso abri-lo. Sem nada escrito, o separador mostra só o que lá se faz.
+  const estados: Partial<Record<Aba, EstadoDaAba>> = {};
+  const projetoVazio = nomeProjeto.trim() === "" && descricaoProjeto.trim() === "" && !temJustificacao(justificacao);
+  if (!projetoVazio) {
+    estados.projeto = estadoPorErros(
+      validarNomeProjeto(nomeProjeto).length +
+        validarDescricaoProjeto(descricaoProjeto).length +
+        validarJustificacao(justificacao).length,
+    );
+  }
+  if (perfis.length > 0) estados.perfis = estadoPorErros(validarPerfis(perfis).length);
+  if (lotes.lotes.length > 0) {
+    estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
+  }
+
   function irPara(destino: Aba) {
     setAba(destino);
     window.scrollTo({ top: 0 });
@@ -166,47 +230,61 @@ function App() {
     <ProtecaoExemplos>
       <div className="app">
       <header className="app-cabecalho">
-        <div className="marca">
-          <h1>Propostas</h1>
-          <p>Requisitos de experiência profissional e avaliação de propostas</p>
+        <div className="cabecalho-topo">
+          <div className="marca">
+            <h1>Procedimento Pré-contratual</h1>
+            <p>Aquisição de serviços de desenvolvimento e manutenção</p>
+          </div>
+
+          <nav className="vistas-topo" aria-label="Vistas de gestão">
+            <span className="grupo-abas-titulo">Vistas de gestão</span>
+            {ABAS_DE_VISTA.map((v) => (
+              <button
+                key={v.chave}
+                type="button"
+                className={aba === v.chave ? `aba ${v.classe} aba-ativa` : `aba ${v.classe}`}
+                aria-current={aba === v.chave ? "page" : undefined}
+                title={v.descricao}
+                onClick={() => setAba(v.chave)}
+              >
+                <span className="aba-numero" aria-hidden="true">
+                  {v.marca}
+                </span>
+                <span className="aba-texto">
+                  <span className="aba-titulo">{v.titulo}</span>
+                </span>
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <nav className="abas" aria-label="Módulos">
-          {ABAS.map((a) => (
-            <button
-              key={a.chave}
-              type="button"
-              className={aba === a.chave ? "aba aba-modulo aba-ativa" : "aba aba-modulo"}
-              aria-current={aba === a.chave ? "page" : undefined}
-              onClick={() => setAba(a.chave)}
-            >
-              <span className="aba-numero">{a.numero}</span>
-              <span className="aba-texto">
-                <span className="aba-titulo">{a.titulo}</span>
-                <span className="aba-descricao">{a.descricao}</span>
-              </span>
-            </button>
-          ))}
-
-          {/* Força a vista para uma linha própria, por baixo dos cinco módulos. */}
-          <span className="abas-quebra" aria-hidden="true" />
-
-          {ABAS_DE_VISTA.map((v) => (
-            <button
-              key={v.chave}
-              type="button"
-              className={aba === v.chave ? `aba ${v.classe} aba-ativa` : `aba ${v.classe}`}
-              aria-current={aba === v.chave ? "page" : undefined}
-              onClick={() => setAba(v.chave)}
-            >
-              <span className="aba-numero" aria-hidden="true">
-                {v.marca}
-              </span>
-              <span className="aba-texto">
-                <span className="aba-titulo">{v.titulo}</span>
-                <span className="aba-descricao">{v.descricao}</span>
-              </span>
-            </button>
+        <nav className="menu-modulos" aria-label="Módulos">
+          {GRUPOS_DE_ABAS.map((g) => (
+            <div key={g.titulo} className="grupo-abas">
+              <span className="grupo-abas-titulo">{g.titulo}</span>
+              <div className="abas">
+                {g.abas.map((a) => {
+                  const estado = estados[a.chave];
+                  return (
+                    <button
+                      key={a.chave}
+                      type="button"
+                      className={aba === a.chave ? "aba aba-modulo aba-ativa" : "aba aba-modulo"}
+                      aria-current={aba === a.chave ? "page" : undefined}
+                      onClick={() => setAba(a.chave)}
+                    >
+                      <span className="aba-numero">{a.numero}</span>
+                      <span className="aba-texto">
+                        <span className="aba-titulo">{a.titulo}</span>
+                        <span className={estado?.falta ? "aba-descricao aba-estado-falta" : "aba-descricao"}>
+                          {estado?.texto ?? a.descricao}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </nav>
       </header>

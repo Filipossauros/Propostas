@@ -245,6 +245,9 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
           </div>
         </div>
         <p className="modulo-subtitulo">Apura o cumprimento dos requisitos mínimos das propostas.</p>
+        <p className="modulo-quem">
+          <strong>Quem preenche:</strong> o júri, depois de recebidas as propostas.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />

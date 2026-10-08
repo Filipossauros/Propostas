@@ -12,6 +12,7 @@ import {
   duplicarPerfil,
   importarPerfisJSON,
   perfilInicial,
+  validarPerfil,
   validarPerfis,
 } from "../core/perfil";
 import { PERFIS_EXEMPLO } from "../core/exemplo";
@@ -216,6 +217,9 @@ export function ModuloPerfis({
           Define cada perfil: a identificação, os requisitos mínimos de experiência, as formações ou certificações e
           o conteúdo funcional.
         </p>
+        <p className="modulo-quem">
+          <strong>Quem preenche:</strong> o elemento técnico.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
@@ -232,6 +236,7 @@ export function ModuloPerfis({
           <ul className="lista-perfis-catalogo">
             {perfis.map((p) => {
               const numeroLote = lotePorPerfilId[p.id];
+              const porResolver = validarPerfil(p);
               return (
                 <li key={p.id} className={p.id === emEdicao?.id ? "perfil-catalogo perfil-catalogo-ativo" : "perfil-catalogo"}>
                   <button
@@ -244,6 +249,14 @@ export function ModuloPerfis({
                     <span className="meta">
                       {p.requisitos.length} requisito(s) · {p.conteudoFuncional.length} atividade(s)
                       {numeroLote !== undefined && ` · lote ${numeroLote}`}
+                      {" · "}
+                      {porResolver.length === 0 ? (
+                        <span className="estado-perfil">completo</span>
+                      ) : (
+                        <span className="estado-perfil estado-perfil-falta" title={porResolver.map((e) => e.mensagem).join("\n")}>
+                          {porResolver.length === 1 ? porResolver[0].mensagem : `${porResolver.length} questões por resolver`}
+                        </span>
+                      )}
                     </span>
                   </button>
 
@@ -307,6 +320,7 @@ export function ModuloPerfis({
                   onChange={(e) => alterarEmEdicao({ perfil: e.target.value })}
                   aria-invalid={emEdicao.perfil.trim() === ""}
                 />
+                {emEdicao.perfil.trim() === "" && <span className="aviso-inline aviso-inline-falta">Dê um nome ao perfil.</span>}
               </label>
             </div>
 
@@ -326,6 +340,7 @@ export function ModuloPerfis({
                     </option>
                   ))}
                 </select>
+                {emEdicao.designacao === "" && <span className="aviso-inline aviso-inline-falta">Escolha a designação.</span>}
               </label>
 
               <label className="campo-crescente">
@@ -343,6 +358,9 @@ export function ModuloPerfis({
                     </option>
                   ))}
                 </select>
+                {emEdicao.tipoServico === "" && (
+                  <span className="aviso-inline aviso-inline-falta">Escolha o tipo de serviço.</span>
+                )}
               </label>
             </div>
             <p className="ajuda">

@@ -19,6 +19,25 @@ interface Props {
   onIrParaPerfis: () => void;
 }
 
+const CHAVE_COMO_FUNCIONA = "propostas.v2.comoFuncionaFechado";
+
+// Só uma conveniência de quem usa: se o navegador não guardar, volta a aparecer.
+function comoFuncionaFechado(): boolean {
+  try {
+    return localStorage.getItem(CHAVE_COMO_FUNCIONA) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function fecharComoFunciona() {
+  try {
+    localStorage.setItem(CHAVE_COMO_FUNCIONA, "1");
+  } catch {
+    // Sem armazenamento, fica fechado só até recarregar.
+  }
+}
+
 /**
  * Módulo 1 · Projeto.
  *
@@ -37,6 +56,7 @@ export function ModuloProjeto({
   onIrParaPerfis,
 }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  const [verComoFunciona, setVerComoFunciona] = useState(() => !comoFuncionaFechado());
 
   const erros = [
     ...validarNomeProjeto(nomeProjeto),
@@ -81,9 +101,48 @@ export function ModuloProjeto({
         <p className="modulo-subtitulo">
           Identifica o projeto e justifica a aquisição. Escreve-se uma vez e segue para todas as peças.
         </p>
+        <p className="modulo-quem">
+          <strong>Quem preenche:</strong> o gestor do projeto.
+        </p>
       </header>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
+
+      {verComoFunciona && (
+        <section className="painel painel-como-funciona">
+          <header className="painel-cabecalho">
+            <h3>Como funciona a preparação</h3>
+            <button
+              type="button"
+              className="botao-discreto"
+              onClick={() => {
+                fecharComoFunciona();
+                setVerComoFunciona(false);
+              }}
+            >
+              Fechar
+            </button>
+          </header>
+          <ol className="passos-preparacao">
+            <li>
+              <strong>1 · Projeto</strong>
+              Nome, descrição e justificação: objetivos, benefícios e riscos.
+            </li>
+            <li>
+              <strong>2 · Perfis</strong>
+              As funções e a experiência mínima exigida a cada perfil.
+            </li>
+            <li>
+              <strong>3 · Lotes</strong>
+              Horas, preço/hora e júri; no fim, descarrega o Anexo Técnico (ZIP).
+            </li>
+          </ol>
+          <p className="ajuda">
+            Primeira vez? Use «Carregar exemplo» em cada módulo para ver um procedimento completo. Tudo fica guardado
+            neste navegador; nada sai deste computador.
+          </p>
+        </section>
+      )}
 
       <section className="painel">
         <header className="painel-cabecalho">
