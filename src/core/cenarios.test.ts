@@ -4,6 +4,7 @@ import {
   aplicarCenario,
   comInternoMovido,
   comPessoas,
+  comValorHora,
   comProjetoCortado,
   comProjetoReposto,
   duplicarCenario,
@@ -12,6 +13,7 @@ import {
   novoCenario,
   pessoasNoCenario,
   semAlteracoesSemEfeito,
+  valorHoraNoCenario,
 } from "./cenarios";
 import {
   importarOrcamentoJSON,
@@ -21,7 +23,12 @@ import {
   totaisPorAnoDaUnidade,
   type OrcamentoUnidade,
 } from "./vistaGeral";
-import { comCenarioDaUnidade, vistaComCenarios, vistaDirecaoInicial, normalizarVistaDirecao } from "./vistaGeralDirecao";
+import {
+  comCenarioDaUnidade,
+  vistaComCenarios,
+  vistaDirecaoInicial,
+  normalizarVistaDirecao,
+} from "./vistaGeralDirecao";
 import { SCHEMA_VERSION_ATUAL } from "./types";
 
 /** Dois projetos: A com 3 programadores e 1 arquiteto, B com 2 analistas; um interno em cada. */
@@ -202,7 +209,9 @@ describe("nomes e cópias", () => {
 describe("guardar e voltar a abrir", () => {
   it("os cenários viajam no JSON da Vista Geral", () => {
     const o = orcamento();
-    o.cenarios = [comInternoMovido(comPessoas(novoCenario("X"), o.projetos[0], o.projetos[0].entradas[0], 1), "i1", "A", "B")];
+    o.cenarios = [
+      comInternoMovido(comPessoas(novoCenario("X"), o.projetos[0], o.projetos[0].entradas[0], 1), "i1", "A", "B"),
+    ];
     const relido = importarOrcamentoJSON(orcamentoParaJSON(o));
     expect(relido.cenarios).toEqual(o.cenarios);
   });
@@ -247,5 +256,67 @@ describe("vista da direção", () => {
   it("a escolha fica guardada na vista da direção", () => {
     const vista = comCenarioDaUnidade(vistaDirecaoInicial(), "UPACE", "c1");
     expect(normalizarVistaDirecao(JSON.parse(JSON.stringify(vista))).cenarioPorUnidade).toEqual({ UPACE: "c1" });
+  });
+});
+
+describe("valor hora no cenário", () => {
+  it("o valor da linha acompanha o novo valor hora, com o mesmo IVA", () => {
+    const o = orcamento();
+    const [a] = o.projetos;
+    // Programador: 40 €/h s/ IVA (49,20 c/ IVA) → 30 €/h.
+    const c = comValorHora(novoCenario("X"), a, a.entradas[0], 30);
+    const linha = aplicarCenario(o, c).projetos[0].entradas[0];
+
+    expect(linha.valorHoraSemIva).toBe(30);
+    expect(linha.valorHoraComIva).toBe(36.9);
+    expect(linha.totaisPorAno).toEqual([225, 112.5, 112.5]);
+  });
+
+  it("combina com o corte de pessoas, em qualquer ordem", () => {
+    const o = orcamento();
+    const [a] = o.projetos;
+    const e = a.entradas[0];
+    const primeiro = comPessoas(comValorHora(novoCenario("X"), a, e, 20), a, e, 1);
+    const segundo = comValorHora(comPessoas(novoCenario("X"), a, e, 1), a, e, 20);
+    for (const c of [primeiro, segundo]) {
+      // 300 × 1/3 × 20/40
+      expect(aplicarCenario(o, c).projetos[0].entradas[0].totaisPorAno[0]).toBeCloseTo(50, 6);
+    }
+  });
+
+  it("repor as pessoas do projeto mantém o valor hora alterado", () => {
+    const o = orcamento();
+    const [a] = o.projetos;
+    const c = comProjetoReposto(comProjetoCortado(comValorHora(novoCenario("X"), a, a.entradas[0], 35), a), a);
+    expect(pessoasNoCenario(c, a, a.entradas[0])).toBe(3);
+    expect(valorHoraNoCenario(c, a, a.entradas[0])).toBe(35);
+  });
+
+  it("voltar ao valor do orçamento, com as pessoas todas, deixa de guardar a linha", () => {
+    const o = orcamento();
+    const [a] = o.projetos;
+    const c = comValorHora(comValorHora(novoCenario("X"), a, a.entradas[0], 35), a, a.entradas[0], 40);
+    expect(c.cortes).toEqual([]);
+  });
+
+  it("em cêntimos e nunca negativo; o que não é número repõe o do orçamento", () => {
+    const o = orcamento();
+    const [a] = o.projetos;
+    const e = a.entradas[0];
+    expect(valorHoraNoCenario(comValorHora(novoCenario("X"), a, e, 33.337), a, e)).toBe(33.34);
+    expect(valorHoraNoCenario(comValorHora(novoCenario("X"), a, e, -5), a, e)).toBe(0);
+    expect(valorHoraNoCenario(comValorHora(novoCenario("X"), a, e, Number.NaN), a, e)).toBe(40);
+  });
+
+  it("viaja no JSON", () => {
+    const o = orcamento();
+    o.cenarios = [comValorHora(novoCenario("X"), o.projetos[0], o.projetos[0].entradas[0], 35)];
+    expect(importarOrcamentoJSON(orcamentoParaJSON(o)).cenarios[0].cortes[0]).toEqual({
+      projeto: "A",
+      lote: "1",
+      perfil: "Programador",
+      ficam: 3,
+      valorHoraSemIva: 35,
+    });
   });
 });

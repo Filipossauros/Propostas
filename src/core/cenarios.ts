@@ -12,18 +12,25 @@
 // Os internos não se importam — são registados na própria vista —, e o seu
 // identificador é estável; o destino de um interno movido é o nome do projeto.
 //
-// Só se cortam pessoas inteiras: o valor de uma linha é o valor por pessoa ×
-// as pessoas que ficam. Os internos não se cortam, só mudam de projeto.
+// Só se cortam pessoas inteiras, e o valor hora de cada linha pode mudar: o
+// valor de uma linha é o do orçamento × as pessoas que ficam / as do orçamento
+// × o valor hora do cenário / o do orçamento. Os internos não se cortam, só
+// mudam de projeto.
 
 import { gerarId } from "./id";
 import type { EntradaVistaGeral, OrcamentoUnidade, ProjetoVistaGeral } from "./vistaGeral";
 
-/** As pessoas que ficam numa linha do orçamento, quando são menos do que as do orçamento. */
+/**
+ * O que muda numa linha do orçamento: as pessoas que ficam e, se foi
+ * alterado, o valor hora sem IVA.
+ */
 export interface CorteDeLinha {
   projeto: string;
   lote: string;
   perfil: string;
   ficam: number;
+  /** Valor hora sem IVA no cenário; sem ele, é o do orçamento. */
+  valorHoraSemIva?: number;
 }
 
 /** Um elemento interno que, no cenário, passa para outro projeto. */
@@ -67,11 +74,34 @@ export function pessoasNoCenario(cenario: Cenario, projeto: ProjetoVistaGeral, e
   return corte === undefined ? entrada.pessoas : Math.min(corte.ficam, entrada.pessoas);
 }
 
+/** O valor hora sem IVA de uma linha, no cenário. Sem alteração, é o do orçamento. */
+export function valorHoraNoCenario(cenario: Cenario, projeto: ProjetoVistaGeral, entrada: EntradaVistaGeral): number {
+  return cenario.cortes.find((c) => eDaLinha(c, projeto, entrada))?.valorHoraSemIva ?? entrada.valorHoraSemIva;
+}
+
 /**
- * Define as pessoas que ficam numa linha.
+ * Guarda o que muda numa linha. Uma linha que volte a ser igual à do
+ * orçamento — as pessoas todas e o mesmo valor hora — deixa de se guardar.
+ */
+function comLinha(
+  cenario: Cenario,
+  projeto: ProjetoVistaGeral,
+  entrada: EntradaVistaGeral,
+  ficam: number,
+  valorHoraSemIva: number,
+): Cenario {
+  const outros = cenario.cortes.filter((c) => !eDaLinha(c, projeto, entrada));
+  const mesmoValor = Math.abs(valorHoraSemIva - entrada.valorHoraSemIva) < 0.005;
+  if (ficam === entrada.pessoas && mesmoValor) return { ...cenario, cortes: outros };
+  const linha: CorteDeLinha = { projeto: projeto.nome, lote: entrada.lote, perfil: entrada.perfil, ficam };
+  if (!mesmoValor) linha.valorHoraSemIva = valorHoraSemIva;
+  return { ...cenario, cortes: [...outros, linha] };
+}
+
+/**
+ * Define as pessoas que ficam numa linha, sem mexer no valor hora.
  *
- * Fica entre zero e as do orçamento — o cenário corta, não acrescenta — e um
- * corte que repõe as pessoas todas deixa de se guardar.
+ * Fica entre zero e as do orçamento — o cenário corta, não acrescenta.
  */
 export function comPessoas(
   cenario: Cenario,
@@ -80,14 +110,23 @@ export function comPessoas(
   ficam: number,
 ): Cenario {
   const valor = Math.max(0, Math.min(entrada.pessoas, Math.round(Number.isFinite(ficam) ? ficam : entrada.pessoas)));
-  const outros = cenario.cortes.filter((c) => !eDaLinha(c, projeto, entrada));
-  return {
-    ...cenario,
-    cortes:
-      valor === entrada.pessoas
-        ? outros
-        : [...outros, { projeto: projeto.nome, lote: entrada.lote, perfil: entrada.perfil, ficam: valor }],
-  };
+  return comLinha(cenario, projeto, entrada, valor, valorHoraNoCenario(cenario, projeto, entrada));
+}
+
+/**
+ * Define o valor hora sem IVA de uma linha, sem mexer nas pessoas. Fica em
+ * cêntimos e nunca negativo; um valor que não é número repõe o do orçamento.
+ */
+export function comValorHora(
+  cenario: Cenario,
+  projeto: ProjetoVistaGeral,
+  entrada: EntradaVistaGeral,
+  valorHoraSemIva: number,
+): Cenario {
+  const valor = Number.isFinite(valorHoraSemIva)
+    ? Math.max(0, Math.round(valorHoraSemIva * 100) / 100)
+    : entrada.valorHoraSemIva;
+  return comLinha(cenario, projeto, entrada, pessoasNoCenario(cenario, projeto, entrada), valor);
 }
 
 /** Corta todas as pessoas externas do projeto. */
@@ -95,9 +134,9 @@ export function comProjetoCortado(cenario: Cenario, projeto: ProjetoVistaGeral):
   return projeto.entradas.reduce((c, entrada) => comPessoas(c, projeto, entrada, 0), cenario);
 }
 
-/** Repõe todas as pessoas externas do projeto. */
+/** Repõe todas as pessoas externas do projeto; os valores hora alterados ficam. */
 export function comProjetoReposto(cenario: Cenario, projeto: ProjetoVistaGeral): Cenario {
-  return { ...cenario, cortes: cenario.cortes.filter((c) => c.projeto !== projeto.nome) };
+  return projeto.entradas.reduce((c, entrada) => comPessoas(c, projeto, entrada, entrada.pessoas), cenario);
 }
 
 /** O projeto em que um interno fica no cenário: o de destino, se o moveram, ou o seu. */
@@ -146,8 +185,18 @@ export function aplicarCenario(
       entradas: projeto.entradas
         .map((entrada) => {
           const ficam = pessoasNoCenario(cenario, projeto, entrada);
-          const fator = entrada.pessoas === 0 ? 0 : ficam / entrada.pessoas;
-          return { ...entrada, pessoas: ficam, totaisPorAno: entrada.totaisPorAno.map((v) => v * fator) };
+          const valorHora = valorHoraNoCenario(cenario, projeto, entrada);
+          // O IVA da linha é o do orçamento: muda o valor, não a taxa.
+          const iva = entrada.valorHoraSemIva === 0 ? 1 : entrada.valorHoraComIva / entrada.valorHoraSemIva;
+          const fatorPessoas = entrada.pessoas === 0 ? 0 : ficam / entrada.pessoas;
+          const fatorValor = entrada.valorHoraSemIva === 0 ? 1 : valorHora / entrada.valorHoraSemIva;
+          return {
+            ...entrada,
+            pessoas: ficam,
+            valorHoraSemIva: valorHora,
+            valorHoraComIva: Math.round(valorHora * iva * 100) / 100,
+            totaisPorAno: entrada.totaisPorAno.map((v) => v * fatorPessoas * fatorValor),
+          };
         })
         .filter((entrada) => !opcoes.semLinhasCortadas || entrada.pessoas > 0),
       // Primeiro os que já eram do projeto, depois os que chegam de outros.
@@ -206,9 +255,17 @@ export function normalizarCenarios(bruto: unknown): Cenario[] {
           const k = x as Record<string, unknown>;
           const ficam = Number(k.ficam);
           if (!Number.isFinite(ficam) || ficam < 0) return [];
-          return [
-            { projeto: texto(k.projeto), lote: texto(k.lote), perfil: texto(k.perfil), ficam: Math.round(ficam) },
-          ];
+          const linha: CorteDeLinha = {
+            projeto: texto(k.projeto),
+            lote: texto(k.lote),
+            perfil: texto(k.perfil),
+            ficam: Math.round(ficam),
+          };
+          const valorHora = Number(k.valorHoraSemIva);
+          if (k.valorHoraSemIva !== undefined && Number.isFinite(valorHora) && valorHora >= 0) {
+            linha.valorHoraSemIva = valorHora;
+          }
+          return [linha];
         }),
         movimentos: (Array.isArray(r.movimentos) ? r.movimentos : []).flatMap((x) => {
           if (typeof x !== "object" || x === null) return [];

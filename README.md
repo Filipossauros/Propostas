@@ -292,9 +292,9 @@ ano e o peso de cada projeto. Tem duas leituras:
 
 - **Orçamento** — os projetos tal como foram agrupados, com os elementos internos registados à mão.
 - **Cenários de corte** — variações do orçamento, que nunca o alteram. Em cada cenário retiram-se
-  pessoas inteiras, linha a linha (− / +), ou um projeto inteiro; o valor de cada linha passa a ser o
-  valor por pessoa × as pessoas que ficam. Os elementos internos não se cortam, mas podem passar para
-  outro projeto. O cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
+  pessoas inteiras, linha a linha (− / +), ou um projeto inteiro, e pode alterar-se o valor hora (sem
+  IVA) de cada perfil; o valor de cada linha acompanha as pessoas que ficam e o novo valor hora, com as
+  mesmas horas e o mesmo IVA. Os elementos internos não se cortam, mas podem passar para outro projeto. O cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
 
 Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao perfil, e não aos
 identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de

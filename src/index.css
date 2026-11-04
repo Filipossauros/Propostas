@@ -2529,3 +2529,12 @@ tbody.grupo-projeto.projeto-alvo td {
 .tabela-cenario .seletor-projeto-interno {
   max-width: 260px;
 }
+
+.tabela-cenario .celula-valor-hora {
+  min-width: 120px;
+}
+
+.tabela-cenario .celula-valor-hora .campo-numero input {
+  width: 84px;
+  text-align: right;
+}

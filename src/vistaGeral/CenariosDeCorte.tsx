@@ -5,12 +5,14 @@ import {
   aplicarCenario,
   comInternoMovido,
   comPessoas,
+  comValorHora,
   comProjetoCortado,
   comProjetoReposto,
   duplicarCenario,
   nomeLivre,
   novoCenario,
   pessoasNoCenario,
+  valorHoraNoCenario,
   projetoDoInterno,
   semAlteracoesSemEfeito,
   type Cenario,
@@ -24,6 +26,7 @@ import {
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
 import { ResumoGeral } from "./ResumoGeral";
+import { CampoNumero } from "../ui/CampoNumero";
 
 interface Props {
   orcamento: OrcamentoUnidade;
@@ -161,8 +164,9 @@ export function CenariosDeCorte({ orcamento, onAlterar, onMoverProjeto, onDesloc
             <header className="painel-cabecalho">
               <h3>Pessoas, linha a linha</h3>
               <p className="painel-nota">
-                Use − e + para retirar ou repor pessoas: o valor da linha passa a ser o valor por pessoa × as pessoas
-                que ficam. Os internos não se cortam, mas podem passar para outro projeto.
+                Use − e + para retirar ou repor pessoas, e altere o valor hora (sem IVA) de qualquer perfil: o valor da
+                linha acompanha as pessoas que ficam e o novo valor hora, com as mesmas horas e o mesmo IVA. Os internos
+                não se cortam, mas podem passar para outro projeto.
               </p>
             </header>
             <TabelaDoCenario orcamento={orcamento} cenario={cenario} onAlterarCenario={alterarCenario} />
@@ -280,6 +284,9 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
             <th scope="col" className="numerico">
               No cenário
             </th>
+            <th scope="col" className="numerico">
+              Valor hora <span className="cabecalho-nota">s/ IVA</span>
+            </th>
             {anos.map((ano) => (
               <th key={ano} scope="col" className="numerico">
                 Total € c/ IVA <span className="cabecalho-nota">{ano}</span>
@@ -328,7 +335,9 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
           const linhas: Array<{ chave: string; classe?: string; celulas: React.ReactNode }> = [
             ...projeto.entradas.map((entrada, i) => {
               const ficam = pessoasNoCenario(cenario, projeto, entrada);
-              const cortada = ficam < entrada.pessoas;
+              const valorHora = valorHoraNoCenario(cenario, projeto, entrada);
+              const valorAlterado = Math.abs(valorHora - entrada.valorHoraSemIva) >= 0.005;
+              const cortada = ficam < entrada.pessoas || valorAlterado;
               return {
                 chave: entrada.id,
                 classe: ficam === 0 ? "linha-cortada" : undefined,
@@ -360,6 +369,19 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
                           +
                         </button>
                       </span>
+                    </td>
+                    <td className="numerico celula-valor-hora">
+                      <CampoNumero
+                        valor={valorHora}
+                        min={0}
+                        step={0.5}
+                        sufixo="€"
+                        aria-label={`Valor hora sem IVA de ${entrada.perfil} (${projeto.nome}) no cenário`}
+                        onChange={(v) => onAlterarCenario((c) => comValorHora(c, projeto, entrada, v))}
+                      />
+                      {valorAlterado && (
+                        <span className="valor-anterior">{formatarMoeda(entrada.valorHoraSemIva)}</span>
+                      )}
                     </td>
                     {anos.map((ano) => {
                       const valor = valorDaEntradaNoAno(derivado, derivado.entradas[i], ano);
@@ -409,6 +431,9 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
                     </td>
                     <td className="numerico">{origem === projeto.nome ? 1 : <span className="meta">—</span>}</td>
                     <td className="numerico">1</td>
+                    <td className="numerico">
+                      <span className="meta">—</span>
+                    </td>
                     {anos.map((ano) => (
                       <td key={ano} className="numerico">
                         <span className="meta">—</span>
@@ -425,7 +450,7 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
               {linhas.length === 0 ? (
                 <tr>
                   {celulaDoProjeto}
-                  <td colSpan={4 + anos.length}>
+                  <td colSpan={5 + anos.length}>
                     <span className="meta">Sem perfis nem elementos internos neste cenário.</span>
                   </td>
                 </tr>
@@ -452,6 +477,7 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
             <td className="numerico">
               <strong>{pessoasDaUnidade(noCenario)}</strong>
             </td>
+            <td />
             {totaisPorAnoDaUnidade(noCenario).map((total, i) => (
               <td key={anos[i]} className="numerico">
                 <strong>{formatarMoeda(total)}</strong>
