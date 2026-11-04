@@ -12,16 +12,19 @@ permissions:
   pages: write
   id-token: write
 
+# Uma publicação de cada vez, sem cancelar a que está em curso: cancelar o
+# Pages a meio pode deixá-lo preso em «updating_pages», e a publicação
+# seguinte da mesma versão sai cancelada. A mais recente fica em fila.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -29,7 +32,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
@@ -42,3 +45,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          timeout: 1200000
