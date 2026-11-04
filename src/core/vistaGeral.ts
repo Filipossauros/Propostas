@@ -16,6 +16,7 @@ import { ANOS_PLURIANUAIS, SCHEMA_VERSION_ATUAL } from "./types";
 import { aplicarIva, horasPorAnoDe, taxaIva } from "./lotes";
 import { ErroImportacao } from "./perfil";
 import { gerarId } from "./id";
+import { normalizarCenarios, type Cenario } from "./cenarios";
 
 /** Uma pessoa da equipa afeta ao projeto, registada pelo nome. */
 export interface ElementoInterno {
@@ -58,10 +59,12 @@ export interface OrcamentoUnidade {
   /** Unidade a que o orçamento respeita, se quem o guardou lhe deu nome. */
   unidade: string;
   projetos: ProjetoVistaGeral[];
+  /** Variações do orçamento com menos pessoas: ver `cenarios.ts`. */
+  cenarios: Cenario[];
 }
 
 export function orcamentoInicial(): OrcamentoUnidade {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "orcamentoUnidade", unidade: "", projetos: [] };
+  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "orcamentoUnidade", unidade: "", projetos: [], cenarios: [] };
 }
 
 // --------------------------------------------------------------------------
@@ -437,6 +440,7 @@ export function normalizarOrcamento(bruto: object): OrcamentoUnidade {
     tipo: "orcamentoUnidade",
     unidade: typeof registo.unidade === "string" ? registo.unidade : "",
     projetos: Array.isArray(registo.projetos) ? registo.projetos.map((p) => normalizarProjeto(p)) : [],
+    cenarios: normalizarCenarios(registo.cenarios),
   };
 }
 

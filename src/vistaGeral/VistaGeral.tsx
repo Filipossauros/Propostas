@@ -24,6 +24,7 @@ import { ficheirosDaVistaGeral, nomeDoPacoteDaVistaGeral } from "../saidas/pacot
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { ResumoGeral } from "./ResumoGeral";
 import { TabelaVistaGeral } from "./TabelaVistaGeral";
+import { CenariosDeCorte } from "./CenariosDeCorte";
 
 /**
  * Vista Geral — o orçamento da unidade.
@@ -40,6 +41,9 @@ export function VistaGeral() {
     normalizarOrcamento,
   );
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  // O orçamento e os cenários de corte são duas leituras do mesmo módulo: os
+  // cenários partem do orçamento e nunca o alteram.
+  const [leitura, setLeitura] = useState<"orcamento" | "cenarios">("orcamento");
   const inputAgrupamentosRef = useRef<HTMLInputElement>(null);
   const inputOrcamentoRef = useRef<HTMLInputElement>(null);
 
@@ -144,95 +148,124 @@ export function VistaGeral() {
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Orçamento da unidade</h3>
-          <p className="painel-nota">
-            Carregue os JSON de lotes gerados no Módulo 3 — um por projeto, ou vários de uma vez. Reimportar um
-            projeto atualiza-o, em vez de o duplicar.
-          </p>
-        </header>
+      <div className="seletor-vista" role="group" aria-label="Leitura da vista">
+        <button
+          type="button"
+          className={leitura === "orcamento" ? "aba-ativa" : undefined}
+          aria-pressed={leitura === "orcamento"}
+          onClick={() => setLeitura("orcamento")}
+        >
+          Orçamento
+        </button>
+        <button
+          type="button"
+          className={leitura === "cenarios" ? "aba-ativa" : undefined}
+          aria-pressed={leitura === "cenarios"}
+          onClick={() => setLeitura("cenarios")}
+        >
+          Cenários de corte{orcamento.cenarios.length > 0 ? ` (${orcamento.cenarios.length})` : ""}
+        </button>
+      </div>
 
-        <label className="campo-unidade">
-          <span>Unidade</span>
-          <input
-            type="text"
-            value={orcamento.unidade}
-            placeholder="Nome da unidade (sai nos ficheiros)"
-            onChange={(e) => setOrcamento((atual) => ({ ...atual, unidade: e.target.value }))}
-          />
-        </label>
+      {leitura === "cenarios" && (
+        <CenariosDeCorte
+          orcamento={orcamento}
+          onAlterar={setOrcamento}
+          onMoverProjeto={moverProjeto}
+          onDeslocarProjeto={deslocarProjeto}
+        />
+      )}
 
-        <div className="acoes">
-          <button type="button" className="botao-principal" onClick={() => inputAgrupamentosRef.current?.click()}>
-            Importar lotes (JSON)
-          </button>
-          <input
-            ref={inputAgrupamentosRef}
-            type="file"
-            multiple
-            accept="application/json,.json"
-            className="input-ficheiro-oculto"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) void carregarAgrupamentos(e.target.files);
-              e.target.value = "";
-            }}
-          />
+      {leitura === "orcamento" && (
+        <>
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Orçamento da unidade</h3>
+              <p className="painel-nota">
+                Carregue os JSON de lotes gerados no Módulo 3 — um por projeto, ou vários de uma vez. Reimportar um
+                projeto atualiza-o, em vez de o duplicar.
+              </p>
+            </header>
 
-          <button type="button" className="botao-secundario" onClick={() => inputOrcamentoRef.current?.click()}>
-            Carregar Vista Geral (JSON)
-          </button>
-          <input
-            ref={inputOrcamentoRef}
-            type="file"
-            accept="application/json,.json"
-            className="input-ficheiro-oculto"
-            onChange={(e) => {
-              const ficheiro = e.target.files?.[0];
-              if (ficheiro) void carregarOrcamento(ficheiro);
-              e.target.value = "";
-            }}
-          />
+            <label className="campo-unidade">
+              <span>Unidade</span>
+              <input
+                type="text"
+                value={orcamento.unidade}
+                placeholder="Nome da unidade (sai nos ficheiros)"
+                onChange={(e) => setOrcamento((atual) => ({ ...atual, unidade: e.target.value }))}
+              />
+            </label>
 
-        </div>
+            <div className="acoes">
+              <button type="button" className="botao-principal" onClick={() => inputAgrupamentosRef.current?.click()}>
+                Importar lotes (JSON)
+              </button>
+              <input
+                ref={inputAgrupamentosRef}
+                type="file"
+                multiple
+                accept="application/json,.json"
+                className="input-ficheiro-oculto"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) void carregarAgrupamentos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
 
-        {/* A vista traz nomes de pessoas da equipa: quem a preenche tem de saber
+              <button type="button" className="botao-secundario" onClick={() => inputOrcamentoRef.current?.click()}>
+                Carregar Vista Geral (JSON)
+              </button>
+              <input
+                ref={inputOrcamentoRef}
+                type="file"
+                accept="application/json,.json"
+                className="input-ficheiro-oculto"
+                onChange={(e) => {
+                  const ficheiro = e.target.files?.[0];
+                  if (ficheiro) void carregarOrcamento(ficheiro);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
+            {/* A vista traz nomes de pessoas da equipa: quem a preenche tem de saber
             onde ficam, e que ficam só aqui. */}
-        <p className="ajuda">
-          Esta vista fica guardada neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto
-          de trabalho. Apagar um projeto apaga também os nomes que lhe estavam afetos. Para a levar para outro posto,
-          descarregue a Vista Geral em JSON, ao fundo da página.
-        </p>
-      </section>
+            <p className="ajuda">
+              Esta vista fica guardada neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto
+              de trabalho. Apagar um projeto apaga também os nomes que lhe estavam afetos. Para a levar para outro
+              posto, descarregue a Vista Geral em JSON, ao fundo da página.
+            </p>
+          </section>
 
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Resumo geral</h3>
-          <p className="painel-nota">As pessoas de todos os projetos na unidade.</p>
-        </header>
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Resumo geral</h3>
+              <p className="painel-nota">As pessoas de todos os projetos na unidade.</p>
+            </header>
 
-        <ResumoGeral
-          orcamento={orcamento}
-          onMoverProjeto={moverProjeto}
-          onDeslocarProjeto={deslocarProjeto}
-        />
-      </section>
+            <ResumoGeral orcamento={orcamento} onMoverProjeto={moverProjeto} onDeslocarProjeto={deslocarProjeto} />
+          </section>
 
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Projetos, pessoas e valores</h3>
-          <p className="painel-nota">Detalhe de cada projeto, perfil a perfil.</p>
-        </header>
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Projetos, pessoas e valores</h3>
+              <p className="painel-nota">Detalhe de cada projeto, perfil a perfil.</p>
+            </header>
 
-        <TabelaVistaGeral
-          orcamento={orcamento}
-          onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
-          onRemoverInterno={(projetoId, internoId) => setOrcamento((atual) => semInterno(atual, projetoId, internoId))}
-          onAcrescentarInterno={(projetoId, nome) => setOrcamento((atual) => comInterno(atual, projetoId, nome))}
-          onMoverProjeto={moverProjeto}
-          onDeslocarProjeto={deslocarProjeto}
-        />
-      </section>
+            <TabelaVistaGeral
+              orcamento={orcamento}
+              onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
+              onRemoverInterno={(projetoId, internoId) =>
+                setOrcamento((atual) => semInterno(atual, projetoId, internoId))
+              }
+              onAcrescentarInterno={(projetoId, nome) => setOrcamento((atual) => comInterno(atual, projetoId, nome))}
+              onMoverProjeto={moverProjeto}
+              onDeslocarProjeto={deslocarProjeto}
+            />
+          </section>
+        </>
+      )}
 
       <section className="painel">
         <header className="painel-cabecalho">
@@ -250,7 +283,9 @@ export function VistaGeral() {
         </div>
         <p className="ajuda">
           Um ZIP com o Excel e o JSON. O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por
-          projeto. O nome do ficheiro leva os anos de início dos projetos carregados.
+          projeto — e, havendo cenários de corte, uma folha «Comparação» com o orçamento e os cenários lado a lado e o
+          detalhe de cada cenário. O JSON leva os cenários, para os retomar noutro posto e para a Vista Geral da Direção
+          os poder usar. O nome do ficheiro leva os anos de início dos projetos carregados.
         </p>
       </section>
     </>

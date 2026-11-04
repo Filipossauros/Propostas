@@ -285,6 +285,25 @@ Como a certificação não entra em nenhum quadro do apuramento, o risco é pass
 despercebida. Por isso o Módulo 4, ao carregar o agrupamento, assinala cada
 perfil que a exija — chamada de atenção, não verificação.
 
+## As vistas gerais e os cenários de corte
+
+A **Vista Geral da Unidade** junta os JSON de lotes dos projetos de uma unidade: pessoas, valores por
+ano e o peso de cada projeto. Tem duas leituras:
+
+- **Orçamento** — os projetos tal como foram agrupados, com os elementos internos registados à mão.
+- **Cenários de corte** — variações do orçamento, que nunca o alteram. Em cada cenário retiram-se
+  pessoas inteiras, linha a linha (− / +), ou um projeto inteiro; o valor de cada linha passa a ser o
+  valor por pessoa × as pessoas que ficam. Os elementos internos não se cortam, mas podem passar para
+  outro projeto. O cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
+
+Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao perfil, e não aos
+identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de
+ter onde se aplicar é assinalado. Os cenários viajam no JSON da Vista Geral, e o Excel leva uma folha
+«Comparação» e o detalhe de cada cenário.
+
+Na **Vista Geral da Direção**, cada unidade que traga cenários pode entrar com um deles em vez do
+orçamento; totais, tabelas e ficheiros passam a usá-lo, sem as linhas que ficaram sem ninguém.
+
 ## Princípios
 
 - **Determinismo total.** Nenhum uso de IA em qualquer ponto do fluxo. O mesmo input produz

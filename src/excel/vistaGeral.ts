@@ -26,6 +26,7 @@ import {
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
 } from "../core/vistaGeral";
+import { aplicarCenario, type Cenario } from "../core/cenarios";
 import { prepararImpressao } from "./impressao";
 import {
   cabecalho,
@@ -90,9 +91,126 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
   livro.title = unidade === "" ? "Vista geral" : `Vista geral — ${unidade}`;
 
   folhaDoResumo(livro, orcamento);
+  folhaDoDetalhe(
+    livro,
+    orcamento,
+    "Detalhe por projeto",
+    livro.title,
+    "Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos " +
+      "elementos exigidos em cada perfil. Valores com IVA incluído.",
+  );
 
+  // Os cenários de corte vêm a seguir ao orçamento: primeiro a comparação, que
+  // responde à pergunta de quem os fez, e depois o detalhe de cada um.
+  if (orcamento.cenarios.length > 0) {
+    folhaDaComparacao(livro, orcamento);
+    const usados = new Set(livro.worksheets.map((f) => f.name));
+    orcamento.cenarios.forEach((cenario, i) => {
+      const nome = nomeDaFolhaDoCenario(cenario, i, usados);
+      usados.add(nome);
+      folhaDoDetalhe(
+        livro,
+        aplicarCenario(orcamento, cenario),
+        nome,
+        `Cenário «${cenario.nome}»${livro.title ? ` — ${livro.title}` : ""}`,
+        "Cenário de corte: as pessoas que ficam em cada linha e o valor correspondente (valor por pessoa × " +
+          "pessoas que ficam). Os elementos internos aparecem no projeto em que ficam no cenário. Valores com " +
+          "IVA incluído.",
+      );
+    });
+  }
+  return livro;
+}
+
+/** O Excel não aceita nas folhas nomes com mais de 31 carateres nem `[]:*?/\`. */
+function nomeDaFolhaDoCenario(cenario: Cenario, i: number, usados: Set<string>): string {
+  const limpo = cenario.nome.replace(/[[\]:*?/\\]/g, " ").trim();
+  const base = `Cenário ${i + 1}${limpo ? ` — ${limpo}` : ""}`.slice(0, 31).trim();
+  let nome = base;
+  for (let n = 2; usados.has(nome); n++) nome = `${base.slice(0, 27)} (${n})`;
+  return nome;
+}
+
+/** Uma linha por leitura — o orçamento e cada cenário —, com as pessoas e o valor de cada ano. */
+function folhaDaComparacao(livro: ExcelJS.Workbook, orcamento: OrcamentoUnidade): void {
   const anos = anosDoOrcamento(orcamento);
-  const folha = livro.addWorksheet("Detalhe por projeto", { views: [{ showGridLines: false }] });
+  const folha = livro.addWorksheet("Comparação", { views: [{ showGridLines: false }] });
+  const titulos = [
+    "Leitura",
+    "Elementos externos",
+    "Elementos internos",
+    "Total de pessoas",
+    ...anos.map((ano) => `Total € c/ IVA\n${ano}`),
+    "Total € s/ IVA",
+    "Diferença € s/ IVA",
+    "Diferença %",
+  ];
+  folha.columns = [
+    { width: 34 },
+    { width: 14 },
+    { width: 14 },
+    { width: 12 },
+    ...anos.map(() => ({ width: 18 })),
+    { width: 18 },
+    { width: 18 },
+    { width: 13 },
+  ];
+
+  let linha = 1;
+  faixa(folha, linha++, titulos.length, `Comparação de cenários${livro.title ? ` — ${livro.title}` : ""}`);
+  nota(
+    folha,
+    linha++,
+    titulos.length,
+    "O orçamento e cada cenário de corte lado a lado. A diferença é a do cenário em relação ao orçamento, sem IVA.",
+  );
+  linha++;
+  const linhaCabecalho = linha;
+  cabecalho(folha, linha++, titulos);
+
+  const soma = (v: number[]) => v.reduce((a, b) => a + b, 0);
+  const semIvaDoOrcamento = soma(totaisPorAnoDaUnidadeSemIva(orcamento));
+  const leituras: Array<{ nome: string; orcamento: OrcamentoUnidade }> = [
+    { nome: "Orçamento", orcamento },
+    ...orcamento.cenarios.map((c) => ({ nome: `Cenário: ${c.nome}`, orcamento: aplicarCenario(orcamento, c) })),
+  ];
+
+  leituras.forEach((l, i) => {
+    const semIva = soma(totaisPorAnoDaUnidadeSemIva(l.orcamento));
+    const dif = semIva - semIvaDoOrcamento;
+    escreverLinha(
+      folha,
+      linha++,
+      [
+        texto(l.nome),
+        { valor: externosDaUnidade(l.orcamento) },
+        { valor: internosDaUnidade(l.orcamento) },
+        { valor: pessoasDaUnidade(l.orcamento) },
+        ...totaisPorAnoDaUnidade(l.orcamento).map((v) => moeda(v)),
+        moeda(semIva),
+        moeda(i === 0 ? null : dif),
+        i === 0 || semIvaDoOrcamento === 0
+          ? { valor: null }
+          : { valor: (dif / semIvaDoOrcamento) * 100, formato: PERCENTAGEM },
+      ],
+      i % 2 === 1,
+    );
+  });
+
+  folha.views = [{ state: "frozen", ySplit: linhaCabecalho, xSplit: 1, showGridLines: false }];
+  prepararImpressao(folha, { repetirAte: linhaCabecalho });
+}
+
+/** A folha do detalhe: uma linha por perfil e por elemento interno, projeto a projeto. */
+function folhaDoDetalhe(
+  livro: ExcelJS.Workbook,
+  orcamento: OrcamentoUnidade,
+  nomeDaFolha: string,
+  titulo: string,
+  explicacao: string,
+): void {
+  const anos = anosDoOrcamento(orcamento);
+  const folha = livro.addWorksheet(nomeDaFolha, { views: [{ showGridLines: false }] });
 
   const titulos = [
     "Projeto",
@@ -112,14 +230,8 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
   ];
 
   let linha = 1;
-  faixa(folha, linha++, titulos.length, livro.title);
-  nota(
-    folha,
-    linha++,
-    titulos.length,
-    "Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos " +
-      "elementos exigidos em cada perfil. Valores com IVA incluído.",
-  );
+  faixa(folha, linha++, titulos.length, titulo);
+  nota(folha, linha++, titulos.length, explicacao);
   linha++;
 
   const linhaCabecalho = linha;
@@ -149,7 +261,6 @@ export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Wo
       to: { row: ultimaLinha, column: titulos.length },
     };
   }
-  return livro;
 }
 
 /**

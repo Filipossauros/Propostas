@@ -4,6 +4,7 @@ import { CHAVE_VISTA_DIRECAO } from "../core/persistencia";
 import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { ErroImportacao } from "../core/perfil";
 import { importarOrcamentoJSON, pessoasDaUnidade } from "../core/vistaGeral";
+import { aplicarCenario } from "../core/cenarios";
 import {
   anosDaDirecao,
   aplicarFiltros,
@@ -18,6 +19,9 @@ import {
   normalizarVistaDirecao,
   pessoasDaDirecao,
   semUnidade,
+  cenarioDaUnidade,
+  comCenarioDaUnidade,
+  vistaComCenarios,
   valorDaDirecao,
   valorDaDirecaoSemIva,
   vistaDirecaoInicial,
@@ -57,7 +61,9 @@ export function VistaGeralDirecao() {
   const semDados = vista.unidades.length === 0;
   // Tudo o que se mostra sai da vista filtrada: as três tabelas, os totais e o
   // Excel. É o que garante que o ficheiro leva o que está no ecrã.
-  const filtrada = aplicarFiltros(vista, filtros);
+  // Antes dos filtros, cada unidade entra no cenário escolhido para ela.
+  const efetiva = vistaComCenarios(vista);
+  const filtrada = aplicarFiltros(efetiva, filtros);
   const anos = anosDaDirecao(filtrada).filter((ano) => filtros.anos.length === 0 || filtros.anos.includes(ano));
 
   async function carregarUnidades(ficheiros: FileList) {
@@ -206,12 +212,31 @@ export function VistaGeralDirecao() {
           <div className="lista-unidades">
             {vista.unidades.map((unidade) => {
               const nome = nomeDaUnidade(unidade);
+              const cenario = cenarioDaUnidade(vista, unidade);
               return (
                 <span key={nome} className="etiqueta-unidade">
                   {nome}
                   <span className="meta">
-                    {unidade.projetos.length} projeto(s) · {pessoasDaUnidade(unidade)} pessoas
+                    {unidade.projetos.length} projeto(s) ·{" "}
+                    {pessoasDaUnidade(cenario === undefined ? unidade : aplicarCenario(unidade, cenario))} pessoas
                   </span>
+                  {unidade.cenarios.length > 0 && (
+                    <select
+                      className="seletor-cenario"
+                      aria-label={`Cenário de ${nome}`}
+                      value={cenario?.id ?? ""}
+                      onChange={(e) =>
+                        setVista((atual) => comCenarioDaUnidade(atual, nome, e.target.value === "" ? null : e.target.value))
+                      }
+                    >
+                      <option value="">Orçamento</option>
+                      {unidade.cenarios.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          Cenário: {c.nome}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <button
                     type="button"
                     aria-label={`Remover a unidade ${nome}`}
@@ -228,7 +253,9 @@ export function VistaGeralDirecao() {
         <p className="ajuda">
           Esta vista fica guardada neste navegador, incluindo os nomes dos elementos internos que cada unidade
           registou, e não sai deste posto de trabalho. Os elementos internos não se editam aqui: são da unidade, e é
-          lá que se acrescentam.
+          lá que se acrescentam. Uma unidade que traga cenários de corte pode entrar com um deles em vez do
+          orçamento: escolha-o junto ao nome da unidade. Tudo o que está abaixo — totais, tabelas e ficheiros —
+          passa a usar esse cenário.
         </p>
       </section>
 
@@ -240,7 +267,7 @@ export function VistaGeralDirecao() {
               <p className="painel-nota">Valem para as três tabelas e para os ficheiros que daqui saem.</p>
             </header>
 
-            <FiltrosDaDirecao vista={vista} filtros={filtros} onAlterar={setFiltros} />
+            <FiltrosDaDirecao vista={efetiva} filtros={filtros} onAlterar={setFiltros} />
 
             <dl className="tira-totais">
               <div>

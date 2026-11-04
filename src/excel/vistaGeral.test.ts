@@ -10,6 +10,7 @@ import {
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
 import { perfil } from "../core/fixtures";
+import { comPessoas, novoCenario } from "../core/cenarios";
 import type { LotesJSON } from "../core/types";
 
 function agrupamento(nome: string, anoInicio: number, perfis: Array<{ lote: string; perfil: string; pessoas: number }>) {
@@ -205,3 +206,49 @@ function linhaCom(folha: ExcelJS.Worksheet, texto: string): number {
   }
   throw new Error(`sem linha para "${texto}"`);
 }
+
+describe("cenários de corte no Excel da unidade", () => {
+  function comCenarios(): OrcamentoUnidade {
+    const orcamento = comDoisProjetos();
+    const [sclinico] = orcamento.projetos;
+    return {
+      ...orcamento,
+      cenarios: [
+        comPessoas(novoCenario("Corte: 50 % [teste] de um nome muito comprido"), sclinico, sclinico.entradas[0], 1),
+      ],
+    };
+  }
+
+  it("sem cenários, o livro fica como estava", () => {
+    expect(gerarWorkbookVistaGeral(comDoisProjetos()).worksheets.map((f) => f.name)).toEqual([
+      "Resumo geral",
+      "Detalhe por projeto",
+    ]);
+  });
+
+  it("com cenários, acrescenta a comparação e o detalhe de cada um, com nomes de folha válidos", () => {
+    const nomes = gerarWorkbookVistaGeral(comCenarios()).worksheets.map((f) => f.name);
+    expect(nomes.slice(0, 3)).toEqual(["Resumo geral", "Detalhe por projeto", "Comparação"]);
+    expect(nomes[3].startsWith("Cenário 1 — Corte")).toBe(true);
+    expect(nomes[3].length).toBeLessThanOrEqual(31);
+    expect(nomes[3]).not.toMatch(/[[\]:*?/\\]/);
+  });
+
+  it("a comparação tem o orçamento e o cenário, com a diferença sem IVA", () => {
+    const folha = gerarWorkbookVistaGeral(comCenarios()).getWorksheet("Comparação")!;
+    const linhas: ExcelJS.Row[] = [];
+    folha.eachRow((r) => linhas.push(r));
+    const orcamento = linhas.find((r) => r.getCell(1).value === "Orçamento")!;
+    const cenario = linhas.find((r) => String(r.getCell(1).value).startsWith("Cenário:"))!;
+
+    // 2 externos + 1 interno no SClínico, 1 no RSE; o cenário corta um programador.
+    expect(orcamento.getCell(4).value).toBe(4);
+    expect(cenario.getCell(4).value).toBe(3);
+    const nColunas = folha.columnCount;
+    const semIvaOrcamento = Number(orcamento.getCell(nColunas - 2).value);
+    const semIvaCenario = Number(cenario.getCell(nColunas - 2).value);
+    // O programador do SClínico: 2 × 1500 h × 100 €; corta-se metade.
+    expect(semIvaOrcamento - semIvaCenario).toBeCloseTo(150000, 2);
+    expect(Number(cenario.getCell(nColunas - 1).value)).toBeCloseTo(-150000, 2);
+  });
+});

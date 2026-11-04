@@ -13,6 +13,7 @@
 
 import { ANOS_PLURIANUAIS, SCHEMA_VERSION_ATUAL } from "./types";
 import { ErroImportacao } from "./perfil";
+import { aplicarCenario } from "./cenarios";
 import {
   anosDoOrcamento,
   externosDaUnidade,
@@ -35,10 +36,15 @@ export interface VistaDirecao {
   /** Direção a que a vista respeita, se quem a guardou lhe deu nome. */
   direcao: string;
   unidades: OrcamentoUnidade[];
+  /**
+   * O cenário de corte com que cada unidade entra na vista, pelo nome da
+   * unidade. Sem entrada, a unidade entra com o orçamento.
+   */
+  cenarioPorUnidade: Record<string, string>;
 }
 
 export function vistaDirecaoInicial(): VistaDirecao {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "vistaDirecao", direcao: "", unidades: [] };
+  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "vistaDirecao", direcao: "", unidades: [], cenarioPorUnidade: {} };
 }
 
 /**
@@ -78,6 +84,43 @@ export function jaTemUnidade(vista: VistaDirecao, nome: string): boolean {
 
 export function semUnidade(vista: VistaDirecao, nome: string): VistaDirecao {
   return { ...vista, unidades: vista.unidades.filter((u) => nomeDaUnidade(u) !== nome) };
+}
+
+// --------------------------------------------------------------------------
+// Cenários
+// --------------------------------------------------------------------------
+
+/** O cenário escolhido para a unidade, se ainda existir nela. */
+export function cenarioDaUnidade(vista: VistaDirecao, orcamento: OrcamentoUnidade) {
+  const id = vista.cenarioPorUnidade[nomeDaUnidade(orcamento)];
+  return id === undefined ? undefined : orcamento.cenarios.find((c) => c.id === id);
+}
+
+export function comCenarioDaUnidade(vista: VistaDirecao, nomeUnidade: string, cenarioId: string | null): VistaDirecao {
+  const cenarioPorUnidade = { ...vista.cenarioPorUnidade };
+  if (cenarioId === null) delete cenarioPorUnidade[nomeUnidade];
+  else cenarioPorUnidade[nomeUnidade] = cenarioId;
+  return { ...vista, cenarioPorUnidade };
+}
+
+/**
+ * A vista com cada unidade no cenário escolhido para ela.
+ *
+ * É o primeiro passo de tudo o que se mostra, antes dos filtros: as três
+ * tabelas, os totais e os ficheiros veem as unidades já com os cortes. O
+ * resultado é um retrato — sem cenários nem escolhas —, para que guardá-lo e
+ * voltar a abri-lo não aplique os cortes duas vezes. As linhas que ficam sem
+ * ninguém saem, para um perfil cortado não contar nas rates praticadas.
+ */
+export function vistaComCenarios(vista: VistaDirecao): VistaDirecao {
+  return {
+    ...vista,
+    cenarioPorUnidade: {},
+    unidades: vista.unidades.map((u) => {
+      const cenario = cenarioDaUnidade(vista, u);
+      return cenario === undefined ? u : aplicarCenario(u, cenario, { semLinhasCortadas: true });
+    }),
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -386,5 +429,12 @@ export function normalizarVistaDirecao(bruto: object): VistaDirecao {
     unidades: Array.isArray(registo.unidades)
       ? registo.unidades.flatMap((u) => (typeof u === "object" && u !== null ? [normalizarOrcamento(u)] : []))
       : [],
+    cenarioPorUnidade: Object.fromEntries(
+      Object.entries(
+        typeof registo.cenarioPorUnidade === "object" && registo.cenarioPorUnidade !== null
+          ? (registo.cenarioPorUnidade as Record<string, unknown>)
+          : {},
+      ).filter((par): par is [string, string] => typeof par[1] === "string"),
+    ),
   };
 }

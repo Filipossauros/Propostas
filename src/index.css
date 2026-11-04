@@ -2405,3 +2405,127 @@ tbody.grupo-projeto.projeto-alvo td {
 .estado-verificacao-falta {
   color: var(--ambar);
 }
+
+/* ----------------------------------------- Cenários de corte (Vista Geral) */
+
+.barra-cenarios {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip-cenario {
+  padding: 6px 14px;
+  border: 1px solid var(--borda-forte);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.87rem;
+  cursor: pointer;
+}
+
+.chip-cenario-ativo {
+  border-color: var(--unidade-700);
+  background: var(--unidade-700);
+  color: #fff;
+}
+
+/* O valor do orçamento, riscado por baixo do valor do cenário. */
+.valor-anterior,
+.tira-totais dd .valor-anterior {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+  text-decoration: line-through;
+}
+
+.tira-totais dd .diferenca,
+.diferenca {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--verde);
+}
+
+.tira-totais dd .diferenca-nula,
+.diferenca-nula {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+
+.passo-pessoas {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-pequeno);
+  overflow: hidden;
+  background: var(--superficie);
+}
+
+.passo-pessoas button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: var(--superficie-alt);
+  color: var(--texto);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.passo-pessoas button:disabled {
+  color: var(--borda-forte);
+  cursor: default;
+}
+
+.passo-pessoas span {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela-cenario .linha-cortada td {
+  color: var(--texto-suave);
+}
+
+.tabela-cenario .celula-projeto .acoes-linha {
+  margin-top: 6px;
+}
+
+.seletor-projeto-interno,
+.seletor-cenario {
+  max-width: 220px;
+  font-size: 0.82rem;
+}
+
+.linha-mover-interno {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.tabela-cenario .linha-interno-registado .meta {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.tabela-cenario .celula-perfil {
+  min-width: 220px;
+}
+
+.tabela-cenario .celula-projeto {
+  min-width: 170px;
+}
+
+.tabela-cenario .seletor-projeto-interno {
+  max-width: 260px;
+}
