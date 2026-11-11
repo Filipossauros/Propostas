@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "./core/types";
 import { SCHEMA_VERSION_ATUAL } from "./core/types";
 import {
@@ -39,80 +39,24 @@ import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
 import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
+import { ModuloLicenciamento } from "./licenciamento/ModuloLicenciamento";
+import { PaginaInicial, type EstadoDoModulo } from "./inicio/PaginaInicial";
+import { BarraDoModulo } from "./inicio/BarraDoModulo";
+import {
+  enderecoDe,
+  grupoDaPagina,
+  localizacaoDoEndereco,
+  type ChaveGrupo,
+  type Localizacao,
+  type Pagina,
+} from "./inicio/navegacao";
 
-type Aba = "projeto" | "perfis" | "lotes" | "avaliacao" | "ordenacao" | "vistaGeral" | "vistaDirecao";
-
-interface AbaDeModulo {
-  chave: Aba;
-  numero: string;
-  titulo: string;
-  descricao: string;
-}
-
-/**
- * Os cinco módulos, em dois grupos: a preparação do procedimento, feita por
- * quem o lança, e a análise das propostas, feita pelo júri. São momentos e
- * pessoas diferentes, e o menu mostra-o.
- */
-const GRUPOS_DE_ABAS: Array<{ titulo: string; abas: AbaDeModulo[] }> = [
-  {
-    titulo: "Preparação do procedimento",
-    abas: [
-      { chave: "projeto", numero: "1", titulo: "Projeto", descricao: "Descrição e justificação" },
-      { chave: "perfis", numero: "2", titulo: "Perfis", descricao: "Requisitos e conteúdo" },
-      { chave: "lotes", numero: "3", titulo: "Lotes", descricao: "Valor e Anexo Técnico" },
-    ],
-  },
-  {
-    titulo: "Análise das propostas",
-    abas: [
-      { chave: "avaliacao", numero: "4", titulo: "Análise", descricao: "Apuramento" },
-      { chave: "ordenacao", numero: "5", titulo: "Ordenação", descricao: "Preço e vencedores" },
-    ],
-  },
-];
-
-/** O estado de um módulo, dito no próprio separador: o que falta, ou que está completo. */
-interface EstadoDaAba {
-  texto: string;
-  falta: boolean;
-}
-
-function estadoPorErros(n: number): EstadoDaAba {
+/** O estado de um módulo, dito no seu cartão da página inicial: o que falta, ou que está completo. */
+function estadoPorErros(n: number): EstadoDoModulo {
   return n === 0
     ? { texto: "completo", falta: false }
     : { texto: n === 1 ? "1 questão por resolver" : `${n} questões por resolver`, falta: true };
 }
-
-/**
- * As vistas gerais não são o sexto passo de nada.
- *
- * Os cinco módulos são um caminho: projeto, perfis, lotes, avaliação,
- * ordenação, sempre do mesmo procedimento. Estas olham para muitos
- * procedimentos ao mesmo tempo, e por isso ficam à parte — no canto do
- * cabeçalho, fora do menu dos módulos, e com
- * cor própria, para não se lerem como o passo a seguir à ordenação.
- *
- * São duas, uma por cada altura a que a pergunta se faz: a da unidade junta os
- * procedimentos de uma unidade, a da direção junta as unidades. Cada uma leva a
- * sua cor: quem trabalha numa não está a trabalhar na outra.
- */
-const ABAS_DE_VISTA: Array<{ chave: Aba; marca: string; classe: string; titulo: string; descricao: string }> = [
-  {
-    chave: "vistaGeral",
-    marca: "Σ",
-    classe: "aba-unidade",
-    titulo: "Unidade",
-    descricao: "Vista Geral da Unidade: orçamento e pessoas da unidade",
-  },
-  {
-    chave: "vistaDirecao",
-    marca: "ΣΣ",
-    classe: "aba-direcao",
-    titulo: "Direção",
-    descricao: "Vista Geral da Direção: as unidades da direção lado a lado",
-  },
-];
 
 function ehTexto(valor: unknown): valor is string {
   return typeof valor === "string";
@@ -125,7 +69,16 @@ function ehLotesGuardado(valor: unknown): valor is LotesJSON {
 }
 
 function App() {
-  const [aba, setAba] = useState<Aba>("projeto");
+  // Onde se está: a página e o grupo de onde se veio. Vive no endereço
+  // (`#bolsa/perfis`), para o «retroceder» do navegador funcionar e para um
+  // recarregamento não atirar ninguém para a página inicial.
+  const [local, setLocal] = useState<Localizacao>(() => localizacaoDoEndereco(window.location.hash));
+  useEffect(() => {
+    const aoMudar = () => setLocal(localizacaoDoEndereco(window.location.hash));
+    window.addEventListener("hashchange", aoMudar);
+    return () => window.removeEventListener("hashchange", aoMudar);
+  }, []);
+  const aba = local.pagina;
 
   // O apuramento entregue pelo Módulo 4 ao Módulo 5 vive aqui, em memória e
   // nunca no navegador: traz as declarações dos candidatos, que são dados
@@ -205,9 +158,11 @@ function App() {
     if (temJustificacao(doFicheiro) && !temJustificacao(justificacao)) setJustificacao(doFicheiro);
   }
 
-  // O estado de cada módulo de preparação, para o separador o dizer sem ser
-  // preciso abri-lo. Sem nada escrito, o separador mostra só o que lá se faz.
-  const estados: Partial<Record<Aba, EstadoDaAba>> = {};
+  // O estado de cada módulo de preparação, para o cartão da página inicial o
+  // dizer sem ser preciso abri-lo. Sem nada escrito, o cartão não diz nada.
+  const estados: Partial<Record<Pagina, EstadoDoModulo>> = {
+    licenciamento: { texto: "em preparação", falta: false },
+  };
   const projetoVazio = nomeProjeto.trim() === "" && descricaoProjeto.trim() === "" && !temJustificacao(justificacao);
   if (!projetoVazio) {
     estados.projeto = estadoPorErros(
@@ -221,75 +176,48 @@ function App() {
     estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
   }
 
-  function irPara(destino: Aba) {
-    setAba(destino);
+  function navegar(destino: Localizacao) {
+    const endereco = enderecoDe(destino);
+    if (window.location.hash !== endereco && !(endereco === "#" && window.location.hash === "")) {
+      window.location.hash = endereco;
+    }
+    setLocal(destino);
     window.scrollTo({ top: 0 });
   }
+
+  /** Vai para outro módulo do grupo em que se está (ou do grupo da página, se for de um só). */
+  function irPara(destino: Exclude<Pagina, "inicio">) {
+    navegar({ pagina: destino, grupo: grupoDaPagina(destino, local.grupo ?? undefined).chave });
+  }
+
+  function abrir(grupo: ChaveGrupo, pagina: Exclude<Pagina, "inicio">) {
+    navegar({ pagina, grupo });
+  }
+
+  const grupo = aba === "inicio" ? null : grupoDaPagina(aba, local.grupo ?? undefined);
 
   return (
     <ProtecaoExemplos>
       <div className="app">
       <header className="app-cabecalho">
-        <div className="cabecalho-topo">
-          <div className="marca">
-            <h1>Manifestações de Necessidades</h1>
-            <p>Aquisição de serviços de desenvolvimento e manutenção</p>
-          </div>
-
-          <nav className="vistas-topo" aria-label="Vistas de gestão">
-            <span className="grupo-abas-titulo">Vistas de gestão</span>
-            {ABAS_DE_VISTA.map((v) => (
-              <button
-                key={v.chave}
-                type="button"
-                className={aba === v.chave ? `aba ${v.classe} aba-ativa` : `aba ${v.classe}`}
-                aria-current={aba === v.chave ? "page" : undefined}
-                title={v.descricao}
-                onClick={() => setAba(v.chave)}
-              >
-                <span className="aba-numero" aria-hidden="true">
-                  {v.marca}
-                </span>
-                <span className="aba-texto">
-                  <span className="aba-titulo">{v.titulo}</span>
-                </span>
-              </button>
-            ))}
-          </nav>
+        <div className="marca">
+          <h1>Manifestações de Necessidades</h1>
+          <p>Preparação de procedimentos, análise de propostas e orçamento</p>
         </div>
-
-        <nav className="menu-modulos" aria-label="Módulos">
-          {GRUPOS_DE_ABAS.map((g) => (
-            <div key={g.titulo} className="grupo-abas">
-              <span className="grupo-abas-titulo">{g.titulo}</span>
-              <div className="abas">
-                {g.abas.map((a) => {
-                  const estado = estados[a.chave];
-                  return (
-                    <button
-                      key={a.chave}
-                      type="button"
-                      className={aba === a.chave ? "aba aba-modulo aba-ativa" : "aba aba-modulo"}
-                      aria-current={aba === a.chave ? "page" : undefined}
-                      onClick={() => setAba(a.chave)}
-                    >
-                      <span className="aba-numero">{a.numero}</span>
-                      <span className="aba-texto">
-                        <span className="aba-titulo">{a.titulo}</span>
-                        <span className={estado?.falta ? "aba-descricao aba-estado-falta" : "aba-descricao"}>
-                          {estado?.texto ?? a.descricao}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
       </header>
 
       <main>
+        {aba === "inicio" && <PaginaInicial estados={estados} onAbrir={abrir} />}
+
+        {grupo !== null && aba !== "inicio" && (
+          <BarraDoModulo
+            grupo={grupo}
+            pagina={aba}
+            onVoltar={() => navegar({ pagina: "inicio", grupo: null })}
+            onIrPara={irPara}
+          />
+        )}
+
         {aba === "projeto" && (
           <ModuloProjeto
             nomeProjeto={nomeProjeto}
@@ -298,7 +226,22 @@ function App() {
             onAlterarDescricaoProjeto={setDescricaoProjeto}
             justificacao={justificacao}
             onAlterarJustificacao={setJustificacao}
-            onIrParaPerfis={() => irPara("perfis")}
+            mostrarComoFunciona={grupo?.chave === "bolsa"}
+            seguinte={
+              grupo?.chave === "licenciamento"
+                ? {
+                    titulo: "o pedido de licenciamento",
+                    nota: "O projeto fica guardado neste navegador e é o ponto de partida do pedido de licenciamento.",
+                    onIr: () => irPara("licenciamento"),
+                  }
+                : {
+                    titulo: "os perfis",
+                    nota:
+                      "O projeto fica guardado neste navegador e segue nos ficheiros dos perfis e dos lotes. Pode " +
+                      "avançar com questões por resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.",
+                    onIr: () => irPara("perfis"),
+                  }
+            }
           />
         )}
         {aba === "perfis" && (
@@ -344,6 +287,10 @@ function App() {
 
         {aba === "ordenacao" && (
           <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
+        )}
+
+        {aba === "licenciamento" && (
+          <ModuloLicenciamento nomeProjeto={nomeProjeto} onIrParaProjeto={() => irPara("projeto")} />
         )}
 
         {aba === "vistaGeral" && <VistaGeral />}

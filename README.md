@@ -6,6 +6,20 @@ procedimento de contratação pública com o preço como critério único.
 Aplicação 100% cliente: sem backend e sem qualquer chamada de rede. Os ficheiros de propostas
 em análise nunca saem do posto de trabalho.
 
+## A página inicial
+
+A aplicação abre numa página inicial com quatro grupos de módulos, cada um num cartão:
+
+- **Pedido de serviços de bolsa de horas** — 1 Projeto, 2 Perfis, 3 Lotes.
+- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior) e o módulo «Pedido de
+  licenciamento», ainda em preparação.
+- **Análise de propostas** — 4 Análise, 5 Ordenação.
+- **Orçamento** — Vista Geral da Unidade e Vista Geral da Direção.
+
+Em cada módulo, o topo tem «← Página inicial», o grupo em que se está e os passos do grupo, para ir
+de um módulo ao seguinte. O endereço da página guarda onde se está (`#bolsa/perfis`): o botão
+«retroceder» do navegador funciona e recarregar não volta ao início.
+
 ## Os cinco módulos
 
 O fluxo acompanha papéis distintos, que raramente são a mesma pessoa:
@@ -24,9 +38,11 @@ do procedimento é sempre campo de preenchimento livre; o lote vem pré-preenchi
 quando o formulário é gerado a partir de um lote já definido no Módulo 3, e fica em branco
 quando é gerado no Módulo 2.
 
-O projeto não tem ficheiro próprio: o nome, a descrição, os objetivos, os benefícios e os
-riscos vão dentro do JSON dos perfis e do dos lotes, e ao importar um desses ficheiros são
-adotados se o Módulo 1 ainda estiver em branco. Cada módulo tem o seu «Carregar exemplo» e o
+O projeto tem ficheiro próprio («Descarregar projeto (JSON)», no Módulo 1), só com o nome, a
+descrição, os objetivos, os benefícios e os riscos. «Importar projeto (JSON)» aceita esse ficheiro e
+também o JSON dos perfis ou dos lotes, de onde tira só o projeto. O projeto continua a ir dentro do
+JSON dos perfis e do dos lotes, e ao importar um desses ficheiros nos Módulos 2 e 3 é adotado se o
+Módulo 1 ainda estiver em branco. Cada módulo tem o seu «Carregar exemplo» e o
 seu «Recomeçar», que só tocam no que é desse módulo.
 
 ### Um catálogo de perfis, partilhado

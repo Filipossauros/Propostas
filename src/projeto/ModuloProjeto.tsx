@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { JustificacaoProjeto } from "../core/types";
 import { BENEFICIO_FIXO } from "../core/types";
 import { validarDescricaoProjeto, validarNomeProjeto } from "../core/perfil";
@@ -7,6 +7,10 @@ import { justificacaoInicial, validarJustificacao } from "../core/justificacao";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { ListaItensEditor } from "../modulo1/ListaItensEditor";
+import { ErroImportacao } from "../core/perfil";
+import { importarProjetoJSON, projetoParaJSON } from "../core/projetoJSON";
+import { temJustificacao } from "../core/justificacao";
+import { descarregarBlob, nomeComProjeto } from "../ui/descarregar";
 
 interface Props {
   nomeProjeto: string;
@@ -16,7 +20,13 @@ interface Props {
   /** Objetivos da aquisição, benefícios do projeto e riscos da não contratação. */
   justificacao: JustificacaoProjeto;
   onAlterarJustificacao: (justificacao: JustificacaoProjeto) => void;
-  onIrParaPerfis: () => void;
+  /**
+   * O passo seguinte do pedido de onde se veio: os perfis, no pedido de
+   * serviços de bolsa de horas; o pedido, no de licenciamento.
+   */
+  seguinte: { titulo: string; nota: string; onIr: () => void };
+  /** O quadro «Como funciona» é o do pedido de serviços de bolsa de horas. */
+  mostrarComoFunciona: boolean;
 }
 
 const CHAVE_COMO_FUNCIONA = "propostas.v2.comoFuncionaFechado";
@@ -42,9 +52,10 @@ function fecharComoFunciona() {
  * Módulo 1 · Projeto.
  *
  * O que é do projeto e não de nenhum perfil: o nome, a descrição e as três
- * listas da manifestação de necessidades. Não tem ficheiro próprio — viaja
- * dentro do JSON dos perfis e do dos lotes, como sempre viajou, e é adotado de
- * lá ao importar se ainda não estiver escrito.
+ * listas da manifestação de necessidades. É o mesmo no pedido de serviços de
+ * bolsa de horas e no pedido de licenciamento. Tem ficheiro próprio, só com a
+ * caracterização, e viaja também dentro do JSON dos perfis e do dos lotes;
+ * qualquer um dos três o repõe aqui.
  */
 export function ModuloProjeto({
   nomeProjeto,
@@ -53,9 +64,12 @@ export function ModuloProjeto({
   onAlterarDescricaoProjeto,
   justificacao,
   onAlterarJustificacao,
-  onIrParaPerfis,
+  seguinte,
+  mostrarComoFunciona,
 }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  const inputProjetoRef = useRef<HTMLInputElement>(null);
+  const temProjeto = nomeProjeto.trim() !== "" || descricaoProjeto.trim() !== "" || temJustificacao(justificacao);
   const [verComoFunciona, setVerComoFunciona] = useState(() => !comoFuncionaFechado());
 
   const erros = [
@@ -74,8 +88,48 @@ export function ModuloProjeto({
     setMensagem({ tipo: "sucesso", texto: "Projeto de exemplo carregado." });
   }
 
+  function descarregarProjeto() {
+    const blob = new Blob([projetoParaJSON(nomeProjeto, descricaoProjeto, justificacao)], {
+      type: "application/json",
+    });
+    descarregarBlob(blob, nomeComProjeto(nomeProjeto, "Projeto.json"));
+  }
+
+  async function importarProjeto(ficheiro: File) {
+    try {
+      const lido = importarProjetoJSON(await ficheiro.text());
+      if (
+        temProjeto &&
+        !confirm("Substituir o nome, a descrição, os objetivos, os benefícios e os riscos pelos do ficheiro?")
+      ) {
+        return;
+      }
+      onAlterarNomeProjeto(lido.nomeProjeto);
+      onAlterarDescricaoProjeto(lido.descricaoProjeto);
+      onAlterarJustificacao(lido.justificacao);
+      const de = { projeto: "do projeto", perfis: "dos perfis", lotes: "dos lotes" }[lido.origem];
+      setMensagem({
+        tipo: "sucesso",
+        texto:
+          `Projeto carregado do ficheiro ${de}.` +
+          (lido.origem === "projeto" ? "" : " Só a caracterização do projeto: os perfis e os lotes não foram tocados."),
+      });
+    } catch (erro) {
+      setMensagem({
+        tipo: "erro",
+        texto: erro instanceof ErroImportacao ? erro.message : "Não foi possível ler o ficheiro.",
+      });
+    }
+  }
+
   function recomecar() {
-    if (!confirm("Apagar o nome, a descrição, os objetivos, os benefícios e os riscos do projeto?")) return;
+    if (
+      !confirm(
+        "Apagar o nome, a descrição, os objetivos, os benefícios e os riscos do projeto? Os perfis e os lotes ficam.",
+      )
+    ) {
+      return;
+    }
     // O nome vai com o resto: o nome de um projeto anterior num campo
     // preenchido é o género de resto que acaba dentro de uma peça.
     onAlterarNomeProjeto("");
@@ -99,7 +153,8 @@ export function ModuloProjeto({
           </div>
         </div>
         <p className="modulo-subtitulo">
-          Identifica o projeto e justifica a aquisição. Escreve-se uma vez e segue para todas as peças.
+          Identifica o projeto e justifica a aquisição. Escreve-se uma vez e serve o pedido de serviços de bolsa de
+          horas e o pedido de licenciamento.
         </p>
         <p className="modulo-quem">
           <strong>Quem preenche:</strong> o gestor do projeto.
@@ -108,7 +163,40 @@ export function ModuloProjeto({
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
-      {verComoFunciona && (
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Ficheiro do projeto</h3>
+          <p className="painel-nota">
+            Para guardar ou partilhar só a caracterização do projeto, sem perfis nem lotes.
+          </p>
+        </header>
+        <div className="acoes">
+          <button type="button" className="botao-secundario" onClick={() => inputProjetoRef.current?.click()}>
+            Importar projeto (JSON)
+          </button>
+          <input
+            ref={inputProjetoRef}
+            type="file"
+            accept="application/json,.json"
+            className="input-ficheiro-oculto"
+            onChange={(e) => {
+              const ficheiro = e.target.files?.[0];
+              if (ficheiro) void importarProjeto(ficheiro);
+              e.target.value = "";
+            }}
+          />
+          <button type="button" className="botao-principal" disabled={!temProjeto} onClick={descarregarProjeto}>
+            Descarregar projeto (JSON)
+          </button>
+        </div>
+        <p className="ajuda">
+          O ficheiro leva o nome, a descrição, os objetivos, os benefícios e os riscos. A importação aceita também o
+          JSON dos perfis ou dos lotes, de onde tira só o projeto, e substitui o que está escrito neste módulo (pede
+          confirmação). Os perfis e os lotes não são tocados.
+        </p>
+      </section>
+
+      {mostrarComoFunciona && verComoFunciona && (
         <section className="painel painel-como-funciona">
           <header className="painel-cabecalho">
             <h3>Como funciona a preparação</h3>
@@ -240,14 +328,11 @@ export function ModuloProjeto({
 
       <section className="painel painel-avancar">
         <div>
-          <h3>Continuar para os perfis</h3>
-          <p className="painel-nota">
-            O projeto fica guardado neste navegador e segue nos ficheiros dos perfis e dos lotes. Pode avançar com
-            questões por resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.
-          </p>
+          <h3>Continuar para {seguinte.titulo}</h3>
+          <p className="painel-nota">{seguinte.nota}</p>
         </div>
-        <button type="button" className="botao-principal" onClick={onIrParaPerfis}>
-          Continuar para os perfis →
+        <button type="button" className="botao-principal" onClick={seguinte.onIr}>
+          Continuar para {seguinte.titulo} →
         </button>
       </section>
     </div>

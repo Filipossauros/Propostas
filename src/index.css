@@ -130,30 +130,38 @@ body {
   color: var(--texto-suave);
 }
 
-/* ------------------------------------------------------------------- Abas */
+/* --------------------------------------------- Página inicial e navegação */
 
-/* O nome à esquerda e as vistas de gestão à direita; por baixo, o menu dos
-   cinco módulos numa barra só, dividida entre preparação e análise. */
-.cabecalho-topo {
+/* A página inicial: um bloco por trabalho da aplicação, com os seus módulos
+   em cartões. Substitui a barra de separadores, que deixou de caber. */
+.pagina-inicial {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.secao-grupo {
+  padding: 18px 20px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.secao-grupo-cabecalho {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: baseline;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
 }
 
-.vistas-topo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.secao-grupo-cabecalho h2 {
+  margin: 0;
+  font-size: 1.1rem;
 }
 
-.vistas-topo .aba {
-  padding: 6px 12px 6px 8px;
-}
-
-.grupo-abas-titulo {
+.secao-grupo-etiqueta {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -161,200 +169,168 @@ body {
   color: var(--texto-suave);
 }
 
-.menu-modulos {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
-  box-shadow: var(--sombra);
+.secao-grupo-descricao {
+  margin: 4px 0 14px;
+  font-size: 0.88rem;
+  color: var(--texto-suave);
 }
 
-.grupo-abas {
+.cartoes-modulos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cartao-modulo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+  color: var(--texto);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.cartao-modulo:hover,
+.cartao-modulo:focus-visible {
+  border-color: var(--azul-500);
+}
+
+.cartao-modulo-marca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--azul-100);
+  color: var(--azul-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cartao-modulo-texto {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-width: 0;
-  padding: 10px 12px 12px;
+  line-height: 1.3;
 }
 
-.grupo-abas + .grupo-abas {
-  border-left: 1px solid var(--borda);
+.cartao-modulo-titulo {
+  font-weight: 600;
 }
 
-.grupo-abas .abas {
-  flex-wrap: nowrap;
-  gap: 6px;
+.cartao-modulo-descricao,
+.cartao-modulo-nota,
+.cartao-modulo-estado {
+  font-size: 0.82rem;
+  color: var(--texto-suave);
 }
 
-.grupo-abas .aba {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 7px 8px;
-  gap: 8px;
+.cartao-modulo-nota,
+.cartao-modulo-estado {
+  margin-top: 4px;
+  font-size: 0.76rem;
 }
 
-.grupo-abas .aba-numero {
-  width: 22px;
-  height: 22px;
-  font-size: 0.72rem;
-}
-
-.grupo-abas .aba-texto {
-  min-width: 0;
-}
-
-.grupo-abas .aba-titulo,
-.grupo-abas .aba-descricao {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.aba .aba-descricao.aba-estado-falta,
-.aba.aba-ativa .aba-descricao.aba-estado-falta {
+.cartao-modulo-estado-falta {
   color: var(--ambar);
 }
 
-@media (max-width: 760px) {
-  .menu-modulos {
-    grid-template-columns: 1fr;
-  }
-
-  .grupo-abas + .grupo-abas {
-    border-left: 0;
-    border-top: 1px solid var(--borda);
-  }
-
-  .grupo-abas .abas {
-    flex-direction: column;
-  }
-}
-
-.abas {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.aba {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px 10px 12px;
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
-  background: var(--superficie);
-  color: var(--texto);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.aba:hover {
-  border-color: var(--borda-forte);
-}
-
-
-.aba-numero {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--superficie-alt);
-  color: var(--texto-suave);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.aba-texto {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.25;
-}
-
-.aba-titulo {
-  font-weight: 600;
-}
-
-.aba-descricao {
-  font-size: 0.78rem;
-  color: var(--texto-suave);
-}
-
-.aba.aba-ativa {
-  border-color: var(--azul-500);
-  background: var(--azul-100);
-}
-
-.aba.aba-ativa .aba-numero {
-  background: var(--azul-700);
-  color: #fff;
-}
-
-.aba.aba-ativa .aba-descricao {
-  color: var(--texto-suave);
-}
-
-/* A vista da unidade fica numa linha própria, por baixo dos quatro módulos. */
-.abas-quebra {
-  flex-basis: 100%;
-  height: 0;
-}
-
-.aba.aba-unidade .aba-numero {
+.cartao-modulo-vistaGeral .cartao-modulo-marca {
   background: var(--unidade-100);
   color: var(--unidade-700);
 }
 
-.aba.aba-unidade:hover {
+.cartao-modulo-vistaGeral:hover {
   border-color: var(--unidade-500);
 }
 
-.aba.aba-unidade.aba-ativa {
-  border-color: var(--unidade-500);
-  background: var(--unidade-100);
+.cartao-modulo-vistaDirecao .cartao-modulo-marca {
+  background: var(--direcao-100);
+  color: var(--direcao-700);
 }
 
-.aba.aba-unidade.aba-ativa .aba-numero {
-  background: var(--unidade-700);
-  color: var(--superficie);
+.cartao-modulo-vistaDirecao:hover {
+  border-color: var(--direcao-500);
+}
+
+/* O topo de cada módulo: voltar ao início, onde se está e os passos do grupo. */
+.barra-modulo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.botao-voltar {
+  padding: 7px 12px;
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.87rem;
+  cursor: pointer;
+}
+
+.botao-voltar:hover {
+  border-color: var(--azul-500);
+}
+
+.migalhas {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.migalhas strong {
+  color: var(--texto);
+}
+
+.passos-grupo {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.passo-grupo {
+  padding: 5px 10px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.passo-grupo-ativo {
+  border-color: var(--azul-500);
+  background: var(--azul-100);
+  font-weight: 600;
 }
 
 .modulo-cabecalho-unidade h2 {
   color: var(--unidade-700);
 }
 
-.aba.aba-direcao .aba-numero {
-  background: var(--direcao-100);
-  color: var(--direcao-700);
-}
-
-.aba.aba-direcao:hover {
-  border-color: var(--direcao-500);
-}
-
-.aba.aba-direcao.aba-ativa {
-  border-color: var(--direcao-700);
-  background: var(--direcao-100);
-  color: var(--direcao-700);
-}
-
-.aba.aba-direcao.aba-ativa .aba-numero {
-  background: var(--direcao-700);
-  color: var(--superficie);
-}
-
-.aba.aba-direcao.aba-ativa .aba-descricao {
-  color: var(--direcao-700);
-  opacity: 0.85;
-}
-
 .modulo-cabecalho-direcao h2 {
   color: var(--direcao-700);
+}
+
+@media (max-width: 760px) {
+  .cartoes-modulos {
+    grid-template-columns: 1fr;
+  }
+
+  .passos-grupo {
+    margin-left: 0;
+  }
 }
 
 /* ----------------------------------------------------------------- Módulos */
