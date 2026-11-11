@@ -27,6 +27,11 @@ interface Props {
   seguinte: { titulo: string; nota: string; onIr: () => void };
   /** O quadro «Como funciona» é o do pedido de serviços de bolsa de horas. */
   mostrarComoFunciona: boolean;
+  /**
+   * O benefício de fecho — a insuficiência de recursos humanos internos — é
+   * da bolsa de horas: no pedido de licenciamento não se mostra nem sai.
+   */
+  comBeneficioFixo?: boolean;
 }
 
 const CHAVE_COMO_FUNCIONA = "propostas.v2.comoFuncionaFechado";
@@ -66,6 +71,7 @@ export function ModuloProjeto({
   onAlterarJustificacao,
   seguinte,
   mostrarComoFunciona,
+  comBeneficioFixo = true,
 }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const inputProjetoRef = useRef<HTMLInputElement>(null);
@@ -278,15 +284,17 @@ export function ModuloProjeto({
         titulo="Benefícios do projeto"
         nota={
           "Obrigatório. Um benefício por linha. Saem na manifestação de necessidades, como alíneas a., b., c.…, " +
-          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício. O último é " +
-          "fixo e fecha a lista em todos os projetos: acrescente pelo menos um antes dele."
+          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício." +
+          (comBeneficioFixo
+            ? " O último é fixo e fecha a lista nos pedidos de serviços de bolsa de horas: acrescente pelo menos um antes dele."
+            : " O benefício de fecho dos pedidos de serviços de bolsa de horas não se aplica ao licenciamento e não sai.")
         }
         nomeItem="benefício"
         rotuloColuna="Benefício"
         placeholder="ex.: Redução do tempo de registo clínico, com uma única aplicação em vez de várias"
         textoVazio="Ainda não há benefícios. Acrescente o primeiro."
         rotuloAdicionar="+ Adicionar benefício"
-        itemFixo={BENEFICIO_FIXO}
+        itemFixo={comBeneficioFixo ? BENEFICIO_FIXO : undefined}
         rotuloFixo="fixo"
         itens={justificacao.beneficios}
         onChange={(beneficios) => onAlterarJustificacao({ ...justificacao, beneficios })}

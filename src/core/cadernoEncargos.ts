@@ -506,7 +506,9 @@ function blocosPostoTrabalho(config: LotesJSON): BlocoDocumento[] {
  * altera o resultado do procedimento para lá do apuramento da experiência, e
  * quem prepara as peças tem de dar por ela.
  */
-function blocosUmLotePorConcorrente(config: LotesJSON): BlocoDocumento[] {
+export function blocosUmLotePorConcorrente(
+  config: Pick<LotesJSON, "umLotePorConcorrente"> & { lotes: Array<{ numero: string }> },
+): BlocoDocumento[] {
   if (!config.umLotePorConcorrente) return [];
 
   const numeros = config.lotes.map((lote) => `Lote ${lote.numero}`);

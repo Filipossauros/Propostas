@@ -11,8 +11,8 @@ em análise nunca saem do posto de trabalho.
 A aplicação abre numa página inicial com quatro grupos de módulos, cada um num cartão:
 
 - **Pedido de serviços de bolsa de horas** — 1 Projeto, 2 Perfis, 3 Lotes.
-- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior, com os mesmos dados) e o módulo «Pedido de
-  licenciamento», ainda em preparação.
+- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior, com os mesmos dados), L1 Licenças, L2
+  Condições e L3 Pedido.
 - **Análise de propostas** — 4 Análise, 5 Ordenação.
 - **Orçamento** — Vista Geral da Unidade e Vista Geral da Direção.
 
@@ -310,6 +310,46 @@ Como a certificação não entra em nenhum quadro do apuramento, o risco é pass
 despercebida. Por isso o Módulo 4, ao carregar o agrupamento, assinala cada
 perfil que a exija — chamada de atenção, não verificação.
 
+## O pedido de licenciamento
+
+Aquisição de licenciamento de software em que **o preço é o único aspeto submetido à concorrência**: tudo
+o resto — requisitos, métrica, manutenção, níveis de serviço — são termos e condições do contrato.
+
+| Módulo | Quem usa | O que faz |
+|---|---|---|
+| **1 · Projeto** | Responsável do projeto | O mesmo do pedido de serviços, sem o benefício de fecho da bolsa de horas |
+| **L1 · Licenças** | Gestor do projeto, com a área técnica | Natureza da aquisição e, por produto: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
+| **L2 · Condições** | Gestor do projeto | Âmbito da licença, direito de uso e transmissão, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo de disponibilização, mais condições próprias |
+| **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, eAvalia, júri e Anexo Técnico |
+
+**Natureza da aquisição.** Numa aquisição **aberta à concorrência**, cada produto descreve-se sem marca:
+designação, categoria e requisitos funcionais e técnicos mínimos, linha a linha; o concorrente identifica
+o produto no mapa de preços. Num **produto determinado**, identifica-se o produto, o fabricante e a versão
+mínima, e fundamenta-se a escolha (plataforma instalada, direitos exclusivos — art.º 24.º do CCP —,
+renovação).
+
+**Valor estimado.** Subscrição: quantidade × preço/mês × meses, repartido pelos meses de cada ano a partir
+de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano, mais a manutenção à
+parte (percentagem anual do valor das licenças) pelo período. O período vai até 36 meses (art.º 48.º do
+CCP); acima de 12 pede encargos plurianuais. A margem prudencial aplica-se ao preço unitário de cada
+produto. Por omissão, cada produto é um lote; no L3 juntam-se produtos no mesmo lote.
+
+**O Anexo Técnico (ZIP)** leva:
+
+- a manifestação de necessidades, no mesmo modelo da DAG (Word e, com o n.º da informação e o n.º de
+  orçamento, PDF), com as condições do L2 nas Especificações Técnicas (Anexo III) e as folhas do eAvalia
+  em imagem;
+- o pedido eAvalia com o «Alinhamento Tecnológico» e a folha **«Custos - Licenciamento»** preenchida — um
+  bloco por produto, na secção do software proprietário ou, para «Solução Software Livre», na do código
+  aberto. O preço unitário é o do período inteiro, e a manutenção à parte vai na manutenção da aquisição.
+  A folha «Custos - Serviços» fica como o modelo a traz;
+- um **mapa de quantidades e preços** em Excel por lote, que o concorrente preenche (só as células
+  amarelas: preço e, na aberta, o produto proposto);
+- o JSON do pedido, que se importa no L1.
+
+O pedido fica guardado neste navegador (`propostas.v2.licenciamento`). A ordenação das propostas de
+licenciamento (Módulo 5) e as vistas gerais ainda não o leem.
+
 ## As vistas gerais e os cenários de corte
 
 A **Vista Geral da Unidade** junta os JSON de lotes dos projetos de uma unidade: pessoas, valores por
@@ -368,6 +408,9 @@ npm run build    # build de produção (pasta dist/)
   ficheiros gerados vive em `src/excel/estilo.ts`: é a partilha que os faz parecer da mesma casa.
 - `src/pdf/` — comparador PDF ↔ Excel (pdf.js).
 - `src/modulo1/` … `src/modulo4/` — interface de cada módulo.
+- `src/licenciamento/` — interface do pedido de licenciamento (L1, L2, L3); o núcleo está em
+  `src/core/licenciamento.ts`, a folha eAvalia em `src/excel/custosLicenciamento.ts`, os mapas de
+  preços em `src/excel/mapaPrecos.ts` e a manifestação em `src/word/manifestacaoLicenciamento.ts`.
 - `src/ui/` — componentes partilhados.
 
 ## Implantação (GitHub Pages)

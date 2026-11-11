@@ -21,7 +21,11 @@ import { comMargemPrudencial } from "../core/margem";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
 import { gerarDeclaracaoExcelBlob } from "../excel/gerar";
 import { imagensDosResumos } from "../excel/imagemDaFolha";
-import { gerarEavaliaBlob } from "../excel/eavalia";
+import { gerarEavaliaBlob, gerarEavaliaLicenciamentoBlob } from "../excel/eavalia";
+import type { PedidoLicenciamento } from "../core/licenciamento";
+import { comMargemLicenciamento, pedidoLicenciamentoParaJSON } from "../core/licenciamento";
+import { gerarManifestacaoLicenciamentoBlob, tituloDoPdfLicenciamento } from "../word/manifestacaoLicenciamento";
+import { gerarMapaPrecosBlob, lotesComMapa } from "../excel/mapaPrecos";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { gerarVistaGeralBlob } from "../excel/vistaGeral";
 import { gerarVistaDirecaoBlob } from "../excel/vistaDirecao";
@@ -161,6 +165,59 @@ export async function ficheirosDasPecas(
 export function nomeDoPacoteDePecas(nomeProjeto: string, quando?: Date): string {
   // O pacote chama-se como o painel que o gera no Módulo 3.
   return nomeDoPacote(nomeProjeto, "Anexo_Tecnico", quando);
+}
+
+// --------------------------------------------------------------------------
+// Pedido de licenciamento (L3) — Anexo Técnico
+// --------------------------------------------------------------------------
+
+/**
+ * As peças do pedido de licenciamento: a manifestação de necessidades (Word e,
+ * com os dois números, PDF), o eAvalia com a folha «Custos - Licenciamento», um
+ * mapa de quantidades e preços por lote e o JSON do pedido.
+ *
+ * `pedido` traz o projeto carimbado e os preços de referência; a margem
+ * prudencial aplica-se aqui, uma vez, a todas as peças com preços.
+ */
+export async function ficheirosDoPedidoLicenciamento(
+  pedido: PedidoLicenciamento,
+  quando = new Date(),
+): Promise<FicheiroDoPacote[]> {
+  const base = nomeSeguro(pedido.nomeProjeto, "Projeto");
+  const comMargem = comMargemLicenciamento(pedido);
+  const informacao: FicheiroDoPacote = {
+    nome: `${base}_Manifestacao_de_Necessidades_Licenciamento.docx`,
+    conteudo: await gerarManifestacaoLicenciamentoBlob(pedido, quando),
+  };
+
+  const pdf: FicheiroDoPacote[] = [];
+  if (pedido.numeroInformacao.trim() !== "" && pedido.numeroOrcamento.trim() !== "" && informacao.conteudo instanceof Blob) {
+    const { wordEmPdf } = await import("../pdf/wordEmPdf");
+    const bytes = await wordEmPdf(informacao.conteudo, tituloDoPdfLicenciamento(pedido));
+    pdf.push({
+      nome: informacao.nome.replace(/\.docx$/, ".pdf"),
+      conteudo: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
+    });
+  }
+
+  const mapas = await Promise.all(
+    lotesComMapa(comMargem).map(async (lote) => ({
+      nome: `${base}_Mapa_de_Precos_Lote_${lote.numero}.xlsx`,
+      conteudo: await gerarMapaPrecosBlob(comMargem, lote),
+    })),
+  );
+
+  return [
+    informacao,
+    ...pdf,
+    { nome: `Pedido_PPP_eavalia_${base}.xlsx`, conteudo: await gerarEavaliaLicenciamentoBlob(comMargem, quando) },
+    ...emPasta("Mapas de quantidades e precos", mapas),
+    { nome: `${base}_Pedido_Licenciamento.json`, conteudo: comoJSON(pedidoLicenciamentoParaJSON(pedido)) },
+  ];
+}
+
+export function nomeDoPacoteDeLicenciamento(nomeProjeto: string, quando?: Date): string {
+  return nomeDoPacote(nomeProjeto, "Anexo_Tecnico_Licenciamento", quando);
 }
 
 // --------------------------------------------------------------------------

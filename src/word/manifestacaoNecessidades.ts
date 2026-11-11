@@ -86,16 +86,16 @@ export const BENEFICIARIOS =
   "profissionais de saúde, utentes do Serviço Nacional de Saúde (SNS), entidades do SNS e serviços da SPMS, " +
   "E.P.E. responsáveis pelos sistemas de informação abrangidos pelo projeto.";
 
-const RISCOS_DA_EXECUCAO =
+export const RISCOS_DA_EXECUCAO =
   "rotatividade dos recursos afetos, com perda de conhecimento; atrasos na disponibilização dos recursos; " +
   "desajuste entre os perfis contratados e as necessidades do projeto; consumo de horas acima do planeado.";
 
-const MITIGACAO =
+export const MITIGACAO =
   "exigência de requisitos mínimos de experiência por perfil; acompanhamento pelo gestor do contrato com base em " +
   "relatórios mensais de atividade; controlo do consumo de horas face ao planeado; documentação técnica e " +
   "transferência de conhecimento obrigatórias.";
 
-const CONCLUSAO_CUSTO_BENEFICIO =
+export const CONCLUSAO_CUSTO_BENEFICIO =
   "Da análise efetuada resulta que a contratação permite assegurar os benefícios operacionais identificados, " +
   "mostrando-se o dimensionamento financeiro adotado adequado e proporcional à necessidade, sem prejuízo da " +
   "monitorização do consumo de horas e dos encargos durante a execução.";
@@ -150,21 +150,21 @@ function centimos(valor: number): number {
 // --------------------------------------------------------------------------
 
 const LETRA = "Calibri";
-const CORPO = 22;
-const TABELA = 18;
-const ANOS = 16;
+export const CORPO = 22;
+export const TABELA = 18;
+export const ANOS = 16;
 const POR_PREENCHER = "C00000";
 const SUAVE = "595959";
 const CINZA = "EDF1F5";
-const LARGURA = 9356;
+export const LARGURA = 9356;
 const RFONTS = `<w:rFonts w:ascii="${LETRA}" w:eastAsia="${LETRA}" w:hAnsi="${LETRA}" w:cs="${LETRA}"/>`;
-const QUEBRA_DE_PAGINA = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+export const QUEBRA_DE_PAGINA = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
 /** O recuo do texto numerado e o das alíneas, como no modelo. */
-const RECUO = 720;
-const RECUO_ALINEA = 1440;
+export const RECUO = 720;
+export const RECUO_ALINEA = 1440;
 
-function esc(texto: string): string {
+export function esc(texto: string): string {
   return texto
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -179,7 +179,7 @@ interface OpcoesRun {
   maiusculas?: boolean;
 }
 
-function run(
+export function run(
   texto: string,
   { negrito, italico, sz = CORPO, cor, maiusculas }: OpcoesRun = {},
 ): string {
@@ -192,7 +192,7 @@ function run(
   return `<w:r>${rpr}<w:t xml:space="preserve">${esc(texto)}</w:t></w:r>`;
 }
 
-function tabulador(sz = CORPO): string {
+export function tabulador(sz = CORPO): string {
   return `<w:r><w:rPr>${RFONTS}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr><w:tab/></w:r>`;
 }
 
@@ -200,7 +200,7 @@ function quebra(): string {
   return "<w:r><w:br/></w:r>";
 }
 
-function marcador(texto: string): string {
+export function marcador(texto: string): string {
   return run(`[${texto}]`, { negrito: true, cor: POR_PREENCHER });
 }
 
@@ -215,7 +215,7 @@ interface OpcoesParagrafo {
   entrelinha?: number;
 }
 
-function paragrafo(
+export function paragrafo(
   conteudo: string | string[],
   opcoes: OpcoesParagrafo = {},
 ): string {
@@ -245,7 +245,7 @@ function paragrafo(
   return `<w:p>${ppr}${runs.join("")}</w:p>`;
 }
 
-function vazio(depois = 0): string {
+export function vazio(depois = 0): string {
   return (
     '<w:p><w:pPr><w:pStyle w:val="Normal"/>' +
     `<w:spacing w:before="0" w:after="${depois}" w:line="240" w:lineRule="auto"/></w:pPr></w:p>`
@@ -253,7 +253,7 @@ function vazio(depois = 0): string {
 }
 
 /** «III.  VALOR ESTIMADO E MEMÓRIA DE CÁLCULO» — as secções do modelo. */
-function seccao(numero: number, texto: string): string {
+export function seccao(numero: number, texto: string): string {
   return paragrafo(
     [
       run(`${numeroRomano(numero)}.`, { negrito: true }),
@@ -272,7 +272,7 @@ function seccao(numero: number, texto: string): string {
 }
 
 /** Um título dentro de um anexo, a negrito. */
-function subtitulo(texto: string, nivel: 1 | 2 = 1): string {
+export function subtitulo(texto: string, nivel: 1 | 2 = 1): string {
   return paragrafo(
     [
       run(texto, {
@@ -291,7 +291,7 @@ function subtitulo(texto: string, nivel: 1 | 2 = 1): string {
 }
 
 /** Um ponto numerado: «6.  Para efeitos dos artigos 17.º …». */
-function numerado(
+export function numerado(
   marca: string,
   conteudo: string | string[],
   opcoes: OpcoesParagrafo = {},
@@ -305,7 +305,7 @@ function numerado(
 }
 
 /** Uma alínea, um degrau abaixo do ponto: «a.  …». */
-function alinea(
+export function alinea(
   marca: string,
   conteudo: string | string[],
   ind = RECUO_ALINEA,
@@ -319,7 +319,7 @@ function alinea(
 }
 
 /** Texto alinhado com o texto dos pontos numerados, sem número. */
-function recuado(
+export function recuado(
   conteudo: string | string[],
   opcoes: OpcoesParagrafo = {},
 ): string {
@@ -327,14 +327,14 @@ function recuado(
 }
 
 /** «a., b., c.» — e o último com ponto final, os outros com ponto e vírgula. */
-function comPontuacao(itens: string[]): string[] {
+export function comPontuacao(itens: string[]): string[] {
   return itens.map((item, i) => {
     const limpo = item.trim().replace(/[.;]+$/, "");
     return `${limpo}${i === itens.length - 1 ? "." : ";"}`;
   });
 }
 
-function letra(i: number): string {
+export function letra(i: number): string {
   return String.fromCharCode(97 + i);
 }
 
@@ -392,7 +392,7 @@ function celula(
   );
 }
 
-function tabela(
+export function tabela(
   colunas: Coluna[],
   linhas: LinhaDeCelula[][],
   {
@@ -500,7 +500,7 @@ function tabelaPlurianual(
   });
 }
 
-function lista(
+export function lista(
   bloco: Extract<BlocoDocumento, { tipo: "lista" }>,
   ind = RECUO,
 ): string {
@@ -528,7 +528,7 @@ function lista(
 }
 
 /** Os blocos da aplicação, no corpo da manifestação. Os títulos descem a subtítulos. */
-function renderizar(bloco: BlocoDocumento): string {
+export function renderizar(bloco: BlocoDocumento): string {
   switch (bloco.tipo) {
     case "titulo":
       return subtitulo(bloco.texto, bloco.nivel === 1 ? 1 : 2);
@@ -572,14 +572,14 @@ function semCampos(xml: string): string {
   return saida;
 }
 
-function soCalibri(xml: string): string {
+export function soCalibri(xml: string): string {
   return xml
     .replace(/<w:rFonts[^/]*\/>/g, RFONTS)
     .replace(/<w:rPr>(?!<w:rFonts)/g, `<w:rPr>${RFONTS}`)
     .replace(/<w:pStyle w:val="Normal0"\/>/g, '<w:pStyle w:val="Normal"/>');
 }
 
-function juntoAoSeguinte(xml: string): string {
+export function juntoAoSeguinte(xml: string): string {
   const total = [...xml.matchAll(/<w:pPr>/g)].length;
   let n = 0;
   return xml.replace(
@@ -592,7 +592,7 @@ function juntoAoSeguinte(xml: string): string {
   );
 }
 
-function entre(texto: string, abre: string, fecha: string): string {
+export function entre(texto: string, abre: string, fecha: string): string {
   const i = texto.indexOf(abre);
   return texto.slice(i, texto.indexOf(fecha, i) + fecha.length);
 }
@@ -602,7 +602,7 @@ function entre(texto: string, abre: string, fecha: string): string {
  * indicado no júri, por cima de «(Coordenador)», e a unidade por baixo da
  * direção.
  */
-function assinatura(modeloAnterior: string, juri: LotesJSON["juri"]): string {
+export function assinatura(modeloAnterior: string, juri: LotesJSON["juri"]): string {
   const i = modeloAnterior.lastIndexOf("<w:tbl>");
   const tabelaAnterior = modeloAnterior.slice(
     i,
@@ -622,7 +622,7 @@ function assinatura(modeloAnterior: string, juri: LotesJSON["juri"]): string {
 }
 
 /** N.º, Data, N.º orçamento e Assunto. */
-function tabelaIdentificacao(
+export function tabelaIdentificacao(
   numero: string,
   orcamento: string,
   data: string,
@@ -725,7 +725,7 @@ function numeros(original: LotesJSON, config: LotesJSON): Numeros {
   };
 }
 
-function enumerar(itens: string[]): string {
+export function enumerar(itens: string[]): string {
   return itens.length <= 1
     ? itens.join("")
     : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
@@ -1568,12 +1568,12 @@ function corpo(
 // --------------------------------------------------------------------------
 
 const EMU_POR_PIXEL = 914400 / 96;
-const DXA_POR_PIXEL = 1440 / 96;
+export const DXA_POR_PIXEL = 1440 / 96;
 const LARGURA_EM_PAISAGEM = 16838 - 1701 - 849;
 const ALTURA_EM_PAISAGEM = 11906 - 1970 - 1417 - 240;
-const LARGURA_EM_RETRATO = 11906 - 1701 - 849;
-const ALTURA_EM_RETRATO = 16838 - 1970 - 1417 - 240;
-const RESERVA_DO_TITULO = 1800;
+export const LARGURA_EM_RETRATO = 11906 - 1701 - 849;
+export const ALTURA_EM_RETRATO = 16838 - 1970 - 1417 - 240;
+export const RESERVA_DO_TITULO = 1800;
 const TIPO_IMAGEM =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
 
@@ -1608,7 +1608,7 @@ function paragrafoDeImagem(
   );
 }
 
-function paginasDeImagem(
+export function paginasDeImagem(
   paginas: PaginaDaFolha[],
   nome: string,
   ids: { docPr: number; relacao: string; ficheiro: string },
@@ -1641,7 +1641,7 @@ export function semVersaoDoModelo(cabecalho: string): string {
   );
 }
 
-function decodificar(base64: string): Uint8Array {
+export function decodificar(base64: string): Uint8Array {
   const binario = atob(base64);
   const bytes = new Uint8Array(binario.length);
   for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
@@ -1654,12 +1654,19 @@ function decodificar(base64: string): Uint8Array {
  * Recebe o agrupamento como está gravado — com os valores hora de referência —
  * e aplica-lhe a margem prudencial antes de escrever qualquer número.
  */
-export async function gerarManifestacaoBlob(
-  original: LotesJSON,
-  quando = new Date(),
-  imagens: ImagemDaFolha[] = [],
-): Promise<Blob> {
-  const config = comMargemPrudencial(original);
+/** O modelo da DAG aberto, com a secção que traz o cabeçalho e o rodapé, e onde pôr imagens. */
+export interface ModeloDaManifestacao {
+  zip: JSZip;
+  modelo: string;
+  /** O documento da informação anterior, de onde vem o bloco da assinatura. */
+  anterior: string;
+  sect: string;
+  sectPaisagem: string;
+  relacao: (id: string, ficheiro: string, dados: Uint8Array) => string;
+  relacoesNovas: string[];
+}
+
+export async function abrirModeloDaManifestacao(): Promise<ModeloDaManifestacao> {
   const zip = await JSZip.loadAsync(modeloBase64, { base64: true });
   const modelo = await zip.file("word/document.xml")!.async("string");
   const anterior = await (
@@ -1689,6 +1696,76 @@ export async function gerarManifestacaoBlob(
     );
     return id;
   };
+  return { zip, modelo, anterior, sect, sectPaisagem, relacao, relacoesNovas };
+}
+
+/** O documento montado: o corpo no lugar do do modelo, as imagens registadas, o cabeçalho e o rodapé acertados. */
+export async function fecharManifestacao(
+  { zip, modelo, relacoesNovas }: ModeloDaManifestacao,
+  xml: string,
+): Promise<Blob> {
+  if (relacoesNovas.length > 0) {
+    const caminho = "word/_rels/document.xml.rels";
+    const relacoes = await zip.file(caminho)!.async("string");
+    zip.file(
+      caminho,
+      relacoes.replace(
+        "</Relationships>",
+        `${relacoesNovas.join("")}</Relationships>`,
+      ),
+    );
+    const tipos = await zip.file("[Content_Types].xml")!.async("string");
+    if (!/Extension="png"/i.test(tipos)) {
+      zip.file(
+        "[Content_Types].xml",
+        tipos
+          .replace("<Types", "<Types")
+          .replace(
+            /(<Types[^>]*>)/,
+            '$1<Default Extension="png" ContentType="image/png"/>',
+          ),
+      );
+    }
+  }
+
+  const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
+  const fim = modelo.lastIndexOf("</w:body>");
+  zip.file(
+    "word/document.xml",
+    modelo.slice(0, inicio) + xml + modelo.slice(fim),
+  );
+
+  // O cabeçalho do modelo traz a marca da versão do template («Template DAG /
+  // Setembro de 2026»): é do modelo, não da informação, e sai.
+  const cabecalho = zip.file("word/header1.xml");
+  if (cabecalho !== null)
+    zip.file(
+      "word/header1.xml",
+      semVersaoDoModelo(await cabecalho.async("string")),
+    );
+
+  const rodape = zip.file("word/footer1.xml");
+  if (rodape !== null)
+    zip.file(
+      "word/footer1.xml",
+      rodapeComLinhaUnica(await rodape.async("string")),
+    );
+
+  return zip.generateAsync({
+    type: "blob",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+}
+
+export async function gerarManifestacaoBlob(
+  original: LotesJSON,
+  quando = new Date(),
+  imagens: ImagemDaFolha[] = [],
+): Promise<Blob> {
+  const config = comMargemPrudencial(original);
+  const aberto = await abrirModeloDaManifestacao();
+  const { modelo, anterior, sect, sectPaisagem, relacao } = aberto;
 
   let xml = corpo(original, config, modelo, anterior, quando, imagens);
   const resumos = anexoDosResumos(config, imagens);
@@ -1802,56 +1879,5 @@ export async function gerarManifestacaoBlob(
         );
   xml += sect;
 
-  if (relacoesNovas.length > 0) {
-    const caminho = "word/_rels/document.xml.rels";
-    const relacoes = await zip.file(caminho)!.async("string");
-    zip.file(
-      caminho,
-      relacoes.replace(
-        "</Relationships>",
-        `${relacoesNovas.join("")}</Relationships>`,
-      ),
-    );
-    const tipos = await zip.file("[Content_Types].xml")!.async("string");
-    if (!/Extension="png"/i.test(tipos)) {
-      zip.file(
-        "[Content_Types].xml",
-        tipos
-          .replace("<Types", "<Types")
-          .replace(
-            /(<Types[^>]*>)/,
-            '$1<Default Extension="png" ContentType="image/png"/>',
-          ),
-      );
-    }
-  }
-
-  const inicio = modelo.indexOf("<w:body>") + "<w:body>".length;
-  const fim = modelo.lastIndexOf("</w:body>");
-  zip.file(
-    "word/document.xml",
-    modelo.slice(0, inicio) + xml + modelo.slice(fim),
-  );
-
-  // O cabeçalho do modelo traz a marca da versão do template («Template DAG /
-  // Setembro de 2026»): é do modelo, não da informação, e sai.
-  const cabecalho = zip.file("word/header1.xml");
-  if (cabecalho !== null)
-    zip.file(
-      "word/header1.xml",
-      semVersaoDoModelo(await cabecalho.async("string")),
-    );
-
-  const rodape = zip.file("word/footer1.xml");
-  if (rodape !== null)
-    zip.file(
-      "word/footer1.xml",
-      rodapeComLinhaUnica(await rodape.async("string")),
-    );
-
-  return zip.generateAsync({
-    type: "blob",
-    mimeType:
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  });
+  return fecharManifestacao(aberto, xml);
 }

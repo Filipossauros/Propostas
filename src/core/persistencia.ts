@@ -29,6 +29,8 @@ export const CHAVE_JUSTIFICACAO_PROJETO = `${PREFIXO}justificacaoProjeto`;
 export const CHAVE_VISTA_GERAL = `${PREFIXO}vistaGeral`;
 /** Vista Geral da Direção: as vistas das unidades que o Diretor juntou. */
 export const CHAVE_VISTA_DIRECAO = `${PREFIXO}vistaDirecao`;
+/** O pedido de licenciamento (L1, L2 e L3): produtos, condições, lotes e júri — sem dados de candidatos. */
+export const CHAVE_LICENCIAMENTO = `${PREFIXO}licenciamento`;
 
 function armazenamentoDisponivel(): boolean {
   try {

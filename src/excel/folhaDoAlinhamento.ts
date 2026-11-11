@@ -60,6 +60,8 @@ export interface FolhaDesenhavel {
 export interface OpcoesDaLeitura {
   /** A última linha a ler (a contar de 1): o que vem abaixo dela fica de fora. */
   ateLinha?: number;
+  /** A última coluna a ler (a contar de 0): o que vem à direita dela fica de fora. */
+  ateColuna?: number;
   juntas?: Array<[number, number]>;
 }
 
@@ -403,7 +405,7 @@ export async function lerFolhaDoEavalia(
 
   const dimensao = atributo(/<dimension\b[^>]*\/>/.exec(folha)?.[0] ?? "", "ref") ?? "A1:F1";
   const fim = lerRef(dimensao.split(":").pop()!);
-  const nColunas = fim.coluna + 1;
+  const nColunas = Math.min(fim.coluna + 1, (opcoes.ateColuna ?? Infinity) + 1);
   const nLinhas = Math.min(fim.linha + 1, opcoes.ateLinha ?? Infinity);
 
   // Larguras: as das `<col>`, e a omissão da folha nas que não tenham.
@@ -460,7 +462,10 @@ export async function lerFolhaDoEavalia(
   }));
   const absorvidas = new Set<string>();
   const fusaoDe = new Map<string, { linha: number; coluna: number }>();
-  for (const { de, ate } of fusoes.filter((f) => f.de.linha < nLinhas)) {
+  for (const fusao of fusoes.filter((f) => f.de.linha < nLinhas && f.de.coluna < nColunas)) {
+    const { de } = fusao;
+    // Uma fusão que passe da última coluna lida fica cortada nela.
+    const ate = { ...fusao.ate, coluna: Math.min(fusao.ate.coluna, nColunas - 1) };
     for (let r = de.linha; r <= ate.linha; r++) {
       for (let c = de.coluna; c <= ate.coluna; c++) {
         if (r !== de.linha || c !== de.coluna) absorvidas.add(`${r}:${c}`);
@@ -471,7 +476,8 @@ export async function lerFolhaDoEavalia(
 
   const regras = lerRegras(folha);
   const valorDe = (ref: string) => valores.get(ref) ?? "";
-  const refDe = (r: number, c: number) => `${String.fromCharCode(65 + c)}${r + 1}`;
+  const letras = (c: number): string => (c < 26 ? String.fromCharCode(65 + c) : letras(Math.floor(c / 26) - 1) + letras(c % 26));
+  const refDe = (r: number, c: number) => `${letras(c)}${r + 1}`;
 
   const estiloFinal = (r: number, c: number): EstiloDeCelula => {
     const ref = refDe(r, c);

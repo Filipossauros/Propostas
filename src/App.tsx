@@ -4,6 +4,7 @@ import { SCHEMA_VERSION_ATUAL } from "./core/types";
 import {
   CHAVE_DESCRICAO_PROJETO,
   CHAVE_JUSTIFICACAO_PROJETO,
+  CHAVE_LICENCIAMENTO,
   CHAVE_LOTES,
   CHAVE_NOME_PROJETO,
   CHAVE_PERFIS,
@@ -39,7 +40,18 @@ import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
 import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
-import { ModuloLicenciamento } from "./licenciamento/ModuloLicenciamento";
+import { ModuloLicencas, type ProjetoDoFicheiro } from "./licenciamento/ModuloLicencas";
+import { ModuloCondicoes } from "./licenciamento/ModuloCondicoes";
+import { ModuloPedidoLicenciamento } from "./licenciamento/ModuloPedidoLicenciamento";
+import {
+  ehPedidoLicenciamentoGuardado,
+  normalizarPedidoLicenciamento,
+  pedidoLicenciamentoInicial,
+  validarCondicoes,
+  validarLicencas,
+  validarPedido,
+  type PedidoLicenciamento,
+} from "./core/licenciamento";
 import { PaginaInicial, type EstadoDoModulo } from "./inicio/PaginaInicial";
 import { BarraDoModulo } from "./inicio/BarraDoModulo";
 import {
@@ -119,6 +131,29 @@ function App() {
     normalizarJustificacao,
   );
 
+  // O pedido de licenciamento (L1, L2 e L3): um só estado, partilhado pelos
+  // três módulos, como o agrupamento em lotes o é pelo Módulo 3.
+  const [licenciamento, setLicenciamento] = useEstadoPersistente<PedidoLicenciamento>(
+    CHAVE_LICENCIAMENTO,
+    pedidoLicenciamentoInicial,
+    ehPedidoLicenciamentoGuardado,
+    normalizarPedidoLicenciamento,
+  );
+
+  /** O projeto de um ficheiro de licenciamento, campo a campo, pelas regras de adoção. */
+  function adotarProjeto(p: ProjetoDoFicheiro) {
+    adotarNomeProjeto(p.nomeProjeto);
+    adotarDescricaoProjeto(p.descricaoProjeto);
+    adotarJustificacao(p.justificacao);
+  }
+
+  /** O projeto do exemplo substitui o que lá estiver — como o exemplo da bolsa de horas. */
+  function definirProjeto(p: ProjetoDoFicheiro) {
+    setNomeProjeto(p.nomeProjeto);
+    setDescricaoProjeto(p.descricaoProjeto);
+    setJustificacao(p.justificacao);
+  }
+
   /**
    * Ponto único de alteração do catálogo.
    *
@@ -160,9 +195,7 @@ function App() {
 
   // O estado de cada módulo de preparação, para o cartão da página inicial o
   // dizer sem ser preciso abri-lo. Sem nada escrito, o cartão não diz nada.
-  const estados: Partial<Record<Pagina, EstadoDoModulo>> = {
-    licenciamento: { texto: "em preparação", falta: false },
-  };
+  const estados: Partial<Record<Pagina, EstadoDoModulo>> = {};
   const projetoVazio = nomeProjeto.trim() === "" && descricaoProjeto.trim() === "" && !temJustificacao(justificacao);
   if (!projetoVazio) {
     estados.projeto = estadoPorErros(
@@ -174,6 +207,12 @@ function App() {
   if (perfis.length > 0) estados.perfis = estadoPorErros(validarPerfis(perfis).length);
   if (lotes.lotes.length > 0) {
     estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
+  }
+
+  if (licenciamento.produtos.length > 0) {
+    estados.licencas = estadoPorErros(validarLicencas(licenciamento).length);
+    estados.condicoes = estadoPorErros(validarCondicoes(licenciamento.condicoes).length);
+    estados.pedidoLicenciamento = estadoPorErros(validarPedido(licenciamento).length);
   }
 
   function navegar(destino: Localizacao) {
@@ -227,12 +266,13 @@ function App() {
             justificacao={justificacao}
             onAlterarJustificacao={setJustificacao}
             mostrarComoFunciona={grupo?.chave === "bolsa"}
+            comBeneficioFixo={grupo?.chave !== "licenciamento"}
             seguinte={
               grupo?.chave === "licenciamento"
                 ? {
-                    titulo: "o pedido de licenciamento",
+                    titulo: "as licenças",
                     nota: "O projeto fica guardado neste navegador e é o ponto de partida do pedido de licenciamento.",
-                    onIr: () => irPara("licenciamento"),
+                    onIr: () => irPara("licencas"),
                   }
                 : {
                     titulo: "os perfis",
@@ -289,8 +329,30 @@ function App() {
           <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
         )}
 
-        {aba === "licenciamento" && (
-          <ModuloLicenciamento nomeProjeto={nomeProjeto} onIrParaProjeto={() => irPara("projeto")} />
+        {aba === "licencas" && (
+          <ModuloLicencas
+            pedido={licenciamento}
+            onAlterar={setLicenciamento}
+            onDefinirProjeto={definirProjeto}
+            onAdotarProjeto={adotarProjeto}
+            onIrParaCondicoes={() => irPara("condicoes")}
+          />
+        )}
+        {aba === "condicoes" && (
+          <ModuloCondicoes
+            pedido={licenciamento}
+            onAlterar={setLicenciamento}
+            onIrParaPedido={() => irPara("pedidoLicenciamento")}
+          />
+        )}
+        {aba === "pedidoLicenciamento" && (
+          <ModuloPedidoLicenciamento
+            pedido={licenciamento}
+            onAlterar={setLicenciamento}
+            nomeProjeto={nomeProjeto}
+            descricaoProjeto={descricaoProjeto}
+            justificacao={justificacao}
+          />
         )}
 
         {aba === "vistaGeral" && <VistaGeral />}

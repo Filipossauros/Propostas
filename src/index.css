@@ -2535,3 +2535,136 @@ tbody.grupo-projeto.projeto-alvo td {
 .tabela-projetos-a-confirmar .linha-excluida td:last-child {
   text-decoration: none;
 }
+
+/* --------------------------------------------------------------------------
+   Pedido de licenciamento (L1, L2, L3)
+   -------------------------------------------------------------------------- */
+
+/* A natureza da aquisição: duas escolhas lado a lado, cada uma com a explicação. */
+.opcoes-natureza {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.opcao-natureza {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  cursor: pointer;
+}
+
+.opcao-natureza input[type="radio"] {
+  margin-top: 3px;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.opcao-natureza > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.opcao-natureza-ativa {
+  border-color: var(--azul-500);
+  background: var(--azul-100);
+}
+
+.linha-campos-separada {
+  margin-top: 14px;
+}
+
+/* Uma condição do contrato (L2): título, marca, texto e parâmetros. */
+.condicao {
+  padding: 14px 0;
+}
+
+.condicao + .condicao {
+  border-top: 1px solid var(--borda);
+}
+
+.condicao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.condicao-cabecalho .campo-opcao {
+  margin-top: 0;
+}
+
+.condicao-titulo {
+  font-size: 0.95rem;
+}
+
+.condicao-desligada .condicao-cabecalho {
+  margin-bottom: 0;
+  opacity: 0.7;
+}
+
+.condicao > .botao-discreto {
+  margin-top: 4px;
+}
+
+.selo-condicao {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.selo-condicao-obrigatoria {
+  color: var(--azul-700);
+  background: var(--azul-100);
+}
+
+.selo-condicao-opcional {
+  color: var(--texto-suave);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+}
+
+.campo-horario {
+  width: 280px;
+}
+
+/* Os lotes do licenciamento (L3). */
+.lote-licenciamento {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  padding: 12px 14px;
+}
+
+.lote-licenciamento .linha-campos {
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.lote-licenciamento-numero {
+  white-space: nowrap;
+}
+
+.seletor-lote {
+  width: auto;
+  padding: 4px 6px;
+}
+
+/* Os sufixos do licenciamento são mais longos («% do contrato», «dias úteis»):
+   o campo fica com largura própria e o sufixo ao lado, sem o espremer. */
+.modulo-licenciamento .campo-numero-rotulado .campo-numero {
+  width: auto;
+}
+
+.modulo-licenciamento .campo-numero-rotulado .campo-numero input {
+  width: 110px;
+  flex: none;
+}

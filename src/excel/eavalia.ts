@@ -14,7 +14,8 @@
 // as restantes entradas intactas.
 
 import JSZip from "jszip";
-import type { LotesJSON } from "../core/types";
+import type { InformacaoEavalia, LotesJSON } from "../core/types";
+import type { PedidoLicenciamento } from "../core/licenciamento";
 import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
 import {
   CELULA_OBJETO,
@@ -33,6 +34,7 @@ import {
   type RespostaDoFormulario,
 } from "./eavaliaModelo";
 import { comFolhaVisivel, preencherCustosServicos, recursosDoProcedimento } from "./custosServicos";
+import { FOLHA_CUSTOS_LICENCIAMENTO, preencherCustosLicenciamento } from "./custosLicenciamento";
 
 export { ErroModeloEavalia, serieDeData };
 
@@ -47,32 +49,32 @@ function decodificarBase64(base64: string): Uint8Array {
   return bytes;
 }
 
-/**
- * Preenche o modelo eAvalia com o nome do projeto, as respostas do Módulo 3,
- * as respostas fixas e, na folha «Custos - Serviços», os perfis dos lotes.
- *
- * Uma medida por responder fica em branco, que é como o modelo já vem — e a
- * formatação condicional do próprio formulário assinala-a. A data só acompanha
- * as respostas que assumem um compromisso futuro (ver `RESPOSTAS_COM_DATA`).
- */
-export async function gerarEavaliaBlob(
-  config: LotesJSON,
-  /** Recebida, e não lida do relógio, para o resultado ser reproduzível. */
-  hoje: Date = new Date(),
-): Promise<Blob> {
+/** O modelo eAvalia aberto, com as folhas que se preenchem sempre. */
+async function abrirModelo() {
   const zip = await JSZip.loadAsync(decodificarBase64(modeloBase64));
-
   const folhaAlinhamento = zip.file(FOLHA_ALINHAMENTO);
   const folhaDespesa = zip.file(FOLHA_DESPESA);
-  const folhaCustos = zip.file(FOLHA_CUSTOS_SERVICOS);
   const livro = zip.file("xl/workbook.xml");
   const cadeias = zip.file("xl/sharedStrings.xml");
-  if (folhaAlinhamento === null || folhaDespesa === null || folhaCustos === null || livro === null || cadeias === null) {
+  if (folhaAlinhamento === null || folhaDespesa === null || livro === null || cadeias === null) {
     throw new ErroModeloEavalia("O modelo eAvalia não tem a estrutura esperada.");
   }
-
   const partilhadas = lerCadeiasPartilhadas(await cadeias.async("string"));
-  let alinhamento = await folhaAlinhamento.async("string");
+  return { zip, partilhadas };
+}
+
+/**
+ * As medidas do alinhamento tecnológico e o objeto da despesa — o que é comum
+ * ao pedido de serviços e ao de licenciamento.
+ */
+async function preencherAlinhamentoEDespesa(
+  zip: JSZip,
+  partilhadas: string[],
+  eavalia: InformacaoEavalia,
+  objeto: string,
+  hoje: Date,
+): Promise<void> {
+  let alinhamento = await zip.file(FOLHA_ALINHAMENTO)!.async("string");
   const serie = serieDeData(hoje);
 
   for (const medida of MEDIDAS) {
@@ -84,7 +86,7 @@ export async function gerarEavaliaBlob(
       );
     }
 
-    const resposta: RespostaDoFormulario = "fixa" in medida ? medida.fixa : config.eavalia[medida.campo];
+    const resposta: RespostaDoFormulario = "fixa" in medida ? medida.fixa : eavalia[medida.campo];
     if (resposta === "") continue;
 
     alinhamento = escreverCelula(
@@ -104,19 +106,13 @@ export async function gerarEavaliaBlob(
   }
   zip.file(FOLHA_ALINHAMENTO, alinhamento);
 
-  const despesa = escreverCelula(await folhaDespesa.async("string"), CELULA_OBJETO, (attrs) =>
-    celulaDeTexto(CELULA_OBJETO, attrs, config.nomeProjeto),
+  const despesa = escreverCelula(await zip.file(FOLHA_DESPESA)!.async("string"), CELULA_OBJETO, (attrs) =>
+    celulaDeTexto(CELULA_OBJETO, attrs, objeto),
   );
   zip.file(FOLHA_DESPESA, despesa);
+}
 
-  // Os custos dos serviços: um bloco por perfil em cada lote. A folha vem
-  // oculta no modelo e passa a ver-se — é o que se pede preenchido.
-  zip.file(
-    FOLHA_CUSTOS_SERVICOS,
-    preencherCustosServicos(await folhaCustos.async("string"), recursosDoProcedimento(config), partilhadas),
-  );
-  zip.file("xl/workbook.xml", comFolhaVisivel(await livro.async("string")));
-
+async function fechar(zip: JSZip): Promise<Blob> {
   // O `loadAsync` cria entradas de pasta ao interpretar os caminhos; o modelo
   // não as tem, e o arquivo há de sair com as mesmas entradas com que entrou.
   for (const nome of Object.keys(zip.files)) {
@@ -127,4 +123,50 @@ export async function gerarEavaliaBlob(
   return new Blob([dados], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
+}
+
+/**
+ * Preenche o modelo eAvalia com o nome do projeto, as respostas do Módulo 3,
+ * as respostas fixas e, na folha «Custos - Serviços», os perfis dos lotes.
+ *
+ * Uma medida por responder fica em branco, que é como o modelo já vem — e a
+ * formatação condicional do próprio formulário assinala-a. A data só acompanha
+ * as respostas que assumem um compromisso futuro (ver `RESPOSTAS_COM_DATA`).
+ */
+export async function gerarEavaliaBlob(
+  config: LotesJSON,
+  /** Recebida, e não lida do relógio, para o resultado ser reproduzível. */
+  hoje: Date = new Date(),
+): Promise<Blob> {
+  const { zip, partilhadas } = await abrirModelo();
+  const folhaCustos = zip.file(FOLHA_CUSTOS_SERVICOS);
+  if (folhaCustos === null) throw new ErroModeloEavalia("O modelo eAvalia não tem a estrutura esperada.");
+  await preencherAlinhamentoEDespesa(zip, partilhadas, config.eavalia, config.nomeProjeto, hoje);
+
+  // Os custos dos serviços: um bloco por perfil em cada lote. A folha vem
+  // oculta no modelo e passa a ver-se — é o que se pede preenchido.
+  zip.file(
+    FOLHA_CUSTOS_SERVICOS,
+    preencherCustosServicos(await folhaCustos.async("string"), recursosDoProcedimento(config), partilhadas),
+  );
+  zip.file("xl/workbook.xml", comFolhaVisivel(await zip.file("xl/workbook.xml")!.async("string")));
+  return fechar(zip);
+}
+
+/**
+ * O eAvalia de um pedido de licenciamento: o alinhamento e o objeto como no
+ * pedido de serviços, e a folha «Custos - Licenciamento» preenchida com os
+ * produtos (ver `custosLicenciamento.ts`). A folha «Custos - Serviços» fica
+ * como o modelo a traz — oculta e por preencher.
+ */
+export async function gerarEavaliaLicenciamentoBlob(
+  pedido: PedidoLicenciamento,
+  hoje: Date = new Date(),
+): Promise<Blob> {
+  const { zip, partilhadas } = await abrirModelo();
+  const folha = zip.file(FOLHA_CUSTOS_LICENCIAMENTO);
+  if (folha === null) throw new ErroModeloEavalia("O modelo eAvalia não tem a folha «Custos - Licenciamento».");
+  await preencherAlinhamentoEDespesa(zip, partilhadas, pedido.eavalia, pedido.nomeProjeto, hoje);
+  zip.file(FOLHA_CUSTOS_LICENCIAMENTO, preencherCustosLicenciamento(await folha.async("string"), pedido, partilhadas));
+  return fechar(zip);
 }

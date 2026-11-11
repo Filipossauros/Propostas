@@ -13,7 +13,9 @@ export type Pagina =
   | "projeto"
   | "perfis"
   | "lotes"
-  | "licenciamento"
+  | "licencas"
+  | "condicoes"
+  | "pedidoLicenciamento"
   | "avaliacao"
   | "ordenacao"
   | "vistaGeral"
@@ -63,14 +65,18 @@ export const GRUPOS: Grupo[] = [
     chave: "licenciamento",
     titulo: "Pedido de licenciamento",
     etiqueta: "Preparação do procedimento",
-    descricao: "Preparação de pedidos de licenciamento, a partir da caracterização do projeto.",
+    descricao:
+      "Aquisição de licenciamento de software, com o preço como único critério: do projeto ao Anexo Técnico " +
+      "(manifestação de necessidades, eAvalia e mapas de quantidades e preços).",
     modulos: [
       PROJETO,
+      { pagina: "licencas", marca: "L1", titulo: "Licenças", descricao: "Produtos, métrica e preço de referência" },
+      { pagina: "condicoes", marca: "L2", titulo: "Condições", descricao: "Âmbito, manutenção, SLA e penalizações" },
       {
-        pagina: "licenciamento",
-        marca: "L",
-        titulo: "Pedido de licenciamento",
-        descricao: "Licenças, quantidades e valor estimado",
+        pagina: "pedidoLicenciamento",
+        marca: "L3",
+        titulo: "Pedido",
+        descricao: "Lotes, valor estimado e Anexo Técnico",
       },
     ],
   },

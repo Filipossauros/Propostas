@@ -18,6 +18,12 @@ describe("organização da aplicação", () => {
     expect(grupoDaPagina("perfis", "licenciamento").chave).toBe("bolsa");
   });
 
+  it("o pedido de licenciamento: Projeto, L1, L2 e L3", () => {
+    const grupo = GRUPOS.find((g) => g.chave === "licenciamento")!;
+    expect(grupo.modulos.map((m) => m.marca)).toEqual(["1", "L1", "L2", "L3"]);
+    expect(localizacaoDoEndereco("#licenciamento/condicoes")).toEqual({ pagina: "condicoes", grupo: "licenciamento" });
+  });
+
   it("a localização vai e vem pelo endereço", () => {
     for (const local of [
       { pagina: "perfis", grupo: "bolsa" },
