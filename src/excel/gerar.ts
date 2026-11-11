@@ -32,7 +32,10 @@ import {
   LISTAS_SIM_NAO_MAIUSC,
   NOME_FOLHA_LEIAME,
   NOME_FOLHA_LISTAS,
+  nomeFolhaAdicional,
   nomeFolhaPerfil,
+  subtituloAdicional,
+  TEXTO_TETO_DATA_LIMITE,
   OFFSET_CABECALHO_DATAS_PROJETO,
   OFFSET_CLIENTE_PROJETO,
   OFFSET_DATAS_PROJETO,
@@ -61,6 +64,7 @@ import {
   offsetNotaBloco,
   tituloFaixaBloco,
   ANO_MINIMO,
+  ANO_MAXIMO,
 } from "./layout";
 
 /** Alturas de linha, para o formulário respirar em vez de se colar todo. */
@@ -165,42 +169,40 @@ function endereco(linha: number, coluna: number): string {
 }
 
 /**
- * Mês, com o teto do mês corrente.
+ * Mês: um número inteiro de 1 a 12, sem casas decimais.
  *
- * A fórmula usa TODAY() em vez de uma data fixa para o teto acompanhar o
- * momento do preenchimento — o formulário é distribuído uma vez e preenchido
- * ao longo de semanas. A validação do Excel é um guarda de conveniência: o
- * apuramento do Módulo 4 volta a impor a mesma regra, e é esse que decide.
+ * Sem teto de data: o teto é a data-limite de apresentação de propostas (n.º 12
+ * das regras), que quando o formulário é gerado ainda não se conhece, e que é
+ * precisamente a data que o n.º 3 manda indicar como fim de um projeto em
+ * curso. Quem a aplica é o apuramento do Módulo 4. `colunaAno` mantém-se na
+ * assinatura para as duas validações andarem aos pares.
  */
-function validarMes(sheet: ExcelJS.Worksheet, linha: number, coluna: number, colunaAno: number): void {
+function validarMes(sheet: ExcelJS.Worksheet, linha: number, coluna: number, _colunaAno: number): void {
   const cell = sheet.getCell(linha, coluna);
   const mes = endereco(linha, coluna);
-  const ano = endereco(linha, colunaAno);
   cell.dataValidation = {
     type: "custom",
     allowBlank: true,
-    formulae: [
-      `AND(${mes}>=1,${mes}<=12,OR(${ano}="",${ano}<YEAR(TODAY()),${mes}<=MONTH(TODAY())))`,
-    ],
+    formulae: [`AND(ISNUMBER(${mes}),INT(${mes})=${mes},${mes}>=1,${mes}<=12)`],
     showErrorMessage: true,
     errorStyle: "error",
     errorTitle: "Mês inválido",
-    error: "Indique um mês de 1 a 12. Nenhuma data pode ser posterior ao mês e ano atuais.",
+    error: "Indique o mês com um número inteiro de 1 a 12, sem casas decimais.",
   };
 }
 
-/** Ano, com o teto do ano corrente — ver `validarMes`. */
+/** Ano: um número inteiro, sem casas decimais — ver `validarMes`. */
 function validarAno(sheet: ExcelJS.Worksheet, linha: number, coluna: number): void {
   const cell = sheet.getCell(linha, coluna);
   const ref = endereco(linha, coluna);
   cell.dataValidation = {
     type: "custom",
     allowBlank: true,
-    formulae: [`AND(${ref}>=${ANO_MINIMO},${ref}<=YEAR(TODAY()))`],
+    formulae: [`AND(ISNUMBER(${ref}),INT(${ref})=${ref},${ref}>=${ANO_MINIMO},${ref}<=${ANO_MAXIMO})`],
     showErrorMessage: true,
     errorStyle: "error",
     errorTitle: "Ano inválido",
-    error: `Indique um ano entre ${ANO_MINIMO} e o ano atual. Nenhuma data pode ser posterior ao mês e ano atuais.`,
+    error: `Indique o ano com quatro algarismos (${ANO_MINIMO} a ${ANO_MAXIMO}), sem casas decimais.`,
   };
 }
 
@@ -240,7 +242,10 @@ function subtitulo(config: EspecificacaoFormulario): string {
   return config.perfil;
 }
 
-function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string; perfil: string }>): void {
+function construirFolhaLeiame(
+  wb: ExcelJS.Workbook,
+  folhas: Array<{ nome: string; nomeAdicional: string; perfil: string }>,
+): void {
   const sheet = wb.addWorksheet(NOME_FOLHA_LEIAME);
   sheet.getColumn(1).width = 110;
   prepararImpressao(sheet);
@@ -250,7 +255,9 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string
     ? [{ texto: folhas[0].perfil }]
     : [
         { texto: "Este ficheiro tem uma folha por perfil. Preencha apenas a folha do perfil a que se candidata:" },
-        ...folhas.map((f) => ({ texto: `    • ${f.perfil}  →  folha "${f.nome}"` })),
+        ...folhas.map((f) => ({
+          texto: `    • ${f.perfil}  →  folha "${f.nome}" (e, se necessário, "${f.nomeAdicional}")`,
+        })),
       ];
 
   const linhas: Array<{ texto: string; titulo?: boolean }> = [
@@ -273,15 +280,20 @@ function construirFolhaLeiame(wb: ExcelJS.Workbook, folhas: Array<{ nome: string
     },
     {
       texto:
-        "4. Nenhuma data pode ser posterior ao mês e ano em que o formulário é preenchido: experiência ainda por acontecer não é considerada.",
+        "4. Os meses e os anos indicam-se com números inteiros, sem casas decimais. Se o projeto ainda não tiver terminado à data de apresentação da proposta, considera-se como fim do projeto a data-limite de apresentação de propostas. " +
+        TEXTO_TETO_DATA_LIMITE,
     },
     {
       texto:
-        "5. Não é permitido inserir nem eliminar linhas ou colunas. Utilize apenas os blocos disponibilizados no ficheiro.",
+        "5. Cada folha de perfil comporta 15 projetos. Se precisar de declarar mais, utilize a folha de experiência adicional do mesmo perfil, que continua a numeração; a identificação e a assinatura são as da folha principal.",
     },
     {
       texto:
-        "6. Após concluir o preenchimento, assine digitalmente o documento e submeta o PDF resultante nos termos do procedimento.",
+        "6. Não é permitido inserir nem eliminar linhas ou colunas, nem alterar de qualquer forma a estrutura do ficheiro. Utilize apenas os blocos disponibilizados.",
+    },
+    {
+      texto:
+        "7. O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência, mediante assinatura eletrónica, e submetido neste formato de folha de cálculo.",
     },
   ];
 
@@ -312,6 +324,8 @@ function construirFolhaExperiencia(
   wb: ExcelJS.Workbook,
   config: EspecificacaoFormulario,
   nomeFolha: string,
+  /** Na folha de experiência adicional: o nome da folha principal, a que remete. */
+  adicionalDe?: string,
 ): void {
   const sheet = wb.addWorksheet(nomeFolha);
   COLUNAS.forEach((c, idx) => {
@@ -329,44 +343,62 @@ function construirFolhaExperiencia(
   // esta folha ao ler a declaração — ver `encontrarFolhaExperiencia`.
   sheet.mergeCells(LINHA_SUBTITULO, 1, LINHA_SUBTITULO, 8);
   const subtituloCell = sheet.getCell(LINHA_SUBTITULO, 1);
-  subtituloCell.value = subtitulo(config);
+  subtituloCell.value = adicionalDe === undefined ? subtitulo(config) : subtituloAdicional(subtitulo(config));
   subtituloCell.font = { italic: true, size: 11, color: { argb: COR_ROTULO_TEXTO } };
   subtituloCell.alignment = { horizontal: "center", vertical: "middle" };
   sheet.getRow(LINHA_SUBTITULO).height = ALTURA_SUBTITULO;
 
-  aplicarFaixa(sheet, LINHA_FAIXA_IDENTIFICACAO, "IDENTIFICAÇÃO DO CANDIDATO");
+  if (adicionalDe === undefined) {
+    aplicarFaixa(sheet, LINHA_FAIXA_IDENTIFICACAO, "IDENTIFICAÇÃO DO CANDIDATO");
 
-  for (const { linha, rotulo, campo: nomeCampo } of CAMPOS_IDENTIFICACAO) {
-    aplicarRotulo(sheet.getCell(linha, 1), rotulo);
-    sheet.mergeCells(linha, 2, linha, 8);
-    const campo = sheet.getCell(linha, 2);
+    for (const { linha, rotulo, campo: nomeCampo } of CAMPOS_IDENTIFICACAO) {
+      aplicarRotulo(sheet.getCell(linha, 1), rotulo);
+      sheet.mergeCells(linha, 2, linha, 8);
+      const campo = sheet.getCell(linha, 2);
 
-    if (nomeCampo === "perfil") {
-      aplicarCampoBloqueado(campo, config.perfil);
-    } else if (nomeCampo === "lote" && config.lote) {
-      aplicarCampoBloqueado(campo, config.lote);
-    } else if (nomeCampo === "loteDesignacao" && config.loteDesignacao) {
-      aplicarCampoBloqueado(campo, config.loteDesignacao);
-    } else {
-      aplicarCampoEditavel(campo);
-      validarTexto(campo);
+      if (nomeCampo === "perfil") {
+        aplicarCampoBloqueado(campo, config.perfil);
+      } else if (nomeCampo === "lote" && config.lote) {
+        aplicarCampoBloqueado(campo, config.lote);
+      } else if (nomeCampo === "loteDesignacao" && config.loteDesignacao) {
+        aplicarCampoBloqueado(campo, config.loteDesignacao);
+      } else {
+        aplicarCampoEditavel(campo);
+        validarTexto(campo);
+      }
+      sheet.getRow(linha).height = ALTURA_IDENTIFICACAO;
     }
-    sheet.getRow(linha).height = ALTURA_IDENTIFICACAO;
+
+    sheet.mergeCells(LINHA_DECLARACAO_VERACIDADE, 1, LINHA_DECLARACAO_VERACIDADE, 8);
+    const declaracaoCell = sheet.getCell(LINHA_DECLARACAO_VERACIDADE, 1);
+    declaracaoCell.value = TEXTO_DECLARACAO_VERACIDADE;
+    declaracaoCell.fill = fillSolido(COR_NOTA_BG);
+    declaracaoCell.alignment = { wrapText: true, vertical: "middle", indent: 1 };
+    declaracaoCell.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
+    declaracaoCell.protection = { locked: true };
+    sheet.getRow(LINHA_DECLARACAO_VERACIDADE).height = 32;
+
+    aplicarRotulo(sheet.getCell(LINHA_ASSINATURA, 1), ROTULO_ASSINATURA);
+    sheet.mergeCells(LINHA_ASSINATURA, 2, LINHA_ASSINATURA, 8);
+    aplicarCampoEditavel(sheet.getCell(LINHA_ASSINATURA, 2));
+    sheet.getRow(LINHA_ASSINATURA).height = ALTURA_CAMPO;
+  } else {
+    // A folha adicional não repete a identificação: é a da folha principal.
+    // As linhas ficam, para os blocos começarem na mesma linha e o leitor os
+    // encontrar com a mesma geometria.
+    aplicarFaixa(sheet, LINHA_FAIXA_IDENTIFICACAO, "EXPERIÊNCIA ADICIONAL");
+    const primeira = CAMPOS_IDENTIFICACAO[0].linha;
+    sheet.mergeCells(primeira, 1, primeira + 1, 8);
+    const nota = sheet.getCell(primeira, 1);
+    nota.value =
+      `Continuação da folha "${adicionalDe}", para declarar mais de ${config.nBlocos} projetos. Preencha esta ` +
+      "folha apenas se necessário. A identificação do candidato e a assinatura são as da folha principal.";
+    nota.fill = fillSolido(COR_NOTA_BG);
+    nota.font = { italic: true, size: 10, color: { argb: COR_NOTA_TEXTO } };
+    nota.alignment = { wrapText: true, vertical: "middle", indent: 1 };
+    nota.protection = { locked: true };
+    for (let l = primeira + 2; l < LINHA_BRANCO_APOS_IDENTIFICACAO; l++) sheet.getRow(l).height = ALTURA_SEPARADOR;
   }
-
-  sheet.mergeCells(LINHA_DECLARACAO_VERACIDADE, 1, LINHA_DECLARACAO_VERACIDADE, 8);
-  const declaracaoCell = sheet.getCell(LINHA_DECLARACAO_VERACIDADE, 1);
-  declaracaoCell.value = TEXTO_DECLARACAO_VERACIDADE;
-  declaracaoCell.fill = fillSolido(COR_NOTA_BG);
-  declaracaoCell.alignment = { wrapText: true, vertical: "middle", indent: 1 };
-  declaracaoCell.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
-  declaracaoCell.protection = { locked: true };
-  sheet.getRow(LINHA_DECLARACAO_VERACIDADE).height = 32;
-
-  aplicarRotulo(sheet.getCell(LINHA_ASSINATURA, 1), ROTULO_ASSINATURA);
-  sheet.mergeCells(LINHA_ASSINATURA, 2, LINHA_ASSINATURA, 8);
-  aplicarCampoEditavel(sheet.getCell(LINHA_ASSINATURA, 2));
-  sheet.getRow(LINHA_ASSINATURA).height = ALTURA_CAMPO;
 
   sheet.getRow(LINHA_BRANCO_APOS_IDENTIFICACAO).height = ALTURA_SEPARADOR;
 
@@ -374,7 +406,7 @@ function construirFolhaExperiencia(
   for (let i = 1; i <= config.nBlocos; i++) {
     const linhaInicial = linhaInicialBloco(i, nRequisitos);
 
-    aplicarFaixa(sheet, linhaInicial, tituloFaixaBloco(i));
+    aplicarFaixa(sheet, linhaInicial, tituloFaixaBloco(adicionalDe === undefined ? i : config.nBlocos + i));
 
     const linhaClienteProjeto = linhaInicial + OFFSET_CLIENTE_PROJETO;
     sheet.getRow(linhaClienteProjeto).height = ALTURA_CAMPO;
@@ -515,12 +547,18 @@ export function gerarWorkbookDeclaracao(especificacoes: EspecificacaoFormulario[
   const folhas = especificacoes.map((config) => ({
     config,
     nome: nomeFolhaPerfil(config.perfil, usados),
+    nomeAdicional: nomeFolhaAdicional(config.perfil, usados),
     perfil: config.perfil,
   }));
 
   construirFolhaLeiame(wb, folhas);
   construirFolhaListas(wb);
-  for (const folha of folhas) construirFolhaExperiencia(wb, folha.config, folha.nome);
+  // Cada perfil leva a sua folha principal e, logo a seguir, a de experiência
+  // adicional (n.º 1 das regras): mais projetos, com a mesma estrutura.
+  for (const folha of folhas) {
+    construirFolhaExperiencia(wb, folha.config, folha.nome);
+    construirFolhaExperiencia(wb, folha.config, folha.nomeAdicional, folha.nome);
+  }
 
   return wb;
 }

@@ -2512,3 +2512,26 @@ tbody.grupo-projeto.projeto-alvo td {
   width: 84px;
   text-align: right;
 }
+
+/* Módulo 4: a data-limite de apresentação de propostas, e os projetos a confirmar. */
+.campo-data-limite {
+  margin-top: 14px;
+}
+
+.campo-data-limite .linha-campos {
+  gap: 8px;
+  align-items: center;
+}
+
+.campo-data-limite input {
+  width: 100px;
+}
+
+.tabela-projetos-a-confirmar .linha-excluida td {
+  color: var(--texto-suave);
+  text-decoration: line-through;
+}
+
+.tabela-projetos-a-confirmar .linha-excluida td:last-child {
+  text-decoration: none;
+}

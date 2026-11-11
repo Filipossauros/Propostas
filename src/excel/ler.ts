@@ -26,14 +26,21 @@ import {
   OFFSET_DATAS_PROJETO,
   OFFSET_FUNCAO,
   OFFSET_PRIMEIRA_LINHA_REQUISITO,
+  SUFIXO_SUBTITULO_ADICIONAL,
   linhaInicialBloco,
+  subtituloAdicional,
 } from "./layout";
 
 /** Resultado da leitura combinada de uma célula de mês e uma de ano. */
 interface MesAnoLido {
   valor: MesAno | null;
-  /** true quando exatamente uma das duas células (mês/ano) está preenchida. */
+  /**
+   * true quando a data não se pode usar: só uma das duas células (mês/ano)
+   * preenchida, ou uma delas com casas decimais ou com algo que não é número.
+   */
   incompleto: boolean;
+  /** true quando uma das células tem casas decimais ou não é número. */
+  invalido: boolean;
 }
 
 function lerTexto(sheet: XLSX.WorkSheet, ref: string): string {
@@ -42,11 +49,18 @@ function lerTexto(sheet: XLSX.WorkSheet, ref: string): string {
   return String(cell.v).trim();
 }
 
-function lerInteiro(sheet: XLSX.WorkSheet, ref: string): number | null {
+/**
+ * Um mês ou um ano: só números inteiros. Uma célula com casas decimais (3,5)
+ * ou com texto que não é número não é arredondada nem truncada — fica
+ * inválida, e a data a que pertence não conta.
+ */
+function lerInteiro(sheet: XLSX.WorkSheet, ref: string): { valor: number | null; invalido: boolean } {
   const cell = sheet[ref];
-  if (!cell || cell.v === undefined || cell.v === null || cell.v === "") return null;
-  const n = typeof cell.v === "number" ? cell.v : Number(String(cell.v).trim());
-  return Number.isFinite(n) ? Math.trunc(n) : null;
+  if (!cell || cell.v === undefined || cell.v === null || String(cell.v).trim() === "") {
+    return { valor: null, invalido: false };
+  }
+  const n = typeof cell.v === "number" ? cell.v : Number(String(cell.v).trim().replace(",", "."));
+  return Number.isInteger(n) ? { valor: n, invalido: false } : { valor: null, invalido: true };
 }
 
 /**
@@ -58,9 +72,10 @@ function lerInteiro(sheet: XLSX.WorkSheet, ref: string): number | null {
 function lerMesAno(sheet: XLSX.WorkSheet, refMes: string, refAno: string): MesAnoLido {
   const mes = lerInteiro(sheet, refMes);
   const ano = lerInteiro(sheet, refAno);
-  if (mes === null && ano === null) return { valor: null, incompleto: false };
-  if (mes === null || ano === null) return { valor: null, incompleto: true };
-  return { valor: { mes, ano }, incompleto: false };
+  if (mes.invalido || ano.invalido) return { valor: null, incompleto: true, invalido: true };
+  if (mes.valor === null && ano.valor === null) return { valor: null, incompleto: false, invalido: false };
+  if (mes.valor === null || ano.valor === null) return { valor: null, incompleto: true, invalido: false };
+  return { valor: { mes: mes.valor, ano: ano.valor }, incompleto: false, invalido: false };
 }
 
 function lerDeclara(sheet: XLSX.WorkSheet, ref: string): "SIM" | "NÃO" | null {
@@ -94,6 +109,84 @@ function encontrarFolhaExperiencia(workbook: XLSX.WorkBook, perfil: string): XLS
   if (workbook.Sheets[NOME_FOLHA_EXPERIENCIA]) return workbook.Sheets[NOME_FOLHA_EXPERIENCIA];
   if (candidatas.length === 1) return workbook.Sheets[candidatas[0]] ?? null;
   return null;
+}
+
+/** A folha de experiência adicional do perfil, se o ficheiro a tiver. */
+function encontrarFolhaAdicional(workbook: XLSX.WorkBook, perfil: string): XLSX.WorkSheet | null {
+  const alvo = subtituloAdicional(perfil.trim());
+  for (const nome of workbook.SheetNames) {
+    const sheet = workbook.Sheets[nome];
+    if (sheet && lerTexto(sheet, `A${LINHA_SUBTITULO}`) === alvo) return sheet;
+  }
+  return null;
+}
+
+/**
+ * Os blocos de projeto de uma folha, numerados a partir de `primeiroIndice`.
+ * As datas com casas decimais ou que não são números ficam assinaladas.
+ */
+function lerBlocos(
+  sheet: XLSX.WorkSheet,
+  config: ConfiguracaoAvaliacao,
+  primeiroIndice: number,
+  folha: "principal" | "adicional",
+  alertas: Alerta[],
+): Bloco[] {
+  const nRequisitos = config.requisitos.length;
+  const blocos: Bloco[] = [];
+
+  for (let i = 1; i <= config.nBlocos; i++) {
+    const indice = primeiroIndice + i - 1;
+    const linhaInicial = linhaInicialBloco(i, nRequisitos);
+    const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
+    let datasInvalidas = false;
+
+    const linhasRequisito: LinhaRequisito[] = config.requisitos.map((requisito, r) => {
+      const linhaReq = linhaInicial + OFFSET_PRIMEIRA_LINHA_REQUISITO + r;
+      const inicio = lerMesAno(sheet, `E${linhaReq}`, `F${linhaReq}`);
+      const fim = lerMesAno(sheet, `G${linhaReq}`, `H${linhaReq}`);
+      datasInvalidas ||= inicio.invalido || fim.invalido;
+      return {
+        requisitoId: requisito.id,
+        declara: lerDeclara(sheet, `D${linhaReq}`),
+        inicio: inicio.valor,
+        fim: fim.valor,
+        inicioIncompleto: inicio.incompleto,
+        fimIncompleto: fim.incompleto,
+      };
+    });
+
+    const projInicio = lerMesAno(sheet, `B${linhaDatas}`, `C${linhaDatas}`);
+    const projFim = lerMesAno(sheet, `E${linhaDatas}`, `F${linhaDatas}`);
+    datasInvalidas ||= projInicio.invalido || projFim.invalido;
+    if (datasInvalidas) {
+      alertas.push({
+        tipo: "dataInvalida",
+        mensagem:
+          `Bloco ${indice}: mês ou ano com casas decimais, ou que não é número — essa data não é considerada ` +
+          `(trata-se como incompleta).`,
+        blocoIndice: indice,
+      });
+    }
+
+    blocos.push({
+      indice,
+      cliente: lerTexto(sheet, `B${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
+      projeto: lerTexto(sheet, `E${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
+      funcao: lerTexto(sheet, `B${linhaInicial + OFFSET_FUNCAO}`),
+      projInicio: projInicio.valor,
+      projFim: projFim.valor,
+      linhas: linhasRequisito,
+      folha,
+    });
+  }
+  return blocos;
+}
+
+/** Se as designações dos requisitos do primeiro bloco da folha não coincidem, por ordem, com as da configuração. */
+function requisitosDivergem(sheet: XLSX.WorkSheet, config: ConfiguracaoAvaliacao): boolean {
+  const primeiraLinha = linhaInicialBloco(1, config.requisitos.length) + OFFSET_PRIMEIRA_LINHA_REQUISITO;
+  return config.requisitos.some((requisito, idx) => lerTexto(sheet, `A${primeiraLinha + idx}`) !== requisito.designacao);
 }
 
 export interface ResultadoLeitura {
@@ -137,44 +230,16 @@ export function lerDeclaracaoExcel(
     identificacao[campo] = lerTexto(sheet, `B${linha}`);
   }
 
-  const nRequisitos = config.requisitos.length;
-  const blocos: Bloco[] = [];
+  const blocos = lerBlocos(sheet, config, 1, "principal", alertas);
 
-  for (let i = 1; i <= config.nBlocos; i++) {
-    const linhaInicial = linhaInicialBloco(i, nRequisitos);
-    const linhaDatas = linhaInicial + OFFSET_DATAS_PROJETO;
-
-    const linhasRequisito: LinhaRequisito[] = config.requisitos.map((requisito, r) => {
-      const linhaReq = linhaInicial + OFFSET_PRIMEIRA_LINHA_REQUISITO + r;
-      const inicio = lerMesAno(sheet, `E${linhaReq}`, `F${linhaReq}`);
-      const fim = lerMesAno(sheet, `G${linhaReq}`, `H${linhaReq}`);
-      return {
-        requisitoId: requisito.id,
-        declara: lerDeclara(sheet, `D${linhaReq}`),
-        inicio: inicio.valor,
-        fim: fim.valor,
-        inicioIncompleto: inicio.incompleto,
-        fimIncompleto: fim.incompleto,
-      };
-    });
-
-    blocos.push({
-      indice: i,
-      cliente: lerTexto(sheet, `B${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
-      projeto: lerTexto(sheet, `E${linhaInicial + OFFSET_CLIENTE_PROJETO}`),
-      funcao: lerTexto(sheet, `B${linhaInicial + OFFSET_FUNCAO}`),
-      projInicio: lerMesAno(sheet, `B${linhaDatas}`, `C${linhaDatas}`).valor,
-      projFim: lerMesAno(sheet, `E${linhaDatas}`, `F${linhaDatas}`).valor,
-      linhas: linhasRequisito,
-    });
-  }
+  // A folha de experiência adicional continua a numeração (projetos 16 a 30,
+  // com 15 por folha). Os ficheiros que não a tenham são lidos como antes.
+  const adicional = encontrarFolhaAdicional(workbook, config.perfil);
+  if (adicional) blocos.push(...lerBlocos(adicional, config, config.nBlocos + 1, "adicional", alertas));
 
   // As designações do primeiro bloco identificam a estrutura do ficheiro: se não
   // coincidirem, por ordem, com as da configuração, as âncoras não são de confiança.
-  const primeiraLinhaRequisitos = linhaInicialBloco(1, nRequisitos) + OFFSET_PRIMEIRA_LINHA_REQUISITO;
-  const divergem = config.requisitos.some(
-    (requisito, idx) => lerTexto(sheet, `A${primeiraLinhaRequisitos + idx}`) !== requisito.designacao,
-  );
+  const divergem = requisitosDivergem(sheet, config) || (adicional !== null && requisitosDivergem(adicional, config));
   if (divergem) {
     alertas.push({
       tipo: "requisitosDivergentes",
@@ -240,6 +305,8 @@ export function lerDeclaracoesDoWorkbook(
     if (!sheet) continue;
 
     const perfilDaFolha = lerTexto(sheet, `A${LINHA_SUBTITULO}`);
+    // A folha adicional lê-se com a principal do mesmo perfil.
+    if (perfilDaFolha.endsWith(SUFIXO_SUBTITULO_ADICIONAL)) continue;
     const numeroLote = lerTexto(sheet, `B${CAMPOS_IDENTIFICACAO.find((c) => c.campo === "lote")!.linha}`);
 
     const candidatos = config.lotes.flatMap((lote) =>

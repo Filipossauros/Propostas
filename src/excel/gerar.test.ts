@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import type { EspecificacaoFormulario } from "../core/types";
 import { configAvaliacao, requisito } from "../core/fixtures";
 import { PERFIS_EXEMPLO } from "../core/exemplo";
-import { CAMPOS_IDENTIFICACAO, alturaBloco, linhaInicialBloco, nomeFolhaPerfil } from "./layout";
+import { CAMPOS_IDENTIFICACAO, alturaBloco, linhaInicialBloco, nomeFolhaAdicional, nomeFolhaPerfil } from "./layout";
 import { gerarWorkbookDeclaracao } from "./gerar";
 import { lerDeclaracaoExcel } from "./ler";
 
@@ -31,7 +31,12 @@ describe("gerarWorkbookDeclaracao", () => {
   it("gera Leia-me, Listas oculta e uma folha para o perfil", () => {
     const wb = gerarWorkbookDeclaracao([perfilExemplo()]);
 
-    expect(wb.worksheets.map((s) => s.name)).toEqual(["Leia-me", "Listas", nomeFolhaPerfil(NOME_PERFIL)]);
+    expect(wb.worksheets.map((s) => s.name)).toEqual([
+      "Leia-me",
+      "Listas",
+      nomeFolhaPerfil(NOME_PERFIL),
+      nomeFolhaAdicional(NOME_PERFIL, new Set([nomeFolhaPerfil(NOME_PERFIL)])),
+    ]);
     expect(wb.getWorksheet("Listas")!.state).toBe("hidden");
     expect(folhaDe(wb).state).not.toBe("hidden");
   });
@@ -42,7 +47,14 @@ describe("gerarWorkbookDeclaracao", () => {
       perfilExemplo({ perfil: "Analista" }),
     ]);
 
-    expect(wb.worksheets.map((s) => s.name)).toEqual(["Leia-me", "Listas", "Programador", "Analista"]);
+    expect(wb.worksheets.map((s) => s.name)).toEqual([
+      "Leia-me",
+      "Listas",
+      "Programador",
+      "Programador (adicional)",
+      "Analista",
+      "Analista (adicional)",
+    ]);
   });
 
   it("lista os perfis no Leia-me quando há mais do que um", () => {
@@ -146,7 +158,10 @@ describe("gerarWorkbookDeclaracao", () => {
 
     expect(estruturaValida).toBe(true);
     expect(declaracao.alertas).toHaveLength(0);
-    expect(declaracao.blocos).toHaveLength(p.nBlocos);
+    // A folha principal e a de experiência adicional: o dobro dos projetos.
+    expect(declaracao.blocos).toHaveLength(2 * p.nBlocos);
+    expect(declaracao.blocos[p.nBlocos].indice).toBe(p.nBlocos + 1);
+    expect(declaracao.blocos[p.nBlocos].folha).toBe("adicional");
     expect(declaracao.blocos[0].linhas.map((l) => l.requisitoId)).toEqual(p.requisitos.map((r) => r.id));
   });
 
@@ -234,5 +249,71 @@ describe("nomeFolhaPerfil", () => {
 
     expect(segundo).not.toBe(primeiro);
     expect(segundo.length).toBeLessThanOrEqual(31);
+  });
+});
+
+describe("novas regras do Resumo Curricular", () => {
+  const p = perfilExemplo();
+  const n = p.requisitos.length;
+  const configLeitura = () => configAvaliacao({ perfil: p.perfil, nBlocos: p.nBlocos, requisitos: p.requisitos });
+
+  /** Preenche um projeto completo, com «SIM» no primeiro requisito. */
+  function preencherProjeto(
+    folha: ReturnType<typeof folhaDe>,
+    bloco: number,
+    datas: { inicio: [number, number]; fim: [number, number] },
+  ) {
+    const l = linhaInicialBloco(bloco, n);
+    folha.getCell(l + 1, 2).value = "Cliente";
+    folha.getCell(l + 1, 5).value = "Projeto";
+    folha.getCell(l + 2, 2).value = "Função";
+    folha.getCell(l + 4, 2).value = datas.inicio[0];
+    folha.getCell(l + 4, 3).value = datas.inicio[1];
+    folha.getCell(l + 4, 5).value = datas.fim[0];
+    folha.getCell(l + 4, 6).value = datas.fim[1];
+    folha.getCell(l + 6, 4).value = "SIM";
+  }
+
+  it("meses e anos só aceitam números inteiros, sem teto do mês corrente", () => {
+    const folha = folhaDe(gerarWorkbookDeclaracao([p]));
+    const linhaDatas = linhaInicialBloco(1, n) + 4;
+    const mes = folha.getCell(linhaDatas, 2).dataValidation;
+    const ano = folha.getCell(linhaDatas, 3).dataValidation;
+
+    expect(mes.formulae?.[0]).toMatch(/INT\(B\d+\)=B\d+/);
+    expect(ano.formulae?.[0]).toMatch(/INT\(C\d+\)=C\d+/);
+    for (const v of [mes, ano]) expect(String(v.formulae?.[0])).not.toContain("TODAY");
+  });
+
+  it("cada perfil tem uma folha de experiência adicional, que continua a numeração", () => {
+    const wb = gerarWorkbookDeclaracao([p]);
+    const adicional = wb.getWorksheet(nomeFolhaAdicional(NOME_PERFIL, new Set([nomeFolhaPerfil(NOME_PERFIL)])))!;
+
+    expect(adicional.getCell(2, 1).value).toBe(`${NOME_PERFIL} — Experiência adicional`);
+    expect(adicional.getCell(linhaInicialBloco(1, n), 1).value).toBe(`PROJETO ${p.nBlocos + 1}`);
+    expect(String(adicional.getCell(5, 1).value)).toMatch(/^Continuação da folha/);
+  });
+
+  it("a experiência declarada na folha adicional conta", async () => {
+    const wb = gerarWorkbookDeclaracao([p]);
+    const adicional = wb.getWorksheet(nomeFolhaAdicional(NOME_PERFIL, new Set([nomeFolhaPerfil(NOME_PERFIL)])))!;
+    preencherProjeto(adicional, 1, { inicio: [1, 2020], fim: [12, 2020] });
+    const buffer = await wb.xlsx.writeBuffer();
+
+    const { declaracao } = lerDeclaracaoExcel("t.xlsx", XLSX.read(buffer, { type: "array" }), configLeitura());
+    const projeto = declaracao.blocos.find((b) => b.indice === p.nBlocos + 1)!;
+    expect(projeto.cliente).toBe("Cliente");
+    expect(projeto.projInicio).toEqual({ mes: 1, ano: 2020 });
+    expect(projeto.linhas[0].declara).toBe("SIM");
+  });
+
+  it("um mês com casas decimais não é arredondado: a data não conta e fica assinalada", async () => {
+    const wb = gerarWorkbookDeclaracao([p]);
+    preencherProjeto(folhaDe(wb), 1, { inicio: [3.5, 2020], fim: [12, 2020] });
+    const buffer = await wb.xlsx.writeBuffer();
+
+    const { declaracao } = lerDeclaracaoExcel("t.xlsx", XLSX.read(buffer, { type: "array" }), configLeitura());
+    expect(declaracao.blocos[0].projInicio).toBeNull();
+    expect(declaracao.alertas.some((a) => a.tipo === "dataInvalida" && a.blocoIndice === 1)).toBe(true);
   });
 });

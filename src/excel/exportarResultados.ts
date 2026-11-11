@@ -257,6 +257,12 @@ function construirCapa(wb: ExcelJS.Workbook, resultado: ResultadoProcedimento, c
   const campos: Array<[string, string | number]> = [
     ["Projeto", config.nomeProjeto],
     ["Procedimento", config.nomeProcedimento],
+    [
+      "Data-limite de apresentação de propostas (teto das datas)",
+      resultado.dataLimite
+        ? `${String(resultado.dataLimite.mes).padStart(2, "0")}/${resultado.dataLimite.ano}`
+        : "—",
+    ],
     ["Lotes analisados", resultado.lotes.length],
     ["Concorrentes", concorrentesDoProcedimento(resultado).length],
     ["Um lote por concorrente", resultado.umLotePorConcorrente ? "Sim" : "Não"],

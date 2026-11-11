@@ -42,6 +42,7 @@ function bloco(
     projInicio?: MesAno | null;
     projFim?: MesAno | null;
     linhas: LinhaRequisito[];
+    excluidoPeloJuri?: boolean;
   },
 ): Bloco {
   return {
@@ -52,6 +53,7 @@ function bloco(
     projInicio: opts.projInicio ?? null,
     projFim: opts.projFim ?? null,
     linhas: opts.linhas,
+    excluidoPeloJuri: opts.excluidoPeloJuri,
   };
 }
 
@@ -198,19 +200,32 @@ describe("Regra A — comportamentos adicionais", () => {
   });
 });
 
-describe("Regra A — bloco de projeto incompleto anula a experiência declarada", () => {
-  it("cliente/entidade em falta descarta a linha, mesmo com datas coerentes", () => {
+describe("Regra A — bloco de projeto incompleto", () => {
+  it("cliente/entidade em falta já não anula a experiência: conta", () => {
     const b = bloco(1, { cliente: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r1")] });
     const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
-    expect(resultado.mesesApurados).toBe(0);
-    expect(resultado.periodosDescartados[0].motivo).toMatch(/incompleto/i);
+    expect(resultado.mesesApurados).toBe(12);
+    expect(resultado.periodosDescartados).toHaveLength(0);
   });
 
-  it("projeto ou função em falta descarta a linha", () => {
+  it("projeto ou função em falta também contam", () => {
     const semProjeto = bloco(1, { projeto: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r1")] });
     const semFuncao = bloco(2, { funcao: "", projInicio: ma(2020, 1), projFim: ma(2020, 12), linhas: [linha("r2")] });
-    expect(apurarRequisito([semProjeto], requisito("r1", 0), dataLimitePadrao).mesesApurados).toBe(0);
-    expect(apurarRequisito([semFuncao], requisito("r2", 0), dataLimitePadrao).mesesApurados).toBe(0);
+    expect(apurarRequisito([semProjeto], requisito("r1", 0), dataLimitePadrao).mesesApurados).toBe(12);
+    expect(apurarRequisito([semFuncao], requisito("r2", 0), dataLimitePadrao).mesesApurados).toBe(12);
+  });
+
+  it("o projeto que o júri não considera, por falta de evidências, deixa de contar", () => {
+    const b = bloco(1, {
+      cliente: "",
+      projInicio: ma(2020, 1),
+      projFim: ma(2020, 12),
+      linhas: [linha("r1")],
+      excluidoPeloJuri: true,
+    });
+    const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
+    expect(resultado.mesesApurados).toBe(0);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/pelo júri/);
   });
 
   it("datas do projeto em falta descartam a linha, ainda que a linha tenha datas próprias", () => {
@@ -221,7 +236,7 @@ describe("Regra A — bloco de projeto incompleto anula a experiência declarada
     });
     const resultado = apurarRequisito([b], requisito("r1", 0), dataLimitePadrao);
     expect(resultado.mesesApurados).toBe(0);
-    expect(resultado.periodosDescartados[0].motivo).toMatch(/incompleto/i);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/sem início ou sem fim do projeto/i);
   });
 });
 
@@ -248,7 +263,7 @@ describe("Regra A — datas de experiência parcialmente preenchidas anulam a li
   });
 });
 
-describe("Regra A — nenhuma experiência pode ir além do mês corrente", () => {
+describe("Regra A — nenhuma experiência pode ir além da data-limite de apresentação de propostas", () => {
   it("fim exatamente na data limite é admitido (fronteira)", () => {
     const dataLimite = ma(2027, 3);
     const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 3), linhas: [linha("r1")] });
@@ -257,11 +272,11 @@ describe("Regra A — nenhuma experiência pode ir além do mês corrente", () =
     expect(resultado.periodosDescartados).toHaveLength(0);
   });
 
-  it("fim posterior ao mês corrente é descartado, mesmo estando dentro do período do projeto", () => {
+  it("fim posterior à data-limite é descartado, mesmo estando dentro do período do projeto", () => {
     const dataLimite = ma(2027, 3);
     const b = bloco(1, { projInicio: ma(2026, 1), projFim: ma(2027, 6), linhas: [linha("r1")] });
     const resultado = apurarRequisito([b], requisito("r1", 0), dataLimite);
     expect(resultado.mesesApurados).toBe(0);
-    expect(resultado.periodosDescartados[0].motivo).toMatch(/mês corrente/i);
+    expect(resultado.periodosDescartados[0].motivo).toMatch(/data-limite/i);
   });
 });

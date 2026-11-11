@@ -578,34 +578,41 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
     ...blocosUmLotePorConcorrente(config),
 
     { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
+    // A obrigação de apresentar um Resumo Curricular por elemento está no
+    // Programa do Concurso; aqui abre-se com a assinatura, sem número.
+    {
+      tipo: "paragrafo",
+      texto:
+        "O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica.",
+    },
     {
       // Uma só numeração para todas as regras, sem secções pelo meio: as
       // remissões entre normas ("nos termos do n.º 2") só são inequívocas se
-      // a sequência correr de fio a pavio. As causas de exclusão vão numa
-      // única regra, com alíneas em (i)/(ii)/(iii), para não quebrar a série.
+      // a sequência correr de fio a pavio. Os três casos das datas da linha
+      // são alíneas do mesmo número, para não quebrar a série.
       tipo: "lista",
       numerada: true,
       itens: [
-        "Para efeitos de verificação dos requisitos mínimos de experiência profissional fixados no Anexo Técnico, o concorrente apresenta, relativamente a cada elemento proposto, o Resumo Curricular, em modelo disponibilizado pela entidade adjudicante como anexo ao Programa do Concurso.",
-        "O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica.",
-        `O Resumo Curricular comporta ${config.nBlocos} Projetos de projeto. Sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados tantos exemplares do Resumo Curricular quantos os necessários, todos preenchidos e assinados nos termos do número anterior e identificados sequencialmente, não existindo limite ao número de exemplares admitidos.`,
-        "Em cada Projeto de projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
-        "O Resumo Curricular não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data do preenchimento, o projeto ainda não tenha terminado, indica-se como fim do projeto o mês e o ano em que o formulário é preenchido.",
-        "O Resumo Curricular deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura. O referido Resumo Curricular deverá ser apresentado em duas versões, correspondentes ao mesmo conteúdo: (i) uma versão em formato editável (folha de cálculo); e (ii) uma versão em formato PDF, devidamente assinada mediante recurso a assinatura eletrónica.",
-        "Em caso de divergência entre a versão em folha de cálculo e a versão em PDF submetidas, prevalece esta última.",
-        "São excluídas as propostas relativamente às quais se verifique, quanto a qualquer dos elementos propostos: (i) a falta de apresentação do Resumo Curricular; (ii) a falta de assinatura do PDF do Resumo Curricular, mediante assinatura eletrónica pelo próprio titular da experiência; ou (iii) a alteração da estrutura do Resumo Curricular disponibilizado, designadamente por supressão, aditamento ou modificação de folhas, linhas, colunas ou rótulos.",
+        `O modelo para apresentação do Resumo Curricular comporta informação referente a ${config.nBlocos} Projetos, contudo, sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados na segunda folha disponibilizada para o efeito.`,
+        "Em cada Projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
+        "O Resumo Curricular não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data de apresentação de proposta, o projeto ainda não tenha terminado, deve-se considerar como data de fim do projeto a data-limite de apresentação de propostas.",
+        "O Resumo Curricular deve ser submetido no formato de folha de cálculo disponibilizado pela entidade adjudicante, sem alteração da respetiva estrutura.",
         "Os períodos declarados devem corresponder ao tempo de dedicação efetiva do elemento ao requisito em causa, cabendo ao titular delimitá-los nos campos de datas próprios da linha do requisito sempre que a dedicação não tenha sido integral ao longo do período do projeto.",
-        "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo Técnico.",
+        "A experiência é apurada em meses de calendário completos, autonomamente para cada um dos requisitos constantes do Anexo I do Caderno de Encargos.",
         "São contados o mês de calendário em que se inicia e o mês de calendário em que termina o período declarado.",
         "Quando o campo relativo a um requisito não contenha a indicação «SIM» ou «NÃO», considera-se, quanto a esse Projeto, que não foi declarada experiência no requisito em causa.",
         "Se vários projetos forem apresentados para demonstrar o cumprimento do mesmo requisito e os respetivos períodos de execução abrangerem os mesmos meses, esses meses são contabilizados apenas uma vez para esse requisito.",
-        "Quando os campos de datas da linha de um requisito se encontrem em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo Projeto.",
-        "Quando os campos de datas da linha de um requisito se encontrem parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse Projeto, a experiência no requisito em causa.",
-        "Quando os campos de datas da linha de um requisito se encontrem integralmente preenchidos, releva exclusivamente o período neles delimitado.",
+        {
+          texto: "Quando os campos de datas da linha de um requisito se encontrem:",
+          alineas: [
+            "em branco, considera-se declarado que a experiência nesse requisito ocorreu durante a totalidade do período do projeto indicado no respetivo Projeto.",
+            "parcialmente preenchidos apenas o mês ou apenas o ano, de início ou de fim, considera-se não declarada, quanto a esse Projeto, a experiência no requisito em causa.",
+            "integralmente preenchidos, releva exclusivamente o período neles delimitado.",
+          ],
+        },
         "As datas declaradas na linha de um requisito situam-se dentro do período do projeto indicado no respetivo projeto. Caso não se situem, o período declarado não é admitido, considerando-se, quanto a esse projeto, que não foi declarada experiência no requisito em causa.",
-        "Não é admitida experiência cujo período se prolongue para além do mês e ano em que o Resumo Curricular é submetido, considerando-se experiência ainda por decorrer como não adquirida.",
-        "Quando o projeto não identifique o cliente ou entidade, o projeto, a função desempenhada, o início do projeto ou o fim do projeto, considera-se não declarada a experiência em todos os requisitos associados ao projeto.",
-        "Os requisitos mínimos exprimem-se em meses inteiros, não havendo lugar a arredondamento.",
+        "Não é admitida experiência cujo período se prolongue após a data-limite para a apresentação de propostas, considerando-se experiência ainda por decorrer como não adquirida.",
+        "Caso subsistam dúvidas à entidade adjudicante, a mesma poderá solicitar ao concorrente, nos termos do art.º 72.º do CCP, evidências probatórias do projeto, podendo o concorrente solicitar que a resposta seja classificada como confidencial, nos termos do art.º 66.º do CCP.",
       ],
     },
   ];

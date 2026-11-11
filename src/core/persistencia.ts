@@ -75,3 +75,9 @@ export function limparEstado(chave: string): void {
     // Sem recurso útil — ignorar.
   }
 }
+/**
+ * Data-limite de apresentação de propostas, indicada na análise (Módulo 4): o
+ * teto das datas declaradas. É do procedimento, não dos candidatos, e por isso
+ * pode ficar no navegador — ao contrário das declarações, que nunca ficam.
+ */
+export const CHAVE_DATA_LIMITE_ANALISE = `${PREFIXO}dataLimiteAnalise`;

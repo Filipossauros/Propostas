@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avaliarProcedimento, ordenarLotes, type DeclaracaoAtribuida } from "./avaliacaoProcedimento";
+import { avaliarProcedimento, chaveDeProjeto, ordenarLotes, type DeclaracaoAtribuida } from "./avaliacaoProcedimento";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "./exemplo";
 import { proporAgrupamentos } from "./reconciliacao";
 import type { LotesJSON } from "./types";
@@ -88,3 +88,45 @@ describe("limitação de um lote por concorrente", () => {
     expect(concorrente(resultado, "2", "Alfa").potencialImpedimento).toEqual([]);
   });
 });
+
+describe("novas regras: data-limite e decisão do júri", () => {
+  const declaracoes = () => declaracoesExemplo(LOTES_EXEMPLO);
+  const grupos = (d: DeclaracaoAtribuida[]) =>
+    proporAgrupamentos(d.map((x) => x.declaracao.identificacao.entidadeConcorrente));
+
+  it("o resultado guarda a data-limite usada como teto", () => {
+    const d = declaracoes();
+    const resultado = avaliarProcedimento(LOTES_EXEMPLO, d, grupos(d), new Map(), { mes: 3, ano: 2026 });
+    expect(resultado.dataLimite).toEqual({ mes: 3, ano: 2026 });
+  });
+
+  it("um projeto sem cliente conta, assinalado; o júri pode deixar de o considerar", () => {
+    const d = declaracoes();
+    const alvo = d.find((x) => concorrenteDe(x).startsWith("Alfa"))!;
+    alvo.declaracao.blocos[0] = { ...alvo.declaracao.blocos[0], cliente: "" };
+    const teto = { mes: 12, ano: 2030 };
+
+    const elemento = (r: ReturnType<typeof avaliarProcedimento>) =>
+      r.lotes
+        .flatMap((l) => l.concorrentes)
+        .flatMap((c) => c.perfis)
+        .flatMap((p) => p.elementos)
+        .find((e) => e.declaracao.id === alvo.declaracao.id)!;
+
+    const antes = elemento(avaliarProcedimento(LOTES_EXEMPLO, d, grupos(d), new Map(), teto));
+    expect(antes.alertas.some((a) => a.tipo === "blocoSemIdentificacao")).toBe(true);
+    const mesesAntes = antes.apuramento.requisitos.reduce((s, r) => s + r.mesesApurados, 0);
+
+    const excluidos = new Set([chaveDeProjeto(alvo.declaracao.id, alvo.declaracao.blocos[0].indice)]);
+    const depois = elemento(avaliarProcedimento(LOTES_EXEMPLO, d, grupos(d), new Map(), teto, excluidos));
+    const mesesDepois = depois.apuramento.requisitos.reduce((s, r) => s + r.mesesApurados, 0);
+
+    expect(mesesDepois).toBeLessThan(mesesAntes);
+    expect(depois.alertas.some((a) => a.tipo === "projetoExcluidoPeloJuri")).toBe(true);
+    expect(depois.alertas.some((a) => a.tipo === "blocoSemIdentificacao")).toBe(false);
+  });
+});
+
+function concorrenteDe(d: DeclaracaoAtribuida): string {
+  return d.declaracao.identificacao.entidadeConcorrente;
+}

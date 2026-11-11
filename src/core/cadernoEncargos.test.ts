@@ -65,8 +65,11 @@ describe("documentoRegrasEPrecoBase", () => {
     const idx = doc.blocos.findIndex((b) => b.tipo === "titulo" && b.texto === "Regras de apuramento da experiência");
     const aSeguir = doc.blocos.slice(idx + 1);
 
+    // A assinatura abre a secção, sem número; as regras seguem numa só lista.
+    expect(aSeguir[0].tipo === "paragrafo" && aSeguir[0].texto).toMatch(/^O Resumo Curricular é preenchido e assinado/);
     expect(aSeguir.filter((b) => b.tipo === "lista")).toHaveLength(1);
-    expect(aSeguir[0].tipo === "lista" && aSeguir[0].numerada).toBe(true);
+    expect(aSeguir[1].tipo === "lista" && aSeguir[1].numerada).toBe(true);
+    expect(aSeguir[1].tipo === "lista" && aSeguir[1].itens).toHaveLength(13);
   });
 
   it("mantém o valor estimado e os requisitos como secções próprias", () => {
@@ -84,8 +87,13 @@ describe("documentoRegrasEPrecoBase", () => {
   });
 
   it("conserva as matérias das secções que deixaram de ter título próprio", () => {
-    expect(texto).toContain("São excluídas as propostas");
     expect(texto).toContain("tempo de dedicação efetiva");
+    expect(texto).toContain("data-limite para a apresentação de propostas");
+    expect(texto).toContain("segunda folha disponibilizada para o efeito");
+    expect(texto).toContain("evidências probatórias");
+    // Saíram com a nova redação.
+    expect(texto).not.toContain("São excluídas as propostas");
+    expect(texto).not.toContain("prevalece esta última");
   });
 
   it("não estrutura o conteúdo em artigos — isso fica para a redação das peças", () => {
@@ -99,7 +107,7 @@ describe("documentoRegrasEPrecoBase", () => {
   it("indica o n.º de projetos por formulário, que é do procedimento", () => {
     const config = { ...lotesComPerfis([{ numero: "1", perfis: [perfil()] }]), nBlocos: 15 };
 
-    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("comporta 15 Projetos");
+    expect(documentoParaTexto(documentoRegrasEPrecoBase(config))).toContain("comporta informação referente a 15 Projetos");
   });
 
   it("só aparece quando a opção está ativa, e com título próprio", () => {
@@ -338,12 +346,12 @@ describe("normas de nulidade da experiência", () => {
     expect(texto).toContain("contabilizados apenas uma vez");
   });
 
-  it("não admite experiência para além do mês do preenchimento", () => {
-    expect(texto).toContain("para além do mês e ano em que o Resumo Curricular é submetido");
+  it("não admite experiência para além da data-limite de apresentação de propostas", () => {
+    expect(texto).toContain("se prolongue após a data-limite para a apresentação de propostas");
   });
 
-  it("anula a experiência do bloco de projeto incompleto", () => {
-    expect(texto).toContain("não identifique o cliente ou entidade");
+  it("já não traz a regra do bloco de projeto incompleto", () => {
+    expect(texto).not.toContain("não identifique o cliente ou entidade");
   });
 
   it("anula a experiência da linha com datas parcialmente preenchidas", () => {
@@ -355,8 +363,8 @@ describe("normas de nulidade da experiência", () => {
     expect(texto).not.toContain("A existência, em bloco de projeto preenchido");
   });
 
-  it("manda datar o fim do projeto em curso pelo mês do preenchimento", () => {
-    expect(texto).toContain("indica-se como fim do projeto o mês e o ano em que o formulário é preenchido");
+  it("manda considerar como fim do projeto em curso a data-limite de apresentação de propostas", () => {
+    expect(texto).toContain("deve-se considerar como data de fim do projeto a data-limite de apresentação de propostas");
   });
 });
 

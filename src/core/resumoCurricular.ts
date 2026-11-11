@@ -146,7 +146,8 @@ function aberturaDoAnexo(config: LotesJSON): BlocoDocumento {
       "Reproduz-se em seguida o Resumo Curricular disponibilizado aos concorrentes, tal como consta do " +
       "ficheiro de folha de cálculo anexo ao Programa do Concurso: uma folha por perfil, na página " +
       `correspondente. O ficheiro comporta ${config.nBlocos} Projetos por perfil, todos com a mesma ` +
-      "estrutura; reproduz-se aqui apenas o primeiro.",
+      "estrutura, e uma segunda folha por perfil, de experiência adicional, para mais " +
+      `${config.nBlocos} Projetos; reproduz-se aqui apenas o primeiro Projeto da folha principal.`,
   };
 }
 

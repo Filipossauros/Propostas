@@ -36,6 +36,24 @@ export function nomeFolhaPerfil(designacao: string, usados: Set<string> = new Se
   return nome;
 }
 
+/**
+ * A folha de experiência adicional de um perfil: mais projetos, com a mesma
+ * estrutura de blocos, para quem precise de declarar além dos da folha
+ * principal (n.º 1 das regras). O subtítulo é o do perfil com este sufixo, e é
+ * por ele que o leitor a junta à folha principal.
+ */
+export const SUFIXO_SUBTITULO_ADICIONAL = " — Experiência adicional";
+
+export function subtituloAdicional(perfil: string): string {
+  return `${perfil}${SUFIXO_SUBTITULO_ADICIONAL}`;
+}
+
+/** Nome da folha adicional, derivado do do perfil e com os mesmos limites do Excel. */
+export function nomeFolhaAdicional(designacao: string, usados: Set<string> = new Set()): string {
+  const marca = " (adicional)";
+  return nomeFolhaPerfil(`${designacao.slice(0, MAX_NOME_FOLHA - marca.length).trim()}${marca}`, usados);
+}
+
 export const LINHA_TITULO = 1;
 export const LINHA_SUBTITULO = 2;
 
@@ -104,12 +122,13 @@ export const TEXTO_NOTA_BLOCO =
   "inferior ao período do projeto. Caso não sejam preenchidos, considera-se que a experiência no requisito " +
   "corresponde ao período integral do projeto.";
 
-export const TEXTO_TETO_MES_ATUAL =
-  "Nenhuma data pode ser posterior ao mês e ano em que este formulário é preenchido.";
+export const TEXTO_TETO_DATA_LIMITE =
+  "Nenhuma data pode ser posterior ao mês da data-limite de apresentação de propostas: experiência ainda por " +
+  "decorrer não é considerada.";
 
 export const TEXTO_DISCLAIMER_PROJETO_EM_CURSO =
-  "Se o projeto ainda estiver em curso à data de preenchimento deste formulário, indique como \"Fim do " +
-  "projeto\" o mês e o ano em que este formulário está a ser preenchido.";
+  "Se o projeto ainda não tiver terminado à data de apresentação da proposta, considera-se como \"Fim do " +
+  "projeto\" a data-limite de apresentação de propostas.";
 
 export const TEXTO_SUBCABECALHO_REQUISITO =
   "Requisito — indicar, para cada um, se declara experiência neste projeto";

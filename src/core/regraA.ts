@@ -42,26 +42,28 @@ export type ResultadoPeriodoLinha =
   | { admitido: false; descartado: PeriodoDescartado };
 
 /**
- * O bloco de projeto está incompleto quando falta qualquer um dos campos
- * essenciais à sua identificação e delimitação temporal. Um bloco incompleto
- * anula toda a experiência nele declarada — não apenas a que dependeria do
- * campo em falta — porque não há como confirmar a que projeto, período ou
- * função a experiência respeita.
+ * O bloco de projeto sem início ou sem fim do projeto não se pode apurar: as
+ * datas da linha herdam o período do projeto, ou têm de caber nele (n.os 10.1 e
+ * 11 das regras), e sem esse período não há com que as comparar. Toda a
+ * experiência do bloco fica por considerar.
  */
-export function blocoIncompleto(bloco: Bloco): boolean {
-  return (
-    bloco.cliente.trim() === "" ||
-    bloco.projeto.trim() === "" ||
-    bloco.funcao.trim() === "" ||
-    bloco.projInicio === null ||
-    bloco.projFim === null
-  );
+export function blocoSemDatas(bloco: Bloco): boolean {
+  return bloco.projInicio === null || bloco.projFim === null;
+}
+
+/**
+ * Sem cliente/entidade, projeto ou função, o projeto conta — as regras já não
+ * o anulam —, mas fica assinalado: o júri pode pedir evidências (n.º 13) e, sem
+ * elas, não o considerar (`excluidoPeloJuri`).
+ */
+export function blocoSemIdentificacao(bloco: Bloco): boolean {
+  return bloco.cliente.trim() === "" || bloco.projeto.trim() === "" || bloco.funcao.trim() === "";
 }
 
 /**
  * Determina o período de uma linha de requisito (6.1): datas próprias da
  * linha > herança do período do projeto > contenção no período do projeto >
- * teto do mês corrente.
+ * teto do mês da data-limite de apresentação de propostas (n.º 12).
  */
 export function determinarPeriodoLinha(
   bloco: Bloco,
@@ -73,10 +75,12 @@ export function determinarPeriodoLinha(
     descartado: { blocoIndice: bloco.indice, requisitoId: linha.requisitoId, motivo },
   });
 
-  if (blocoIncompleto(bloco)) {
-    return descartar(
-      "Bloco de projeto incompleto (cliente/entidade, projeto, função ou datas do projeto por preencher) — experiência não considerada",
-    );
+  if (bloco.excluidoPeloJuri) {
+    return descartar("Projeto não considerado pelo júri, por falta de evidências");
+  }
+
+  if (blocoSemDatas(bloco)) {
+    return descartar("Bloco de projeto sem início ou sem fim do projeto — experiência não considerada");
   }
 
   if (linha.inicioIncompleto || linha.fimIncompleto) {
@@ -105,7 +109,7 @@ export function determinarPeriodoLinha(
   }
 
   if (fimInt > paraMesInt(teto)) {
-    return descartar("Data de fim posterior ao mês corrente");
+    return descartar("Período prolonga-se após a data-limite de apresentação de propostas");
   }
 
   return {

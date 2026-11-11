@@ -5,7 +5,7 @@
 
 import { ANO_MAXIMO, ANO_MINIMO, mesAtual } from "./types";
 import type { Alerta, AlertaTipo, Bloco, ConfiguracaoAvaliacao, Declaracao, MesAno } from "./types";
-import { apurarElemento, blocoIncompleto, paraMesInt } from "./regraA";
+import { apurarElemento, blocoSemDatas, blocoSemIdentificacao, paraMesInt } from "./regraA";
 import type { ApuramentoElemento } from "./regraA";
 
 /** Bloco preenchido (7.1): consta qualquer elemento identificativo do cliente, projeto ou período. */
@@ -50,21 +50,35 @@ function validarCamposObrigatorios(bloco: Bloco): Alerta[] {
 }
 
 /**
- * Bloco preenchido mas incompleto (cliente/entidade, projeto, função ou datas
- * do projeto em falta): toda a experiência nele declarada é nula, não apenas a
- * que dependeria do campo em falta.
+ * Bloco preenchido mas incompleto.
+ *
+ * Sem início ou fim do projeto, a experiência do bloco não se pode apurar e
+ * fica por considerar. Sem cliente/entidade, projeto ou função, conta — mas o
+ * júri é avisado de que pode pedir evidências (n.º 13 das regras) e, sem elas,
+ * não considerar o projeto.
  */
 function validarBlocoIncompleto(bloco: Bloco): Alerta[] {
-  if (!blocoPreenchido(bloco) || !blocoIncompleto(bloco)) return [];
-  return [
-    {
+  if (!blocoPreenchido(bloco)) return [];
+  const alertas: Alerta[] = [];
+  if (blocoSemDatas(bloco)) {
+    alertas.push({
       tipo: "blocoIncompleto",
       mensagem:
-        `Bloco ${bloco.indice}: campo obrigatório por preencher (cliente/entidade, projeto, função ou datas ` +
-        `do projeto) — nenhuma experiência declarada neste bloco é considerada.`,
+        `Bloco ${bloco.indice}: início ou fim do projeto por preencher — nenhuma experiência declarada neste ` +
+        `bloco é considerada.`,
       blocoIndice: bloco.indice,
-    },
-  ];
+    });
+  }
+  if (blocoSemIdentificacao(bloco) && !bloco.excluidoPeloJuri) {
+    alertas.push({
+      tipo: "blocoSemIdentificacao",
+      mensagem:
+        `Bloco ${bloco.indice}: cliente/entidade, projeto ou função por preencher — a experiência conta, mas o ` +
+        `júri pode pedir evidências do projeto e, não as obtendo, não o considerar.`,
+      blocoIndice: bloco.indice,
+    });
+  }
+  return alertas;
 }
 
 function validarDatasBloco(bloco: Bloco): Alerta[] {
@@ -125,8 +139,9 @@ function validarIdentificacao(declaracao: Declaracao): Alerta[] {
 
 function tipoDoDescarte(motivo: string): AlertaTipo {
   if (motivo.includes("fora do período")) return "periodoForaDoProjeto";
-  if (motivo.includes("posterior ao mês corrente")) return "periodoNoFuturo";
-  if (motivo.includes("Bloco de projeto incompleto")) return "blocoIncompleto";
+  if (motivo.includes("data-limite")) return "periodoNoFuturo";
+  if (motivo.includes("sem início ou sem fim do projeto")) return "blocoIncompleto";
+  if (motivo.includes("pelo júri")) return "projetoExcluidoPeloJuri";
   return "datasIncoerentes";
 }
 

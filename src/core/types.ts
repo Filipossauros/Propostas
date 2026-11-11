@@ -642,6 +642,13 @@ export interface Bloco {
   projInicio: MesAno | null;
   projFim: MesAno | null;
   linhas: LinhaRequisito[];
+  /**
+   * O júri decidiu não considerar este projeto: pediu evidências (n.º 13 das
+   * regras) e não as obteve. É decisão do júri na análise, não vem do ficheiro.
+   */
+  excluidoPeloJuri?: boolean;
+  /** Folha de onde o projeto foi lido: a principal do perfil ou a de experiência adicional. */
+  folha?: "principal" | "adicional";
 }
 
 export interface Identificacao {
@@ -662,6 +669,12 @@ export type AlertaTipo =
   | "datasIncoerentes"
   | "identificacaoIncompleta"
   | "blocoIncompleto"
+  /** Projeto sem cliente/entidade, projeto ou função: conta, mas o júri pode pedir evidências. */
+  | "blocoSemIdentificacao"
+  /** Projeto que o júri decidiu não considerar, por falta de evidências. */
+  | "projetoExcluidoPeloJuri"
+  /** Mês ou ano com casas decimais, ou que não é número. */
+  | "dataInvalida"
   | "divergenciaPdf";
 
 export interface Alerta {

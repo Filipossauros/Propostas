@@ -1,5 +1,8 @@
 import { useMemo, useRef, useState } from "react";
-import type { Alerta, Declaracao, LotesJSON } from "../core/types";
+import type { Alerta, Declaracao, LotesJSON, MesAno } from "../core/types";
+import { CHAVE_DATA_LIMITE_ANALISE } from "../core/persistencia";
+import { useEstadoPersistente } from "../core/useEstadoPersistente";
+import { ANO_MAXIMO, ANO_MINIMO, mesAtual } from "../core/types";
 import { ErroImportacao } from "../core/perfil";
 import { AVISO_CERTIFICACAO, importarLotesJSON, perfisComCertificacao } from "../core/lotes";
 import { LOTES_EXEMPLO, declaracoesExemplo } from "../core/exemplo";
@@ -19,6 +22,7 @@ import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { ReconciliacaoConcorrentes } from "./ReconciliacaoConcorrentes";
 import { ResultadosTabelas } from "./ResultadosTabelas";
+import { ProjetosAConfirmar } from "./ProjetosAConfirmar";
 
 /** Requisitos de todos os perfis do agrupamento, para o comparador PDF. */
 function requisitosPorId(config: LotesJSON): Map<string, string> {
@@ -29,6 +33,13 @@ function requisitosPorId(config: LotesJSON): Map<string, string> {
     }
   }
   return mapa;
+}
+
+function ehMesAnoOuNada(valor: unknown): valor is MesAno | null {
+  if (valor === null) return true;
+  if (typeof valor !== "object") return false;
+  const v = valor as Partial<MesAno>;
+  return Number.isInteger(v.mes) && Number.isInteger(v.ano) && v.mes! >= 1 && v.mes! <= 12;
 }
 
 interface Props {
@@ -46,6 +57,15 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   const [aProcessar, setAProcessar] = useState(false);
   const [aExportar, setAExportar] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
+  // O teto das datas declaradas (n.º 12 das regras). Sem ela não se apura.
+  const [dataLimite, setDataLimite] = useEstadoPersistente<MesAno | null>(
+    CHAVE_DATA_LIMITE_ANALISE,
+    () => null,
+    ehMesAnoOuNada,
+  );
+  // Projetos que o júri decidiu não considerar, por falta de evidências. Só
+  // em memória, como as declarações a que dizem respeito.
+  const [excluidos, setExcluidos] = useState<ReadonlySet<string>>(new Set());
 
   const inputConfigRef = useRef<HTMLInputElement>(null);
   const inputDeclaracoesRef = useRef<HTMLInputElement>(null);
@@ -69,9 +89,24 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   const comCertificacao = useMemo(() => (config === null ? [] : perfisComCertificacao(config)), [config]);
 
   const resultado = useMemo(() => {
-    if (config === null || atribuicoes === null || !concorrentesConfirmados || atribuidas.length === 0) return null;
-    return avaliarProcedimento(config, atribuidas, agruparAtribuicoes(atribuicoes), alertasPdf);
-  }, [config, atribuidas, atribuicoes, concorrentesConfirmados, alertasPdf]);
+    if (
+      config === null ||
+      dataLimite === null ||
+      atribuicoes === null ||
+      !concorrentesConfirmados ||
+      atribuidas.length === 0
+    ) {
+      return null;
+    }
+    return avaliarProcedimento(
+      config,
+      atribuidas,
+      agruparAtribuicoes(atribuicoes),
+      alertasPdf,
+      dataLimite,
+      excluidos,
+    );
+  }, [config, atribuidas, atribuicoes, concorrentesConfirmados, alertasPdf, dataLimite, excluidos]);
 
   const nPerfis = config?.lotes.reduce((soma, l) => soma + l.perfis.length, 0) ?? 0;
 
@@ -80,6 +115,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
     setAtribuicoes(null);
     setConcorrentesConfirmados(false);
     setAlertasPdf(new Map());
+    setExcluidos(new Set());
   }
 
   async function carregarConfig(ficheiro: File) {
@@ -115,6 +151,9 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
     setAtribuicoes(proporAtribuicoes(declaracoes.map((d) => d.declaracao.identificacao.entidadeConcorrente)));
     setConcorrentesConfirmados(true);
     setAlertasPdf(new Map());
+    setExcluidos(new Set());
+    // O exemplo apura-se logo: sem data-limite indicada, usa o mês corrente.
+    if (dataLimite === null) setDataLimite(mesAtual());
     setMensagem({
       tipo: "sucesso",
       texto: `Exemplo carregado: ${declaracoes.length} declarações de 2 concorrentes, nos ${exemplo.lotes.length} lotes.`,
@@ -305,6 +344,59 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             </ul>
           </div>
         )}
+
+        {config !== null && (
+          <div className="campo-data-limite">
+            <span className="rotulo">Data-limite de apresentação de propostas</span>
+            <div className="linha-campos">
+              <label>
+                <span className="rotulo-oculto">Mês</span>
+                <select
+                  aria-label="Mês da data-limite de apresentação de propostas"
+                  value={dataLimite?.mes ?? ""}
+                  aria-invalid={dataLimite === null}
+                  onChange={(e) => {
+                    const mes = Number(e.target.value);
+                    setDataLimite(
+                      e.target.value === "" ? null : { mes, ano: dataLimite?.ano ?? new Date().getFullYear() },
+                    );
+                  }}
+                >
+                  <option value="">— mês —</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>
+                      {String(m).padStart(2, "0")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="rotulo-oculto">Ano</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step={1}
+                  min={ANO_MINIMO}
+                  max={ANO_MAXIMO}
+                  aria-label="Ano da data-limite de apresentação de propostas"
+                  value={dataLimite?.ano ?? ""}
+                  placeholder="ano"
+                  onChange={(e) => {
+                    const ano = Number(e.target.value);
+                    if (Number.isInteger(ano) && ano >= ANO_MINIMO && ano <= ANO_MAXIMO) {
+                      setDataLimite({ mes: dataLimite?.mes ?? 1, ano });
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <p className="ajuda">
+              Obrigatória. É o teto das datas declaradas: não conta experiência cujo período se prolongue para além
+              do mês da data-limite (n.º 12 das regras), e é a data que o n.º 3 manda considerar como fim de um
+              projeto ainda em curso. Sem ela, o apuramento não é feito.
+            </p>
+          </div>
+        )}
       </section>
 
       {config !== null && (
@@ -452,11 +544,42 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
         </section>
       )}
 
+      {config !== null && atribuicoes !== null && concorrentesConfirmados && dataLimite === null && (
+        <p className="aviso aviso-atencao" role="status">
+          Indique a data-limite de apresentação de propostas, no passo 1, para fazer o apuramento.
+        </p>
+      )}
+
       {resultado !== null && config !== null && (
         <>
           <section className="painel">
             <header className="painel-cabecalho">
+              <h3>Projetos sem cliente, projeto ou função</h3>
+              <p className="painel-nota">
+                Contam para o apuramento; o júri pode pedir evidências e, sem elas, não os considerar.
+              </p>
+            </header>
+            <ProjetosAConfirmar
+              atribuidas={atribuidas}
+              excluidos={excluidos}
+              onAlterar={(chave, excluir) =>
+                setExcluidos((atual) => {
+                  const novo = new Set(atual);
+                  if (excluir) novo.add(chave);
+                  else novo.delete(chave);
+                  return novo;
+                })
+              }
+            />
+          </section>
+
+          <section className="painel">
+            <header className="painel-cabecalho">
               <h3>Resultados</h3>
+              <p className="painel-nota">
+                Teto das datas: {String(resultado.dataLimite.mes).padStart(2, "0")}/{resultado.dataLimite.ano}, mês da
+                data-limite de apresentação de propostas.
+              </p>
             </header>
             <ResultadosTabelas resultado={resultado} />
           </section>
