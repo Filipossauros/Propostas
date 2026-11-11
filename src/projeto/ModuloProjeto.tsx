@@ -163,39 +163,6 @@ export function ModuloProjeto({
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Ficheiro do projeto</h3>
-          <p className="painel-nota">
-            Para guardar ou partilhar só a caracterização do projeto, sem perfis nem lotes.
-          </p>
-        </header>
-        <div className="acoes">
-          <button type="button" className="botao-secundario" onClick={() => inputProjetoRef.current?.click()}>
-            Importar projeto (JSON)
-          </button>
-          <input
-            ref={inputProjetoRef}
-            type="file"
-            accept="application/json,.json"
-            className="input-ficheiro-oculto"
-            onChange={(e) => {
-              const ficheiro = e.target.files?.[0];
-              if (ficheiro) void importarProjeto(ficheiro);
-              e.target.value = "";
-            }}
-          />
-          <button type="button" className="botao-principal" disabled={!temProjeto} onClick={descarregarProjeto}>
-            Descarregar projeto (JSON)
-          </button>
-        </div>
-        <p className="ajuda">
-          O ficheiro leva o nome, a descrição, os objetivos, os benefícios e os riscos. A importação aceita também o
-          JSON dos perfis ou dos lotes, de onde tira só o projeto, e substitui o que está escrito neste módulo (pede
-          confirmação). Os perfis e os lotes não são tocados.
-        </p>
-      </section>
-
       {mostrarComoFunciona && verComoFunciona && (
         <section className="painel painel-como-funciona">
           <header className="painel-cabecalho">
@@ -231,6 +198,33 @@ export function ModuloProjeto({
           </p>
         </section>
       )}
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Carregar projeto</h3>
+          <p className="painel-nota">Para retomar um projeto guardado, ou começar a partir de um já existente.</p>
+        </header>
+        <div className="acoes">
+          <button type="button" className="botao-secundario" onClick={() => inputProjetoRef.current?.click()}>
+            Importar projeto (JSON)
+          </button>
+          <input
+            ref={inputProjetoRef}
+            type="file"
+            accept="application/json,.json"
+            className="input-ficheiro-oculto"
+            onChange={(e) => {
+              const ficheiro = e.target.files?.[0];
+              if (ficheiro) void importarProjeto(ficheiro);
+              e.target.value = "";
+            }}
+          />
+        </div>
+        <p className="ajuda">
+          Aceita o JSON do projeto e também o JSON dos perfis ou dos lotes, de onde tira só o projeto. Substitui o
+          que está escrito neste módulo (pede confirmação); os perfis e os lotes não são tocados.
+        </p>
+      </section>
 
       <section className="painel">
         <header className="painel-cabecalho">
@@ -325,6 +319,21 @@ export function ModuloProjeto({
           </ul>
         </section>
       )}
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Saídas</h3>
+        </header>
+        <div className="acoes">
+          <button type="button" className="botao-principal" disabled={!temProjeto} onClick={descarregarProjeto}>
+            Descarregar projeto (JSON)
+          </button>
+        </div>
+        <p className="ajuda">
+          Um JSON só com a caracterização do projeto — o nome, a descrição, os objetivos, os benefícios e os riscos —,
+          sem perfis nem lotes. Serve para o guardar ou partilhar e para o retomar mais tarde em «Carregar projeto».
+        </p>
+      </section>
 
       <section className="painel painel-avancar">
         <div>
