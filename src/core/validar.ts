@@ -54,7 +54,7 @@ function validarCamposObrigatorios(bloco: Bloco): Alerta[] {
  *
  * Sem início ou fim do projeto, a experiência do bloco não se pode apurar e
  * fica por considerar. Sem cliente/entidade, projeto ou função, conta — mas o
- * júri é avisado de que pode pedir evidências (n.º 13 das regras) e, sem elas,
+ * júri é avisado de que pode pedir evidências (n.º 14 das regras) e, sem elas,
  * não considerar o projeto.
  */
 function validarBlocoIncompleto(bloco: Bloco): Alerta[] {

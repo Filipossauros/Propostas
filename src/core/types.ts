@@ -643,7 +643,7 @@ export interface Bloco {
   projFim: MesAno | null;
   linhas: LinhaRequisito[];
   /**
-   * O júri decidiu não considerar este projeto: pediu evidências (n.º 13 das
+   * O júri decidiu não considerar este projeto: pediu evidências (n.º 14 das
    * regras) e não as obteve. É decisão do júri na análise, não vem do ficheiro.
    */
   excluidoPeloJuri?: boolean;

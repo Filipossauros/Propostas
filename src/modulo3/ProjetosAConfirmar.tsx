@@ -12,7 +12,7 @@ interface Props {
  * Projetos sem cliente/entidade, projeto ou função.
  *
  * As regras já não anulam estes projetos: contam. Mas o júri pode pedir ao
- * concorrente evidências do projeto (n.º 13 das regras) e, não as obtendo,
+ * concorrente evidências do projeto (n.º 14 das regras) e, não as obtendo,
  * não o considerar — é o que a caixa de cada linha faz. A decisão fica só
  * nesta sessão, como as declarações: nunca é guardada no navegador.
  */
@@ -72,7 +72,7 @@ export function ProjetosAConfirmar({ atribuidas, excluidos, onAlterar }: Props) 
         </table>
       </div>
       <p className="ajuda">
-        Estes projetos contam para o apuramento. Se o júri pedir evidências do projeto (n.º 13 das regras) e o
+        Estes projetos contam para o apuramento. Se o júri pedir evidências do projeto (n.º 14 das regras) e o
         concorrente não as apresentar, assinale «Não considerar»: a experiência desse projeto deixa de contar, e o
         relatório indica-o.
       </p>

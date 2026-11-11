@@ -57,7 +57,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
   const [aProcessar, setAProcessar] = useState(false);
   const [aExportar, setAExportar] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
-  // O teto das datas declaradas (n.º 12 das regras). Sem ela não se apura.
+  // O teto das datas declaradas (n.º 13 das regras). Sem ela não se apura.
   const [dataLimite, setDataLimite] = useEstadoPersistente<MesAno | null>(
     CHAVE_DATA_LIMITE_ANALISE,
     () => null,
@@ -392,7 +392,7 @@ export function Modulo3({ onIrParaOrdenacao }: Props) {
             </div>
             <p className="ajuda">
               Obrigatória. É o teto das datas declaradas: não conta experiência cujo período se prolongue para além
-              do mês da data-limite (n.º 12 das regras), e é a data que o n.º 3 manda considerar como fim de um
+              do mês da data-limite (n.º 13 das regras), e é a data que o n.º 4 manda considerar como fim de um
               projeto ainda em curso. Sem ela, o apuramento não é feito.
             </p>
           </div>

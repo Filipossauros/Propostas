@@ -65,11 +65,11 @@ describe("documentoRegrasEPrecoBase", () => {
     const idx = doc.blocos.findIndex((b) => b.tipo === "titulo" && b.texto === "Regras de apuramento da experiência");
     const aSeguir = doc.blocos.slice(idx + 1);
 
-    // A assinatura abre a secção, sem número; as regras seguem numa só lista.
-    expect(aSeguir[0].tipo === "paragrafo" && aSeguir[0].texto).toMatch(/^O Resumo Curricular é preenchido e assinado/);
+    // Uma só lista numerada, de 14 números, que abre com a assinatura.
     expect(aSeguir.filter((b) => b.tipo === "lista")).toHaveLength(1);
-    expect(aSeguir[1].tipo === "lista" && aSeguir[1].numerada).toBe(true);
-    expect(aSeguir[1].tipo === "lista" && aSeguir[1].itens).toHaveLength(13);
+    expect(aSeguir[0].tipo === "lista" && aSeguir[0].numerada).toBe(true);
+    expect(aSeguir[0].tipo === "lista" && aSeguir[0].itens).toHaveLength(14);
+    expect(aSeguir[0].tipo === "lista" && aSeguir[0].itens[0]).toMatch(/^O Resumo Curricular é preenchido e assinado/);
   });
 
   it("mantém o valor estimado e os requisitos como secções próprias", () => {

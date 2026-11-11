@@ -39,7 +39,7 @@ export function nomeFolhaPerfil(designacao: string, usados: Set<string> = new Se
 /**
  * A folha de experiência adicional de um perfil: mais projetos, com a mesma
  * estrutura de blocos, para quem precise de declarar além dos da folha
- * principal (n.º 1 das regras). O subtítulo é o do perfil com este sufixo, e é
+ * principal (n.º 2 das regras). O subtítulo é o do perfil com este sufixo, e é
  * por ele que o leitor a junta à folha principal.
  */
 export const SUFIXO_SUBTITULO_ADICIONAL = " — Experiência adicional";

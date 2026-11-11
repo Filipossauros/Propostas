@@ -579,12 +579,7 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
 
     { tipo: "titulo", nivel: 1, texto: "Regras de apuramento da experiência" },
     // A obrigação de apresentar um Resumo Curricular por elemento está no
-    // Programa do Concurso; aqui abre-se com a assinatura, sem número.
-    {
-      tipo: "paragrafo",
-      texto:
-        "O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica.",
-    },
+    // Programa do Concurso; aqui a série abre com a assinatura.
     {
       // Uma só numeração para todas as regras, sem secções pelo meio: as
       // remissões entre normas ("nos termos do n.º 2") só são inequívocas se
@@ -593,6 +588,7 @@ export function blocosAnexoTecnico(config: LotesJSON): BlocoDocumento[] {
       tipo: "lista",
       numerada: true,
       itens: [
+        "O Resumo Curricular é preenchido e assinado pelo próprio titular da experiência nele declarada, mediante assinatura eletrónica.",
         `O modelo para apresentação do Resumo Curricular comporta informação referente a ${config.nBlocos} Projetos, contudo, sempre que o número de projetos a declarar exceda essa capacidade, poderão ser apresentados na segunda folha disponibilizada para o efeito.`,
         "Em cada Projeto preenchido, o campo relativo a cada um dos requisitos constantes da lista deve conter a indicação «SIM» ou «NÃO».",
         "O Resumo Curricular não prevê a indicação de que o projeto se encontra em curso. Sempre que, à data de apresentação de proposta, o projeto ainda não tenha terminado, deve-se considerar como data de fim do projeto a data-limite de apresentação de propostas.",

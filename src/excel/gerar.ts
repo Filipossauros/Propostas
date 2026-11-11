@@ -171,9 +171,9 @@ function endereco(linha: number, coluna: number): string {
 /**
  * Mês: um número inteiro de 1 a 12, sem casas decimais.
  *
- * Sem teto de data: o teto é a data-limite de apresentação de propostas (n.º 12
+ * Sem teto de data: o teto é a data-limite de apresentação de propostas (n.º 13
  * das regras), que quando o formulário é gerado ainda não se conhece, e que é
- * precisamente a data que o n.º 3 manda indicar como fim de um projeto em
+ * precisamente a data que o n.º 4 manda indicar como fim de um projeto em
  * curso. Quem a aplica é o apuramento do Módulo 4. `colunaAno` mantém-se na
  * assinatura para as duas validações andarem aos pares.
  */
@@ -554,7 +554,7 @@ export function gerarWorkbookDeclaracao(especificacoes: EspecificacaoFormulario[
   construirFolhaLeiame(wb, folhas);
   construirFolhaListas(wb);
   // Cada perfil leva a sua folha principal e, logo a seguir, a de experiência
-  // adicional (n.º 1 das regras): mais projetos, com a mesma estrutura.
+  // adicional (n.º 2 das regras): mais projetos, com a mesma estrutura.
   for (const folha of folhas) {
     construirFolhaExperiencia(wb, folha.config, folha.nome);
     construirFolhaExperiencia(wb, folha.config, folha.nomeAdicional, folha.nome);

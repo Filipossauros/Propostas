@@ -43,8 +43,8 @@ export type ResultadoPeriodoLinha =
 
 /**
  * O bloco de projeto sem início ou sem fim do projeto não se pode apurar: as
- * datas da linha herdam o período do projeto, ou têm de caber nele (n.os 10.1 e
- * 11 das regras), e sem esse período não há com que as comparar. Toda a
+ * datas da linha herdam o período do projeto, ou têm de caber nele (n.os 11, alínea i), e
+ * 12 das regras), e sem esse período não há com que as comparar. Toda a
  * experiência do bloco fica por considerar.
  */
 export function blocoSemDatas(bloco: Bloco): boolean {
@@ -53,7 +53,7 @@ export function blocoSemDatas(bloco: Bloco): boolean {
 
 /**
  * Sem cliente/entidade, projeto ou função, o projeto conta — as regras já não
- * o anulam —, mas fica assinalado: o júri pode pedir evidências (n.º 13) e, sem
+ * o anulam —, mas fica assinalado: o júri pode pedir evidências (n.º 14) e, sem
  * elas, não o considerar (`excluidoPeloJuri`).
  */
 export function blocoSemIdentificacao(bloco: Bloco): boolean {
@@ -63,7 +63,7 @@ export function blocoSemIdentificacao(bloco: Bloco): boolean {
 /**
  * Determina o período de uma linha de requisito (6.1): datas próprias da
  * linha > herança do período do projeto > contenção no período do projeto >
- * teto do mês da data-limite de apresentação de propostas (n.º 12).
+ * teto do mês da data-limite de apresentação de propostas (n.º 13).
  */
 export function determinarPeriodoLinha(
   bloco: Bloco,

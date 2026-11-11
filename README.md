@@ -71,9 +71,9 @@ O valor estimado de cada perfil dentro de um lote é
 ### Regras que atravessam a aplicação
 
 **Nenhuma experiência pode ir além da data-limite de apresentação de
-propostas** (n.º 12 das regras). Experiência ainda por decorrer não é experiência
+propostas** (n.º 13 das regras). Experiência ainda por decorrer não é experiência
 adquirida; e um projeto ainda em curso considera-se terminado na data-limite
-(n.º 3). A data-limite indica-se no Módulo 4, antes de apurar, e é o teto das
+(n.º 4). A data-limite indica-se no Módulo 4, antes de apurar, e é o teto das
 datas declaradas: o período que se prolongue para além do seu mês não conta. O
 formulário Excel não tem teto — quando é gerado a data-limite ainda não se
 conhece —, só aceita meses e anos inteiros, sem casas decimais.
@@ -83,7 +83,7 @@ uma folha de experiência adicional com outros 15, que continua a numeração; o
 Módulo 4 lê as duas. Um mês ou ano com casas decimais não é arredondado: a data
 não conta e fica assinalada. Um projeto sem início ou fim do projeto não conta;
 um projeto sem cliente/entidade, projeto ou função conta, mas fica assinalado, e
-o júri pode — sem evidências pedidas ao concorrente (n.º 13) — não o considerar.
+o júri pode — sem evidências pedidas ao concorrente (n.º 14) — não o considerar.
 
 **Um lote por concorrente**, quando ativada no Módulo 3. A regra sai no
 documento Word com título próprio, e é aplicada em dois tempos, porque em dois
