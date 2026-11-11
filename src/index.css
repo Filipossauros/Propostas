@@ -226,13 +226,11 @@ body {
 }
 
 .cartao-modulo-descricao,
-.cartao-modulo-nota,
 .cartao-modulo-estado {
   font-size: 0.82rem;
   color: var(--texto-suave);
 }
 
-.cartao-modulo-nota,
 .cartao-modulo-estado {
   margin-top: 4px;
   font-size: 0.76rem;

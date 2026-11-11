@@ -32,7 +32,6 @@ export function PaginaInicial({ estados, onAbrir }: Props) {
                 key={modulo.pagina}
                 modulo={modulo}
                 estado={estados[modulo.pagina]}
-                partilhado={modulo.pagina === "projeto" && grupo.chave !== "bolsa"}
                 onAbrir={() => onAbrir(grupo.chave, modulo.pagina)}
               />
             ))}
@@ -48,12 +47,10 @@ export function PaginaInicial({ estados, onAbrir }: Props) {
 function CartaoModulo({
   modulo,
   estado,
-  partilhado,
   onAbrir,
 }: {
   modulo: ModuloDoGrupo;
   estado: EstadoDoModulo | undefined;
-  partilhado: boolean;
   onAbrir: () => void;
 }) {
   return (
@@ -64,7 +61,6 @@ function CartaoModulo({
       <span className="cartao-modulo-texto">
         <span className="cartao-modulo-titulo">{modulo.titulo}</span>
         <span className="cartao-modulo-descricao">{modulo.descricao}</span>
-        {partilhado && <span className="cartao-modulo-nota">O mesmo do pedido de serviços de bolsa de horas.</span>}
         {estado && (
           <span className={estado.falta ? "cartao-modulo-estado cartao-modulo-estado-falta" : "cartao-modulo-estado"}>
             {estado.texto}

@@ -11,7 +11,7 @@ em análise nunca saem do posto de trabalho.
 A aplicação abre numa página inicial com quatro grupos de módulos, cada um num cartão:
 
 - **Pedido de serviços de bolsa de horas** — 1 Projeto, 2 Perfis, 3 Lotes.
-- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior) e o módulo «Pedido de
+- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior, com os mesmos dados) e o módulo «Pedido de
   licenciamento», ainda em preparação.
 - **Análise de propostas** — 4 Análise, 5 Ordenação.
 - **Orçamento** — Vista Geral da Unidade e Vista Geral da Direção.
