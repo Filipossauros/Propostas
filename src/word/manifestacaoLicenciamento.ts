@@ -32,6 +32,8 @@ import {
   nomeDaLicenca,
   nomeProcedimentoLicenciamento,
   ENTREGAVEIS,
+  beneficiariosDoPedido,
+  beneficiosOperacionaisDoPedido,
   ehServico,
   frasesDoDireitoDeUso,
   metricaDaColuna,
@@ -54,7 +56,6 @@ import { paginasDoAlinhamento } from "../excel/imagemDoAlinhamento";
 import { lerFolhaDosCustosLicenciamento } from "../excel/custosLicenciamento";
 import {
   ALTURA_EM_RETRATO,
-  BENEFICIARIOS,
   DIRECAO,
   DXA_POR_PIXEL,
   LARGURA_EM_RETRATO,
@@ -376,18 +377,10 @@ function corpoLicenciamento(
       "Atento o valor estimado e para efeitos do artigo 36.º do CCP, apresenta-se a seguinte avaliação custo-benefício:",
     ),
   );
-  const beneficiosOperacionais = beneficios
-    .map((b) =>
-      b
-        .trim()
-        .replace(/^Permitirá\s+/i, "")
-        .replace(/[.;]+$/, ""),
-    )
-    .map((b) => b.charAt(0).toLowerCase() + b.slice(1));
   const criterios: Array<[string, string]> = [
-    ["Beneficiários", BENEFICIARIOS],
+    ["Beneficiários", beneficiariosDoPedido(pedido)],
     ["Utilização prevista", `${enumerar(soLicencas.map((x) => utilizacaoDaLicenca(x, pedido)))}.`],
-    ["Benefícios operacionais", beneficiosOperacionais.length === 0 ? "" : `${beneficiosOperacionais.join("; ")}.`],
+    ["Benefícios operacionais", beneficiosOperacionaisDoPedido(pedido)],
     [
       "Custos",
       `encargo anual máximo de ${formatarMoeda(Math.max(...porAno))}, sem IVA, e encargo máximo global de ${formatarMoeda(
@@ -655,14 +648,6 @@ function corpoLicenciamento(
     ),
   );
   p.push(recuado(justificacaoMargem, { antes: 80 }));
-  p.push(numerado("4.", [run("Rastreabilidade da execução", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  p.push(
-    recuado(
-      "A execução deverá permitir a reconciliação entre as licenças disponibilizadas, as faturadas, os preços " +
-        "unitários contratados e os limites financeiros anuais, assegurando o respetivo registo documental e a " +
-        "preparação de evidência adequada para controlo interno, auditoria e fiscalização.",
-    ),
-  );
 
   // Anexo III — especificações técnicas
   const numeroInf = pedido.numeroInformacao.trim();

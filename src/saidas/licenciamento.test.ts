@@ -193,6 +193,16 @@ describe("manifestação de necessidades do licenciamento", () => {
     expect(texto).toContain("as penalizações aí previstas");
   });
 
+  it("beneficiários e benefícios operacionais editados saem; a rastreabilidade não", async () => {
+    const pedido = snomed();
+    pedido.beneficiarios = "Os serviços de codificação clínica.";
+    pedido.beneficiosOperacionais = "Menos erros de codificação.";
+    const texto = await textoDe(pedido);
+    expect(texto).toContain("Beneficiários: Os serviços de codificação clínica.");
+    expect(texto).toContain("Benefícios operacionais: Menos erros de codificação.");
+    expect(texto).not.toContain("Rastreabilidade da execução");
+  });
+
   it("a origem do preço leva a referência", async () => {
     expect(await textoDe(snomed())).toContain("Tabela pública do fabricante ou titular (https://www.snomed.org/member-fees)");
   });

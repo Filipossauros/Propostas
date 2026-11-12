@@ -346,6 +346,13 @@ export interface PedidoLicenciamento {
   nomeProduto: string;
   descricaoProduto: string;
   justificacao: JustificacaoProjeto;
+  /**
+   * Os beneficiários e os benefícios operacionais da avaliação custo-benefício:
+   * `null` é o texto por omissão (os benefícios operacionais formam-se a partir
+   * dos benefícios do produto); escritos no Módulo 1, ficam como estão.
+   */
+  beneficiarios: string | null;
+  beneficiosOperacionais: string | null;
   natureza: NaturezaAquisicao;
   licencas: Licenca[];
   condicoes: CondicoesContrato;
@@ -432,6 +439,8 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
     nomeProduto: "",
     descricaoProduto: "",
     justificacao: justificacaoInicial(),
+    beneficiarios: null,
+    beneficiosOperacionais: null,
     natureza: "aberta",
     licencas: [],
     condicoes: condicoesIniciais(),
@@ -535,6 +544,30 @@ export function origemPorExtenso(l: Pick<Licenca, "origemPreco" | "referenciaPre
   if (l.origemPreco === "procedimentoAnterior" && ref) return `${ORIGENS_PRECO.procedimentoAnterior} (n.º ${ref})`;
   if (l.origemPreco === "tabelaPublica" && ref) return `${ORIGENS_PRECO.tabelaPublica} (${ref})`;
   return ORIGENS_PRECO[l.origemPreco];
+}
+
+/** Os beneficiários por omissão, na avaliação custo-benefício. */
+export const BENEFICIARIOS_LICENCIAMENTO =
+  "profissionais de saúde, utentes do Serviço Nacional de Saúde (SNS), entidades do SNS e serviços da SPMS, " +
+  "E.P.E. responsáveis pelos sistemas de informação abrangidos pelo produto.";
+
+/** Os benefícios operacionais por omissão: os benefícios do produto, numa frase. */
+export function beneficiosOperacionaisPorOmissao(justificacao: JustificacaoProjeto): string {
+  const itens = semBeneficioFixo(justificacao.beneficios)
+    .map((b) => b.designacao.trim().replace(/^Permitirá\s+/i, "").replace(/[.;]+$/, ""))
+    .filter((b) => b !== "")
+    .map((b) => b.charAt(0).toLowerCase() + b.slice(1));
+  return itens.length === 0 ? "" : `${itens.join("; ")}.`;
+}
+
+export function beneficiariosDoPedido(pedido: Pick<PedidoLicenciamento, "beneficiarios">): string {
+  return pedido.beneficiarios ?? BENEFICIARIOS_LICENCIAMENTO;
+}
+
+export function beneficiosOperacionaisDoPedido(
+  pedido: Pick<PedidoLicenciamento, "beneficiosOperacionais" | "justificacao">,
+): string {
+  return pedido.beneficiosOperacionais ?? beneficiosOperacionaisPorOmissao(pedido.justificacao);
 }
 
 // --------------------------------------------------------------------------
@@ -986,7 +1019,7 @@ function falta(campo: string, mensagem: string): ErroValidacao {
 
 /** O que falta no produto (Módulo 1 do licenciamento). */
 export function validarProdutoLicenciamento(
-  pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao">,
+  pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao" | "beneficiarios" | "beneficiosOperacionais">,
 ): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   if (pedido.nomeProduto.trim() === "") erros.push(falta("nomeProduto", "Indique o nome do produto."));
@@ -999,6 +1032,9 @@ export function validarProdutoLicenciamento(
   lista(pedido.justificacao.objetivos, "justificacao.objetivos", "Indique pelo menos um objetivo da aquisição.", "objetivos");
   lista(pedido.justificacao.beneficios, "justificacao.beneficios", "Indique pelo menos um benefício do produto.", "benefícios");
   lista(pedido.justificacao.riscos, "justificacao.riscos", "Indique pelo menos um risco da não aquisição.", "riscos");
+  if (beneficiariosDoPedido(pedido).trim() === "") erros.push(falta("beneficiarios", "Indique os beneficiários."));
+  if (beneficiosOperacionaisDoPedido(pedido).trim() === "")
+    erros.push(falta("beneficiosOperacionais", "Indique os benefícios operacionais."));
   return erros;
 }
 
@@ -1172,15 +1208,21 @@ export interface ProdutoJSON {
   nomeProduto: string;
   descricaoProduto: string;
   justificacao: JustificacaoProjeto;
+  beneficiarios: string | null;
+  beneficiosOperacionais: string | null;
 }
 
-export function produtoParaJSON(pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao">): string {
+export function produtoParaJSON(
+  pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao" | "beneficiarios" | "beneficiosOperacionais">,
+): string {
   const ficheiro: ProdutoJSON = {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "produto",
     nomeProduto: pedido.nomeProduto,
     descricaoProduto: pedido.descricaoProduto,
     justificacao: pedido.justificacao,
+    beneficiarios: pedido.beneficiarios,
+    beneficiosOperacionais: pedido.beneficiosOperacionais,
   };
   return JSON.stringify(ficheiro, null, 2);
 }
@@ -1189,6 +1231,8 @@ export interface ProdutoImportado {
   nomeProduto: string;
   descricaoProduto: string;
   justificacao: JustificacaoProjeto;
+  beneficiarios: string | null;
+  beneficiosOperacionais: string | null;
   origem: "produto" | "licenciamento" | "projeto";
 }
 
@@ -1206,11 +1250,20 @@ export function importarProdutoJSON(conteudo: string): ProdutoImportado {
       nomeProduto: texto(r.nomeProduto ?? r.nomeProjeto),
       descricaoProduto: texto(r.descricaoProduto ?? r.descricaoProjeto),
       justificacao,
+      beneficiarios: textoOuNulo(r.beneficiarios),
+      beneficiosOperacionais: textoOuNulo(r.beneficiosOperacionais),
       origem: r.tipo,
     };
   }
   if (r.tipo === "projeto") {
-    return { nomeProduto: texto(r.nomeProjeto), descricaoProduto: texto(r.descricaoProjeto), justificacao, origem: "projeto" };
+    return {
+      nomeProduto: texto(r.nomeProjeto),
+      descricaoProduto: texto(r.descricaoProjeto),
+      justificacao,
+      beneficiarios: null,
+      beneficiosOperacionais: null,
+      origem: "projeto",
+    };
   }
   throw new ErroImportacao(
     `Este ficheiro é do tipo "${String(r.tipo)}". Carregue o JSON do produto, do pedido de licenciamento ou de um projeto.`,
@@ -1422,6 +1475,8 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
             const j = normalizarJustificacao(r.justificacao);
             return { ...j, beneficios: semBeneficioFixo(j.beneficios) };
           })(),
+    beneficiarios: textoOuNulo(r.beneficiarios),
+    beneficiosOperacionais: textoOuNulo(r.beneficiosOperacionais),
     natureza: r.natureza === "determinado" ? "determinado" : "aberta",
     licencas: brutas.map(normalizarLicenca),
     condicoes: normalizarCondicoes(r.condicoes),

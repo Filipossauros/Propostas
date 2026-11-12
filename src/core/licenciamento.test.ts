@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   anosDoPedido,
   aplicabilidade,
+  beneficiariosDoPedido,
+  beneficiosOperacionaisDoPedido,
   comAlteracao,
   comMargemLicenciamento,
   consultaMercadoEavalia,
@@ -341,6 +343,16 @@ describe("licenciamento — ficheiros", () => {
     expect(importarProdutoJSON(pedidoLicenciamentoParaJSON(pedido)).origem).toBe("licenciamento");
     const projeto = JSON.stringify({ schemaVersion: "2.0", tipo: "projeto", nomeProjeto: "P", descricaoProjeto: "d" });
     expect(importarProdutoJSON(projeto)).toMatchObject({ nomeProduto: "P", origem: "projeto" });
+  });
+
+  it("beneficiários e benefícios operacionais: por omissão, editáveis e no ficheiro do produto", () => {
+    const pedido = pedidoLicenciamentoExemplo(2027);
+    expect(beneficiariosDoPedido(pedido)).toContain("abrangidos pelo produto");
+    expect(beneficiosOperacionaisDoPedido(pedido)).toContain("interoperabilidade semântica");
+    pedido.beneficiarios = "Os laboratórios.";
+    pedido.beneficiosOperacionais = "Menos erros de codificação.";
+    const lido = importarProdutoJSON(produtoParaJSON(pedido));
+    expect([lido.beneficiarios, lido.beneficiosOperacionais]).toEqual(["Os laboratórios.", "Menos erros de codificação."]);
   });
 
   it("recusa um ficheiro de outro tipo", () => {
