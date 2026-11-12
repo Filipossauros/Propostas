@@ -27,6 +27,7 @@ import {
   PERIODICIDADES,
   TIPOS_SOLUCAO_DETERMINADA,
   comAlteracao,
+  ehServico,
   criarLicenca,
   importarPedidoLicenciamentoJSON,
   nomeDaLicenca,
@@ -176,6 +177,40 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
     setMensagem({ tipo: "sucesso", texto: "Pedido de licenciamento reposto." });
   }
 
+  const servico = emEdicao !== null && ehServico(emEdicao);
+  const escolhaDaOrigem = emEdicao === null ? null : (
+          <Escolha<Exclude<OrigemPreco, "">>
+            rotulo="Origem do preço de referência"
+            valor={emEdicao.origemPreco}
+            opcoes={deRegisto(ORIGENS_PRECO)}
+            onChange={(origemPreco) => alterarLicenca({ origemPreco })}
+          />
+  );
+  const referenciaDoPreco = emEdicao === null ? null : (
+    <>
+      {(emEdicao.origemPreco === "procedimentoAnterior" || emEdicao.origemPreco === "tabelaPublica") && (
+              <div className="linha-campos linha-campos-separada">
+                <label className="campo-crescente">
+                  <span className="rotulo">
+                    {emEdicao.origemPreco === "procedimentoAnterior"
+                      ? "N.º do procedimento anterior"
+                      : "Ligação ou indicação da tabela pública"}
+                  </span>
+                  <input
+                    type="text"
+                    value={emEdicao.referenciaPreco}
+                    placeholder={
+                      emEdicao.origemPreco === "procedimentoAnterior" ? "ex.: CP 123/2025" : "ex.: https://… ou «Tabela de preços 2026, p. 4»"
+                    }
+                    aria-invalid={emEdicao.referenciaPreco.trim() === ""}
+                    onChange={(e) => alterarLicenca({ referenciaPreco: e.target.value })}
+                  />
+                </label>
+              </div>
+            )}
+    </>
+  );
+
   const valor = emEdicao === null ? null : valorDaLicenca(emEdicao, Math.ceil(emEdicao.periodoMeses / 12) || 1);
   const unica = emEdicao !== null && emEdicao.metrica !== "" && METRICAS_UNICAS.includes(emEdicao.metrica);
   const anual = emEdicao?.direitoUso === "temporario" && emEdicao.periodicidadePreco === "anual";
@@ -320,7 +355,77 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
         </p>
       </section>
 
-      {emEdicao !== null && (
+      {emEdicao !== null && servico && (
+        <>
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Serviço associado</h3>
+              <p className="painel-nota">
+                Um serviço com preço próprio — suporte para adaptar a plataforma, configuração, formação —, que entra no
+                mapa de quantidades e preços do lote como uma linha de preço global.
+              </p>
+            </header>
+            <div className="linha-campos">
+              <Escolha<ObjetoLicenca>
+                rotulo="Objeto"
+                valor={emEdicao.objeto}
+                opcoes={deRegisto(OBJETOS_LICENCA)}
+                onChange={(objeto) => objeto !== "" && alterarLicenca({ objeto })}
+              />
+              <label className="campo-crescente">
+                <span className="rotulo">Designação do serviço</span>
+                <input
+                  type="text"
+                  value={emEdicao.designacao}
+                  placeholder="ex.: Suporte para adaptar as métricas da plataforma às necessidades da SPMS"
+                  aria-invalid={emEdicao.designacao.trim() === ""}
+                  onChange={(e) => alterarLicenca({ designacao: e.target.value })}
+                />
+              </label>
+            </div>
+            <p className="ajuda">
+              Não é uma licença: não tem direito de uso, métrica nem classificação eAvalia própria. No eAvalia, o valor
+              soma-se à linha «Instalação, configuração, atualização» da licença do mesmo lote.
+            </p>
+          </section>
+
+          <ListaItensEditor
+            titulo="Atividades do serviço"
+            nota="Obrigatório. Uma atividade por linha: o que o serviço compreende. Saem no Anexo III, em tabela."
+            nomeItem="atividade"
+            rotuloColuna="Atividade"
+            placeholder="ex.: Configuração dos indicadores e alertas da plataforma"
+            textoVazio="Ainda não há atividades. Acrescente a primeira."
+            rotuloAdicionar="+ Adicionar atividade"
+            itens={emEdicao.requisitosFuncionais}
+            onChange={(requisitosFuncionais) => alterarLicenca({ requisitosFuncionais })}
+          />
+
+          <section className="painel">
+            <header className="painel-cabecalho">
+              <h3>Preço de referência</h3>
+            </header>
+            <div className="linha-campos">{escolhaDaOrigem}</div>
+            {referenciaDoPreco}
+            <div className="linha-campos linha-campos-numeros">
+              <label className="campo-numero-rotulado">
+                <span className="rotulo">Preço global de referência (s/ IVA)</span>
+                <CampoNumero
+                  valor={emEdicao.precoUnitario}
+                  min={0}
+                  step={0.01}
+                  sufixo="€"
+                  aria-label="Preço global de referência"
+                  invalido={!(emEdicao.precoUnitario > 0)}
+                  onChange={(precoUnitario) => alterarLicenca({ precoUnitario })}
+                />
+              </label>
+            </div>
+          </section>
+        </>
+      )}
+
+      {emEdicao !== null && !servico && (
         <>
           {aberta ? (
             <>
@@ -584,29 +689,19 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                   onChange={(periodicidadePreco) => periodicidadePreco !== "" && alterarLicenca({ periodicidadePreco })}
                 />
               )}
-              <Escolha<Exclude<OrigemPreco, "">>
-                rotulo="Origem do preço de referência"
-                valor={emEdicao.origemPreco}
-                opcoes={deRegisto(ORIGENS_PRECO)}
-                onChange={(origemPreco) => alterarLicenca({ origemPreco })}
-              />
+              {escolhaDaOrigem}
             </div>
-            {(emEdicao.origemPreco === "procedimentoAnterior" || emEdicao.origemPreco === "tabelaPublica") && (
+            {referenciaDoPreco}
+            {emEdicao.metrica === "pacote" && (
               <div className="linha-campos linha-campos-separada">
                 <label className="campo-crescente">
-                  <span className="rotulo">
-                    {emEdicao.origemPreco === "procedimentoAnterior"
-                      ? "N.º do procedimento anterior"
-                      : "Ligação ou indicação da tabela pública"}
-                  </span>
+                  <span className="rotulo">Capacidade do pacote ou edição</span>
                   <input
                     type="text"
-                    value={emEdicao.referenciaPreco}
-                    placeholder={
-                      emEdicao.origemPreco === "procedimentoAnterior" ? "ex.: CP 123/2025" : "ex.: https://… ou «Tabela de preços 2026, p. 4»"
-                    }
-                    aria-invalid={emEdicao.referenciaPreco.trim() === ""}
-                    onChange={(e) => alterarLicenca({ referenciaPreco: e.target.value })}
+                    value={emEdicao.capacidade}
+                    placeholder="ex.: até 500 análises por dia"
+                    aria-invalid={emEdicao.capacidade.trim() === ""}
+                    onChange={(e) => alterarLicenca({ capacidade: e.target.value })}
                   />
                 </label>
               </div>
@@ -645,8 +740,9 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             </div>
             {unica && (
               <p className="ajuda">
-                Licença única: cobre todo o território ou toda a entidade, e a quantidade fica em 1. O preço é o da
-                licença inteira.
+                {emEdicao.metrica === "pacote"
+                  ? "Pacote ou edição: compra-se um, com a capacidade indicada, e a quantidade fica em 1. O preço é o do pacote inteiro."
+                  : "Licença única: cobre todo o território ou toda a entidade, e a quantidade fica em 1. O preço é o da licença inteira."}
               </p>
             )}
             {valor !== null && valor.total > 0 && (

@@ -11,12 +11,11 @@
 // Anexo III são termos e condições do contrato.
 
 import type { BlocoDocumento } from "../core/documento";
-import type { PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
+import type { Entregavel, PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
 import {
   DIREITOS_USO,
   FUNDAMENTOS_LICENCA,
   MANUTENCOES,
-  METRICAS,
   MODALIDADES,
   anosDoPedido,
   comIva,
@@ -32,7 +31,10 @@ import {
   metricaPorExtenso,
   nomeDaLicenca,
   nomeProcedimentoLicenciamento,
+  ENTREGAVEIS,
+  ehServico,
   frasesDoDireitoDeUso,
+  metricaDaColuna,
   objetoPorExtenso,
   origemPorExtenso,
   textoDaCondicao,
@@ -217,6 +219,8 @@ function corpoLicenciamento(
   const determinado = pedido.natureza === "determinado";
   const c = pedido.condicoes;
   const juri = pedido.juri;
+  const soLicencas = pedido.licencas.filter((l) => !ehServico(l));
+  const servicos = pedido.licencas.filter(ehServico);
 
   const p: string[] = [];
   let ponto = 0;
@@ -256,9 +260,20 @@ function corpoLicenciamento(
       { depois: 80 },
     ),
   );
-  comPontuacao(pedido.licencas.map((x) => utilizacaoDaLicenca(x, pedido))).forEach((t, i) =>
+  comPontuacao(soLicencas.map((x) => utilizacaoDaLicenca(x, pedido))).forEach((t, i) =>
     p.push(alinea(`${letra(i)}.`, t)),
   );
+  if (servicos.length > 0) {
+    p.push(
+      numerado(proximo(), "A aquisição inclui ainda os seguintes serviços associados, com preço próprio:", {
+        depois: 80,
+        antes: 80,
+      }),
+    );
+    comPontuacao(servicos.map((x) => x.designacao.trim() || "serviço por designar")).forEach((t, i) =>
+      p.push(alinea(`${letra(i)}.`, t)),
+    );
+  }
   if (determinado) {
     p.push(
       numerado(
@@ -267,7 +282,7 @@ function corpoLicenciamento(
         { depois: 80, antes: 80 },
       ),
     );
-    pedido.licencas.forEach((x, i) =>
+    soLicencas.forEach((x, i) =>
       p.push(
         alinea(`${letra(i)}.`, [
           run(`${nomeDaLicenca(x, "determinado") || "Licença"}: `, { negrito: true }),
@@ -371,7 +386,7 @@ function corpoLicenciamento(
     .map((b) => b.charAt(0).toLowerCase() + b.slice(1));
   const criterios: Array<[string, string]> = [
     ["Beneficiários", BENEFICIARIOS],
-    ["Utilização prevista", `${enumerar(pedido.licencas.map((x) => utilizacaoDaLicenca(x, pedido)))}.`],
+    ["Utilização prevista", `${enumerar(soLicencas.map((x) => utilizacaoDaLicenca(x, pedido)))}.`],
     ["Benefícios operacionais", beneficiosOperacionais.length === 0 ? "" : `${beneficiosOperacionais.join("; ")}.`],
     [
       "Custos",
@@ -691,7 +706,9 @@ function corpoLicenciamento(
           { titulo: "Versão / edição mínima", peso: 26 },
         ],
         lotes.flatMap((l) =>
-          l.linhas.map(({ licenca: x }) => [l.lote.numero, x.nomeComercial.trim() || "—", x.fabricante.trim() || "—", x.versao.trim() || "—"]),
+          l.linhas
+            .filter(({ licenca: x }) => !ehServico(x))
+            .map(({ licenca: x }) => [l.lote.numero, x.nomeComercial.trim() || "—", x.fabricante.trim() || "—", x.versao.trim() || "—"]),
         ),
       ),
     );
@@ -703,7 +720,7 @@ function corpoLicenciamento(
       ),
     );
     lotes.forEach((l) =>
-      l.linhas.forEach(({ licenca: x }) => {
+      l.linhas.filter(({ licenca: x }) => !ehServico(x)).forEach(({ licenca: x }) => {
         p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Licença"}`, 2));
         const funcionais = x.requisitosFuncionais.map((r) => r.designacao.trim()).filter((r) => r !== "");
         const tecnicos = x.requisitosTecnicos.map((r) => r.designacao.trim()).filter((r) => r !== "");
@@ -728,13 +745,13 @@ function corpoLicenciamento(
         { titulo: "Manutenção", peso: 11 },
       ],
       lotes.flatMap((l) =>
-        l.linhas.map(({ licenca: x }) => [
+        l.linhas.filter(({ licenca: x }) => !ehServico(x)).map(({ licenca: x }) => [
           l.lote.numero,
           nomeDaLicenca(x, pedido.natureza) || "—",
           objetoPorExtenso(x),
           DIREITOS_USO[x.direitoUso],
           MODALIDADES[x.modalidade],
-          x.metrica === "" ? "—" : METRICAS[x.metrica].singular,
+          metricaDaColuna(x) || "—",
           formatarNumero(x.quantidade),
           periodoPorExtenso(x.periodoMeses),
           x.direitoUso === "temporario" ? MANUTENCOES.incluida : MANUTENCOES[x.manutencao],
@@ -743,6 +760,23 @@ function corpoLicenciamento(
       { sz: 16 },
     ),
   );
+
+  if (servicos.length > 0) {
+    ponto3("Serviços associados");
+    p.push(
+      recuado(
+        "Os serviços seguintes são prestados pelo adjudicatário, com preço próprio no mapa de quantidades e preços do " +
+          "respetivo lote, e compreendem as atividades indicadas.",
+      ),
+    );
+    lotes.forEach((l) =>
+      l.linhas.filter(({ licenca: x }) => ehServico(x)).forEach(({ licenca: x }) => {
+        p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Serviço"}`, 2));
+        const atividades = x.requisitosFuncionais.map((r) => r.designacao.trim()).filter((r) => r !== "");
+        p.push(tabela([{ titulo: "Atividades do serviço", peso: 100 }], atividades.map((r) => [r])));
+      }),
+    );
+  }
 
   if (c.prazo.ligada) {
     ponto3("Prazo de disponibilização");
@@ -835,6 +869,13 @@ function corpoLicenciamento(
     );
   }
 
+  if (c.entregaveis.ligada) {
+    const itens = (Object.keys(ENTREGAVEIS) as Entregavel[]).filter((k) => c.entregaveis[k]).map((k) => ENTREGAVEIS[k]);
+    ponto3("Entregáveis");
+    p.push(recuado("O adjudicatário entrega à entidade adjudicante:", { depois: 80 }));
+    comPontuacao(itens).forEach((t, i) => p.push(alinea(`${letra(i)}.`, t, RECUO_ALINEA)));
+  }
+
   for (const propria of c.proprias) {
     ponto3(propria.titulo.trim() || "Condição");
     p.push(recuado(propria.texto.trim()));
@@ -913,7 +954,7 @@ export async function gerarManifestacaoLicenciamentoBlob(
             { titulo: "Manutenção (s/ IVA)", alinhamento: "direita", peso: 16 },
           ],
           valoresDosLotes(pedido).flatMap((l) =>
-            l.linhas.map(({ licenca: x, valor }) => [
+            l.linhas.filter(({ licenca: x }) => !ehServico(x)).map(({ licenca: x, valor }) => [
               nomeDaLicenca(x, pedido.natureza) || "—",
               tipoSolucaoEavalia(x, pedido.natureza) || "—",
               formatarNumero(x.quantidade),

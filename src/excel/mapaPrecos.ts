@@ -172,7 +172,7 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
     for (const titulo of ["Produto proposto", "Fabricante / titular", "Versão / edição"]) {
       if (col(titulo) === 0) continue;
       const cel = folha.getCell(r, col(titulo));
-      // A linha da manutenção é do produto da linha anterior: não se identifica outra vez.
+      // A linha da manutenção é do produto da linha anterior, e o serviço não é um produto: não se identificam.
       if (linha.tipo === "licenca") aPreencher(cel);
       else {
         cel.value = "—";

@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 import type {
   CondicaoComTexto,
   CondicoesContrato,
+  Entregavel,
   HorarioSuporte,
   PedidoLicenciamento,
   TemposDeSeveridade,
 } from "../core/licenciamento";
 import {
+  ENTREGAVEIS,
   EXPLICACAO_NAO_PRODUTIVOS,
   EXPLICACAO_SUBLICENCIAMENTO,
   EXPLICACAO_TRANSMISSAO,
@@ -168,7 +170,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
 
   const manutencao = aplicabilidade("manutencao", pedido);
   const disponibilidade = aplicabilidade("disponibilidade", pedido);
-  const resumo = [...new Set(pedido.licencas.map((l) => `${objetoPorExtenso(l).toLowerCase()} (${l.direitoUso === "temporario" ? "subscrição" : "perpétua"})`))];
+  const resumo = [...new Set(pedido.licencas.filter((l) => l.objeto !== "servico").map((l) => `${objetoPorExtenso(l).toLowerCase()} (${l.direitoUso === "temporario" ? "subscrição" : "perpétua"})`))];
   const horaValida = (h: string) => HORA.test(h.trim());
 
   return (
@@ -485,6 +487,42 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </label>
           </div>
         </Condicao>
+      </section>
+
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Entregáveis</h3>
+        </header>
+        <div className={c.entregaveis.ligada ? "condicao" : "condicao condicao-desligada"}>
+          <div className="condicao-cabecalho">
+            <label className="campo-opcao condicao-interruptor">
+              <input
+                type="checkbox"
+                checked={c.entregaveis.ligada}
+                onChange={(e) => alterar("entregaveis", { ligada: e.target.checked })}
+              />
+              <span>
+                <strong>Entregáveis</strong>
+              </span>
+            </label>
+            <span className="selo-condicao selo-condicao-opcional">facultativa</span>
+          </div>
+          {c.entregaveis.ligada && (
+            <>
+              <p className="ajuda">O que o adjudicatário entrega. Escolha as opções:</p>
+              {(Object.entries(ENTREGAVEIS) as Array<[Entregavel, string]>).map(([chave, texto]) => (
+                <label key={chave} className="campo-opcao">
+                  <input
+                    type="checkbox"
+                    checked={c.entregaveis[chave]}
+                    onChange={(e) => alterar("entregaveis", { [chave]: e.target.checked })}
+                  />
+                  <span>{texto}</span>
+                </label>
+              ))}
+            </>
+          )}
+        </div>
       </section>
 
       <section className="painel">

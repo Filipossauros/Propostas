@@ -36,6 +36,8 @@ import {
   LICENCAS_POR_SECCAO_EAVALIA,
   anosDoPedido,
   consultaMercadoEavalia,
+  ehServico,
+  lotesEfetivos,
   tipoEavalia,
   tipoLicenciamentoEavalia,
   tipoSolucaoEavalia,
@@ -168,9 +170,10 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
   const nAnos = anosDoPedido(pedido).length;
   const natureza = pedido.natureza;
   const seccoes: Array<[LinhasDaSeccao, Licenca[]]> = [
-    [PROPRIETARIO, pedido.licencas.filter((l) => !ehCodigoAberto(l, natureza))],
-    [CODIGO_ABERTO, pedido.licencas.filter((l) => ehCodigoAberto(l, natureza))],
+    [PROPRIETARIO, pedido.licencas.filter((l) => !ehServico(l) && !ehCodigoAberto(l, natureza))],
+    [CODIGO_ABERTO, pedido.licencas.filter((l) => !ehServico(l) && ehCodigoAberto(l, natureza))],
   ];
+  const servicos = servicosPorLicenca(pedido, nAnos);
   let folha = xml;
 
   for (const [linhas, licencas] of seccoes) {
@@ -211,16 +214,37 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
       if (p.quantidade > 0) numero(linhas.quantidade, p.quantidade);
       if (preco > 0 && p.quantidade > 0) folha = comValorCalculado(folha, `${col}${linhas.total}`, valor.licencas);
 
-      if (valor.manutencao > 0) {
+      // A manutenção em linha própria vai na manutenção evolutiva e corretiva;
+      // os serviços associados do mesmo lote, na instalação, configuração e
+      // atualização. A fórmula do total só soma com as três preenchidas.
+      const servico = servicos.get(p.id) ?? 0;
+      if (valor.manutencao > 0 || servico > 0) {
         const [evolutiva, instalacao, especializados, total] = linhas.manutencao;
         numero(evolutiva, valor.manutencao);
-        numero(instalacao, 0);
+        numero(instalacao, servico);
         numero(especializados, 0);
-        folha = comValorCalculado(folha, `${col}${total}`, valor.manutencao);
+        folha = comValorCalculado(folha, `${col}${total}`, Math.round((valor.manutencao + servico) * 100) / 100);
       }
     });
   }
   return folha;
+}
+
+/**
+ * O valor dos serviços associados, pela licença a que se juntam na folha: a
+ * primeira licença do mesmo lote, ou, sem nenhuma no lote, a primeira do pedido.
+ */
+function servicosPorLicenca(pedido: PedidoLicenciamento, nAnos: number): Map<string, number> {
+  const mapa = new Map<string, number>();
+  const porId = new Map(pedido.licencas.map((l) => [l.id, l]));
+  const primeira = pedido.licencas.find((l) => !ehServico(l));
+  for (const lote of lotesEfetivos(pedido)) {
+    const doLote = lote.licencaIds.map((id) => porId.get(id)).filter((l): l is Licenca => l !== undefined);
+    const alvo = doLote.find((l) => !ehServico(l)) ?? primeira;
+    if (alvo === undefined) continue;
+    for (const s of doLote.filter(ehServico)) mapa.set(alvo.id, (mapa.get(alvo.id) ?? 0) + valorDaLicenca(s, nAnos).total);
+  }
+  return mapa;
 }
 
 /**
@@ -231,8 +255,9 @@ export function lerFolhaDosCustosLicenciamento(
   xlsx: Uint8Array | ArrayBuffer,
   pedido: PedidoLicenciamento,
 ): Promise<FolhaDesenhavel> {
-  const abertos = pedido.licencas.filter((l) => ehCodigoAberto(l, pedido.natureza)).length;
-  const blocos = Math.max(1, abertos, pedido.licencas.length - abertos);
+  const licencas = pedido.licencas.filter((l) => !ehServico(l));
+  const abertos = licencas.filter((l) => ehCodigoAberto(l, pedido.natureza)).length;
+  const blocos = Math.max(1, abertos, licencas.length - abertos);
   const ateLinha = abertos > 0 ? ULTIMA_LINHA_CODIGO_ABERTO : ULTIMA_LINHA_PROPRIETARIO;
   return lerFolhaDoEavalia(xlsx, FOLHA_CUSTOS_LICENCIAMENTO, {
     ateLinha,

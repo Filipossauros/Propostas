@@ -328,6 +328,11 @@ requisitos funcionais e técnicos mínimos, linha a linha) e o concorrente ident
 preços. **Licença determinada**: identifica-se a licença, o fabricante ou titular dos direitos e a versão,
 e fundamenta-se a escolha (plataforma instalada, direitos exclusivos — art.º 24.º do CCP —, renovação).
 
+**Serviço associado.** Uma linha pode ser um serviço com preço próprio (suporte para adaptar a plataforma,
+configuração, formação): tem designação, atividades e um preço global, no mesmo lote. Não é uma licença:
+não tem direito de uso, métrica nem classificação eAvalia, e no eAvalia o valor soma-se à linha
+«Instalação, configuração, atualização» da licença do mesmo lote.
+
 **Tipo de licenciamento.** Objeto da licença (software; terminologia, norma ou conteúdo; ou outro, por
 extenso), direito de uso (subscrição ou perpétuo), modalidade e manutenção. Na licença perpétua, a
 manutenção pode estar incluída, não ser contratada ou ter **linha própria** no mapa de preços, com preço
@@ -343,7 +348,8 @@ SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade 
 **Valor estimado.** Subscrição: quantidade × preço (mensal ou anual) × meses ou anos, repartido pelos meses
 de cada ano a partir de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano,
 mais a manutenção em linha própria (percentagem anual de referência sobre o valor das licenças) pelo
-período. As métricas «Licença nacional» e «Licença institucional» têm sempre quantidade 1. O período vai até
+período. As métricas «Licença nacional», «Licença institucional» e «Pacote / edição» têm sempre quantidade 1; o
+pacote leva a capacidade por extenso (por exemplo, «até 500 análises por dia»). O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
 A origem do preço «procedimento anterior» pede o n.º do procedimento; «tabela pública», a ligação ou a
 indicação da tabela.
@@ -353,7 +359,8 @@ perpétua, licença nacional) enquanto não forem alterados à mão. As que não
 a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. O
 direito de uso não tem texto livre: sai um texto padronizado, com as opções de sublicenciamento e de
 transmissão a outra entidade do SNS, cada uma com explicação (i). As penalizações são facultativas e vêm
-desligadas: podem ficar para a formulação do contrato. O horário de suporte é dias úteis, 7 dias por
+desligadas: podem ficar para a formulação do contrato. Os entregáveis também são facultativos, escolhidos
+de uma lista fixa (acesso, documentação de apoio, manuais, registos das sessões de trabalho). O horário de suporte é dias úteis, 7 dias por
 semana ou personalizado, com as horas editáveis.
 
 **O Anexo Técnico (ZIP)** leva a manifestação de necessidades no modelo da DAG (Word e, com o n.º da
