@@ -712,10 +712,15 @@ export function beneficiariosDoPedido(pedido: Pick<PedidoLicenciamento, "benefic
   return pedido.beneficiarios ?? BENEFICIARIOS_LICENCIAMENTO;
 }
 
+/**
+ * Os benefícios operacionais: não se mostram no Módulo 1 e seguem os benefícios
+ * do produto; um texto guardado num ficheiro (JSON) continua a valer.
+ */
 export function beneficiosOperacionaisDoPedido(
   pedido: Pick<PedidoLicenciamento, "beneficiosOperacionais" | "justificacao">,
 ): string {
-  return pedido.beneficiosOperacionais ?? beneficiosOperacionaisPorOmissao(pedido.justificacao);
+  const proprio = pedido.beneficiosOperacionais ?? "";
+  return proprio.trim() !== "" ? proprio : beneficiosOperacionaisPorOmissao(pedido.justificacao);
 }
 
 
@@ -1170,8 +1175,6 @@ export function validarProdutoLicenciamento(
   lista(pedido.justificacao.beneficios, "justificacao.beneficios", "Indique pelo menos um benefício do produto.", "benefícios");
   lista(pedido.justificacao.riscos, "justificacao.riscos", "Indique pelo menos um risco da não aquisição.", "riscos");
   if (beneficiariosDoPedido(pedido).trim() === "") erros.push(falta("beneficiarios", "Indique os beneficiários."));
-  if (beneficiosOperacionaisDoPedido(pedido).trim() === "")
-    erros.push(falta("beneficiosOperacionais", "Indique os benefícios operacionais."));
   return erros;
 }
 

@@ -3,7 +3,6 @@ import type { PedidoLicenciamento } from "../core/licenciamento";
 import {
   PRODUTO_LICENCIAMENTO_EXEMPLO,
   beneficiariosDoPedido,
-  beneficiosOperacionaisDoPedido,
   importarProdutoJSON,
   nomeProcedimentoLicenciamento,
   produtoParaJSON,
@@ -234,7 +233,7 @@ export function ModuloProduto({ pedido, onAlterar, onIrParaLicencas }: Props) {
           <h3>Avaliação custo-benefício</h3>
           <p className="painel-nota">
             Saem na secção «Avaliação custo-benefício» da manifestação de necessidades. Partem de um texto por omissão,
-            que pode alterar.
+            que pode alterar. Os benefícios operacionais formam-se a partir dos benefícios do produto, acima.
           </p>
         </header>
         <label className="campo-largo">
@@ -254,27 +253,6 @@ export function ModuloProduto({ pedido, onAlterar, onIrParaLicencas }: Props) {
           >
             Repor o texto por omissão
           </button>
-        )}
-        <label className="campo-largo">
-          <span className="rotulo">Benefícios operacionais</span>
-          <textarea
-            rows={3}
-            value={beneficiosOperacionaisDoPedido(pedido)}
-            placeholder="Formam-se a partir dos benefícios do produto, acima."
-            aria-invalid={beneficiosOperacionaisDoPedido(pedido).trim() === ""}
-            onChange={(e) => onAlterar((atual) => ({ ...atual, beneficiosOperacionais: e.target.value }))}
-          />
-        </label>
-        {pedido.beneficiosOperacionais !== null ? (
-          <button
-            type="button"
-            className="botao-discreto"
-            onClick={() => onAlterar((atual) => ({ ...atual, beneficiosOperacionais: null }))}
-          >
-            Repor o texto por omissão
-          </button>
-        ) : (
-          <p className="ajuda">Por omissão, são os benefícios do produto numa frase, e acompanham-nos enquanto não forem alterados.</p>
         )}
       </section>
 

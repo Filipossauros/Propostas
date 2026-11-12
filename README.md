@@ -318,7 +318,7 @@ conteúdo.
 
 | Módulo | Quem usa | O que faz |
 |---|---|---|
-| **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição, e os beneficiários e benefícios operacionais da avaliação custo-benefício (com texto por omissão, editável). Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
+| **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição, e os beneficiários da avaliação custo-benefício (com texto por omissão, editável). Os benefícios operacionais não se mostram: formam-se a partir dos benefícios do produto. Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
 | **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
 | **L2 · Condições** | Responsável do produto | Âmbito, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
 | **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, júri e Anexo Técnico |
