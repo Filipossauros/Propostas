@@ -71,12 +71,8 @@ export function EditorOrigemPreco({ rotulo, fonte, onChange, excluir }: Props) {
               <CampoNumero valor={fonte.ano} min={2000} step={1} aria-label="Ano do contrato anterior" invalido={!(fonte.ano >= 2000)} onChange={(ano) => muda({ ano })} />
             </label>
             <label className="campo-numero-rotulado">
-              <span className="rotulo">Preço unitário de então</span>
+              <span className="rotulo">Preço unitário de então (c/ IVA)</span>
               <CampoNumero valor={fonte.precoAnterior} min={0} step={0.01} sufixo="€" aria-label="Preço unitário de então" onChange={(precoAnterior) => muda({ precoAnterior })} />
-            </label>
-            <label className="campo-numero-rotulado">
-              <span className="rotulo">Atualização aplicada</span>
-              <CampoNumero valor={fonte.atualizacao} min={0} step={0.1} sufixo="%" aria-label="Atualização aplicada" invalido={!(fonte.atualizacao >= 0)} onChange={(atualizacao) => muda({ atualizacao })} />
             </label>
           </div>
         </>

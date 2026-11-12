@@ -7,6 +7,7 @@ import {
   anosDoPedido,
   comIva,
   comMargemLicenciamento,
+  comTaxaIva,
   designacaoDoLote,
   justificacaoMargemDoPedido,
   margemDoPedido,
@@ -402,7 +403,8 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar }: Props) {
               step={1}
               sufixo="%"
               invalido={!(pedido.taxaIva >= 0)}
-              onChange={(taxaIva) => onAlterar((atual) => ({ ...atual, taxaIva }))}
+              // Os preços escrevem-se com IVA: mudar a taxa recalcula os sem IVA.
+              onChange={(taxaIva) => onAlterar((atual) => comTaxaIva(atual, taxaIva))}
             />
           </label>
           <label className="campo-numero-rotulado">

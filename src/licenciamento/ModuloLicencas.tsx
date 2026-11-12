@@ -27,6 +27,7 @@ import {
   comAlteracao,
   ehServico,
   fonteVazia,
+  semIvaDe,
   criarLicenca,
   importarPedidoLicenciamentoJSON,
   nomeDaLicenca,
@@ -210,8 +211,31 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
           onChange={(origemComplementar) => alterarLicenca({ origemComplementar })}
         />
       )}
-      <p className="ajuda">Os preços de referência são sempre em euros, sem IVA.</p>
+      <p className="ajuda">Os preços de referência são sempre em euros, com IVA.</p>
     </div>
+  );
+
+  /** O preço escreve-se com IVA; o sem IVA, com que se fazem as contas, deriva da taxa do pedido (L3). */
+  const alterarPreco = (precoComIva: number) =>
+    alterarLicenca({ precoComIva, precoUnitario: semIvaDe(precoComIva, pedido.taxaIva) });
+  const semIvaENota = emEdicao === null ? null : (
+    <>
+      {emEdicao.precoComIva > 0 && (
+        <p className="ajuda">
+          Sem IVA: {formatarMoeda(emEdicao.precoUnitario)} (IVA a {formatarNumero(pedido.taxaIva)} %, a taxa do L3). O
+          valor estimado e as peças usam o preço sem IVA.
+        </p>
+      )}
+      <label className="campo">
+        <span className="rotulo">Nota ao preço de referência (facultativa)</span>
+        <textarea
+          rows={2}
+          value={emEdicao.notaPreco}
+          placeholder="ex.: Preço da renovação de 2025, a que o fabricante aplicou um aumento de 5 %."
+          onChange={(e) => alterarLicenca({ notaPreco: e.target.value })}
+        />
+      </label>
+    </>
   );
 
   const valor = emEdicao === null ? null : valorDaLicenca(emEdicao, Math.ceil(emEdicao.periodoMeses / 12) || 1);
@@ -411,18 +435,19 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             {origensDoPreco}
             <div className="linha-campos linha-campos-numeros">
               <label className="campo-numero-rotulado">
-                <span className="rotulo">Preço global de referência (s/ IVA)</span>
+                <span className="rotulo">Preço global de referência (c/ IVA)</span>
                 <CampoNumero
-                  valor={emEdicao.precoUnitario}
+                  valor={emEdicao.precoComIva}
                   min={0}
                   step={0.01}
                   sufixo="€"
                   aria-label="Preço global de referência"
-                  invalido={!(emEdicao.precoUnitario > 0)}
-                  onChange={(precoUnitario) => alterarLicenca({ precoUnitario })}
+                  invalido={!(emEdicao.precoComIva > 0)}
+                  onChange={alterarPreco}
                 />
               </label>
             </div>
+            {semIvaENota}
           </section>
         </>
       )}
@@ -727,18 +752,19 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                 )}
               </label>
               <label className="campo-numero-rotulado">
-                <span className="rotulo">Preço unitário de referência (s/ IVA)</span>
+                <span className="rotulo">Preço unitário de referência (c/ IVA)</span>
                 <CampoNumero
-                  valor={emEdicao.precoUnitario}
+                  valor={emEdicao.precoComIva}
                   min={0}
                   step={0.01}
                   sufixo={emEdicao.direitoUso === "temporario" ? (anual ? "€ / ano" : "€ / mês") : "€"}
                   aria-label="Preço unitário de referência"
-                  invalido={!(emEdicao.precoUnitario > 0)}
-                  onChange={(precoUnitario) => alterarLicenca({ precoUnitario })}
+                  invalido={!(emEdicao.precoComIva > 0)}
+                  onChange={alterarPreco}
                 />
               </label>
             </div>
+            {semIvaENota}
             {unica && (
               <p className="ajuda">
                 {emEdicao.metrica === "pacote"

@@ -35,7 +35,6 @@ import {
   beneficiariosDoPedido,
   beneficiosOperacionaisDoPedido,
   ehServico,
-  frasesDoDireitoDeUso,
   metricaDaColuna,
   objetoPorExtenso,
   ORIGENS_PRECO,
@@ -681,11 +680,37 @@ function corpoLicenciamento(
           { titulo: "Data", alinhamento: "direita", peso: 12 },
         ],
         linhas,
-        { legenda: "Preços de referência em euros, sem IVA.", sz: 16 },
+        {
+          legenda:
+            `Preços de referência indicados em euros, com IVA; os cálculos usam o preço sem IVA, à taxa de ` +
+            `${formatarNumero(pedido.taxaIva)} %.`,
+          sz: 16,
+        },
       ),
     );
+    const notas = pedido.licencas.filter((x) => x.notaPreco.trim() !== "");
+    if (notas.length > 0) {
+      p.push(recuado([run("Notas sobre os preços de referência:", { negrito: true })], { depois: 80, comOSeguinte: true }));
+      notas.forEach((x, i) =>
+        p.push(
+          alinea(
+            `${letra(i)}.`,
+            [run(`${nomeDaLicenca(x, pedido.natureza) || "Licença"}: `), run(x.notaPreco.trim().replace(/[.;]*$/, "."))],
+            RECUO_ALINEA,
+          ),
+        ),
+      );
+    }
   }
   p.push(recuado(justificacaoMargem, { antes: 80 }));
+  p.push(numerado("4.", [run("Rastreabilidade da execução", { negrito: true })], { comOSeguinte: true, depois: 80 }));
+  p.push(
+    recuado(
+      "A execução deverá permitir a reconciliação entre as licenças disponibilizadas, as faturadas, os preços " +
+        "unitários contratados e os limites financeiros anuais, assegurando o respetivo registo documental e a " +
+        "preparação de evidência adequada para controlo interno, auditoria e fiscalização.",
+    ),
+  );
 
   // Anexo III — especificações técnicas
   const numeroInf = pedido.numeroInformacao.trim();
@@ -817,11 +842,6 @@ function corpoLicenciamento(
       ),
     );
 
-  if (c.direitoUso.ligada) {
-    ponto3("Direito de uso e transmissão");
-    p.push(recuado(textoDaCondicao("direitoUso", pedido).trim()));
-    for (const frase of frasesDoDireitoDeUso(c.direitoUso)) p.push(recuado(frase));
-  }
 
   if (aplicabilidade("manutencao", pedido).aplica) {
     ponto3(tituloDaManutencao(pedido));

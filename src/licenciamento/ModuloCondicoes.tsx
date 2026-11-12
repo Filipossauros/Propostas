@@ -10,14 +10,11 @@ import type {
 import {
   ENTREGAVEIS,
   EXPLICACAO_NAO_PRODUTIVOS,
-  EXPLICACAO_SUBLICENCIAMENTO,
-  EXPLICACAO_TRANSMISSAO,
   HORARIOS_SUPORTE,
   LIMITE_GLOBAL_PENALIZACOES,
   aplicaNaoProdutivos,
   aplicabilidade,
   condicoesIniciais,
-  frasesDoDireitoDeUso,
   horarioPorExtenso,
   objetoPorExtenso,
   textoDaCondicao,
@@ -229,7 +226,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
 
       <section className="painel">
         <header className="painel-cabecalho">
-          <h3>Âmbito e direitos de utilização</h3>
+          <h3>Âmbito da licença</h3>
         </header>
 
         <Condicao titulo="Âmbito da licença" selo="obrigatória" {...textoDe("ambito")}>
@@ -261,61 +258,6 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </>
           )}
         </Condicao>
-
-        <div className={c.direitoUso.ligada ? "condicao" : "condicao condicao-desligada"}>
-          <div className="condicao-cabecalho">
-            <label className="campo-opcao condicao-interruptor">
-              <input
-                type="checkbox"
-                checked={c.direitoUso.ligada}
-                onChange={(e) => alterar("direitoUso", { ligada: e.target.checked })}
-              />
-              <span>
-                <strong>Direito de uso e transmissão</strong>
-              </span>
-            </label>
-            <span className="selo-condicao selo-condicao-opcional">facultativa</span>
-          </div>
-          {c.direitoUso.ligada && (
-            <>
-              <p className="texto-padronizado">{textoDaCondicao("direitoUso", pedido)}</p>
-              <p className="ajuda">
-                Texto padronizado, a partir do direito de uso das licenças do L1. Escolha as opções:
-              </p>
-              <label className="campo-opcao">
-                <input
-                  type="checkbox"
-                  checked={c.direitoUso.sublicenciamento}
-                  onChange={(e) => alterar("direitoUso", { sublicenciamento: e.target.checked })}
-                />
-                <span>
-                  <strong>Sublicenciamento a terceiros abrangidos pelo âmbito</strong>
-                  <span className="meta">
-                    A entidade adjudicante pode autorizar outros a usar a licença, sem custo.
-                  </span>
-                </span>
-              </label>
-              <Explicacao pergunta="O que é o sublicenciamento?">{EXPLICACAO_SUBLICENCIAMENTO}</Explicacao>
-              <label className="campo-opcao">
-                <input
-                  type="checkbox"
-                  checked={c.direitoUso.transmissao}
-                  onChange={(e) => alterar("direitoUso", { transmissao: e.target.checked })}
-                />
-                <span>
-                  <strong>Transmissão a outra entidade do SNS, sem custo</strong>
-                  <span className="meta">A licença passa, por inteiro, para outra entidade do SNS.</span>
-                </span>
-              </label>
-              <Explicacao pergunta="O que é a transmissão?">{EXPLICACAO_TRANSMISSAO}</Explicacao>
-              {frasesDoDireitoDeUso(c.direitoUso).map((f) => (
-                <p key={f} className="texto-padronizado">
-                  {f}
-                </p>
-              ))}
-            </>
-          )}
-        </div>
       </section>
 
       <section className="painel">

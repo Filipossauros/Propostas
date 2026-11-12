@@ -193,27 +193,25 @@ describe("manifestação de necessidades do licenciamento", () => {
     expect(texto).toContain("as penalizações aí previstas");
   });
 
-  it("beneficiários e benefícios operacionais editados saem; a rastreabilidade não", async () => {
+  it("beneficiários e benefícios operacionais editados saem; a rastreabilidade também", async () => {
     const pedido = snomed();
     pedido.beneficiarios = "Os serviços de codificação clínica.";
     pedido.beneficiosOperacionais = "Menos erros de codificação.";
     const texto = await textoDe(pedido);
     expect(texto).toContain("Beneficiários: Os serviços de codificação clínica.");
     expect(texto).toContain("Benefícios operacionais: Menos erros de codificação.");
-    expect(texto).not.toContain("Rastreabilidade da execução");
+    expect(texto).toContain("4. Rastreabilidade da execução");
   });
 
-  it("os pressupostos só falam dos tipos de licença escolhidos; o direito de uso é facultativo", async () => {
-    const snomed1 = snomed();
-    snomed1.condicoes = { ...snomed1.condicoes, direitoUso: { ...snomed1.condicoes.direitoUso, ligada: false } };
-    const texto = await textoDe(snomed1);
+  it("os pressupostos só falam dos tipos de licença escolhidos; sem direito de uso", async () => {
+    const texto = await textoDe(snomed());
     expect(texto).toContain("os períodos são os anos do período");
     expect(texto).not.toContain("licença perpétua");
     expect(texto).not.toContain("consulta preliminar ao mercado");
     expect(texto).not.toContain("Direito de uso e transmissão");
     const software = await textoDe(exemplo());
     expect(software).toContain("A manutenção da licença perpétua tem linha própria");
-    expect(software).toContain("Direito de uso e transmissão");
+    expect(software).not.toContain("Direito de uso e transmissão");
   });
 
   it("a origem do preço leva a referência", async () => {
@@ -223,12 +221,13 @@ describe("manifestação de necessidades do licenciamento", () => {
     expect(texto).toContain("15/10/2026");
   });
 
-  it("o sublicenciamento e a transmissão saem quando escolhidos", async () => {
+  it("a nota ao preço de referência sai na memória de cálculo", async () => {
     const pedido = snomed();
-    pedido.condicoes = { ...pedido.condicoes, direitoUso: { ...pedido.condicoes.direitoUso, sublicenciamento: true } };
+    pedido.licencas[0] = { ...pedido.licencas[0], notaPreco: "Inclui o aumento anunciado para 2027" };
     const texto = await textoDe(pedido);
-    expect(texto).toContain("pode sublicenciar");
-    expect(texto).toContain("transmitidas, por inteiro e sem custo");
+    expect(texto).toContain("Notas sobre os preços de referência:");
+    expect(texto).toContain("Inclui o aumento anunciado para 2027.");
+    expect(texto).toContain("com IVA; os cálculos usam o preço sem IVA");
   });
 
   it("o pacote leva Word, eAvalia, um mapa por lote e o JSON", async () => {

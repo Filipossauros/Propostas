@@ -198,8 +198,6 @@ export interface FontePreco {
   ano: number;
   /** Contrato anterior: o preço unitário de então, em euros. */
   precoAnterior: number;
-  /** Contrato anterior: a atualização aplicada desde então, em %. */
-  atualizacao: number;
   /** Orçamento: quem o deu. */
   entidade: string;
   /** Orçamento: a referência do documento. */
@@ -222,7 +220,6 @@ export function fonteVazia(tipo: OrigemPreco = ""): FontePreco {
     numero: "",
     ano: 0,
     precoAnterior: 0,
-    atualizacao: 0,
     entidade: "",
     referencia: "",
     data: "",
@@ -281,6 +278,14 @@ export interface Licenca {
   origemComplementar: FontePreco;
   /** A capacidade do pacote ou edição, ex.: «até 500 análises por dia». */
   capacidade: string;
+  /**
+   * O preço unitário de referência COM IVA, como se escreve no L1. O sem IVA
+   * (`precoUnitario`), com que se fazem as contas, deriva dele e da taxa de IVA
+   * do pedido — ver `comTaxaIva`.
+   */
+  precoComIva: number;
+  /** Uma nota livre sobre o preço de referência (sai na memória de cálculo). */
+  notaPreco: string;
 }
 
 // --------------------------------------------------------------------------
@@ -305,8 +310,6 @@ export interface TemposDeSeveridade {
  */
 export interface CondicoesContrato {
   ambito: { texto: string | null; entidades: string; naoProdutivosSemCusto: boolean };
-  /** Facultativo: com ele desligado, a condição não sai. */
-  direitoUso: { ligada: boolean; texto: string | null; sublicenciamento: boolean; transmissao: boolean };
   manutencao: { texto: string | null };
   suporte: {
     ligada: boolean;
@@ -338,27 +341,10 @@ export const ENTREGAVEIS: Record<Entregavel, string> = {
   registos: "Registos das sessões de trabalho realizadas",
 };
 
-export type CondicaoComTexto = "ambito" | "direitoUso" | "manutencao" | "suporte" | "disponibilidade" | "penalizacoes" | "prazo";
+export type CondicaoComTexto = "ambito" | "manutencao" | "suporte" | "disponibilidade" | "penalizacoes" | "prazo";
 
 /** O limite das penalizações (art.º 329.º, n.º 2, do CCP): 20 % do preço contratual. */
 export const LIMITE_GLOBAL_PENALIZACOES = 20;
-
-/** Para quem escolhe: o que são o sublicenciamento e a transmissão, e o que muda com eles. */
-export const EXPLICACAO_SUBLICENCIAMENTO =
-  "Sublicenciar é a entidade adjudicante poder autorizar terceiros a usar a licença que adquiriu — por exemplo, " +
-  "outras entidades do SNS ou as empresas de software que desenvolvem sistemas para elas —, dentro do âmbito, do " +
-  "período e das quantidades contratados e sem que cada um tenha de pagar a sua. A licença continua a ser da " +
-  "entidade adjudicante, que responde pelo uso que os sublicenciados dela fizerem. Sem esta cláusula, a licença " +
-  "só pode ser usada por quem a adquiriu, porque o titular dos direitos é que decide quem a pode usar. É " +
-  "frequente nas licenças de âmbito nacional.";
-
-export const EXPLICACAO_TRANSMISSAO =
-  "Transmitir é passar a licença, por inteiro e sem custo, para outra entidade do SNS — por exemplo, quando os " +
-  "serviços que a usam são integrados noutra entidade, como aconteceu com a criação das Unidades Locais de Saúde. " +
-  "A licença continua a valer nas mesmas condições (âmbito, quantidades e prazo); muda apenas quem a detém. Sem " +
-  "esta cláusula, a passagem para outra entidade fica dependente do acordo do titular dos direitos, que a pode " +
-  "recusar ou cobrar. Não se confunde com o sublicenciamento: aqui quem adquiriu deixa de ser o titular da " +
-  "licença.";
 
 export const EXPLICACAO_NAO_PRODUTIVOS =
   "Num software instalado, cada cópia em funcionamento pode contar como uma licença. Com esta opção, as cópias " +
@@ -368,7 +354,6 @@ export const EXPLICACAO_NAO_PRODUTIVOS =
 export function condicoesIniciais(): CondicoesContrato {
   return {
     ambito: { texto: null, entidades: "", naoProdutivosSemCusto: true },
-    direitoUso: { ligada: true, texto: null, sublicenciamento: false, transmissao: true },
     manutencao: { texto: null },
     suporte: {
       ligada: true,
@@ -541,6 +526,8 @@ export function criarLicenca(): Licenca {
     origemPreco: fonteVazia(),
     origemComplementar: fonteVazia(),
     capacidade: "",
+    precoComIva: 0,
+    notaPreco: "",
   };
 }
 
@@ -674,8 +661,7 @@ export function referenciaDaFonte(f: FontePreco): string {
     case "contratoAnterior":
       if (f.numero.trim()) partes.push(`n.º ${f.numero.trim()}`);
       if (f.ano > 0) partes.push(`de ${f.ano}`);
-      if (f.precoAnterior > 0) partes.push(`preço unitário de então ${euros(f.precoAnterior)}`);
-      if (f.atualizacao > 0) partes.push(`atualizado em ${formatarNumeroLic(f.atualizacao)} %`);
+      if (f.precoAnterior > 0) partes.push(`preço unitário de então ${euros(f.precoAnterior)} com IVA`);
       break;
     case "orcamento":
       if (f.entidade.trim()) partes.push(f.entidade.trim());
@@ -732,6 +718,25 @@ export function beneficiosOperacionaisDoPedido(
   return pedido.beneficiosOperacionais ?? beneficiosOperacionaisPorOmissao(pedido.justificacao);
 }
 
+
+/** O preço sem IVA a partir do com IVA, ao cêntimo. */
+export function semIvaDe(comIvaValor: number, taxa: number): number {
+  const t = Number.isFinite(taxa) && taxa >= 0 ? taxa : 0;
+  return Math.round((num(comIvaValor) / (1 + t / 100)) * 100) / 100;
+}
+
+/**
+ * A licença com o preço com IVA escrito no L1, e o sem IVA que dele resulta
+ * à taxa do pedido.
+ */
+export function comPrecoComIva(l: Licenca, precoComIva: number, taxa: number): Licenca {
+  return { ...l, precoComIva, precoUnitario: semIvaDe(precoComIva, taxa) };
+}
+
+/** O pedido com outra taxa de IVA: os preços sem IVA recalculam-se a partir dos com IVA. */
+export function comTaxaIva(pedido: PedidoLicenciamento, taxaIva: number): PedidoLicenciamento {
+  return { ...pedido, taxaIva, licencas: pedido.licencas.map((l) => comPrecoComIva(l, l.precoComIva, taxaIva)) };
+}
 
 // --------------------------------------------------------------------------
 // Cálculos
@@ -1075,8 +1080,6 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
   const o = objetos(pedido);
   const software = o.size === 0 || o.has("software");
   const outros = o.has("terminologia") || o.has("outro");
-  const temporario = pedido.licencas.length === 0 || pedido.licencas.some((l) => l.direitoUso === "temporario");
-  const perpetuo = pedido.licencas.some((l) => l.direitoUso === "perpetuo");
   switch (chave) {
     case "ambito":
       return temNacional(pedido)
@@ -1085,12 +1088,6 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
         : "Utilização pela SPMS, E.P.E. e pelas entidades do Serviço Nacional de Saúde indicadas, sem limite " +
             "geográfico dentro do território nacional" +
             (software ? ", em todos os ambientes (produção, teste, formação e recuperação)." : ".");
-    case "direitoUso": {
-      const partes: string[] = [];
-      if (temporario) partes.push("pelo período contratado, no caso das licenças em subscrição");
-      if (perpetuo) partes.push("por tempo indeterminado, no caso das licenças perpétuas adquiridas");
-      return `Direito de uso não exclusivo das licenças, ${partes.join(", e ")}, nos termos do âmbito contratado.`;
-    }
     case "manutencao": {
       const frases: string[] = [];
       if (software)
@@ -1125,32 +1122,9 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
   }
 }
 
-/**
- * O texto de uma condição: o escrito à mão, ou o por omissão. O direito de uso
- * não tem texto livre: sai sempre o padronizado, com as opções escolhidas.
- */
+/** O texto de uma condição: o escrito à mão, ou o por omissão. */
 export function textoDaCondicao(chave: CondicaoComTexto, pedido: PedidoLicenciamento): string {
-  if (chave === "direitoUso") return textoPorOmissao(chave, pedido);
   return pedido.condicoes[chave].texto ?? textoPorOmissao(chave, pedido);
-}
-
-/** As frases das opções do direito de uso, como saem no Anexo III. */
-export function frasesDoDireitoDeUso(c: CondicoesContrato["direitoUso"]): string[] {
-  return [
-    ...(c.sublicenciamento
-      ? [
-          "A entidade adjudicante pode sublicenciar a utilização das licenças às entidades e aos fornecedores " +
-            "abrangidos pelo âmbito da licença, dentro do período e das quantidades contratados, sem encargos " +
-            "adicionais, respondendo pelo uso que os sublicenciados delas fizerem.",
-        ]
-      : []),
-    ...(c.transmissao
-      ? [
-          "As licenças podem ser transmitidas, por inteiro e sem custo, a outra entidade do Serviço Nacional de " +
-            "Saúde, mantendo-se as condições do contrato.",
-        ]
-      : []),
-  ];
 }
 
 const HORA = /^([01]\d|2[0-4]):([0-5]\d)$/;
@@ -1271,7 +1245,6 @@ export function validarFonte(
     case "contratoAnterior":
       if (f.numero.trim() === "") falta("indique o n.º do contrato ou do procedimento anterior");
       if (!(Number.isInteger(f.ano) && f.ano >= 2000 && f.ano <= anoAtual)) falta("indique o ano do contrato anterior");
-      if (!(f.atualizacao >= 0)) falta("a atualização não pode ser negativa");
       break;
     case "orcamento":
       if (f.entidade.trim() === "") falta("indique quem deu o orçamento");
@@ -1533,7 +1506,6 @@ function normalizarFonte(bruto: unknown, referenciaAntiga?: unknown): FontePreco
     numero: texto(r.numero),
     ano: numero(r.ano),
     precoAnterior: numero(r.precoAnterior),
-    atualizacao: numero(r.atualizacao),
     entidade: texto(r.entidade),
     referencia: texto(r.referencia),
     data: texto(r.data),
@@ -1579,6 +1551,8 @@ function normalizarLicenca(bruto: unknown): Licenca {
     origemPreco: normalizarFonte(r.origemPreco, r.referenciaPreco),
     origemComplementar: normalizarFonte(r.origemComplementar),
     capacidade: texto(r.capacidade),
+    precoComIva: numero(r.precoComIva),
+    notaPreco: texto(r.notaPreco),
   };
   return comAlteracao(licenca, {});
 }
@@ -1610,7 +1584,6 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
     return { resposta: numero(s.resposta, o.resposta), resolucao: numero(s.resolucao, o.resolucao) };
   };
   const a = objeto(r.ambito);
-  const d = objeto(r.direitoUso);
   const m = objeto(r.manutencao);
   const s = objeto(r.suporte);
   const di = objeto(r.disponibilidade);
@@ -1624,13 +1597,6 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       texto: textoDeCondicao(a.texto),
       entidades: texto(a.entidades),
       naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
-    },
-    direitoUso: {
-      ligada: booleano(d.ligada, true),
-      // Sem texto livre: sai sempre o padronizado.
-      texto: null,
-      sublicenciamento: booleano(d.sublicenciamento, false),
-      transmissao: booleano(d.transmissao, true),
     },
     manutencao: { texto: textoDeCondicao(m.texto) },
     suporte: {
@@ -1739,7 +1705,20 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
     numeroInformacao: texto(r.numeroInformacao),
     numeroOrcamento: texto(r.numeroOrcamento),
   };
-  return { ...pedido, lotes: lotesEfetivos(pedido) };
+  return { ...pedido, licencas: comPrecosCoerentes(pedido.licencas, pedido.taxaIva), lotes: lotesEfetivos(pedido) };
+}
+
+/**
+ * Os preços com e sem IVA acertados à taxa do pedido. Um pedido anterior (só
+ * com o preço sem IVA) ganha o com IVA; nos restantes, o sem IVA deriva do com IVA.
+ */
+export function comPrecosCoerentes(licencas: Licenca[], taxa: number): Licenca[] {
+  return licencas.map((l) => {
+    if (!(l.precoComIva > 0) && l.precoUnitario > 0) {
+      return { ...l, precoComIva: Math.round(l.precoUnitario * (1 + (taxa >= 0 ? taxa : 0) / 100) * 100) / 100 };
+    }
+    return comPrecoComIva(l, l.precoComIva, taxa);
+  });
 }
 
 export function ehPedidoLicenciamentoGuardado(valor: unknown): valor is PedidoLicenciamento {
@@ -1816,6 +1795,7 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     },
   };
   const pedido = pedidoLicenciamentoInicial(anoInicio);
+  snomed.precoComIva = 147_600;
   return {
     ...pedido,
     ...PRODUTO_LICENCIAMENTO_EXEMPLO,
@@ -1887,7 +1867,7 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
       ligacao: "Tabela de preços do fabricante, edição de 2026",
       data: "2026-10-01",
     },
-    origemComplementar: { ...fonteVazia("contratoAnterior"), numero: "CP 45/2023", ano: 2023, precoAnterior: 1750, atualizacao: 8 },
+    origemComplementar: { ...fonteVazia("contratoAnterior"), numero: "CP 45/2023", ano: 2023, precoAnterior: 2150 },
   };
   return {
     ...pedidoLicenciamentoInicial(anoInicio),
@@ -1900,7 +1880,7 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
       beneficios: itensExemplo("ad-ben", ["Redução do tempo de tramitação dos processos"]),
       riscos: itensExemplo("ad-ris", ["Interrupção do acesso ao arquivo documental no termo das licenças atuais"]),
     },
-    licencas: [gestao, bd],
+    licencas: comPrecosCoerentes([gestao, bd], TAXA_IVA_PADRAO),
     lotes: [
       { id: "lote-gd", numero: "1", designacao: "Gestão documental", licencaIds: ["lic-gd"] },
       { id: "lote-bd", numero: "2", designacao: "Base de dados", licencaIds: ["lic-bd"] },

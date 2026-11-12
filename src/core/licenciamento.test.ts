@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { FontePreco } from "./licenciamento";
 import {
   anosDoPedido,
+  comPrecoComIva,
+  comTaxaIva,
   fonteVazia,
   origemPorExtenso,
   aplicabilidade,
@@ -311,10 +313,16 @@ describe("licenciamento — validação", () => {
     expect(consultaMercadoEavalia("aberta", l)).toBe("Sim");
   });
 
-  it("o direito de uso não tem texto livre", () => {
+  it("o preço escreve-se com IVA; o sem IVA acompanha a taxa", () => {
     const pedido = pedidoLicenciamentoExemplo(2027);
-    pedido.condicoes.direitoUso.texto = "Escrito à mão.";
-    expect(textoDaCondicao("direitoUso", pedido)).toBe(textoPorOmissao("direitoUso", pedido));
+    expect(pedido.licencas[0].precoComIva).toBe(147_600);
+    expect(pedido.licencas[0].precoUnitario).toBe(120_000);
+    const a6 = comTaxaIva(pedido, 6);
+    expect(a6.licencas[0].precoUnitario).toBe(139_245.28);
+    expect(comPrecoComIva(criarLicenca(), 17.84, 23).precoUnitario).toBe(14.5);
+    // Um pedido anterior, só com o preço sem IVA, ganha o com IVA.
+    const antigo = normalizarPedidoLicenciamento({ tipo: "licenciamento", taxaIva: 23, licencas: [{ id: "a", precoUnitario: 100 }] });
+    expect([antigo.licencas[0].precoComIva, antigo.licencas[0].precoUnitario]).toEqual([123, 100]);
   });
 
   it("período acima de 36 meses e penalizações (ligadas) acima de 20 % não passam", () => {

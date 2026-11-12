@@ -320,7 +320,7 @@ conteúdo.
 |---|---|---|
 | **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição, e os beneficiários e benefícios operacionais da avaliação custo-benefício (com texto por omissão, editável). Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
 | **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
-| **L2 · Condições** | Responsável do produto | Âmbito, direito de uso e transmissão, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
+| **L2 · Condições** | Responsável do produto | Âmbito, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
 | **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, júri e Anexo Técnico |
 
 **Natureza da aquisição.** **Aberta à concorrência**: cada licença descreve-se sem marca (designação e
@@ -354,18 +354,18 @@ falam dos tipos de licença que o pedido tem, e o fundamento da margem a 0 % só
 escolhidas (texto por omissão, editável e reponível no L3). O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
 Cada licença tem uma origem do preço de referência, com os campos que permitem verificá-la: contrato em
-vigor ou procedimento anterior (n.º, ano, preço de então, atualização), orçamento do fabricante, titular ou
+vigor ou procedimento anterior (n.º, ano, preço de então), orçamento do fabricante, titular ou
 distribuidor (entidade, data, referência), consulta preliminar ao mercado (data, entidades consultadas,
 respostas, critério), tabela pública (ligação, data, desconto) ou contratos semelhantes no portal BASE
-(ligações). Uma segunda origem, facultativa, confirma a primeira. Os preços são sempre em euros. No Word,
-as origens saem num quadro (licença, origem, referência, data). A consulta ao mercado do eAvalia é «Sim»
+(ligações). Uma segunda origem, facultativa, confirma a primeira. Os preços de referência indicam-se sempre em euros **com IVA**; a
+aplicação mostra o valor sem IVA à taxa do L3 (que é o que entra nos cálculos, no eAvalia e no mapa de preços) e
+recalcula-o quando a taxa muda. Cada preço pode levar uma nota facultativa. No Word,
+as origens saem num quadro (licença, origem, referência, data), seguido das notas aos preços. A consulta ao mercado do eAvalia é «Sim»
 na aquisição aberta e sempre que o preço venha de uma consulta preliminar.
 
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
-a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. O
-direito de uso é facultativo e não tem texto livre: sai um texto padronizado, com as opções de sublicenciamento e de
-transmissão a outra entidade do SNS, cada uma com explicação (i). As penalizações são facultativas e vêm
+a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. As penalizações são facultativas e vêm
 desligadas: podem ficar para a formulação do contrato. Os entregáveis também são facultativos, escolhidos
 de uma lista fixa (acesso, documentação de apoio, manuais, registos das sessões de trabalho). O horário de suporte é dias úteis, 7 dias por
 semana ou personalizado, com as horas editáveis.
