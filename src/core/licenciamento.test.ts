@@ -259,11 +259,27 @@ describe("licenciamento — validação", () => {
     expect(mensagens.some((m) => m.includes("anos completos"))).toBe(true);
   });
 
-  it("período acima de 36 meses e penalizações acima de 20 % não passam", () => {
+  it("procedimento anterior e tabela pública pedem a referência", () => {
+    const pedido = pedidoLicenciamentoExemplo(2027);
+    pedido.licencas[0] = { ...pedido.licencas[0], origemPreco: "procedimentoAnterior", referenciaPreco: "" };
+    expect(validarLicencas(pedido).some((e) => e.mensagem.includes("n.º do procedimento anterior"))).toBe(true);
+    pedido.licencas[0] = { ...pedido.licencas[0], origemPreco: "tabelaPublica" };
+    expect(validarLicencas(pedido).some((e) => e.mensagem.includes("tabela pública"))).toBe(true);
+  });
+
+  it("o direito de uso não tem texto livre", () => {
+    const pedido = pedidoLicenciamentoExemplo(2027);
+    pedido.condicoes.direitoUso.texto = "Escrito à mão.";
+    expect(textoDaCondicao("direitoUso", pedido)).toBe(textoPorOmissao("direitoUso", pedido));
+  });
+
+  it("período acima de 36 meses e penalizações (ligadas) acima de 20 % não passam", () => {
     const pedido = pedidoLicenciamentoExemploSoftware(2027);
     pedido.licencas[0].periodoMeses = 48;
     expect(validarLicencas(pedido).some((e) => e.mensagem.includes("art.º 48.º"))).toBe(true);
     pedido.condicoes.penalizacoes.limiteGlobal = 25;
+    expect(validarCondicoes(pedido).some((e) => e.mensagem.includes("art.º 329.º"))).toBe(false);
+    pedido.condicoes.penalizacoes.ligada = true;
     expect(validarCondicoes(pedido).some((e) => e.mensagem.includes("art.º 329.º"))).toBe(true);
   });
 

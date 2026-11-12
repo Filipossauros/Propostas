@@ -18,7 +18,6 @@ import {
   MANUTENCOES,
   METRICAS,
   MODALIDADES,
-  ORIGENS_PRECO,
   anosDoPedido,
   comIva,
   comMargemLicenciamento,
@@ -33,7 +32,9 @@ import {
   metricaPorExtenso,
   nomeDaLicenca,
   nomeProcedimentoLicenciamento,
+  frasesDoDireitoDeUso,
   objetoPorExtenso,
+  origemPorExtenso,
   textoDaCondicao,
   tipoSolucaoEavalia,
   tituloDaManutencao,
@@ -467,7 +468,7 @@ function corpoLicenciamento(
       "O acompanhamento e o controlo da execução são assegurados pelo gestor do contrato, que verifica a " +
         "disponibilização das licenças nas quantidades e métricas contratadas" +
         (instrumentos.length > 0 ? ` e o cumprimento dos níveis de serviço fixados no Anexo III — ${enumerar(instrumentos)}` : "") +
-        ", aplicando, em caso de incumprimento, as penalizações aí previstas.",
+        (c.penalizacoes.ligada ? ", aplicando, em caso de incumprimento, as penalizações aí previstas." : "."),
     ),
   );
   if (c.suporte.ligada || comDisponibilidadeVII) {
@@ -632,7 +633,7 @@ function corpoLicenciamento(
         `${letra(i)}.`,
         [
           run(`${nomeDaLicenca(x, pedido.natureza) || "Licença"}: `),
-          x.origemPreco === "" ? marcador("origem do preço") : run(`${ORIGENS_PRECO[x.origemPreco]}.`),
+          x.origemPreco === "" ? marcador("origem do preço") : run(`${origemPorExtenso(x)}.`),
         ],
         RECUO_ALINEA,
       ),
@@ -761,21 +762,7 @@ function corpoLicenciamento(
 
   ponto3("Direito de uso e transmissão");
   p.push(recuado(textoDaCondicao("direitoUso", pedido).trim()));
-  if (c.direitoUso.sublicenciamento)
-    p.push(
-      recuado(
-        "A entidade adjudicante pode sublicenciar a utilização das licenças às entidades e aos fornecedores " +
-          "abrangidos pelo âmbito da licença, dentro do período e das quantidades contratados, sem encargos " +
-          "adicionais, respondendo pelo uso que os sublicenciados delas fizerem.",
-      ),
-    );
-  if (c.direitoUso.transmissao)
-    p.push(
-      recuado(
-        "As licenças podem ser transmitidas, por inteiro e sem custo, a outra entidade do Serviço Nacional de Saúde, " +
-          "mantendo-se as condições do contrato.",
-      ),
-    );
+  for (const frase of frasesDoDireitoDeUso(c.direitoUso)) p.push(recuado(frase));
 
   if (aplicabilidade("manutencao", pedido).aplica) {
     ponto3(tituloDaManutencao(pedido));
@@ -822,29 +809,31 @@ function corpoLicenciamento(
     );
   }
 
-  ponto3("Penalizações");
-  p.push(recuado(textoDaCondicao("penalizacoes", pedido).trim()));
-  const pen = [
-    ...(c.suporte.ligada
-      ? [
-          `Por cada hora de atraso na resolução de um incidente de severidade crítica, face ao tempo máximo fixado: ${formatarNumero(
-            c.penalizacoes.porHoraCritica,
-          )} % do valor mensal do contrato`,
-        ]
-      : [`Por cada hora de atraso no cumprimento das obrigações de serviço: ${formatarNumero(c.penalizacoes.porHoraCritica)} % do valor mensal do contrato`]),
-    ...(comDisponibilidade
-      ? ["Por cada décima de ponto percentual abaixo da disponibilidade mínima: a mesma percentagem do valor mensal do contrato"]
-      : []),
-    `Limite mensal das penalizações: ${formatarNumero(c.penalizacoes.limiteMensal)} % do valor mensal do contrato`,
-    `Limite global: ${formatarNumero(c.penalizacoes.limiteGlobal)} % do preço contratual, nos termos do artigo 329.º do CCP`,
-  ];
-  comPontuacao(pen).forEach((t, i) => p.push(alinea(`${letra(i)}.`, t, RECUO_ALINEA)));
-  p.push(
-    recuado(
-      "Entende-se por valor mensal do contrato o preço contratual do lote a dividir pelo número de meses do contrato.",
-      { antes: 80 },
-    ),
-  );
+  if (c.penalizacoes.ligada) {
+    ponto3("Penalizações");
+    p.push(recuado(textoDaCondicao("penalizacoes", pedido).trim()));
+    const pen = [
+      ...(c.suporte.ligada
+        ? [
+            `Por cada hora de atraso na resolução de um incidente de severidade crítica, face ao tempo máximo fixado: ${formatarNumero(
+              c.penalizacoes.porHoraCritica,
+            )} % do valor mensal do contrato`,
+          ]
+        : [`Por cada hora de atraso no cumprimento das obrigações de serviço: ${formatarNumero(c.penalizacoes.porHoraCritica)} % do valor mensal do contrato`]),
+      ...(comDisponibilidade
+        ? ["Por cada décima de ponto percentual abaixo da disponibilidade mínima: a mesma percentagem do valor mensal do contrato"]
+        : []),
+      `Limite mensal das penalizações: ${formatarNumero(c.penalizacoes.limiteMensal)} % do valor mensal do contrato`,
+      `Limite global: ${formatarNumero(c.penalizacoes.limiteGlobal)} % do preço contratual, nos termos do artigo 329.º do CCP`,
+    ];
+    comPontuacao(pen).forEach((t, i) => p.push(alinea(`${letra(i)}.`, t, RECUO_ALINEA)));
+    p.push(
+      recuado(
+        "Entende-se por valor mensal do contrato o preço contratual do lote a dividir pelo número de meses do contrato.",
+        { antes: 80 },
+      ),
+    );
+  }
 
   for (const propria of c.proprias) {
     ponto3(propria.titulo.trim() || "Condição");

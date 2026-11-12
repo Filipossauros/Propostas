@@ -157,7 +157,8 @@ describe("manifestação de necessidades do licenciamento", () => {
     expect(texto).toContain("Fluxos de aprovação configuráveis sem programação");
     expect(texto).toContain("sem referência a marca");
     expect(texto).toContain("Suporte técnico e níveis de serviço (SLA)");
-    expect(texto).toContain("artigo 329.º do CCP");
+    // As penalizações são facultativas, e vêm desligadas.
+    expect(texto).not.toContain("artigo 329.º do CCP");
     expect(texto).toContain("O preço é o único aspeto da execução do contrato submetido à concorrência");
     expect(texto).toContain("Anexo V – Custos - Licenciamento (eAvalia)");
     expect(texto).toContain("Manutenção e suporte — Sistema de gestão de base de dados relacional");
@@ -182,6 +183,18 @@ describe("manifestação de necessidades do licenciamento", () => {
     const pedido = exemplo();
     pedido.condicoes = { ...pedido.condicoes, disponibilidade: { ...pedido.condicoes.disponibilidade, ligada: false } };
     expect(await textoDe(pedido)).not.toContain("Disponibilidade do serviço");
+  });
+
+  it("as penalizações saem quando ligadas", async () => {
+    const pedido = exemplo();
+    pedido.condicoes = { ...pedido.condicoes, penalizacoes: { ...pedido.condicoes.penalizacoes, ligada: true } };
+    const texto = await textoDe(pedido);
+    expect(texto).toContain("artigo 329.º do CCP");
+    expect(texto).toContain("as penalizações aí previstas");
+  });
+
+  it("a origem do preço leva a referência", async () => {
+    expect(await textoDe(snomed())).toContain("Tabela pública do fabricante ou titular (https://www.snomed.org/member-fees)");
   });
 
   it("o sublicenciamento e a transmissão saem quando escolhidos", async () => {

@@ -2765,3 +2765,14 @@ select.campo-bloqueado:disabled {
   color: var(--texto-suave);
   border-color: var(--borda);
 }
+
+/* Um texto que não se escreve: sai tal como está, com as opções escolhidas. */
+.texto-padronizado {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-alt);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

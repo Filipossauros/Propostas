@@ -201,6 +201,11 @@ export interface Licenca {
    */
   precoUnitario: number;
   origemPreco: OrigemPreco;
+  /**
+   * A referência da origem do preço: o n.º do procedimento anterior, ou a
+   * ligação (ou indicação) da tabela pública.
+   */
+  referenciaPreco: string;
 }
 
 // --------------------------------------------------------------------------
@@ -240,7 +245,8 @@ export interface CondicoesContrato {
     normal: TemposDeSeveridade;
   };
   disponibilidade: { ligada: boolean; texto: string | null; percentagem: number; janelasForaDoHorario: boolean };
-  penalizacoes: { texto: string | null; porHoraCritica: number; limiteMensal: number; limiteGlobal: number };
+  /** Facultativas: podem ficar para a formulação do contrato. */
+  penalizacoes: { ligada: boolean; texto: string | null; porHoraCritica: number; limiteMensal: number; limiteGlobal: number };
   prazo: { ligada: boolean; texto: string | null; diasUteis: number };
   proprias: Array<{ id: string; titulo: string; texto: string }>;
 }
@@ -289,7 +295,7 @@ export function condicoesIniciais(): CondicoesContrato {
       normal: { resposta: 8, resolucao: 72 },
     },
     disponibilidade: { ligada: true, texto: null, percentagem: 99.5, janelasForaDoHorario: true },
-    penalizacoes: { texto: null, porHoraCritica: 0.5, limiteMensal: 10, limiteGlobal: 20 },
+    penalizacoes: { ligada: false, texto: null, porHoraCritica: 0.5, limiteMensal: 10, limiteGlobal: 20 },
     prazo: { ligada: true, texto: null, diasUteis: 10 },
     proprias: [],
   };
@@ -387,6 +393,7 @@ export function criarLicenca(): Licenca {
     periodicidadePreco: "mensal",
     precoUnitario: 0,
     origemPreco: "",
+    referenciaPreco: "",
   };
 }
 
@@ -481,6 +488,15 @@ export function resumoDoTipo(l: Licenca): string {
         ? ` · manutenção incluída (${l.periodoMeses} meses)`
         : "";
   return `${objeto} · Licenças perpétuas${manut}`;
+}
+
+/** A origem do preço, com a referência: «Procedimento anterior (n.º 123/2025)». */
+export function origemPorExtenso(l: Pick<Licenca, "origemPreco" | "referenciaPreco">): string {
+  if (l.origemPreco === "") return "";
+  const ref = l.referenciaPreco.trim();
+  if (l.origemPreco === "procedimentoAnterior" && ref) return `${ORIGENS_PRECO.procedimentoAnterior} (n.º ${ref})`;
+  if (l.origemPreco === "tabelaPublica" && ref) return `${ORIGENS_PRECO.tabelaPublica} (${ref})`;
+  return ORIGENS_PRECO[l.origemPreco];
 }
 
 // --------------------------------------------------------------------------
@@ -827,10 +843,9 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
     case "suporte":
       return software && !outros
         ? "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do " +
-            "incidente. O incumprimento destes tempos dá lugar às penalizações previstas."
+            "incidente."
         : "Apoio à utilização e ao acesso às edições, em língua portuguesa ou inglesa, com tempos máximos de " +
-            "resposta e de resolução por severidade do pedido. O incumprimento destes tempos dá lugar às " +
-            "penalizações previstas.";
+            "resposta e de resolução por severidade do pedido.";
     case "disponibilidade":
       return (
         "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do " +
@@ -849,9 +864,32 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
   }
 }
 
-/** O texto de uma condição: o escrito à mão, ou o por omissão. */
+/**
+ * O texto de uma condição: o escrito à mão, ou o por omissão. O direito de uso
+ * não tem texto livre: sai sempre o padronizado, com as opções escolhidas.
+ */
 export function textoDaCondicao(chave: CondicaoComTexto, pedido: PedidoLicenciamento): string {
+  if (chave === "direitoUso") return textoPorOmissao(chave, pedido);
   return pedido.condicoes[chave].texto ?? textoPorOmissao(chave, pedido);
+}
+
+/** As frases das opções do direito de uso, como saem no Anexo III. */
+export function frasesDoDireitoDeUso(c: CondicoesContrato["direitoUso"]): string[] {
+  return [
+    ...(c.sublicenciamento
+      ? [
+          "A entidade adjudicante pode sublicenciar a utilização das licenças às entidades e aos fornecedores " +
+            "abrangidos pelo âmbito da licença, dentro do período e das quantidades contratados, sem encargos " +
+            "adicionais, respondendo pelo uso que os sublicenciados delas fizerem.",
+        ]
+      : []),
+    ...(c.transmissao
+      ? [
+          "As licenças podem ser transmitidas, por inteiro e sem custo, a outra entidade do Serviço Nacional de " +
+            "Saúde, mantendo-se as condições do contrato.",
+        ]
+      : []),
+  ];
 }
 
 const HORA = /^([01]\d|2[0-4]):([0-5]\d)$/;
@@ -931,6 +969,10 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
   if (!Number.isInteger(l.quantidade) || l.quantidade < 1) erros.push(de("a quantidade tem de ser um número inteiro positivo."));
   if (!(l.precoUnitario > 0)) erros.push(de("falta o preço unitário de referência."));
   if (l.origemPreco === "") erros.push(de("indique a origem do preço de referência."));
+  else if (l.origemPreco === "procedimentoAnterior" && l.referenciaPreco.trim() === "")
+    erros.push(de("indique o n.º do procedimento anterior."));
+  else if (l.origemPreco === "tabelaPublica" && l.referenciaPreco.trim() === "")
+    erros.push(de("indique a ligação ou a referência da tabela pública."));
   return erros;
 }
 
@@ -955,9 +997,7 @@ export function validarCondicoes(pedido: PedidoLicenciamento): ErroValidacao[] {
     if (textoDaCondicao(chave, pedido).trim() === "") erros.push(falta(chave, `${nome}: escreva o texto da condição.`));
   };
   texto("ambito", "Âmbito da licença");
-  texto("direitoUso", "Direito de uso e transmissão");
   if (aplicabilidade("manutencao", pedido).aplica) texto("manutencao", tituloDaManutencao(pedido));
-  texto("penalizacoes", "Penalizações");
   if (c.suporte.ligada) {
     texto("suporte", "Suporte técnico e SLA");
     if (c.suporte.horario === "personalizado" && c.suporte.diasPersonalizados.trim() === "")
@@ -983,16 +1023,19 @@ export function validarCondicoes(pedido: PedidoLicenciamento): ErroValidacao[] {
     if (!(c.disponibilidade.percentagem > 0 && c.disponibilidade.percentagem <= 100))
       erros.push(falta("disponibilidade", "Disponibilidade: a percentagem tem de estar entre 0 e 100 %."));
   }
-  if (!(c.penalizacoes.porHoraCritica > 0))
-    erros.push(falta("penalizacoes", "Penalizações: indique a penalização por hora de atraso."));
-  if (!(c.penalizacoes.limiteMensal > 0)) erros.push(falta("penalizacoes", "Penalizações: indique o limite mensal."));
-  if (!(c.penalizacoes.limiteGlobal > 0) || c.penalizacoes.limiteGlobal > LIMITE_GLOBAL_PENALIZACOES)
-    erros.push(
-      falta(
-        "penalizacoes",
-        `Penalizações: o limite global tem de estar entre 0 e ${LIMITE_GLOBAL_PENALIZACOES} % do valor do contrato (art.º 329.º do CCP).`,
-      ),
-    );
+  if (c.penalizacoes.ligada) {
+    texto("penalizacoes", "Penalizações");
+    if (!(c.penalizacoes.porHoraCritica > 0))
+      erros.push(falta("penalizacoes", "Penalizações: indique a penalização por hora de atraso."));
+    if (!(c.penalizacoes.limiteMensal > 0)) erros.push(falta("penalizacoes", "Penalizações: indique o limite mensal."));
+    if (!(c.penalizacoes.limiteGlobal > 0) || c.penalizacoes.limiteGlobal > LIMITE_GLOBAL_PENALIZACOES)
+      erros.push(
+        falta(
+          "penalizacoes",
+          `Penalizações: o limite global tem de estar entre 0 e ${LIMITE_GLOBAL_PENALIZACOES} % do valor do contrato (art.º 329.º do CCP).`,
+        ),
+      );
+  }
   if (c.prazo.ligada) {
     texto("prazo", "Prazo de disponibilização");
     if (!(Number.isInteger(c.prazo.diasUteis) && c.prazo.diasUteis > 0))
@@ -1159,6 +1202,7 @@ function normalizarLicenca(bruto: unknown): Licenca {
     periodicidadePreco: r.periodicidadePreco === "anual" ? "anual" : "mensal",
     precoUnitario: numero(r.precoUnitario),
     origemPreco: deLista(r.origemPreco, chaves(ORIGENS_PRECO), ""),
+    referenciaPreco: texto(r.referenciaPreco),
   };
   return comAlteracao(licenca, {});
 }
@@ -1205,7 +1249,8 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
     },
     direitoUso: {
-      texto: textoDeCondicao(d.texto),
+      // Sem texto livre: sai sempre o padronizado.
+      texto: null,
       sublicenciamento: booleano(d.sublicenciamento, false),
       transmissao: booleano(d.transmissao, true),
     },
@@ -1228,6 +1273,7 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       janelasForaDoHorario: booleano(di.janelasForaDoHorario, true),
     },
     penalizacoes: {
+      ligada: booleano(pe.ligada, false),
       texto: textoDeCondicao(pe.texto),
       porHoraCritica: numero(pe.porHoraCritica, base.penalizacoes.porHoraCritica),
       limiteMensal: numero(pe.limiteMensal, base.penalizacoes.limiteMensal),
@@ -1373,6 +1419,7 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     periodicidadePreco: "anual",
     precoUnitario: 120000,
     origemPreco: "tabelaPublica",
+    referenciaPreco: "https://www.snomed.org/member-fees",
   };
   const pedido = pedidoLicenciamentoInicial(anoInicio);
   return {
@@ -1436,6 +1483,7 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
     quantidade: 64,
     precoUnitario: 1900,
     origemPreco: "tabelaPublica",
+    referenciaPreco: "Tabela de preços do fabricante, edição de 2026",
   };
   return {
     ...pedidoLicenciamentoInicial(anoInicio),

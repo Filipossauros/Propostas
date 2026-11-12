@@ -334,7 +334,7 @@ manutenção pode estar incluída, não ser contratada ou ter **linha própria**
 anual, no mesmo procedimento e lote.
 
 **Classificação eAvalia.** Só se escolhem o âmbito e, na licença determinada, o tipo de solução (com a
-explicação de cada um). O resto decorre das escolhas: na aberta, «Submissão à concorrência» e consulta ao
+explicação de cada um). O resto não se mostra e decorre das escolhas: na aberta, «Submissão à concorrência» e consulta ao
 mercado «Sim»; na determinada, consulta «Não»; o tipo vem do direito de uso (subscrição → «Subscrição ou
 SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade (aquisição e alargamento →
 «Aquisição novas licenças»; renovação e upgrade → «Actualizações/Upgrades/Correções»). As medidas do
@@ -345,12 +345,16 @@ de cada ano a partir de janeiro do ano de início. Licença perpétua: quantidad
 mais a manutenção em linha própria (percentagem anual de referência sobre o valor das licenças) pelo
 período. As métricas «Licença nacional» e «Licença institucional» têm sempre quantidade 1. O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
+A origem do preço «procedimento anterior» pede o n.º do procedimento; «tabela pública», a ligação ou a
+indicação da tabela.
 
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
 a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. O
-sublicenciamento e a transmissão a outra entidade do SNS têm explicação (i). O horário de suporte é dias
-úteis, 7 dias por semana ou personalizado, com as horas editáveis.
+direito de uso não tem texto livre: sai um texto padronizado, com as opções de sublicenciamento e de
+transmissão a outra entidade do SNS, cada uma com explicação (i). As penalizações são facultativas e vêm
+desligadas: podem ficar para a formulação do contrato. O horário de suporte é dias úteis, 7 dias por
+semana ou personalizado, com as horas editáveis.
 
 **O Anexo Técnico (ZIP)** leva a manifestação de necessidades no modelo da DAG (Word e, com o n.º da
 informação e o n.º de orçamento, PDF), o pedido eAvalia com a folha **«Custos - Licenciamento»** preenchida

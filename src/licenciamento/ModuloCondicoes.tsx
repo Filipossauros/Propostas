@@ -15,6 +15,7 @@ import {
   aplicaNaoProdutivos,
   aplicabilidade,
   condicoesIniciais,
+  frasesDoDireitoDeUso,
   horarioPorExtenso,
   objetoPorExtenso,
   textoDaCondicao,
@@ -31,7 +32,7 @@ interface Props {
   onIrParaPedido: () => void;
 }
 
-type Selo = "obrigatória" | "recomendada" | "se SaaS";
+type Selo = "obrigatória" | "recomendada" | "facultativa" | "se SaaS";
 
 /**
  * Uma condição do contrato: o título, a marca, o interruptor quando se pode
@@ -236,7 +237,13 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           )}
         </Condicao>
 
-        <Condicao titulo="Direito de uso e transmissão" selo="obrigatória" {...textoDe("direitoUso")}>
+        <div className="condicao">
+          <div className="condicao-cabecalho">
+            <strong className="condicao-titulo">Direito de uso e transmissão</strong>
+            <span className="selo-condicao selo-condicao-obrigatoria">obrigatória</span>
+          </div>
+          <p className="texto-padronizado">{textoDaCondicao("direitoUso", pedido)}</p>
+          <p className="ajuda">Texto padronizado, a partir do direito de uso das licenças do L1. Escolha as opções:</p>
           <label className="campo-opcao">
             <input
               type="checkbox"
@@ -261,7 +268,12 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </span>
           </label>
           <Explicacao pergunta="O que é a transmissão?">{EXPLICACAO_TRANSMISSAO}</Explicacao>
-        </Condicao>
+          {frasesDoDireitoDeUso(c.direitoUso).map((f) => (
+            <p key={f} className="texto-padronizado">
+              {f}
+            </p>
+          ))}
+        </div>
       </section>
 
       <section className="painel">
@@ -396,7 +408,17 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           </label>
         </Condicao>
 
-        <Condicao titulo="Penalizações" selo="obrigatória" {...textoDe("penalizacoes")}>
+        <Condicao
+          titulo="Penalizações"
+          selo="facultativa"
+          ligada={c.penalizacoes.ligada}
+          onLigar={(ligada) => alterar("penalizacoes", { ligada })}
+          {...textoDe("penalizacoes")}
+        >
+          <p className="ajuda">
+            Facultativas: podem ficar para a formulação do contrato. Ligue-as se quiser fixá-las já na manifestação de
+            necessidades.
+          </p>
           <div className="linha-campos linha-campos-numeros">
             <label className="campo-numero-rotulado">
               <span className="rotulo">Por hora de atraso (crítica)</span>

@@ -25,18 +25,14 @@ import {
   OBJETOS_LICENCA,
   ORIGENS_PRECO,
   PERIODICIDADES,
-  ROTULO_TIPO_LICENCIAMENTO,
   TIPOS_SOLUCAO_DETERMINADA,
   comAlteracao,
-  consultaMercadoEavalia,
   criarLicenca,
   importarPedidoLicenciamentoJSON,
   nomeDaLicenca,
   pedidoLicenciamentoExemplo,
   pedidoLicenciamentoInicial,
   resumoDoTipo,
-  tipoEavalia,
-  tipoLicenciamentoEavalia,
   validarLicenca,
   validarLicencas,
   valorDaLicenca,
@@ -106,17 +102,6 @@ function Escolha<T extends string>({
 const iguais = <T extends string>(lista: readonly T[]) => lista.map((v) => [v, v] as const);
 const deRegisto = <T extends string>(registo: Record<T, string>) =>
   (Object.entries(registo) as Array<[T, string]>).map(([v, t]) => [v, t] as const);
-
-/** Um valor do eAvalia que decorre de outra escolha: mostra-se, não se escolhe. */
-function Derivado({ rotulo, valor, origem }: { rotulo: string; valor: string; origem: string }) {
-  return (
-    <div className="valor-derivado">
-      <span className="rotulo">{rotulo}</span>
-      <strong>{valor}</strong>
-      <span className="meta">{origem}</span>
-    </div>
-  );
-}
 
 /**
  * L1 · Licenças: as licenças a adquirir — o que é cada uma, como se conta,
@@ -535,7 +520,7 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             <header className="painel-cabecalho">
               <h3>Classificação eAvalia</h3>
               <p className="painel-nota">
-                Preenche a folha «Custos - Licenciamento». Só se escolhe o que não decorre das escolhas acima.
+                Preenche a folha «Custos - Licenciamento». O resto da classificação decorre das escolhas acima.
               </p>
             </header>
             <div className="linha-campos">
@@ -576,23 +561,6 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                 </ul>
               </Explicacao>
             )}
-            <div className="valores-derivados">
-              <Derivado
-                rotulo="Tipo"
-                valor={tipoEavalia(emEdicao)}
-                origem={`do direito de uso «${DIREITOS_USO[emEdicao.direitoUso].toLowerCase()}»`}
-              />
-              <Derivado
-                rotulo="Tipo de licenciamento"
-                valor={ROTULO_TIPO_LICENCIAMENTO[tipoLicenciamentoEavalia(emEdicao)]}
-                origem={`da modalidade «${MODALIDADES[emEdicao.modalidade].toLowerCase()}»`}
-              />
-              <Derivado
-                rotulo="Consulta ao mercado"
-                valor={consultaMercadoEavalia(pedido.natureza)}
-                origem={`da natureza «${aberta ? "aberta à concorrência" : "licença determinada"}»`}
-              />
-            </div>
           </section>
 
           <section className="painel">
@@ -623,6 +591,26 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                 onChange={(origemPreco) => alterarLicenca({ origemPreco })}
               />
             </div>
+            {(emEdicao.origemPreco === "procedimentoAnterior" || emEdicao.origemPreco === "tabelaPublica") && (
+              <div className="linha-campos linha-campos-separada">
+                <label className="campo-crescente">
+                  <span className="rotulo">
+                    {emEdicao.origemPreco === "procedimentoAnterior"
+                      ? "N.º do procedimento anterior"
+                      : "Ligação ou indicação da tabela pública"}
+                  </span>
+                  <input
+                    type="text"
+                    value={emEdicao.referenciaPreco}
+                    placeholder={
+                      emEdicao.origemPreco === "procedimentoAnterior" ? "ex.: CP 123/2025" : "ex.: https://… ou «Tabela de preços 2026, p. 4»"
+                    }
+                    aria-invalid={emEdicao.referenciaPreco.trim() === ""}
+                    onChange={(e) => alterarLicenca({ referenciaPreco: e.target.value })}
+                  />
+                </label>
+              </div>
+            )}
             <div className="linha-campos linha-campos-numeros">
               <label className="campo-numero-rotulado">
                 <span className="rotulo">Quantidade</span>
