@@ -11,8 +11,7 @@ em análise nunca saem do posto de trabalho.
 A aplicação abre numa página inicial com quatro grupos de módulos, cada um num cartão:
 
 - **Pedido de serviços de bolsa de horas** — 1 Projeto, 2 Perfis, 3 Lotes.
-- **Pedido de licenciamento** — 1 Projeto (o mesmo do grupo anterior, com os mesmos dados), L1 Licenças, L2
-  Condições e L3 Pedido.
+- **Pedido de licenciamento** — 1 Produto, L1 Licenças, L2 Condições e L3 Pedido.
 - **Análise de propostas** — 4 Análise, 5 Ordenação.
 - **Orçamento** — Vista Geral da Unidade e Vista Geral da Direção.
 
@@ -312,43 +311,53 @@ perfil que a exija — chamada de atenção, não verificação.
 
 ## O pedido de licenciamento
 
-Aquisição de licenciamento de software em que **o preço é o único aspeto submetido à concorrência**: tudo
-o resto — requisitos, métrica, manutenção, níveis de serviço — são termos e condições do contrato.
+Aquisição de licenças em que **o preço é o único aspeto submetido à concorrência**: tudo o resto —
+requisitos, métrica, manutenção, níveis de serviço — são termos e condições do contrato. O que se adquire
+é um **produto**, que pode ser software, mas também uma terminologia como a SNOMED CT, uma norma ou um
+conteúdo.
 
 | Módulo | Quem usa | O que faz |
 |---|---|---|
-| **1 · Projeto** | Responsável do projeto | O mesmo do pedido de serviços, sem o benefício de fecho da bolsa de horas |
-| **L1 · Licenças** | Gestor do projeto, com a área técnica | Natureza da aquisição e, por produto: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
-| **L2 · Condições** | Gestor do projeto | Âmbito da licença, direito de uso e transmissão, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo de disponibilização, mais condições próprias |
-| **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, eAvalia, júri e Anexo Técnico |
+| **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição. Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
+| **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
+| **L2 · Condições** | Responsável do produto | Âmbito, direito de uso e transmissão, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
+| **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, júri e Anexo Técnico |
 
-**Natureza da aquisição.** Numa aquisição **aberta à concorrência**, cada produto descreve-se sem marca:
-designação, categoria e requisitos funcionais e técnicos mínimos, linha a linha; o concorrente identifica
-o produto no mapa de preços. Num **produto determinado**, identifica-se o produto, o fabricante e a versão
-mínima, e fundamenta-se a escolha (plataforma instalada, direitos exclusivos — art.º 24.º do CCP —,
-renovação).
+**Natureza da aquisição.** **Aberta à concorrência**: cada licença descreve-se sem marca (designação e
+requisitos funcionais e técnicos mínimos, linha a linha) e o concorrente identifica o produto no mapa de
+preços. **Licença determinada**: identifica-se a licença, o fabricante ou titular dos direitos e a versão,
+e fundamenta-se a escolha (plataforma instalada, direitos exclusivos — art.º 24.º do CCP —, renovação).
 
-**Valor estimado.** Subscrição: quantidade × preço/mês × meses, repartido pelos meses de cada ano a partir
-de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano, mais a manutenção à
-parte (percentagem anual do valor das licenças) pelo período. O período vai até 36 meses (art.º 48.º do
-CCP); acima de 12 pede encargos plurianuais. A margem prudencial aplica-se ao preço unitário de cada
-produto. Por omissão, cada produto é um lote; no L3 juntam-se produtos no mesmo lote.
+**Tipo de licenciamento.** Objeto da licença (software; terminologia, norma ou conteúdo; ou outro, por
+extenso), direito de uso (subscrição ou perpétuo), modalidade e manutenção. Na licença perpétua, a
+manutenção pode estar incluída, não ser contratada ou ter **linha própria** no mapa de preços, com preço
+anual, no mesmo procedimento e lote.
 
-**O Anexo Técnico (ZIP)** leva:
+**Classificação eAvalia.** Só se escolhem o âmbito e, na licença determinada, o tipo de solução (com a
+explicação de cada um). O resto decorre das escolhas: na aberta, «Submissão à concorrência» e consulta ao
+mercado «Sim»; na determinada, consulta «Não»; o tipo vem do direito de uso (subscrição → «Subscrição ou
+SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade (aquisição e alargamento →
+«Aquisição novas licenças»; renovação e upgrade → «Actualizações/Upgrades/Correções»). As medidas do
+«Alinhamento Tecnológico» saem todas «Não aplicável».
 
-- a manifestação de necessidades, no mesmo modelo da DAG (Word e, com o n.º da informação e o n.º de
-  orçamento, PDF), com as condições do L2 nas Especificações Técnicas (Anexo III) e as folhas do eAvalia
-  em imagem;
-- o pedido eAvalia com o «Alinhamento Tecnológico» e a folha **«Custos - Licenciamento»** preenchida — um
-  bloco por produto, na secção do software proprietário ou, para «Solução Software Livre», na do código
-  aberto. O preço unitário é o do período inteiro, e a manutenção à parte vai na manutenção da aquisição.
-  A folha «Custos - Serviços» fica como o modelo a traz;
-- um **mapa de quantidades e preços** em Excel por lote, que o concorrente preenche (só as células
-  amarelas: preço e, na aberta, o produto proposto);
-- o JSON do pedido, que se importa no L1.
+**Valor estimado.** Subscrição: quantidade × preço (mensal ou anual) × meses ou anos, repartido pelos meses
+de cada ano a partir de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano,
+mais a manutenção em linha própria (percentagem anual de referência sobre o valor das licenças) pelo
+período. As métricas «Licença nacional» e «Licença institucional» têm sempre quantidade 1. O período vai até
+36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
 
-O pedido fica guardado neste navegador (`propostas.v2.licenciamento`). A ordenação das propostas de
-licenciamento (Módulo 5) e as vistas gerais ainda não o leem.
+**Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
+perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
+a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. O
+sublicenciamento e a transmissão a outra entidade do SNS têm explicação (i). O horário de suporte é dias
+úteis, 7 dias por semana ou personalizado, com as horas editáveis.
+
+**O Anexo Técnico (ZIP)** leva a manifestação de necessidades no modelo da DAG (Word e, com o n.º da
+informação e o n.º de orçamento, PDF), o pedido eAvalia com a folha **«Custos - Licenciamento»** preenchida
+(«Custos - Serviços» fica como o modelo a traz), um **mapa de quantidades e preços** em Excel por lote e o
+JSON do pedido. O pedido fica guardado neste navegador (`propostas.v2.licenciamento`); um pedido da versão
+anterior é convertido ao abrir. A ordenação das propostas de licenciamento e as vistas gerais ainda não o
+leem.
 
 ## As vistas gerais e os cenários de corte
 

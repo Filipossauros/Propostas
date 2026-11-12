@@ -1,34 +1,32 @@
-// O pedido de licenciamento de software: o modelo, os cálculos e a validação.
+// O pedido de licenciamento: o modelo, os cálculos e a validação.
 //
-// Três módulos partilham este pedido — L1 (as licenças), L2 (as condições do
-// contrato) e L3 (lotes, valor estimado, júri e Anexo Técnico) — e ele parte
-// da mesma caracterização do projeto que o pedido de serviços de bolsa de
-// horas (Módulo 1).
+// Quatro módulos partilham este pedido — 1 Produto, L1 Licenças, L2 Condições
+// e L3 Pedido. O que se adquire é um produto (um software, mas também uma
+// terminologia como a SNOMED CT, uma norma ou um conteúdo), e cada licença é
+// uma linha do mapa de quantidades e preços.
 //
-// O único aspeto submetido à concorrência é o preço. Tudo o resto — o que o
-// software tem de fazer, a métrica, a manutenção, os níveis de serviço — são
+// O único aspeto submetido à concorrência é o preço. Tudo o resto — o que a
+// licença tem de permitir, a métrica, a manutenção, os níveis de serviço — são
 // termos e condições do contrato, e saem nas Especificações Técnicas.
 //
-// Há duas naturezas de aquisição, e cada uma descreve o produto de forma
+// Há duas naturezas de aquisição, e cada uma descreve a licença de forma
 // diferente:
-//   · aberta à concorrência — descreve-se a necessidade (categoria e requisitos
-//     mínimos), sem marca nem fabricante; o produto só se conhece na proposta;
-//   · produto determinado — identifica-se o produto, o fabricante e a versão, e
-//     fundamenta-se a escolha (art.º 24.º do CCP, plataforma já instalada…).
+//   · aberta à concorrência — descreve-se a necessidade (requisitos mínimos),
+//     sem marca nem fabricante; o produto concreto só se conhece na proposta;
+//   · licença determinada — identifica-se a licença, o fabricante ou titular
+//     dos direitos e a versão, e fundamenta-se a escolha (art.º 24.º do CCP).
+//
+// A classificação eAvalia decorre, quase toda, destas escolhas: o tipo, do
+// direito de uso; o tipo de licenciamento, da modalidade; a consulta ao
+// mercado e (na aberta) o tipo de solução, da natureza. Só o âmbito — e o tipo
+// de solução na licença determinada — se escolhem.
 
-import type { InformacaoEavalia, ItemPerfil, JuriTecnico, JustificacaoProjeto } from "./types";
-import {
-  ANOS_PLURIANUAIS,
-  SCHEMA_VERSION_ATUAL,
-  TAXA_IVA_PADRAO,
-  informacaoEavaliaInicial,
-  juriInicial,
-} from "./types";
+import type { ItemPerfil, JuriTecnico, JustificacaoProjeto } from "./types";
+import { ANOS_PLURIANUAIS, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, juriInicial } from "./types";
 import { gerarId } from "./id";
 import type { ErroValidacao } from "./perfil";
-import { ErroImportacao } from "./perfil";
-import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
-import { validarEavalia } from "./lotes";
+import { ErroImportacao, normalizarItens } from "./perfil";
+import { justificacaoInicial, normalizarJustificacao, semBeneficioFixo } from "./justificacao";
 
 // --------------------------------------------------------------------------
 // As listas do eAvalia («Custos - Licenciamento»), tal como vêm na folha
@@ -43,43 +41,72 @@ export const TIPOS_SOLUCAO_EAVALIA = [
 ] as const;
 export type TipoSolucaoEavalia = (typeof TIPOS_SOLUCAO_EAVALIA)[number];
 
-export const TIPOS_EAVALIA = ["Licenças", "Upgrade de licenças", "Subscrição ou SaaS", "Outros"] as const;
-export type TipoEavalia = (typeof TIPOS_EAVALIA)[number];
+/** Os tipos de solução que se escolhem numa licença determinada (na aberta é sempre a submissão à concorrência). */
+export const TIPOS_SOLUCAO_DETERMINADA = [
+  "Software Proprietário sem alternativas",
+  "Software Proprietário com apresentação TCO",
+  "Solução Software Livre",
+] as const satisfies readonly TipoSolucaoEavalia[];
+export type TipoSolucaoDeterminada = (typeof TIPOS_SOLUCAO_DETERMINADA)[number];
+
+/** O que cada tipo de solução quer dizer, para quem escolhe. */
+export const EXPLICACAO_TIPOS_SOLUCAO: Record<TipoSolucaoDeterminada, string> = {
+  "Solução Software Livre":
+    "Software de código aberto, sem custo de licença. Pode haver custo de suporte. No eAvalia vai para a secção " +
+    "«Software de Código Aberto».",
+  "Software Proprietário sem alternativas":
+    "Não existe alternativa no mercado: plataforma já instalada, direitos exclusivos ou renovação. É o caso da " +
+    "SNOMED CT.",
+  "Software Proprietário com apresentação TCO":
+    "Há alternativas, e a escolha justifica-se pelo custo total de posse: aquisição, migração, formação, manutenção " +
+    "e saída. Obriga a juntar essa análise ao pedido.",
+};
+
+export type TipoEavalia = "Licenças" | "Subscrição ou SaaS";
 
 export const AMBITOS_EAVALIA = ["Produtividade", "Servidor", "Gestão Documental", "Outro"] as const;
 export type AmbitoEavalia = (typeof AMBITOS_EAVALIA)[number];
 
-export const TIPOS_LICENCIAMENTO_EAVALIA = ["Aquisição novas licenças", "Actualizações/Upgrades/Correções"] as const;
-export type TipoLicenciamentoEavalia = (typeof TIPOS_LICENCIAMENTO_EAVALIA)[number];
+export type TipoLicenciamentoEavalia = "Aquisição novas licenças" | "Actualizações/Upgrades/Correções";
+/** Como o tipo de licenciamento se lê no ecrã; o ficheiro leva o valor exato da lista do modelo. */
+export const ROTULO_TIPO_LICENCIAMENTO: Record<TipoLicenciamentoEavalia, string> = {
+  "Aquisição novas licenças": "Aquisição de novas licenças",
+  "Actualizações/Upgrades/Correções": "Atualizações / upgrades / correções",
+};
 
-export const RESPOSTAS_CONSULTA_MERCADO = ["Sim", "Não"] as const;
-export type RespostaConsultaMercado = (typeof RESPOSTAS_CONSULTA_MERCADO)[number];
+export type RespostaConsultaMercado = "Sim" | "Não";
 
+/** O que se escolhe da classificação eAvalia; o resto decorre das outras escolhas. */
 export interface ClassificacaoEavalia {
-  tipoSolucao: TipoSolucaoEavalia | "";
-  tipo: TipoEavalia | "";
+  /** Só conta na licença determinada. */
+  tipoSolucao: TipoSolucaoDeterminada | "";
   ambito: AmbitoEavalia | "";
-  consultaMercado: RespostaConsultaMercado | "";
-  tipoLicenciamento: TipoLicenciamentoEavalia | "";
 }
 
 // --------------------------------------------------------------------------
-// O produto (L1)
+// A licença (L1)
 // --------------------------------------------------------------------------
 
 export type NaturezaAquisicao = "aberta" | "determinado";
 
-export const FUNDAMENTOS_PRODUTO = {
+export const FUNDAMENTOS_LICENCA = {
   plataformaInstalada: "Plataforma já instalada — continuidade e compatibilidade técnica",
-  direitosExclusivos: "Direitos exclusivos do fabricante (art.º 24.º, n.º 1, alínea e), do CCP)",
+  direitosExclusivos: "Direitos exclusivos do fabricante ou titular (art.º 24.º, n.º 1, alínea e), do CCP)",
   renovacao: "Renovação de licenças existentes",
   outro: "Outro",
 } as const;
-export type FundamentoProduto = keyof typeof FUNDAMENTOS_PRODUTO | "";
+export type FundamentoLicenca = keyof typeof FUNDAMENTOS_LICENCA | "";
+
+export type ObjetoLicenca = "software" | "terminologia" | "outro";
+export const OBJETOS_LICENCA: Record<ObjetoLicenca, string> = {
+  software: "Software",
+  terminologia: "Terminologia, norma ou conteúdo",
+  outro: "Outro (indicar)",
+};
 
 export type DireitoUso = "temporario" | "perpetuo";
 export const DIREITOS_USO: Record<DireitoUso, string> = {
-  temporario: "Temporário (subscrição / SaaS)",
+  temporario: "Temporário (subscrição)",
   perpetuo: "Perpétuo",
 };
 
@@ -94,9 +121,12 @@ export const MODALIDADES: Record<Modalidade, string> = {
 export type Manutencao = "incluida" | "aParte" | "naoAplicavel";
 export const MANUTENCOES: Record<Manutencao, string> = {
   incluida: "Incluída no preço",
-  aParte: "À parte (% do valor da licença / ano)",
-  naoAplicavel: "Não aplicável",
+  aParte: "Linha própria no mapa de preços",
+  naoAplicavel: "Não contratada",
 };
+
+export type PeriodicidadePreco = "mensal" | "anual";
+export const PERIODICIDADES: Record<PeriodicidadePreco, string> = { mensal: "Mensal", anual: "Anual" };
 
 export type Metrica =
   | ""
@@ -105,7 +135,9 @@ export type Metrica =
   | "dispositivo"
   | "core"
   | "instancia"
-  | "volume";
+  | "volume"
+  | "nacional"
+  | "institucional";
 /** A métrica no singular e no plural: «1 utilizador nomeado», «1 200 utilizadores nomeados». */
 export const METRICAS: Record<Exclude<Metrica, "">, { singular: string; plural: string }> = {
   utilizadorNomeado: { singular: "Utilizador nomeado", plural: "Utilizadores nomeados" },
@@ -114,49 +146,58 @@ export const METRICAS: Record<Exclude<Metrica, "">, { singular: string; plural: 
   core: { singular: "Core / processador", plural: "Cores / processadores" },
   instancia: { singular: "Instância / servidor", plural: "Instâncias / servidores" },
   volume: { singular: "Unidade de volume (transações, GB…)", plural: "Unidades de volume" },
+  nacional: { singular: "Licença nacional (território)", plural: "Licenças nacionais" },
+  institucional: { singular: "Licença institucional (entidade)", plural: "Licenças institucionais" },
 };
+/** As métricas de licença única: a quantidade é sempre 1. */
+export const METRICAS_UNICAS: ReadonlyArray<Exclude<Metrica, "">> = ["nacional", "institucional"];
 
 export type OrigemPreco = "" | "consultaPreliminar" | "procedimentoAnterior" | "tabelaPublica";
 export const ORIGENS_PRECO: Record<Exclude<OrigemPreco, "">, string> = {
   consultaPreliminar: "Consulta preliminar ao mercado (art.º 35.º-A do CCP)",
   procedimentoAnterior: "Procedimento anterior",
-  tabelaPublica: "Tabela pública do fabricante",
+  tabelaPublica: "Tabela pública do fabricante ou titular",
 };
 
 /** O prazo máximo de vigência (art.º 48.º do CCP): três anos, como na bolsa de horas. */
 export const MESES_MAXIMOS = ANOS_PLURIANUAIS * 12;
 
-export interface ProdutoLicenca {
+export interface Licenca {
   id: string;
-  // Aberta à concorrência: a descrição do software, sem marca.
-  /** Designação do produto no procedimento, ex.: «Plataforma de gestão documental». */
+  // Aberta à concorrência: a descrição, sem marca.
+  /** Designação da licença no procedimento, ex.: «Plataforma de gestão documental». */
   designacao: string;
-  /** Categoria de software, ex.: «Gestão documental e workflow». */
-  categoria: string;
   requisitosFuncionais: ItemPerfil[];
   requisitosTecnicos: ItemPerfil[];
-  // Produto determinado: a identificação e o fundamento.
-  produto: string;
+  // Licença determinada: a identificação e o fundamento.
+  /** A licença como o fabricante ou titular a designa, ex.: «Afiliação nacional SNOMED International». */
+  nomeComercial: string;
+  /** O fabricante ou o titular dos direitos. */
   fabricante: string;
   versao: string;
-  fundamento: FundamentoProduto;
+  fundamento: FundamentoLicenca;
   /** A explicação do fundamento — sai na manifestação. */
   explicacaoFundamento: string;
   // Tipo de licenciamento.
+  objeto: ObjetoLicenca;
+  /** O objeto, quando é «outro». */
+  objetoOutro: string;
   direitoUso: DireitoUso;
   modalidade: Modalidade;
   /** Duração da subscrição, ou da manutenção, em meses. */
   periodoMeses: number;
   manutencao: Manutencao;
-  /** Percentagem anual da manutenção, sobre o valor das licenças, quando é à parte. */
+  /** Percentagem anual de referência da manutenção, sobre o valor das licenças, quando tem linha própria. */
   percentagemManutencao: number;
   eavalia: ClassificacaoEavalia;
   // Métrica, quantidade e preço de referência.
   metrica: Metrica;
   quantidade: number;
+  /** Na subscrição, se o preço é por mês ou por ano. */
+  periodicidadePreco: PeriodicidadePreco;
   /**
-   * Preço unitário de referência sem IVA: por mês, na subscrição; de uma vez,
-   * na licença perpétua.
+   * Preço unitário de referência sem IVA: por mês ou por ano, na subscrição; de
+   * uma vez, na licença perpétua.
    */
   precoUnitario: number;
   origemPreco: OrigemPreco;
@@ -166,10 +207,11 @@ export interface ProdutoLicenca {
 // As condições do contrato (L2)
 // --------------------------------------------------------------------------
 
-export type HorarioSuporte = "uteis" | "24x7";
+export type HorarioSuporte = "uteis" | "7dias" | "personalizado";
 export const HORARIOS_SUPORTE: Record<HorarioSuporte, string> = {
-  uteis: "Dias úteis, das 9h às 18h",
-  "24x7": "24 horas por dia, 7 dias por semana",
+  uteis: "Dias úteis",
+  "7dias": "7 dias por semana",
+  personalizado: "Personalizado",
 };
 
 export interface TemposDeSeveridade {
@@ -177,71 +219,78 @@ export interface TemposDeSeveridade {
   resolucao: number;
 }
 
+/**
+ * Os textos das condições: `null` é o texto por omissão, que acompanha as
+ * licenças do L1 enquanto não for alterado à mão.
+ */
 export interface CondicoesContrato {
-  ambito: { texto: string; entidades: string; naoProdutivosSemCusto: boolean };
-  direitoUso: { texto: string; transmissao: boolean };
-  manutencao: { texto: string };
+  ambito: { texto: string | null; entidades: string; naoProdutivosSemCusto: boolean };
+  direitoUso: { texto: string | null; sublicenciamento: boolean; transmissao: boolean };
+  manutencao: { texto: string | null };
   suporte: {
     ligada: boolean;
-    texto: string;
+    texto: string | null;
     horario: HorarioSuporte;
+    /** Os dias, quando o horário é personalizado: «Dias úteis e sábados». */
+    diasPersonalizados: string;
+    horaInicio: string;
+    horaFim: string;
     critica: TemposDeSeveridade;
     alta: TemposDeSeveridade;
     normal: TemposDeSeveridade;
   };
-  disponibilidade: { ligada: boolean; texto: string; percentagem: number; janelasForaDoHorario: boolean };
-  penalizacoes: { texto: string; porHoraCritica: number; limiteMensal: number; limiteGlobal: number };
-  prazo: { ligada: boolean; texto: string; diasUteis: number };
+  disponibilidade: { ligada: boolean; texto: string | null; percentagem: number; janelasForaDoHorario: boolean };
+  penalizacoes: { texto: string | null; porHoraCritica: number; limiteMensal: number; limiteGlobal: number };
+  prazo: { ligada: boolean; texto: string | null; diasUteis: number };
   proprias: Array<{ id: string; titulo: string; texto: string }>;
 }
+
+export type CondicaoComTexto = "ambito" | "direitoUso" | "manutencao" | "suporte" | "disponibilidade" | "penalizacoes" | "prazo";
 
 /** O limite das penalizações (art.º 329.º, n.º 2, do CCP): 20 % do preço contratual. */
 export const LIMITE_GLOBAL_PENALIZACOES = 20;
 
-export const TEXTOS_CONDICOES = {
-  ambito:
-    "Utilização pela SPMS, E.P.E. e pelas entidades do Serviço Nacional de Saúde indicadas, em todos os ambientes " +
-    "(produção, teste, formação e recuperação), sem limite geográfico dentro do território nacional.",
-  direitoUso:
-    "Direito de uso pelo período contratado ou, quando adquirido em regime perpétuo, sem limite temporal, " +
-    "intransmissível a terceiros alheios ao Serviço Nacional de Saúde.",
-  manutencao:
-    "Acesso, durante a vigência do contrato, a todas as correções, versões e atualizações de segurança publicadas " +
-    "pelo fabricante, sem custo adicional para a entidade adjudicante.",
-  suporte:
-    "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do " +
-    "incidente. O incumprimento destes tempos dá lugar às penalizações previstas.",
-  disponibilidade:
-    "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do " +
-    "contrato, excluídas as janelas de manutenção previamente acordadas.",
-  penalizacoes:
-    "Pelo incumprimento dos níveis de serviço, o adjudicatário fica sujeito a penalizações contratuais, sem prejuízo " +
-    "da resolução do contrato nos termos legais.",
-  prazo: "Licenças e acessos disponibilizados à entidade adjudicante no prazo máximo indicado, a contar da data de " +
-    "assinatura do contrato.",
-} as const;
+/** Para quem escolhe: o que são o sublicenciamento e a transmissão, e o que muda com eles. */
+export const EXPLICACAO_SUBLICENCIAMENTO =
+  "Sublicenciar é a entidade adjudicante poder autorizar terceiros a usar a licença que adquiriu — por exemplo, " +
+  "outras entidades do SNS ou as empresas de software que desenvolvem sistemas para elas —, dentro do âmbito, do " +
+  "período e das quantidades contratados e sem que cada um tenha de pagar a sua. A licença continua a ser da " +
+  "entidade adjudicante, que responde pelo uso que os sublicenciados dela fizerem. Sem esta cláusula, a licença " +
+  "só pode ser usada por quem a adquiriu, porque o titular dos direitos é que decide quem a pode usar. É " +
+  "frequente nas licenças de âmbito nacional.";
+
+export const EXPLICACAO_TRANSMISSAO =
+  "Transmitir é passar a licença, por inteiro e sem custo, para outra entidade do SNS — por exemplo, quando os " +
+  "serviços que a usam são integrados noutra entidade, como aconteceu com a criação das Unidades Locais de Saúde. " +
+  "A licença continua a valer nas mesmas condições (âmbito, quantidades e prazo); muda apenas quem a detém. Sem " +
+  "esta cláusula, a passagem para outra entidade fica dependente do acordo do titular dos direitos, que a pode " +
+  "recusar ou cobrar. Não se confunde com o sublicenciamento: aqui quem adquiriu deixa de ser o titular da " +
+  "licença.";
+
+export const EXPLICACAO_NAO_PRODUTIVOS =
+  "Num software instalado, cada cópia em funcionamento pode contar como uma licença. Com esta opção, as cópias " +
+  "usadas só para testes, formação e recuperação de desastre não contam para a quantidade contratada nem se pagam " +
+  "à parte. Só se aplica a licenças de software.";
 
 export function condicoesIniciais(): CondicoesContrato {
   return {
-    ambito: { texto: TEXTOS_CONDICOES.ambito, entidades: "", naoProdutivosSemCusto: true },
-    direitoUso: { texto: TEXTOS_CONDICOES.direitoUso, transmissao: true },
-    manutencao: { texto: TEXTOS_CONDICOES.manutencao },
+    ambito: { texto: null, entidades: "", naoProdutivosSemCusto: true },
+    direitoUso: { texto: null, sublicenciamento: false, transmissao: true },
+    manutencao: { texto: null },
     suporte: {
       ligada: true,
-      texto: TEXTOS_CONDICOES.suporte,
+      texto: null,
       horario: "uteis",
+      diasPersonalizados: "",
+      horaInicio: "09:00",
+      horaFim: "18:00",
       critica: { resposta: 2, resolucao: 8 },
       alta: { resposta: 4, resolucao: 24 },
       normal: { resposta: 8, resolucao: 72 },
     },
-    disponibilidade: {
-      ligada: true,
-      texto: TEXTOS_CONDICOES.disponibilidade,
-      percentagem: 99.5,
-      janelasForaDoHorario: true,
-    },
-    penalizacoes: { texto: TEXTOS_CONDICOES.penalizacoes, porHoraCritica: 0.5, limiteMensal: 10, limiteGlobal: 20 },
-    prazo: { ligada: true, texto: TEXTOS_CONDICOES.prazo, diasUteis: 10 },
+    disponibilidade: { ligada: true, texto: null, percentagem: 99.5, janelasForaDoHorario: true },
+    penalizacoes: { texto: null, porHoraCritica: 0.5, limiteMensal: 10, limiteGlobal: 20 },
+    prazo: { ligada: true, texto: null, diasUteis: 10 },
     proprias: [],
   };
 }
@@ -254,18 +303,18 @@ export interface LoteLicenca {
   id: string;
   numero: string;
   designacao: string;
-  produtoIds: string[];
+  licencaIds: string[];
 }
 
 export interface PedidoLicenciamento {
   schemaVersion: string;
   tipo: "licenciamento";
-  /** Carimbados ao exportar, como no agrupamento em lotes: o projeto vive no Módulo 1. */
-  nomeProjeto: string;
-  descricaoProjeto: string;
+  /** O produto (Módulo 1 do licenciamento) — próprio deste pedido, e não o projeto da bolsa de horas. */
+  nomeProduto: string;
+  descricaoProduto: string;
   justificacao: JustificacaoProjeto;
   natureza: NaturezaAquisicao;
-  produtos: ProdutoLicenca[];
+  licencas: Licenca[];
   condicoes: CondicoesContrato;
   lotes: LoteLicenca[];
   umLotePorConcorrente: boolean;
@@ -274,33 +323,32 @@ export interface PedidoLicenciamento {
   margemPrudencial: number;
   justificacaoMargem: string;
   juri: JuriTecnico;
-  eavalia: InformacaoEavalia;
   numeroInformacao: string;
   numeroOrcamento: string;
 }
 
-export const PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO = "Aquisição de Licenciamento de Software para o projeto ";
+export const PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO = "Aquisição de Licenciamento de ";
 
-export function nomeProcedimentoLicenciamento(nomeProjeto: string): string {
-  const nome = nomeProjeto.trim();
+export function nomeProcedimentoLicenciamento(nomeProduto: string): string {
+  const nome = nomeProduto.trim();
   return nome === "" ? "" : `${PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO}${nome}`;
 }
 
 /** O fundamento da margem a 0 %, por omissão — no licenciamento, os preços vêm do mercado. */
 export const JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO =
   "Não foi aplicada margem prudencial autónoma ao valor estimado. Os preços unitários considerados resultam da " +
-  "consulta ao mercado, de procedimentos anteriores ou da tabela pública do fabricante, conforme indicado para " +
-  "cada produto, refletindo os preços efetivamente praticados. Considera-se, assim, que a margem prudencial se " +
-  "encontra incorporada nos valores unitários adotados, os quais asseguram, com razoabilidade, a suficiência do " +
-  "valor estimado para a satisfação da necessidade identificada.";
+  "consulta ao mercado, de procedimentos anteriores ou da tabela pública do fabricante ou titular, conforme " +
+  "indicado para cada licença, refletindo os preços efetivamente praticados. Considera-se, assim, que a margem " +
+  "prudencial se encontra incorporada nos valores unitários adotados, os quais asseguram, com razoabilidade, a " +
+  "suficiência do valor estimado para a satisfação da necessidade identificada.";
 
 export function justificacaoMargemLicenciamento(margem: number): string {
   if (!(margem > 0)) return JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO;
   return (
     `A margem prudencial de ${formatarNumeroLic(margem)} % destina-se a acautelar a variação dos preços de tabela ` +
-    "dos fabricantes e das condições de mercado até à adjudicação e ao longo da execução do contrato, e é aplicada " +
-    "ao preço unitário de cada produto, refletindo-se em todos os valores por produto, por lote e por ano " +
-    "apresentados na presente informação."
+    "dos fabricantes e titulares e das condições de mercado até à adjudicação e ao longo da execução do contrato, e " +
+    "é aplicada ao preço unitário de cada licença, refletindo-se em todos os valores por licença, por lote e por " +
+    "ano apresentados na presente informação."
   );
 }
 
@@ -315,36 +363,28 @@ function formatarNumeroLic(valor: number): string {
   return new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 2 }).format(valor);
 }
 
-export function classificacaoInicial(natureza: NaturezaAquisicao = "aberta"): ClassificacaoEavalia {
-  return {
-    tipoSolucao: natureza === "aberta" ? "Submissão à concorrência" : "",
-    tipo: "",
-    ambito: "",
-    consultaMercado: "",
-    tipoLicenciamento: "Aquisição novas licenças",
-  };
-}
-
-export function criarProduto(natureza: NaturezaAquisicao = "aberta"): ProdutoLicenca {
+export function criarLicenca(): Licenca {
   return {
     id: gerarId(),
     designacao: "",
-    categoria: "",
     requisitosFuncionais: [],
     requisitosTecnicos: [],
-    produto: "",
+    nomeComercial: "",
     fabricante: "",
     versao: "",
     fundamento: "",
     explicacaoFundamento: "",
+    objeto: "software",
+    objetoOutro: "",
     direitoUso: "temporario",
     modalidade: "aquisicao",
     periodoMeses: 12,
     manutencao: "incluida",
     percentagemManutencao: 0,
-    eavalia: classificacaoInicial(natureza),
+    eavalia: { tipoSolucao: "", ambito: "" },
     metrica: "",
     quantidade: 0,
+    periodicidadePreco: "mensal",
     precoUnitario: 0,
     origemPreco: "",
   };
@@ -354,11 +394,11 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "licenciamento",
-    nomeProjeto: "",
-    descricaoProjeto: "",
+    nomeProduto: "",
+    descricaoProduto: "",
     justificacao: justificacaoInicial(),
     natureza: "aberta",
-    produtos: [],
+    licencas: [],
     condicoes: condicoesIniciais(),
     lotes: [],
     umLotePorConcorrente: false,
@@ -367,88 +407,80 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
     margemPrudencial: 0,
     justificacaoMargem: JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO,
     juri: juriInicial(),
-    eavalia: informacaoEavaliaInicial(),
     numeroInformacao: "",
     numeroOrcamento: "",
   };
 }
 
-/** O tipo de licenciamento do eAvalia que a modalidade sugere. */
-export function tipoLicenciamentoDaModalidade(modalidade: Modalidade): TipoLicenciamentoEavalia {
-  return modalidade === "upgrade" ? "Actualizações/Upgrades/Correções" : "Aquisição novas licenças";
-}
-
-/** O tipo do eAvalia que o direito de uso e a modalidade sugerem. */
-export function tipoEavaliaSugerido(p: Pick<ProdutoLicenca, "direitoUso" | "modalidade">): TipoEavalia {
-  if (p.modalidade === "upgrade") return "Upgrade de licenças";
-  return p.direitoUso === "temporario" ? "Subscrição ou SaaS" : "Licenças";
-}
-
 /**
- * O produto com uma alteração, e com o que dela depende: a classificação
- * eAvalia acompanha a modalidade e o direito de uso, e a manutenção «à parte»
- * só existe na licença perpétua.
+ * A licença com uma alteração, e com o que dela depende: a manutenção em linha
+ * própria só existe na licença perpétua, o preço anual ou mensal só na
+ * subscrição, e as métricas de licença única fixam a quantidade em 1.
  */
-export function comAlteracao(produto: ProdutoLicenca, alteracao: Partial<ProdutoLicenca>): ProdutoLicenca {
-  const novo = { ...produto, ...alteracao };
-  if (alteracao.modalidade !== undefined || alteracao.direitoUso !== undefined) {
-    novo.eavalia = {
-      ...novo.eavalia,
-      tipoLicenciamento: tipoLicenciamentoDaModalidade(novo.modalidade),
-      tipo: tipoEavaliaSugerido(novo),
-    };
-  }
-  if (novo.direitoUso === "temporario" && novo.manutencao === "aParte") novo.manutencao = "incluida";
-  return novo;
+export function comAlteracao(licenca: Licenca, alteracao: Partial<Licenca>): Licenca {
+  const nova = { ...licenca, ...alteracao };
+  if (nova.direitoUso === "temporario" && nova.manutencao === "aParte") nova.manutencao = "incluida";
+  if (nova.metrica !== "" && METRICAS_UNICAS.includes(nova.metrica)) nova.quantidade = 1;
+  return nova;
 }
 
-/**
- * O pedido com outra natureza de aquisição. O tipo de solução do eAvalia que
- * a natureza sugere acompanha-a: «Submissão à concorrência» na aberta, e por
- * escolher no produto determinado (sem alternativas, ou com TCO).
- */
-export function comNatureza(pedido: PedidoLicenciamento, natureza: NaturezaAquisicao): PedidoLicenciamento {
-  if (pedido.natureza === natureza) return pedido;
-  return {
-    ...pedido,
-    natureza,
-    produtos: pedido.produtos.map((p) => {
-      const t = p.eavalia.tipoSolucao;
-      const tipoSolucao =
-        natureza === "aberta" ? (t === "" ? "Submissão à concorrência" : t) : t === "Submissão à concorrência" ? "" : t;
-      return { ...p, eavalia: { ...p.eavalia, tipoSolucao } };
-    }),
-  };
+// --------------------------------------------------------------------------
+// eAvalia — o que decorre das escolhas
+// --------------------------------------------------------------------------
+
+export function tipoSolucaoEavalia(l: Licenca, natureza: NaturezaAquisicao): TipoSolucaoEavalia | "" {
+  return natureza === "aberta" ? "Submissão à concorrência" : l.eavalia.tipoSolucao;
+}
+
+export function tipoEavalia(l: Pick<Licenca, "direitoUso">): TipoEavalia {
+  return l.direitoUso === "temporario" ? "Subscrição ou SaaS" : "Licenças";
+}
+
+export function tipoLicenciamentoEavalia(l: Pick<Licenca, "modalidade">): TipoLicenciamentoEavalia {
+  return l.modalidade === "aquisicao" || l.modalidade === "alargamento"
+    ? "Aquisição novas licenças"
+    : "Actualizações/Upgrades/Correções";
+}
+
+export function consultaMercadoEavalia(natureza: NaturezaAquisicao): RespostaConsultaMercado {
+  return natureza === "aberta" ? "Sim" : "Não";
 }
 
 // --------------------------------------------------------------------------
 // Nomes
 // --------------------------------------------------------------------------
 
-/** O nome do produto como sai nos quadros: a designação, ou o produto e o fabricante. */
-export function nomeDoProduto(p: ProdutoLicenca, natureza: NaturezaAquisicao): string {
-  if (natureza === "aberta") return p.designacao.trim();
-  const produto = p.produto.trim();
-  const fabricante = p.fabricante.trim();
-  if (produto === "") return "";
-  return fabricante === "" ? produto : `${produto} — ${fabricante}`;
+/** O nome da licença como sai nos quadros: a designação, ou a licença e o fabricante ou titular. */
+export function nomeDaLicenca(l: Licenca, natureza: NaturezaAquisicao): string {
+  if (natureza === "aberta") return l.designacao.trim();
+  const nome = l.nomeComercial.trim();
+  const fabricante = l.fabricante.trim();
+  if (nome === "") return "";
+  return fabricante === "" ? nome : `${nome} — ${fabricante}`;
 }
 
-export function metricaPorExtenso(p: Pick<ProdutoLicenca, "metrica" | "quantidade">): string {
-  if (p.metrica === "") return "";
-  const m = METRICAS[p.metrica];
-  return (p.quantidade === 1 ? m.singular : m.plural).toLowerCase();
+export function objetoPorExtenso(l: Pick<Licenca, "objeto" | "objetoOutro">): string {
+  if (l.objeto === "outro") return l.objetoOutro.trim() || "Outro";
+  return OBJETOS_LICENCA[l.objeto];
 }
 
-export function resumoDoTipo(p: ProdutoLicenca): string {
-  if (p.direitoUso === "temporario") return `Subscrição · ${p.periodoMeses} meses`;
+export function metricaPorExtenso(l: Pick<Licenca, "metrica" | "quantidade">): string {
+  if (l.metrica === "") return "";
+  const m = METRICAS[l.metrica];
+  return (l.quantidade === 1 ? m.singular : m.plural).toLowerCase();
+}
+
+export function resumoDoTipo(l: Licenca): string {
+  const objeto = objetoPorExtenso(l);
+  if (l.direitoUso === "temporario")
+    return `${objeto} · Subscrição ${l.periodicidadePreco === "anual" ? "anual" : "mensal"} · ${l.periodoMeses} meses`;
   const manut =
-    p.manutencao === "aParte"
-      ? ` + manutenção (${formatarNumeroLic(p.percentagemManutencao)} %/ano, ${p.periodoMeses} meses)`
-      : p.manutencao === "incluida"
-        ? ` · manutenção incluída (${p.periodoMeses} meses)`
+    l.manutencao === "aParte"
+      ? ` + manutenção em linha própria (${l.periodoMeses} meses)`
+      : l.manutencao === "incluida"
+        ? ` · manutenção incluída (${l.periodoMeses} meses)`
         : "";
-  return `Licenças perpétuas${manut}`;
+  return `${objeto} · Licenças perpétuas${manut}`;
 }
 
 // --------------------------------------------------------------------------
@@ -478,7 +510,7 @@ export function comMargemLicenciamento(pedido: PedidoLicenciamento): PedidoLicen
   if (!(margem > 0)) return pedido;
   return {
     ...pedido,
-    produtos: pedido.produtos.map((p) => ({ ...p, precoUnitario: precoComMargem(p.precoUnitario, margem) })),
+    licencas: pedido.licencas.map((l) => ({ ...l, precoUnitario: precoComMargem(l.precoUnitario, margem) })),
   };
 }
 
@@ -487,10 +519,10 @@ export function mesesPorAno(meses: number, nAnos: number): number[] {
   return Array.from({ length: nAnos }, (_v, i) => Math.max(0, Math.min(12, num(meses) - 12 * i)));
 }
 
-export interface ValorDoProduto {
+export interface ValorDaLicenca {
   /** Licenças ou subscrição, sem IVA. */
   licencas: number;
-  /** Manutenção à parte, sem IVA (0 quando incluída ou não aplicável). */
+  /** Manutenção em linha própria, sem IVA (0 quando incluída ou não contratada). */
   manutencao: number;
   /** Manutenção de um ano. */
   manutencaoAnual: number;
@@ -499,40 +531,116 @@ export interface ValorDoProduto {
   porAno: number[];
 }
 
+/** O preço da subscrição por mês, de uma unidade: o mensal, ou o anual a dividir por 12. */
+function precoMensal(l: Licenca): number {
+  return l.periodicidadePreco === "anual" ? num(l.precoUnitario) / 12 : num(l.precoUnitario);
+}
+
 /**
- * O valor de um produto, sem IVA, com os preços como estão (aplique-se antes a
+ * O valor de uma licença, sem IVA, com os preços como estão (aplique-se antes a
  * margem, se for caso disso).
  *
- *   subscrição: quantidade × preço/mês × meses, repartido mês a mês;
- *   perpétua:   quantidade × preço, no primeiro ano, e a manutenção à parte —
- *               a percentagem anual sobre esse valor, pelos meses do período.
+ *   subscrição: quantidade × preço × períodos (meses, ou anos), repartido mês a mês;
+ *   perpétua:   quantidade × preço, no primeiro ano, e a manutenção em linha
+ *               própria — a percentagem anual sobre esse valor, pelos meses do período.
  */
-export function valorDoProduto(p: ProdutoLicenca, nAnos = 1): ValorDoProduto {
-  const qtd = num(p.quantidade);
-  const preco = num(p.precoUnitario);
-  const meses = Math.min(num(p.periodoMeses), MESES_MAXIMOS);
+export function valorDaLicenca(l: Licenca, nAnos = 1): ValorDaLicenca {
+  const qtd = num(l.quantidade);
+  const meses = Math.min(num(l.periodoMeses), MESES_MAXIMOS);
   const anos = Math.max(1, nAnos);
-  if (p.direitoUso === "temporario") {
-    const mensal = qtd * preco;
-    const porAno = mesesPorAno(meses, anos).map((m) => centimos(mensal * m));
+  const acerta = (porAno: number[], total: number) => {
     // Sem anos bastantes (pedido sem encargos plurianuais), o resto cabe no último.
-    const total = centimos(mensal * meses);
     porAno[porAno.length - 1] = centimos(porAno[porAno.length - 1] + total - porAno.reduce((s, v) => s + v, 0));
+    return porAno;
+  };
+  if (l.direitoUso === "temporario") {
+    const mensal = qtd * precoMensal(l);
+    const total = centimos(mensal * meses);
+    const porAno = acerta(
+      mesesPorAno(meses, anos).map((m) => centimos(mensal * m)),
+      total,
+    );
     return { licencas: total, manutencao: 0, manutencaoAnual: 0, total, porAno };
   }
-  const licencas = centimos(qtd * preco);
-  const manutencaoAnual = p.manutencao === "aParte" ? centimos((licencas * num(p.percentagemManutencao)) / 100) : 0;
-  const mesesDeManutencao = mesesPorAno(meses, anos);
-  const porAno = mesesDeManutencao.map((m, i) => centimos((i === 0 ? licencas : 0) + (manutencaoAnual * m) / 12));
+  const licencas = centimos(qtd * num(l.precoUnitario));
+  const manutencaoAnual = l.manutencao === "aParte" ? centimos((licencas * num(l.percentagemManutencao)) / 100) : 0;
   const manutencao = centimos((manutencaoAnual * meses) / 12);
   const total = centimos(licencas + manutencao);
-  porAno[porAno.length - 1] = centimos(porAno[porAno.length - 1] + total - porAno.reduce((s, v) => s + v, 0));
+  const porAno = acerta(
+    mesesPorAno(meses, anos).map((m, i) => centimos((i === 0 ? licencas : 0) + (manutencaoAnual * m) / 12)),
+    total,
+  );
   return { licencas, manutencao, manutencaoAnual, total, porAno };
 }
 
-/** Os meses do contrato: o maior período dos produtos (pelo menos 1). */
-export function mesesDoContrato(pedido: Pick<PedidoLicenciamento, "produtos">): number {
-  return Math.max(1, ...pedido.produtos.map((p) => Math.min(num(p.periodoMeses), MESES_MAXIMOS)));
+/** Uma linha do mapa de quantidades e preços: a licença, ou a sua manutenção em linha própria. */
+export interface LinhaDoMapa {
+  licenca: Licenca;
+  tipo: "licenca" | "manutencao";
+  designacao: string;
+  metrica: string;
+  quantidade: number;
+  /** Quantos períodos de preço (meses, anos, ou 1 na licença perpétua). */
+  periodos: number;
+  /** Como se lê o preço unitário: «€ por licença e por mês», «€ por ano»… */
+  unidade: string;
+  precoUnitario: number;
+  total: number;
+}
+
+export function linhasDoMapa(l: Licenca, natureza: NaturezaAquisicao, nAnos = 1): LinhaDoMapa[] {
+  const valor = valorDaLicenca(l, nAnos);
+  const nome = nomeDaLicenca(l, natureza) || "Licença";
+  const meses = Math.min(num(l.periodoMeses), MESES_MAXIMOS);
+  const metrica = l.metrica === "" ? "" : METRICAS[l.metrica].plural;
+  if (l.direitoUso === "temporario") {
+    const anual = l.periodicidadePreco === "anual";
+    return [
+      {
+        licenca: l,
+        tipo: "licenca",
+        designacao: nome,
+        metrica,
+        quantidade: l.quantidade,
+        periodos: anual ? meses / 12 : meses,
+        unidade: anual ? "€ por licença e por ano" : "€ por licença e por mês",
+        precoUnitario: l.precoUnitario,
+        total: valor.licencas,
+      },
+    ];
+  }
+  const linhas: LinhaDoMapa[] = [
+    {
+      licenca: l,
+      tipo: "licenca",
+      designacao: `${nome} — licenças perpétuas`,
+      metrica,
+      quantidade: l.quantidade,
+      periodos: 1,
+      unidade: l.manutencao === "incluida" ? "€ por licença (perpétua, com manutenção)" : "€ por licença (perpétua)",
+      precoUnitario: l.precoUnitario,
+      total: valor.licencas,
+    },
+  ];
+  if (l.manutencao === "aParte") {
+    linhas.push({
+      licenca: l,
+      tipo: "manutencao",
+      designacao: `Manutenção e suporte — ${nome}`,
+      metrica: "Ano de manutenção",
+      quantidade: 1,
+      periodos: meses / 12,
+      unidade: "€ por ano",
+      precoUnitario: valor.manutencaoAnual,
+      total: valor.manutencao,
+    });
+  }
+  return linhas;
+}
+
+/** Os meses do contrato: o maior período das licenças (pelo menos 1). */
+export function mesesDoContrato(pedido: Pick<PedidoLicenciamento, "licencas">): number {
+  return Math.max(1, ...pedido.licencas.map((l) => Math.min(num(l.periodoMeses), MESES_MAXIMOS)));
 }
 
 /** Os anos económicos do contrato: com encargos plurianuais, tantos quantos o período abranja. */
@@ -556,8 +664,8 @@ export function comIva(semIva: number, taxa: number): ValoresComIva {
 }
 
 export interface LinhaDoLote {
-  produto: ProdutoLicenca;
-  valor: ValorDoProduto;
+  licenca: Licenca;
+  valor: ValorDaLicenca;
 }
 
 export interface ValoresDoLote {
@@ -570,12 +678,12 @@ export interface ValoresDoLote {
 /** O valor de cada lote, com os preços como estão no pedido recebido. */
 export function valoresDosLotes(pedido: PedidoLicenciamento): ValoresDoLote[] {
   const nAnos = anosDoPedido(pedido).length;
-  const porId = new Map(pedido.produtos.map((p) => [p.id, p]));
+  const porId = new Map(pedido.licencas.map((l) => [l.id, l]));
   return lotesEfetivos(pedido).map((lote) => {
-    const linhas = lote.produtoIds
+    const linhas = lote.licencaIds
       .map((id) => porId.get(id))
-      .filter((p): p is ProdutoLicenca => p !== undefined)
-      .map((produto) => ({ produto, valor: valorDoProduto(produto, nAnos) }));
+      .filter((l): l is Licenca => l !== undefined)
+      .map((licenca) => ({ licenca, valor: valorDaLicenca(licenca, nAnos) }));
     const porAno = Array.from({ length: nAnos }, (_v, i) =>
       centimos(linhas.reduce((s, l) => s + l.valor.porAno[i], 0)),
     );
@@ -586,13 +694,13 @@ export function valoresDosLotes(pedido: PedidoLicenciamento): ValoresDoLote[] {
 /** O valor estimado do contrato, sem IVA, com os preços como estão no pedido recebido. */
 export function valorEstimado(pedido: PedidoLicenciamento): number {
   const nAnos = anosDoPedido(pedido).length;
-  return centimos(pedido.produtos.reduce((s, p) => s + valorDoProduto(p, nAnos).total, 0));
+  return centimos(pedido.licencas.reduce((s, l) => s + valorDaLicenca(l, nAnos).total, 0));
 }
 
 export function valorPorAno(pedido: PedidoLicenciamento): number[] {
   const nAnos = anosDoPedido(pedido).length;
   return Array.from({ length: nAnos }, (_v, i) =>
-    centimos(pedido.produtos.reduce((s, p) => s + valorDoProduto(p, nAnos).porAno[i], 0)),
+    centimos(pedido.licencas.reduce((s, l) => s + valorDaLicenca(l, nAnos).porAno[i], 0)),
   );
 }
 
@@ -601,48 +709,168 @@ export function valorPorAno(pedido: PedidoLicenciamento): number[] {
 // --------------------------------------------------------------------------
 
 /**
- * Os lotes como devem ficar: sem produtos que já não existam, sem lotes vazios,
- * cada produto por atribuir num lote próprio (é a omissão: um lote por
- * produto), numerados de 1 em diante.
+ * Os lotes como devem ficar: sem licenças que já não existam, sem lotes vazios,
+ * cada licença por atribuir num lote próprio (é a omissão: um lote por
+ * licença), numerados de 1 em diante.
  */
-export function lotesEfetivos(pedido: Pick<PedidoLicenciamento, "produtos" | "lotes" | "natureza">): LoteLicenca[] {
-  const existentes = new Set(pedido.produtos.map((p) => p.id));
+export function lotesEfetivos(pedido: Pick<PedidoLicenciamento, "licencas" | "lotes">): LoteLicenca[] {
+  const existentes = new Set(pedido.licencas.map((l) => l.id));
   const vistos = new Set<string>();
   const lotes: LoteLicenca[] = [];
   for (const lote of pedido.lotes) {
-    const ids = lote.produtoIds.filter((id) => existentes.has(id) && !vistos.has(id));
+    const ids = lote.licencaIds.filter((id) => existentes.has(id) && !vistos.has(id));
     ids.forEach((id) => vistos.add(id));
-    if (ids.length > 0) lotes.push({ ...lote, produtoIds: ids });
+    if (ids.length > 0) lotes.push({ ...lote, licencaIds: ids });
   }
-  for (const p of pedido.produtos) {
-    if (!vistos.has(p.id)) lotes.push({ id: `lote-${p.id}`, numero: "", designacao: "", produtoIds: [p.id] });
+  for (const l of pedido.licencas) {
+    if (!vistos.has(l.id)) lotes.push({ id: `lote-${l.id}`, numero: "", designacao: "", licencaIds: [l.id] });
   }
   return lotes.map((l, i) => ({ ...l, numero: String(i + 1) }));
 }
 
-/** A designação de um lote: a escrita, ou o nome do produto quando é só um. */
+/** A designação de um lote: a escrita, ou o nome da licença quando é só uma. */
 export function designacaoDoLote(lote: LoteLicenca, pedido: PedidoLicenciamento): string {
   if (lote.designacao.trim() !== "") return lote.designacao.trim();
-  if (lote.produtoIds.length === 1) {
-    const p = pedido.produtos.find((x) => x.id === lote.produtoIds[0]);
-    if (p) return nomeDoProduto(p, pedido.natureza);
+  if (lote.licencaIds.length === 1) {
+    const l = pedido.licencas.find((x) => x.id === lote.licencaIds[0]);
+    if (l) return nomeDaLicenca(l, pedido.natureza);
   }
   return `Lote ${lote.numero}`;
 }
 
-/** Muda um produto de lote (ou para um lote novo, com `destino` nulo). */
-export function moverProdutoParaLote(
+/** Muda uma licença de lote (ou para um lote novo, com `destino` nulo). */
+export function moverLicencaParaLote(
   pedido: PedidoLicenciamento,
-  produtoId: string,
+  licencaId: string,
   destino: string | null,
 ): PedidoLicenciamento {
-  const lotes = lotesEfetivos(pedido).map((l) => ({ ...l, produtoIds: l.produtoIds.filter((id) => id !== produtoId) }));
-  if (destino === null) lotes.push({ id: gerarId(), numero: "", designacao: "", produtoIds: [produtoId] });
+  const lotes = lotesEfetivos(pedido).map((l) => ({ ...l, licencaIds: l.licencaIds.filter((id) => id !== licencaId) }));
+  if (destino === null) lotes.push({ id: gerarId(), numero: "", designacao: "", licencaIds: [licencaId] });
   else {
     const alvo = lotes.find((l) => l.id === destino);
-    if (alvo) alvo.produtoIds.push(produtoId);
+    if (alvo) alvo.licencaIds.push(licencaId);
   }
   return { ...pedido, lotes: lotesEfetivos({ ...pedido, lotes }) };
+}
+
+// --------------------------------------------------------------------------
+// Condições: o que se aplica e os textos por omissão
+// --------------------------------------------------------------------------
+
+function objetos(pedido: Pick<PedidoLicenciamento, "licencas">): Set<ObjetoLicenca> {
+  return new Set(pedido.licencas.map((l) => l.objeto));
+}
+
+const temSoftware = (p: Pick<PedidoLicenciamento, "licencas">) => objetos(p).has("software");
+const temNacional = (p: Pick<PedidoLicenciamento, "licencas">) => p.licencas.some((l) => l.metrica === "nacional");
+
+/** Se uma condição se aplica às licenças do L1, e, quando não, porquê. */
+export function aplicabilidade(chave: CondicaoComTexto, pedido: PedidoLicenciamento): { aplica: boolean; razao: string } {
+  const sim = { aplica: true, razao: "" };
+  if (pedido.licencas.length === 0) return sim;
+  if (chave === "manutencao") {
+    const alguma = pedido.licencas.some((l) => l.direitoUso === "temporario" || l.manutencao !== "naoAplicavel");
+    return alguma ? sim : { aplica: false, razao: "Todas as licenças do L1 são perpétuas e sem manutenção contratada." };
+  }
+  if (chave === "disponibilidade") {
+    const saas = pedido.licencas.some((l) => l.objeto === "software" && l.direitoUso === "temporario");
+    return saas ? sim : { aplica: false, razao: "Nenhuma licença do L1 é software em subscrição (SaaS)." };
+  }
+  return sim;
+}
+
+/** Se a opção dos ambientes não produtivos se aplica: só há cópias por contar no software. */
+export function aplicaNaoProdutivos(pedido: PedidoLicenciamento): boolean {
+  return pedido.licencas.length === 0 || temSoftware(pedido);
+}
+
+/** O título da condição da manutenção, conforme o que se licencia. */
+export function tituloDaManutencao(pedido: Pick<PedidoLicenciamento, "licencas">): string {
+  const o = objetos(pedido);
+  const software = o.has("software");
+  const outros = o.has("terminologia") || o.has("outro");
+  if (software && outros) return "Manutenção, atualizações e novas edições";
+  return outros ? "Atualizações e novas edições" : "Manutenção e atualizações";
+}
+
+/** Os textos por omissão, escritos a partir das licenças do L1. */
+export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciamento): string {
+  const o = objetos(pedido);
+  const software = o.size === 0 || o.has("software");
+  const outros = o.has("terminologia") || o.has("outro");
+  const temporario = pedido.licencas.length === 0 || pedido.licencas.some((l) => l.direitoUso === "temporario");
+  const perpetuo = pedido.licencas.some((l) => l.direitoUso === "perpetuo");
+  switch (chave) {
+    case "ambito":
+      return temNacional(pedido)
+        ? "Utilização em todo o território nacional, pelas entidades e utilizadores abrangidos pela licença, em " +
+            "todos os sistemas e ambientes em que seja integrada, sem custo adicional para os utilizadores finais."
+        : "Utilização pela SPMS, E.P.E. e pelas entidades do Serviço Nacional de Saúde indicadas, sem limite " +
+            "geográfico dentro do território nacional" +
+            (software ? ", em todos os ambientes (produção, teste, formação e recuperação)." : ".");
+    case "direitoUso": {
+      const partes: string[] = [];
+      if (temporario) partes.push("pelo período contratado, no caso das licenças em subscrição");
+      if (perpetuo) partes.push("por tempo indeterminado, no caso das licenças perpétuas adquiridas");
+      return `Direito de uso não exclusivo das licenças, ${partes.join(", e ")}, nos termos do âmbito contratado.`;
+    }
+    case "manutencao": {
+      const frases: string[] = [];
+      if (software)
+        frases.push(
+          "acesso a todas as correções, novas versões e atualizações de segurança do software publicadas pelo fabricante",
+        );
+      if (outros)
+        frases.push("acesso a todas as edições e atualizações publicadas pelo titular, e aos meios da sua distribuição");
+      return `Durante a vigência do contrato, ${frases.join("; e ")}, sem custo adicional para a entidade adjudicante.`;
+    }
+    case "suporte":
+      return software && !outros
+        ? "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do " +
+            "incidente. O incumprimento destes tempos dá lugar às penalizações previstas."
+        : "Apoio à utilização e ao acesso às edições, em língua portuguesa ou inglesa, com tempos máximos de " +
+            "resposta e de resolução por severidade do pedido. O incumprimento destes tempos dá lugar às " +
+            "penalizações previstas.";
+    case "disponibilidade":
+      return (
+        "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do " +
+        "contrato, excluídas as janelas de manutenção previamente acordadas."
+      );
+    case "penalizacoes":
+      return (
+        "Pelo incumprimento dos níveis de serviço, o adjudicatário fica sujeito a penalizações contratuais, sem " +
+        "prejuízo da resolução do contrato nos termos legais."
+      );
+    case "prazo":
+      return (
+        "Licenças e acessos disponibilizados à entidade adjudicante no prazo máximo indicado, a contar da data de " +
+        "assinatura do contrato."
+      );
+  }
+}
+
+/** O texto de uma condição: o escrito à mão, ou o por omissão. */
+export function textoDaCondicao(chave: CondicaoComTexto, pedido: PedidoLicenciamento): string {
+  return pedido.condicoes[chave].texto ?? textoPorOmissao(chave, pedido);
+}
+
+const HORA = /^([01]\d|2[0-4]):([0-5]\d)$/;
+
+function minutos(hora: string): number {
+  const m = HORA.exec(hora.trim());
+  return m === null ? Number.NaN : Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** «Dias úteis, das 09:00 às 18:00», «Todos os dias, 24 horas por dia»… */
+export function horarioPorExtenso(s: CondicoesContrato["suporte"]): string {
+  const dias =
+    s.horario === "uteis"
+      ? "Dias úteis"
+      : s.horario === "7dias"
+        ? "Todos os dias, incluindo fins de semana e feriados"
+        : s.diasPersonalizados.trim() || "[dias]";
+  const continuo = minutos(s.horaInicio) === 0 && minutos(s.horaFim) === 24 * 60;
+  return continuo ? `${dias}, 24 horas por dia` : `${dias}, das ${s.horaInicio.trim()} às ${s.horaFim.trim()}`;
 }
 
 // --------------------------------------------------------------------------
@@ -653,69 +881,92 @@ function falta(campo: string, mensagem: string): ErroValidacao {
   return { campo, mensagem };
 }
 
-/** O que falta num produto (L1). */
-export function validarProduto(p: ProdutoLicenca, natureza: NaturezaAquisicao): ErroValidacao[] {
+/** O que falta no produto (Módulo 1 do licenciamento). */
+export function validarProdutoLicenciamento(
+  pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao">,
+): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
-  const nome = nomeDoProduto(p, natureza) || "Produto sem nome";
-  const de = (texto: string) => falta(p.id, `${nome}: ${texto}`);
-  if (natureza === "aberta") {
-    if (p.designacao.trim() === "") erros.push(de("indique a designação do produto no procedimento."));
-    if (p.categoria.trim() === "") erros.push(de("indique a categoria de software."));
-    if (p.requisitosFuncionais.filter((r) => r.designacao.trim() !== "").length === 0)
-      erros.push(de("indique pelo menos um requisito funcional mínimo."));
-    if (p.requisitosFuncionais.some((r) => r.designacao.trim() === "") || p.requisitosTecnicos.some((r) => r.designacao.trim() === ""))
-      erros.push(de("há requisitos por escrever — preencha-os ou remova-os."));
-  } else {
-    if (p.produto.trim() === "") erros.push(de("indique o produto."));
-    if (p.fabricante.trim() === "") erros.push(de("indique o fabricante."));
-    if (p.fundamento === "") erros.push(de("escolha o fundamento da escolha do produto."));
-    if (p.explicacaoFundamento.trim() === "") erros.push(de("explique o fundamento da escolha do produto."));
-  }
-  if (!Number.isInteger(p.periodoMeses) || p.periodoMeses < 1)
-    erros.push(de("o período tem de ser um número inteiro de meses."));
-  else if (p.periodoMeses > MESES_MAXIMOS)
-    erros.push(de(`o período não pode exceder ${MESES_MAXIMOS} meses (art.º 48.º do CCP).`));
-  if (p.direitoUso === "perpetuo" && p.manutencao === "aParte" && !(p.percentagemManutencao > 0))
-    erros.push(de("indique a percentagem anual da manutenção."));
-  if (p.eavalia.tipoSolucao === "") erros.push(de("escolha o tipo de solução (eAvalia)."));
-  if (p.eavalia.tipo === "") erros.push(de("escolha o tipo (eAvalia)."));
-  if (p.eavalia.ambito === "") erros.push(de("escolha o âmbito (eAvalia)."));
-  if (p.eavalia.consultaMercado === "") erros.push(de("indique se houve consulta ao mercado (eAvalia)."));
-  if (p.eavalia.tipoLicenciamento === "") erros.push(de("escolha o tipo de licenciamento (eAvalia)."));
-  if (p.metrica === "") erros.push(de("escolha a métrica de licenciamento."));
-  if (!Number.isInteger(p.quantidade) || p.quantidade < 1) erros.push(de("a quantidade tem de ser um número inteiro positivo."));
-  if (!(p.precoUnitario > 0)) erros.push(de("falta o preço unitário de referência."));
-  if (p.origemPreco === "") erros.push(de("indique a origem do preço de referência."));
+  if (pedido.nomeProduto.trim() === "") erros.push(falta("nomeProduto", "Indique o nome do produto."));
+  if (pedido.descricaoProduto.trim() === "") erros.push(falta("descricaoProduto", "Descreva o produto."));
+  const lista = (itens: ItemPerfil[], campo: string, vazia: string, nome: string) => {
+    if (itens.filter((i) => i.designacao.trim() !== "").length === 0) erros.push(falta(campo, vazia));
+    else if (itens.some((i) => i.designacao.trim() === ""))
+      erros.push(falta(campo, `Há ${nome} por escrever — preencha-os ou remova-os.`));
+  };
+  lista(pedido.justificacao.objetivos, "justificacao.objetivos", "Indique pelo menos um objetivo da aquisição.", "objetivos");
+  lista(pedido.justificacao.beneficios, "justificacao.beneficios", "Indique pelo menos um benefício do produto.", "benefícios");
+  lista(pedido.justificacao.riscos, "justificacao.riscos", "Indique pelo menos um risco da não aquisição.", "riscos");
   return erros;
 }
 
-/** Quantos blocos de produto tem cada secção da folha «Custos - Licenciamento». */
-export const PRODUTOS_POR_SECCAO_EAVALIA = 20;
+/** O que falta numa licença (L1). */
+export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+  const nome = nomeDaLicenca(l, natureza) || "Licença sem nome";
+  const de = (texto: string) => falta(l.id, `${nome}: ${texto}`);
+  if (natureza === "aberta") {
+    if (l.designacao.trim() === "") erros.push(de("indique a designação da licença no procedimento."));
+    if (l.requisitosFuncionais.filter((r) => r.designacao.trim() !== "").length === 0)
+      erros.push(de("indique pelo menos um requisito funcional mínimo."));
+    if (l.requisitosFuncionais.some((r) => r.designacao.trim() === "") || l.requisitosTecnicos.some((r) => r.designacao.trim() === ""))
+      erros.push(de("há requisitos por escrever — preencha-os ou remova-os."));
+  } else {
+    if (l.nomeComercial.trim() === "") erros.push(de("indique a licença."));
+    if (l.fabricante.trim() === "") erros.push(de("indique o fabricante ou titular dos direitos."));
+    if (l.fundamento === "") erros.push(de("escolha o fundamento da escolha da licença."));
+    if (l.explicacaoFundamento.trim() === "") erros.push(de("explique o fundamento da escolha da licença."));
+    if (l.eavalia.tipoSolucao === "") erros.push(de("escolha o tipo de solução (eAvalia)."));
+  }
+  if (l.objeto === "outro" && l.objetoOutro.trim() === "") erros.push(de("indique o objeto da licença."));
+  if (!Number.isInteger(l.periodoMeses) || l.periodoMeses < 1)
+    erros.push(de("o período tem de ser um número inteiro de meses."));
+  else if (l.periodoMeses > MESES_MAXIMOS)
+    erros.push(de(`o período não pode exceder ${MESES_MAXIMOS} meses (art.º 48.º do CCP).`));
+  else if (l.direitoUso === "temporario" && l.periodicidadePreco === "anual" && l.periodoMeses % 12 !== 0)
+    erros.push(de("com preço anual, o período tem de ser de anos completos (12, 24 ou 36 meses)."));
+  if (l.direitoUso === "perpetuo" && l.manutencao === "aParte" && !(l.percentagemManutencao > 0))
+    erros.push(de("indique a percentagem anual de referência da manutenção."));
+  if (l.eavalia.ambito === "") erros.push(de("escolha o âmbito (eAvalia)."));
+  if (l.metrica === "") erros.push(de("escolha a métrica de licenciamento."));
+  if (!Number.isInteger(l.quantidade) || l.quantidade < 1) erros.push(de("a quantidade tem de ser um número inteiro positivo."));
+  if (!(l.precoUnitario > 0)) erros.push(de("falta o preço unitário de referência."));
+  if (l.origemPreco === "") erros.push(de("indique a origem do preço de referência."));
+  return erros;
+}
+
+/** Quantos blocos de licença tem cada secção da folha «Custos - Licenciamento». */
+export const LICENCAS_POR_SECCAO_EAVALIA = 20;
 
 /** O que falta nas licenças (L1). */
 export function validarLicencas(pedido: PedidoLicenciamento): ErroValidacao[] {
-  if (pedido.produtos.length === 0) return [falta("produtos", "Acrescente pelo menos um produto a licenciar.")];
-  const erros = pedido.produtos.flatMap((p) => validarProduto(p, pedido.natureza));
-  const livres = pedido.produtos.filter((p) => p.eavalia.tipoSolucao === "Solução Software Livre").length;
-  if (livres > PRODUTOS_POR_SECCAO_EAVALIA || pedido.produtos.length - livres > PRODUTOS_POR_SECCAO_EAVALIA)
-    erros.push(
-      falta("produtos", `O formulário eAvalia comporta ${PRODUTOS_POR_SECCAO_EAVALIA} produtos por secção.`),
-    );
+  if (pedido.licencas.length === 0) return [falta("licencas", "Acrescente pelo menos uma licença.")];
+  const erros = pedido.licencas.flatMap((l) => validarLicenca(l, pedido.natureza));
+  const livres = pedido.licencas.filter((l) => tipoSolucaoEavalia(l, pedido.natureza) === "Solução Software Livre").length;
+  if (livres > LICENCAS_POR_SECCAO_EAVALIA || pedido.licencas.length - livres > LICENCAS_POR_SECCAO_EAVALIA)
+    erros.push(falta("licencas", `O formulário eAvalia comporta ${LICENCAS_POR_SECCAO_EAVALIA} licenças por secção.`));
   return erros;
 }
 
-/** O que falta nas condições do contrato (L2). */
-export function validarCondicoes(c: CondicoesContrato): ErroValidacao[] {
+/** O que falta nas condições do contrato (L2), só nas que se aplicam e estão ligadas. */
+export function validarCondicoes(pedido: PedidoLicenciamento): ErroValidacao[] {
+  const c = pedido.condicoes;
   const erros: ErroValidacao[] = [];
-  const texto = (campo: string, valor: string, nome: string) => {
-    if (valor.trim() === "") erros.push(falta(campo, `${nome}: escreva o texto da condição.`));
+  const texto = (chave: CondicaoComTexto, nome: string) => {
+    if (textoDaCondicao(chave, pedido).trim() === "") erros.push(falta(chave, `${nome}: escreva o texto da condição.`));
   };
-  texto("ambito", c.ambito.texto, "Âmbito da licença");
-  texto("direitoUso", c.direitoUso.texto, "Direito de uso e transmissão");
-  texto("manutencao", c.manutencao.texto, "Manutenção e atualizações");
-  texto("penalizacoes", c.penalizacoes.texto, "Penalizações");
+  texto("ambito", "Âmbito da licença");
+  texto("direitoUso", "Direito de uso e transmissão");
+  if (aplicabilidade("manutencao", pedido).aplica) texto("manutencao", tituloDaManutencao(pedido));
+  texto("penalizacoes", "Penalizações");
   if (c.suporte.ligada) {
-    texto("suporte", c.suporte.texto, "Suporte técnico e SLA");
+    texto("suporte", "Suporte técnico e SLA");
+    if (c.suporte.horario === "personalizado" && c.suporte.diasPersonalizados.trim() === "")
+      erros.push(falta("suporte", "Suporte técnico e SLA: indique os dias do horário personalizado."));
+    const [inicio, fim] = [minutos(c.suporte.horaInicio), minutos(c.suporte.horaFim)];
+    if (Number.isNaN(inicio) || Number.isNaN(fim))
+      erros.push(falta("suporte", "Suporte técnico e SLA: escreva as horas no formato 09:00."));
+    else if (fim <= inicio)
+      erros.push(falta("suporte", "Suporte técnico e SLA: a hora de fim tem de ser depois da de início."));
     for (const [nome, t] of [
       ["crítica", c.suporte.critica],
       ["alta", c.suporte.alta],
@@ -727,15 +978,14 @@ export function validarCondicoes(c: CondicoesContrato): ErroValidacao[] {
         erros.push(falta("suporte", `Suporte técnico e SLA: na severidade ${nome}, a resolução não pode ser antes da resposta.`));
     }
   }
-  if (c.disponibilidade.ligada) {
-    texto("disponibilidade", c.disponibilidade.texto, "Disponibilidade");
+  if (c.disponibilidade.ligada && aplicabilidade("disponibilidade", pedido).aplica) {
+    texto("disponibilidade", "Disponibilidade");
     if (!(c.disponibilidade.percentagem > 0 && c.disponibilidade.percentagem <= 100))
       erros.push(falta("disponibilidade", "Disponibilidade: a percentagem tem de estar entre 0 e 100 %."));
   }
   if (!(c.penalizacoes.porHoraCritica > 0))
     erros.push(falta("penalizacoes", "Penalizações: indique a penalização por hora de atraso."));
-  if (!(c.penalizacoes.limiteMensal > 0))
-    erros.push(falta("penalizacoes", "Penalizações: indique o limite mensal."));
+  if (!(c.penalizacoes.limiteMensal > 0)) erros.push(falta("penalizacoes", "Penalizações: indique o limite mensal."));
   if (!(c.penalizacoes.limiteGlobal > 0) || c.penalizacoes.limiteGlobal > LIMITE_GLOBAL_PENALIZACOES)
     erros.push(
       falta(
@@ -743,8 +993,11 @@ export function validarCondicoes(c: CondicoesContrato): ErroValidacao[] {
         `Penalizações: o limite global tem de estar entre 0 e ${LIMITE_GLOBAL_PENALIZACOES} % do valor do contrato (art.º 329.º do CCP).`,
       ),
     );
-  if (c.prazo.ligada && !(Number.isInteger(c.prazo.diasUteis) && c.prazo.diasUteis > 0))
-    erros.push(falta("prazo", "Prazo de disponibilização: indique o número de dias úteis."));
+  if (c.prazo.ligada) {
+    texto("prazo", "Prazo de disponibilização");
+    if (!(Number.isInteger(c.prazo.diasUteis) && c.prazo.diasUteis > 0))
+      erros.push(falta("prazo", "Prazo de disponibilização: indique o número de dias úteis."));
+  }
   c.proprias.forEach((p, i) => {
     if (p.titulo.trim() === "" || p.texto.trim() === "")
       erros.push(falta(p.id, `Condição própria ${i + 1}: escreva o título e o texto.`));
@@ -760,38 +1013,98 @@ export function validarPedido(pedido: PedidoLicenciamento): ErroValidacao[] {
     erros.push(falta("margemPrudencial", "A margem prudencial tem de ser um número não negativo."));
   if (pedido.justificacaoMargem.trim() === "")
     erros.push(falta("justificacaoMargem", "Escreva o fundamento da margem prudencial."));
-  const longos = pedido.produtos.some((p) => p.periodoMeses > 12);
-  if (longos && !pedido.encargosPlurianuais.ativo)
+  if (pedido.licencas.some((l) => l.periodoMeses > 12) && !pedido.encargosPlurianuais.ativo)
     erros.push(
-      falta(
-        "encargosPlurianuais",
-        "Há produtos com período superior a 12 meses: assinale o pedido de encargos plurianuais.",
-      ),
+      falta("encargosPlurianuais", "Há licenças com período superior a 12 meses: assinale o pedido de encargos plurianuais."),
     );
   const nomes: Array<[keyof JuriTecnico, string]> = [
     ["diretor", "o diretor"],
     ["coordenador", "o coordenador"],
     ["unidade", "a unidade do coordenador"],
-    ["gestorProjeto", "o gestor de projeto"],
+    ["gestorProjeto", "o gestor do produto"],
   ];
   for (const [campo, nome] of nomes) {
     if (pedido.juri[campo].trim() === "") erros.push(falta(`juri.${campo}`, `Júri técnico: indique ${nome}.`));
   }
-  // As medidas do alinhamento tecnológico, como no pedido de serviços.
-  erros.push(...validarEavalia(pedido.eavalia));
   return erros;
 }
 
 // --------------------------------------------------------------------------
-// Ficheiro (JSON) e normalização
+// Ficheiros (JSON) e normalização
 // --------------------------------------------------------------------------
 
 export function pedidoLicenciamentoParaJSON(pedido: PedidoLicenciamento): string {
   return JSON.stringify({ ...pedido, lotes: lotesEfetivos(pedido) }, null, 2);
 }
 
+/** O ficheiro do produto: só o Módulo 1 do licenciamento. */
+export interface ProdutoJSON {
+  schemaVersion: string;
+  tipo: "produto";
+  nomeProduto: string;
+  descricaoProduto: string;
+  justificacao: JustificacaoProjeto;
+}
+
+export function produtoParaJSON(pedido: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao">): string {
+  const ficheiro: ProdutoJSON = {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "produto",
+    nomeProduto: pedido.nomeProduto,
+    descricaoProduto: pedido.descricaoProduto,
+    justificacao: pedido.justificacao,
+  };
+  return JSON.stringify(ficheiro, null, 2);
+}
+
+export interface ProdutoImportado {
+  nomeProduto: string;
+  descricaoProduto: string;
+  justificacao: JustificacaoProjeto;
+  origem: "produto" | "licenciamento" | "projeto";
+}
+
+/** Lê o produto de um ficheiro: o do produto, o do pedido de licenciamento ou o de um projeto. */
+export function importarProdutoJSON(conteudo: string): ProdutoImportado {
+  const r = analisar(conteudo);
+  if (r.schemaVersion !== SCHEMA_VERSION_ATUAL) {
+    throw new ErroImportacao(
+      `Versão de esquema desconhecida ("${String(r.schemaVersion)}"). Esta aplicação suporta a versão "${SCHEMA_VERSION_ATUAL}".`,
+    );
+  }
+  const justificacao = r.justificacao === undefined ? justificacaoInicial() : normalizarJustificacao(r.justificacao);
+  if (r.tipo === "produto" || r.tipo === "licenciamento") {
+    return {
+      nomeProduto: texto(r.nomeProduto ?? r.nomeProjeto),
+      descricaoProduto: texto(r.descricaoProduto ?? r.descricaoProjeto),
+      justificacao,
+      origem: r.tipo,
+    };
+  }
+  if (r.tipo === "projeto") {
+    return { nomeProduto: texto(r.nomeProjeto), descricaoProduto: texto(r.descricaoProjeto), justificacao, origem: "projeto" };
+  }
+  throw new ErroImportacao(
+    `Este ficheiro é do tipo "${String(r.tipo)}". Carregue o JSON do produto, do pedido de licenciamento ou de um projeto.`,
+  );
+}
+
+function analisar(conteudo: string): Record<string, unknown> {
+  let bruto: unknown;
+  try {
+    bruto = JSON.parse(conteudo);
+  } catch {
+    throw new ErroImportacao("O ficheiro não contém JSON válido.");
+  }
+  return objeto(bruto);
+}
+
 function texto(v: unknown, omissao = ""): string {
   return typeof v === "string" ? v : omissao;
+}
+
+function textoOuNulo(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
 }
 
 function numero(v: unknown, omissao = 0): number {
@@ -806,50 +1119,67 @@ function deLista<T extends string>(v: unknown, lista: readonly T[], omissao: T |
   return typeof v === "string" && (lista as readonly string[]).includes(v) ? (v as T) : omissao;
 }
 
-function itens(v: unknown): ItemPerfil[] {
-  if (!Array.isArray(v)) return [];
-  return v
-    .filter((i): i is Record<string, unknown> => typeof i === "object" && i !== null)
-    .map((i) => ({ id: texto(i.id) || gerarId(), designacao: texto(i.designacao) }));
-}
-
 function objeto(v: unknown): Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 }
 
-function normalizarProduto(bruto: unknown): ProdutoLicenca {
+function chaves<T extends string>(registo: Record<T, unknown>): T[] {
+  return Object.keys(registo) as T[];
+}
+
+function normalizarLicenca(bruto: unknown): Licenca {
   const r = objeto(bruto);
-  const base = criarProduto();
+  const base = criarLicenca();
   const e = objeto(r.eavalia);
-  const chaves = <T extends string>(registo: Record<T, unknown>) => Object.keys(registo) as T[];
-  return {
+  const licenca: Licenca = {
     id: texto(r.id) || base.id,
     designacao: texto(r.designacao),
-    categoria: texto(r.categoria),
-    requisitosFuncionais: itens(r.requisitosFuncionais),
-    requisitosTecnicos: itens(r.requisitosTecnicos),
-    produto: texto(r.produto),
+    requisitosFuncionais: normalizarItens(r.requisitosFuncionais),
+    requisitosTecnicos: normalizarItens(r.requisitosTecnicos),
+    // Pedidos anteriores chamavam «produto» ao nome comercial.
+    nomeComercial: texto(r.nomeComercial ?? r.produto),
     fabricante: texto(r.fabricante),
     versao: texto(r.versao),
-    fundamento: deLista(r.fundamento, chaves(FUNDAMENTOS_PRODUTO), ""),
+    fundamento: deLista(r.fundamento, chaves(FUNDAMENTOS_LICENCA), ""),
     explicacaoFundamento: texto(r.explicacaoFundamento),
+    objeto: deLista(r.objeto, chaves(OBJETOS_LICENCA), "") || "software",
+    objetoOutro: texto(r.objetoOutro),
     direitoUso: deLista(r.direitoUso, chaves(DIREITOS_USO), "") || base.direitoUso,
     modalidade: deLista(r.modalidade, chaves(MODALIDADES), "") || base.modalidade,
     periodoMeses: numero(r.periodoMeses, base.periodoMeses),
     manutencao: deLista(r.manutencao, chaves(MANUTENCOES), "") || base.manutencao,
     percentagemManutencao: numero(r.percentagemManutencao),
     eavalia: {
-      tipoSolucao: deLista(e.tipoSolucao, TIPOS_SOLUCAO_EAVALIA, ""),
-      tipo: deLista(e.tipo, TIPOS_EAVALIA, ""),
+      // A submissão à concorrência já não se guarda: decorre da natureza aberta.
+      tipoSolucao: deLista(e.tipoSolucao, TIPOS_SOLUCAO_DETERMINADA, ""),
       ambito: deLista(e.ambito, AMBITOS_EAVALIA, ""),
-      consultaMercado: deLista(e.consultaMercado, RESPOSTAS_CONSULTA_MERCADO, ""),
-      tipoLicenciamento: deLista(e.tipoLicenciamento, TIPOS_LICENCIAMENTO_EAVALIA, ""),
     },
     metrica: deLista(r.metrica, chaves(METRICAS), ""),
     quantidade: numero(r.quantidade),
+    periodicidadePreco: r.periodicidadePreco === "anual" ? "anual" : "mensal",
     precoUnitario: numero(r.precoUnitario),
     origemPreco: deLista(r.origemPreco, chaves(ORIGENS_PRECO), ""),
   };
+  return comAlteracao(licenca, {});
+}
+
+/**
+ * Os textos de condições gravados por versões anteriores: os que eram os
+ * textos por omissão de então passam a acompanhar as licenças.
+ */
+const TEXTOS_ANTERIORES = new Set([
+  "Utilização pela SPMS, E.P.E. e pelas entidades do Serviço Nacional de Saúde indicadas, em todos os ambientes (produção, teste, formação e recuperação), sem limite geográfico dentro do território nacional.",
+  "Direito de uso pelo período contratado ou, quando adquirido em regime perpétuo, sem limite temporal, intransmissível a terceiros alheios ao Serviço Nacional de Saúde.",
+  "Acesso, durante a vigência do contrato, a todas as correções, versões e atualizações de segurança publicadas pelo fabricante, sem custo adicional para a entidade adjudicante.",
+  "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do incidente. O incumprimento destes tempos dá lugar às penalizações previstas.",
+  "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do contrato, excluídas as janelas de manutenção previamente acordadas.",
+  "Pelo incumprimento dos níveis de serviço, o adjudicatário fica sujeito a penalizações contratuais, sem prejuízo da resolução do contrato nos termos legais.",
+  "Licenças e acessos disponibilizados à entidade adjudicante no prazo máximo indicado, a contar da data de assinatura do contrato.",
+]);
+
+function textoDeCondicao(v: unknown): string | null {
+  const t = textoOuNulo(v);
+  return t === null || TEXTOS_ANTERIORES.has(t.trim()) ? null : t;
 }
 
 function normalizarCondicoes(bruto: unknown): CondicoesContrato {
@@ -866,37 +1196,46 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
   const di = objeto(r.disponibilidade);
   const pe = objeto(r.penalizacoes);
   const pr = objeto(r.prazo);
+  // O antigo «24x7» é o horário de 7 dias, 24 horas por dia.
+  const horario: HorarioSuporte = s.horario === "24x7" ? "7dias" : deLista(s.horario, chaves(HORARIOS_SUPORTE), "") || "uteis";
   return {
     ambito: {
-      texto: texto(a.texto, base.ambito.texto),
+      texto: textoDeCondicao(a.texto),
       entidades: texto(a.entidades),
       naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
     },
-    direitoUso: { texto: texto(d.texto, base.direitoUso.texto), transmissao: booleano(d.transmissao, true) },
-    manutencao: { texto: texto(m.texto, base.manutencao.texto) },
+    direitoUso: {
+      texto: textoDeCondicao(d.texto),
+      sublicenciamento: booleano(d.sublicenciamento, false),
+      transmissao: booleano(d.transmissao, true),
+    },
+    manutencao: { texto: textoDeCondicao(m.texto) },
     suporte: {
       ligada: booleano(s.ligada, true),
-      texto: texto(s.texto, base.suporte.texto),
-      horario: s.horario === "24x7" ? "24x7" : "uteis",
+      texto: textoDeCondicao(s.texto),
+      horario,
+      diasPersonalizados: texto(s.diasPersonalizados),
+      horaInicio: texto(s.horaInicio, s.horario === "24x7" ? "00:00" : base.suporte.horaInicio),
+      horaFim: texto(s.horaFim, s.horario === "24x7" ? "24:00" : base.suporte.horaFim),
       critica: sev(s.critica, base.suporte.critica),
       alta: sev(s.alta, base.suporte.alta),
       normal: sev(s.normal, base.suporte.normal),
     },
     disponibilidade: {
       ligada: booleano(di.ligada, true),
-      texto: texto(di.texto, base.disponibilidade.texto),
+      texto: textoDeCondicao(di.texto),
       percentagem: numero(di.percentagem, base.disponibilidade.percentagem),
       janelasForaDoHorario: booleano(di.janelasForaDoHorario, true),
     },
     penalizacoes: {
-      texto: texto(pe.texto, base.penalizacoes.texto),
+      texto: textoDeCondicao(pe.texto),
       porHoraCritica: numero(pe.porHoraCritica, base.penalizacoes.porHoraCritica),
       limiteMensal: numero(pe.limiteMensal, base.penalizacoes.limiteMensal),
       limiteGlobal: numero(pe.limiteGlobal, base.penalizacoes.limiteGlobal),
     },
     prazo: {
       ligada: booleano(pr.ligada, true),
-      texto: texto(pr.texto, base.prazo.texto),
+      texto: textoDeCondicao(pr.texto),
       diasUteis: numero(pr.diasUteis, base.prazo.diasUteis),
     },
     proprias: Array.isArray(r.proprias)
@@ -908,34 +1247,43 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
   };
 }
 
-/** O pedido recuperado de um ficheiro ou do navegador, com o que falte reposto por omissão. */
+/**
+ * O pedido recuperado de um ficheiro ou do navegador, com o que falte reposto
+ * por omissão. Aceita os pedidos da versão anterior (produtos em vez de
+ * licenças, projeto em vez de produto).
+ */
 export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamento {
   const r = objeto(bruto);
   const base = pedidoLicenciamentoInicial();
   const enc = objeto(r.encargosPlurianuais);
   const juri = objeto(r.juri);
-  const eav = objeto(r.eavalia);
-  const produtos = Array.isArray(r.produtos) ? r.produtos.map(normalizarProduto) : [];
-  const natureza: NaturezaAquisicao = r.natureza === "determinado" ? "determinado" : "aberta";
+  const brutas = Array.isArray(r.licencas) ? r.licencas : Array.isArray(r.produtos) ? r.produtos : [];
   const lotes: LoteLicenca[] = Array.isArray(r.lotes)
     ? r.lotes.map((l) => {
         const o = objeto(l);
+        const ids = Array.isArray(o.licencaIds) ? o.licencaIds : Array.isArray(o.produtoIds) ? o.produtoIds : [];
         return {
           id: texto(o.id) || gerarId(),
           numero: texto(o.numero),
           designacao: texto(o.designacao),
-          produtoIds: Array.isArray(o.produtoIds) ? o.produtoIds.filter((x): x is string => typeof x === "string") : [],
+          licencaIds: ids.filter((x): x is string => typeof x === "string"),
         };
       })
     : [];
   const pedido: PedidoLicenciamento = {
     schemaVersion: SCHEMA_VERSION_ATUAL,
     tipo: "licenciamento",
-    nomeProjeto: texto(r.nomeProjeto),
-    descricaoProjeto: texto(r.descricaoProjeto),
-    justificacao: r.justificacao === undefined ? justificacaoInicial() : normalizarJustificacao(r.justificacao),
-    natureza,
-    produtos,
+    nomeProduto: texto(r.nomeProduto ?? r.nomeProjeto),
+    descricaoProduto: texto(r.descricaoProduto ?? r.descricaoProjeto),
+    justificacao:
+      r.justificacao === undefined
+        ? justificacaoInicial()
+        : (() => {
+            const j = normalizarJustificacao(r.justificacao);
+            return { ...j, beneficios: semBeneficioFixo(j.beneficios) };
+          })(),
+    natureza: r.natureza === "determinado" ? "determinado" : "aberta",
+    licencas: brutas.map(normalizarLicenca),
     condicoes: normalizarCondicoes(r.condicoes),
     lotes,
     umLotePorConcorrente: booleano(r.umLotePorConcorrente, false),
@@ -952,7 +1300,6 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
       unidade: texto(juri.unidade),
       gestorProjeto: texto(juri.gestorProjeto),
     },
-    eavalia: { ...informacaoEavaliaInicial(), ...(eav as Partial<InformacaoEavalia>) },
     numeroInformacao: texto(r.numeroInformacao),
     numeroOrcamento: texto(r.numeroOrcamento),
   };
@@ -961,17 +1308,11 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
 
 export function ehPedidoLicenciamentoGuardado(valor: unknown): valor is PedidoLicenciamento {
   const r = objeto(valor);
-  return r.tipo === "licenciamento" && Array.isArray(r.produtos);
+  return r.tipo === "licenciamento" && (Array.isArray(r.licencas) || Array.isArray(r.produtos));
 }
 
 export function importarPedidoLicenciamentoJSON(conteudo: string): PedidoLicenciamento {
-  let bruto: unknown;
-  try {
-    bruto = JSON.parse(conteudo);
-  } catch {
-    throw new ErroImportacao("O ficheiro não contém JSON válido.");
-  }
-  const r = objeto(bruto);
+  const r = analisar(conteudo);
   if (r.tipo !== "licenciamento") {
     throw new ErroImportacao(
       `Este ficheiro é do tipo "${String(r.tipo)}". Carregue o JSON de um pedido de licenciamento.`,
@@ -983,7 +1324,7 @@ export function importarPedidoLicenciamentoJSON(conteudo: string): PedidoLicenci
         `Esta aplicação suporta a versão "${SCHEMA_VERSION_ATUAL}".`,
     );
   }
-  return normalizarPedidoLicenciamento(bruto);
+  return normalizarPedidoLicenciamento(r);
 }
 
 // --------------------------------------------------------------------------
@@ -994,73 +1335,103 @@ function itensExemplo(prefixo: string, textos: string[]): ItemPerfil[] {
   return textos.map((designacao, i) => ({ id: `${prefixo}${i + 1}`, designacao }));
 }
 
-/** Um pedido de exemplo, para experimentar os três módulos sem preencher tudo. */
+const JURI_EXEMPLO: JuriTecnico = {
+  diretor: "Nome do Diretor",
+  coordenador: "Nome do Coordenador",
+  unidade: "Unidade de Planeamento, Arquitetura, Conformidade e Engenharia",
+  gestorProjeto: "Nome do Gestor do Produto",
+};
+
+/**
+ * O exemplo: a SNOMED CT, uma licença determinada de terminologia, de âmbito
+ * nacional, em subscrição anual — o caso que não é software.
+ */
 export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear()): PedidoLicenciamento {
-  const gestao: ProdutoLicenca = {
-    ...criarProduto("aberta"),
+  const snomed: Licenca = {
+    ...criarLicenca(),
+    id: "lic-snomed",
+    designacao: "Licença nacional de terminologia clínica de referência",
+    requisitosFuncionais: itensExemplo("lic-snomed-f", [
+      "Utilização da terminologia em todo o território nacional, por entidades públicas e privadas",
+      "Acesso às edições internacionais e à criação da extensão nacional",
+    ]),
+    nomeComercial: "Afiliação nacional SNOMED International",
+    fabricante: "SNOMED International",
+    versao: "International Edition",
+    fundamento: "direitosExclusivos",
+    explicacaoFundamento:
+      "A SNOMED International é a única entidade que licencia a SNOMED CT; a afiliação nacional cobre a sua " +
+      "utilização em todo o território.",
+    objeto: "terminologia",
+    direitoUso: "temporario",
+    modalidade: "renovacao",
+    periodoMeses: 36,
+    manutencao: "incluida",
+    eavalia: { tipoSolucao: "Software Proprietário sem alternativas", ambito: "Outro" },
+    metrica: "nacional",
+    quantidade: 1,
+    periodicidadePreco: "anual",
+    precoUnitario: 120000,
+    origemPreco: "tabelaPublica",
+  };
+  const pedido = pedidoLicenciamentoInicial(anoInicio);
+  return {
+    ...pedido,
+    ...PRODUTO_LICENCIAMENTO_EXEMPLO,
+    natureza: "determinado",
+    licencas: [snomed],
+    condicoes: {
+      ...pedido.condicoes,
+      suporte: {
+        ...pedido.condicoes.suporte,
+        critica: { resposta: 4, resolucao: 24 },
+        alta: { resposta: 8, resolucao: 48 },
+        normal: { resposta: 24, resolucao: 120 },
+      },
+    },
+    lotes: [{ id: "lote-snomed", numero: "1", designacao: "", licencaIds: ["lic-snomed"] }],
+    encargosPlurianuais: { ativo: true, anoInicio },
+    juri: { ...JURI_EXEMPLO },
+  };
+}
+
+/** Um segundo exemplo, de software: aberta à concorrência, subscrição e licença perpétua com manutenção. */
+export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFullYear()): PedidoLicenciamento {
+  const gestao: Licenca = {
+    ...criarLicenca(),
     id: "lic-gd",
     designacao: "Plataforma de gestão documental",
-    categoria: "Gestão documental e workflow",
     requisitosFuncionais: itensExemplo("lic-gd-f", [
       "Gestão de documentos com versões, classificação e pesquisa de texto integral",
       "Fluxos de aprovação configuráveis sem programação",
       "Assinatura eletrónica qualificada integrada",
       "Integração por API REST com os sistemas da SPMS",
     ]),
-    requisitosTecnicos: itensExemplo("lic-gd-t", [
-      "Autenticação por SSO (SAML 2.0 / OIDC)",
-      "Alojamento dos dados na União Europeia",
-    ]),
-    produto: "DocFlow Enterprise",
-    fabricante: "Fabricante X",
-    versao: "12",
-    fundamento: "plataformaInstalada",
-    explicacaoFundamento:
-      "A plataforma encontra-se instalada e integrada com os sistemas da SPMS desde 2022; a mudança de produto " +
-      "obrigaria à migração de todo o arquivo documental e à reformulação das integrações existentes.",
+    requisitosTecnicos: itensExemplo("lic-gd-t", ["Autenticação por SSO (SAML 2.0 / OIDC)", "Alojamento dos dados na União Europeia"]),
     direitoUso: "temporario",
     modalidade: "aquisicao",
     periodoMeses: 36,
-    manutencao: "incluida",
-    eavalia: {
-      tipoSolucao: "Submissão à concorrência",
-      tipo: "Subscrição ou SaaS",
-      ambito: "Gestão Documental",
-      consultaMercado: "Sim",
-      tipoLicenciamento: "Aquisição novas licenças",
-    },
+    eavalia: { tipoSolucao: "", ambito: "Gestão Documental" },
     metrica: "utilizadorNomeado",
     quantidade: 1200,
     precoUnitario: 14.5,
     origemPreco: "consultaPreliminar",
   };
-  const bd: ProdutoLicenca = {
-    ...criarProduto("aberta"),
+  const bd: Licenca = {
+    ...criarLicenca(),
     id: "lic-bd",
     designacao: "Sistema de gestão de base de dados relacional",
-    categoria: "Base de dados relacional",
     requisitosFuncionais: itensExemplo("lic-bd-f", [
       "Replicação síncrona entre dois centros de dados",
       "Cópias de segurança em linha, sem paragem do serviço",
     ]),
     requisitosTecnicos: itensExemplo("lic-bd-t", ["Suporte a SQL ANSI e a procedimentos armazenados"]),
-    produto: "DataCore DB",
-    fabricante: "Fabricante Y",
-    versao: "19c",
-    fundamento: "renovacao",
-    explicacaoFundamento: "As bases de dados de produção da SPMS assentam neste produto.",
     direitoUso: "perpetuo",
     modalidade: "aquisicao",
     periodoMeses: 36,
     manutencao: "aParte",
     percentagemManutencao: 22,
-    eavalia: {
-      tipoSolucao: "Submissão à concorrência",
-      tipo: "Licenças",
-      ambito: "Servidor",
-      consultaMercado: "Sim",
-      tipoLicenciamento: "Aquisição novas licenças",
-    },
+    eavalia: { tipoSolucao: "", ambito: "Servidor" },
     metrica: "core",
     quantidade: 64,
     precoUnitario: 1900,
@@ -1068,51 +1439,42 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
   };
   return {
     ...pedidoLicenciamentoInicial(anoInicio),
-    produtos: [gestao, bd],
+    nomeProduto: "Arquivo Digital",
+    descricaoProduto:
+      "plataforma de gestão documental eletrónica da SPMS, com fluxos de aprovação, assinatura eletrónica e " +
+      "arquivo de longo prazo, assente numa base de dados relacional de elevada disponibilidade",
+    justificacao: {
+      objetivos: itensExemplo("ad-obj", ["Desmaterializar os processos administrativos da SPMS"]),
+      beneficios: itensExemplo("ad-ben", ["Redução do tempo de tramitação dos processos"]),
+      riscos: itensExemplo("ad-ris", ["Interrupção do acesso ao arquivo documental no termo das licenças atuais"]),
+    },
+    licencas: [gestao, bd],
     lotes: [
-      { id: "lote-gd", numero: "1", designacao: "Gestão documental", produtoIds: ["lic-gd"] },
-      { id: "lote-bd", numero: "2", designacao: "Base de dados", produtoIds: ["lic-bd"] },
+      { id: "lote-gd", numero: "1", designacao: "Gestão documental", licencaIds: ["lic-gd"] },
+      { id: "lote-bd", numero: "2", designacao: "Base de dados", licencaIds: ["lic-bd"] },
     ],
     encargosPlurianuais: { ativo: true, anoInicio },
-    eavalia: {
-      iap: "Já cumpre",
-      sms: "Não aplicável",
-      faturacao: "Não aplicável",
-      chaveMovelDigital: "Não aplicável",
-      usabilidade: "Selo Prata",
-      idiomas: "Cumpre Parcialmente",
-    },
-    juri: {
-      diretor: "Nome do Diretor",
-      coordenador: "Nome do Coordenador",
-      unidade: "Unidade de Planeamento, Arquitetura, Conformidade e Engenharia",
-      gestorProjeto: "Nome do Gestor de Projeto",
-    },
+    juri: { ...JURI_EXEMPLO },
   };
 }
 
-/** O projeto do exemplo do licenciamento — o Módulo 1 que o acompanha. */
-export const PROJETO_LICENCIAMENTO_EXEMPLO: {
-  nomeProjeto: string;
-  descricaoProjeto: string;
-  justificacao: JustificacaoProjeto;
-} = {
-  nomeProjeto: "Arquivo Digital",
-  descricaoProjeto:
-    "assegurar a gestão documental eletrónica da SPMS, com fluxos de aprovação, assinatura eletrónica e arquivo " +
-    "de longo prazo, assente numa base de dados relacional de elevada disponibilidade",
+/** O produto do exemplo — o Módulo 1 do licenciamento. */
+export const PRODUTO_LICENCIAMENTO_EXEMPLO: Pick<PedidoLicenciamento, "nomeProduto" | "descricaoProduto" | "justificacao"> = {
+  nomeProduto: "SNOMED CT",
+  descricaoProduto:
+    "terminologia clínica de referência internacional, que permite codificar de forma inequívoca a informação " +
+    "clínica registada nos sistemas de informação de saúde e partilhá-la entre eles",
   justificacao: {
-    objetivos: itensExemplo("lic-obj", [
-      "Desmaterializar os processos administrativos da SPMS",
-      "Garantir o arquivo eletrónico com valor probatório",
+    objetivos: itensExemplo("snomed-obj", [
+      "Assegurar a utilização da SNOMED CT em todo o território nacional",
+      "Garantir o acesso às edições internacionais e à extensão portuguesa",
     ]),
-    beneficios: itensExemplo("lic-ben", [
-      "Redução do tempo de tramitação dos processos, com fluxos de aprovação eletrónicos",
-      "Eliminação do papel e dos custos de arquivo físico",
+    beneficios: itensExemplo("snomed-ben", [
+      "Interoperabilidade semântica entre os sistemas de informação do SNS",
+      "Utilização da terminologia pelas entidades e pelos fornecedores de software em Portugal sem custos de licenciamento próprios",
     ]),
-    riscos: itensExemplo("lic-ris", [
-      "Interrupção do acesso ao arquivo documental no termo das licenças atuais",
-      "Perda de suporte e de atualizações de segurança da base de dados",
+    riscos: itensExemplo("snomed-ris", [
+      "Os sistemas de informação deixam de poder usar a SNOMED CT no termo da afiliação",
     ]),
   },
 };

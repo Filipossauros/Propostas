@@ -14,7 +14,7 @@
 // as restantes entradas intactas.
 
 import JSZip from "jszip";
-import type { InformacaoEavalia, LotesJSON } from "../core/types";
+import type { LotesJSON } from "../core/types";
 import type { PedidoLicenciamento } from "../core/licenciamento";
 import modeloBase64 from "./modelos/Pedido_PPP_eavalia.xlsx?base64";
 import {
@@ -31,6 +31,7 @@ import {
   RESPOSTAS_COM_DATA,
   serieDeData,
   textoDaMedida,
+  type Medida,
   type RespostaDoFormulario,
 } from "./eavaliaModelo";
 import { comFolhaVisivel, preencherCustosServicos, recursosDoProcedimento } from "./custosServicos";
@@ -70,7 +71,8 @@ async function abrirModelo() {
 async function preencherAlinhamentoEDespesa(
   zip: JSZip,
   partilhadas: string[],
-  eavalia: InformacaoEavalia,
+  /** A resposta a cada medida: a escolhida, ou a fixa do formulário. */
+  respostaDe: (medida: Medida) => RespostaDoFormulario,
   objeto: string,
   hoje: Date,
 ): Promise<void> {
@@ -86,7 +88,7 @@ async function preencherAlinhamentoEDespesa(
       );
     }
 
-    const resposta: RespostaDoFormulario = "fixa" in medida ? medida.fixa : eavalia[medida.campo];
+    const resposta = respostaDe(medida);
     if (resposta === "") continue;
 
     alinhamento = escreverCelula(
@@ -141,7 +143,13 @@ export async function gerarEavaliaBlob(
   const { zip, partilhadas } = await abrirModelo();
   const folhaCustos = zip.file(FOLHA_CUSTOS_SERVICOS);
   if (folhaCustos === null) throw new ErroModeloEavalia("O modelo eAvalia não tem a estrutura esperada.");
-  await preencherAlinhamentoEDespesa(zip, partilhadas, config.eavalia, config.nomeProjeto, hoje);
+  await preencherAlinhamentoEDespesa(
+    zip,
+    partilhadas,
+    (medida) => ("fixa" in medida ? medida.fixa : config.eavalia[medida.campo]),
+    config.nomeProjeto,
+    hoje,
+  );
 
   // Os custos dos serviços: um bloco por perfil em cada lote. A folha vem
   // oculta no modelo e passa a ver-se — é o que se pede preenchido.
@@ -154,9 +162,9 @@ export async function gerarEavaliaBlob(
 }
 
 /**
- * O eAvalia de um pedido de licenciamento: o alinhamento e o objeto como no
- * pedido de serviços, e a folha «Custos - Licenciamento» preenchida com os
- * produtos (ver `custosLicenciamento.ts`). A folha «Custos - Serviços» fica
+ * O eAvalia de um pedido de licenciamento: o alinhamento todo «Não
+ * aplicável», o objeto (o produto) e a folha «Custos - Licenciamento»
+ * preenchida com as licenças (ver `custosLicenciamento.ts`). A folha «Custos - Serviços» fica
  * como o modelo a traz — oculta e por preencher.
  */
 export async function gerarEavaliaLicenciamentoBlob(
@@ -166,7 +174,9 @@ export async function gerarEavaliaLicenciamentoBlob(
   const { zip, partilhadas } = await abrirModelo();
   const folha = zip.file(FOLHA_CUSTOS_LICENCIAMENTO);
   if (folha === null) throw new ErroModeloEavalia("O modelo eAvalia não tem a folha «Custos - Licenciamento».");
-  await preencherAlinhamentoEDespesa(zip, partilhadas, pedido.eavalia, pedido.nomeProjeto, hoje);
+  // No licenciamento, as medidas do alinhamento tecnológico — todas sobre
+  // portais e serviços digitais — não se aplicam: saem todas «Não aplicável».
+  await preencherAlinhamentoEDespesa(zip, partilhadas, () => "Não aplicável", pedido.nomeProduto, hoje);
   zip.file(FOLHA_CUSTOS_LICENCIAMENTO, preencherCustosLicenciamento(await folha.async("string"), pedido, partilhadas));
   return fechar(zip);
 }

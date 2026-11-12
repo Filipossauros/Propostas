@@ -1,14 +1,29 @@
 import type { ReactNode } from "react";
-import type { CondicoesContrato, HorarioSuporte, PedidoLicenciamento, TemposDeSeveridade } from "../core/licenciamento";
+import type {
+  CondicaoComTexto,
+  CondicoesContrato,
+  HorarioSuporte,
+  PedidoLicenciamento,
+  TemposDeSeveridade,
+} from "../core/licenciamento";
 import {
+  EXPLICACAO_NAO_PRODUTIVOS,
+  EXPLICACAO_SUBLICENCIAMENTO,
+  EXPLICACAO_TRANSMISSAO,
   HORARIOS_SUPORTE,
   LIMITE_GLOBAL_PENALIZACOES,
-  TEXTOS_CONDICOES,
+  aplicaNaoProdutivos,
+  aplicabilidade,
   condicoesIniciais,
+  horarioPorExtenso,
+  objetoPorExtenso,
+  textoDaCondicao,
+  tituloDaManutencao,
   validarCondicoes,
 } from "../core/licenciamento";
 import { gerarId } from "../core/id";
 import { CampoNumero } from "../ui/CampoNumero";
+import { Explicacao } from "../ui/Explicacao";
 
 interface Props {
   pedido: PedidoLicenciamento;
@@ -19,28 +34,46 @@ interface Props {
 type Selo = "obrigatória" | "recomendada" | "se SaaS";
 
 /**
- * Uma condição do contrato: o título, a marca (obrigatória, recomendada…), o
- * interruptor quando se pode desligar, o texto e os parâmetros.
+ * Uma condição do contrato: o título, a marca, o interruptor quando se pode
+ * desligar, o texto e os parâmetros. Quando não se aplica às licenças do L1,
+ * fica só o título e a razão.
  */
 function Condicao({
   titulo,
   selo,
   ligada,
   onLigar,
+  naoAplica,
   texto,
-  textoPorOmissao,
+  personalizado,
   onTexto,
+  onRepor,
   children,
 }: {
   titulo: string;
   selo: Selo;
   ligada?: boolean;
   onLigar?: (ligada: boolean) => void;
+  /** A razão por que não se aplica, ou vazio. */
+  naoAplica?: string;
   texto: string;
-  textoPorOmissao: string;
+  /** Se o texto foi escrito à mão (e já não acompanha as licenças). */
+  personalizado: boolean;
   onTexto: (texto: string) => void;
+  onRepor: () => void;
   children?: ReactNode;
 }) {
+  if (naoAplica) {
+    return (
+      <div className="condicao condicao-desligada">
+        <div className="condicao-cabecalho">
+          <strong className="condicao-titulo">{titulo}</strong>
+          <span className="selo-condicao selo-condicao-opcional">não se aplica</span>
+        </div>
+        <p className="ajuda">{naoAplica}</p>
+      </div>
+    );
+  }
   const ativa = ligada ?? true;
   return (
     <div className={ativa ? "condicao" : "condicao condicao-desligada"}>
@@ -63,10 +96,12 @@ function Condicao({
             <span className="rotulo-oculto">Texto da condição «{titulo}»</span>
             <textarea rows={3} value={texto} aria-invalid={texto.trim() === ""} onChange={(e) => onTexto(e.target.value)} />
           </label>
-          {texto.trim() !== textoPorOmissao && (
-            <button type="button" className="botao-discreto" onClick={() => onTexto(textoPorOmissao)}>
+          {personalizado ? (
+            <button type="button" className="botao-discreto" onClick={onRepor}>
               Repor o texto por omissão
             </button>
+          ) : (
+            <p className="ajuda">Texto por omissão, adaptado às licenças do L1. Pode alterá-lo.</p>
           )}
           {children}
         </>
@@ -75,15 +110,7 @@ function Condicao({
   );
 }
 
-function Horas({
-  rotulo,
-  valor,
-  onChange,
-}: {
-  rotulo: string;
-  valor: number;
-  onChange: (valor: number) => void;
-}) {
+function Horas({ rotulo, valor, onChange }: { rotulo: string; valor: number; onChange: (valor: number) => void }) {
   return (
     <label className="campo-numero-rotulado">
       <span className="rotulo">{rotulo}</span>
@@ -92,6 +119,8 @@ function Horas({
   );
 }
 
+const HORA = /^([01]\d|2[0-4]):([0-5]\d)$/;
+
 /**
  * L2 · Condições do contrato: o que o adjudicatário se obriga a cumprir. O
  * preço é o único critério; tudo o resto são termos e condições, e cada
@@ -99,8 +128,7 @@ function Horas({
  */
 export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
   const c = pedido.condicoes;
-  const erros = validarCondicoes(c);
-  const temSaaS = pedido.produtos.some((p) => p.direitoUso === "temporario");
+  const erros = validarCondicoes(pedido);
 
   function alterar<K extends keyof CondicoesContrato>(chave: K, alteracao: Partial<CondicoesContrato[K]>) {
     onAlterar((atual) => ({
@@ -108,6 +136,14 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
       condicoes: { ...atual.condicoes, [chave]: { ...atual.condicoes[chave], ...alteracao } },
     }));
   }
+
+  /** As propriedades do texto de uma condição: o efetivo, se é escrito à mão, e como se muda e repõe. */
+  const textoDe = (chave: CondicaoComTexto) => ({
+    texto: textoDaCondicao(chave, pedido),
+    personalizado: c[chave].texto !== null,
+    onTexto: (texto: string) => alterar(chave, { texto } as Partial<CondicoesContrato[typeof chave]>),
+    onRepor: () => alterar(chave, { texto: null } as Partial<CondicoesContrato[typeof chave]>),
+  });
 
   function severidade(chave: "critica" | "alta" | "normal", alteracao: Partial<TemposDeSeveridade>) {
     alterar("suporte", { [chave]: { ...c.suporte[chave], ...alteracao } });
@@ -129,9 +165,10 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
     onAlterar((atual) => ({ ...atual, condicoes: condicoesIniciais() }));
   }
 
-  const ligadas =
-    4 + Number(c.suporte.ligada) + Number(c.disponibilidade.ligada) + Number(c.prazo.ligada) + c.proprias.length;
-  const total = 7 + c.proprias.length;
+  const manutencao = aplicabilidade("manutencao", pedido);
+  const disponibilidade = aplicabilidade("disponibilidade", pedido);
+  const resumo = [...new Set(pedido.licencas.map((l) => `${objetoPorExtenso(l).toLowerCase()} (${l.direitoUso === "temporario" ? "subscrição" : "perpétua"})`))];
+  const horaValida = (h: string) => HORA.test(h.trim());
 
   return (
     <div className="modulo modulo-licenciamento">
@@ -146,25 +183,30 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         </div>
         <p className="modulo-subtitulo">
           O preço é o único critério: tudo o resto são termos e condições do contrato. Cada condição ligada sai nas
-          Especificações Técnicas (Anexo III), com o texto e os valores aqui fixados.
+          Especificações Técnicas (Anexo III). Os textos por omissão partem das licenças do L1 e acompanham-nas enquanto
+          não forem alterados à mão.
         </p>
         <p className="modulo-quem">
-          <strong>Quem preenche:</strong> o gestor do projeto.
+          <strong>Quem preenche:</strong> o responsável do produto.
         </p>
       </header>
+
+      {pedido.licencas.length > 0 ? (
+        <p className="aviso aviso-info" role="status">
+          Licenças do L1: {resumo.join("; ")}. As condições que não se aplicam ficam assinaladas, com a razão.
+        </p>
+      ) : (
+        <p className="aviso aviso-atencao" role="status">
+          Ainda não há licenças no L1: os textos por omissão ficam genéricos até as acrescentar.
+        </p>
+      )}
 
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Âmbito e direitos de utilização</h3>
         </header>
 
-        <Condicao
-          titulo="Âmbito da licença"
-          selo="obrigatória"
-          texto={c.ambito.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.ambito}
-          onTexto={(texto) => alterar("ambito", { texto })}
-        >
+        <Condicao titulo="Âmbito da licença" selo="obrigatória" {...textoDe("ambito")}>
           <div className="linha-campos linha-campos-separada">
             <label className="campo-crescente">
               <span className="rotulo">Entidades abrangidas</span>
@@ -176,26 +218,37 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
               />
             </label>
           </div>
+          {aplicaNaoProdutivos(pedido) && (
+            <>
+              <label className="campo-opcao">
+                <input
+                  type="checkbox"
+                  checked={c.ambito.naoProdutivosSemCusto}
+                  onChange={(e) => alterar("ambito", { naoProdutivosSemCusto: e.target.checked })}
+                />
+                <span>
+                  <strong>Ambientes de teste, formação e recuperação sem custo</strong>
+                  <span className="meta">Só nas licenças de software.</span>
+                </span>
+              </label>
+              <Explicacao pergunta="O que quer dizer?">{EXPLICACAO_NAO_PRODUTIVOS}</Explicacao>
+            </>
+          )}
+        </Condicao>
+
+        <Condicao titulo="Direito de uso e transmissão" selo="obrigatória" {...textoDe("direitoUso")}>
           <label className="campo-opcao">
             <input
               type="checkbox"
-              checked={c.ambito.naoProdutivosSemCusto}
-              onChange={(e) => alterar("ambito", { naoProdutivosSemCusto: e.target.checked })}
+              checked={c.direitoUso.sublicenciamento}
+              onChange={(e) => alterar("direitoUso", { sublicenciamento: e.target.checked })}
             />
             <span>
-              <strong>Ambientes não produtivos sem custo</strong>
-              <span className="meta">Teste, formação e recuperação não contam para o licenciamento.</span>
+              <strong>Sublicenciamento a terceiros abrangidos pelo âmbito</strong>
+              <span className="meta">A entidade adjudicante pode autorizar outros a usar a licença, sem custo.</span>
             </span>
           </label>
-        </Condicao>
-
-        <Condicao
-          titulo="Direito de uso e transmissão"
-          selo="obrigatória"
-          texto={c.direitoUso.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.direitoUso}
-          onTexto={(texto) => alterar("direitoUso", { texto })}
-        >
+          <Explicacao pergunta="O que é o sublicenciamento?">{EXPLICACAO_SUBLICENCIAMENTO}</Explicacao>
           <label className="campo-opcao">
             <input
               type="checkbox"
@@ -204,9 +257,10 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             />
             <span>
               <strong>Transmissão a outra entidade do SNS, sem custo</strong>
-              <span className="meta">Mediante comunicação prévia ao adjudicatário.</span>
+              <span className="meta">A licença passa, por inteiro, para outra entidade do SNS.</span>
             </span>
           </label>
+          <Explicacao pergunta="O que é a transmissão?">{EXPLICACAO_TRANSMISSAO}</Explicacao>
         </Condicao>
       </section>
 
@@ -216,11 +270,10 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         </header>
 
         <Condicao
-          titulo="Manutenção e atualizações"
+          titulo={tituloDaManutencao(pedido)}
           selo="obrigatória"
-          texto={c.manutencao.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.manutencao}
-          onTexto={(texto) => alterar("manutencao", { texto })}
+          naoAplica={manutencao.aplica ? "" : manutencao.razao}
+          {...textoDe("manutencao")}
         />
 
         <Condicao
@@ -228,9 +281,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           selo="recomendada"
           ligada={c.suporte.ligada}
           onLigar={(ligada) => alterar("suporte", { ligada })}
-          texto={c.suporte.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.suporte}
-          onTexto={(texto) => alterar("suporte", { texto })}
+          {...textoDe("suporte")}
         >
           <div className="linha-campos linha-campos-separada">
             <label className="campo-estreito campo-horario">
@@ -246,7 +297,44 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
                 ))}
               </select>
             </label>
+            {c.suporte.horario === "personalizado" && (
+              <label className="campo-crescente">
+                <span className="rotulo">Dias</span>
+                <input
+                  type="text"
+                  value={c.suporte.diasPersonalizados}
+                  placeholder="ex.: Dias úteis e sábados"
+                  aria-invalid={c.suporte.diasPersonalizados.trim() === ""}
+                  onChange={(e) => alterar("suporte", { diasPersonalizados: e.target.value })}
+                />
+              </label>
+            )}
+            <label className="campo-hora">
+              <span className="rotulo">Das</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={c.suporte.horaInicio}
+                placeholder="09:00"
+                aria-invalid={!horaValida(c.suporte.horaInicio)}
+                onChange={(e) => alterar("suporte", { horaInicio: e.target.value })}
+              />
+            </label>
+            <label className="campo-hora">
+              <span className="rotulo">Às</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={c.suporte.horaFim}
+                placeholder="18:00"
+                aria-invalid={!horaValida(c.suporte.horaFim)}
+                onChange={(e) => alterar("suporte", { horaFim: e.target.value })}
+              />
+            </label>
           </div>
+          <p className="ajuda">
+            Sai assim: «{horarioPorExtenso(c.suporte)}». Horas no formato 09:00; das 00:00 às 24:00 é o dia inteiro.
+          </p>
           {(
             [
               ["critica", "Crítica"],
@@ -268,9 +356,8 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </div>
           ))}
           <p className="ajuda">
-            Tempos máximos por severidade, em horas {c.suporte.horario === "uteis" ? "do horário de suporte" : "seguidas"}.
-            Crítica: serviço indisponível ou perda de dados; alta: funcionalidade relevante afetada; normal: os
-            restantes.
+            Tempos máximos por severidade, em horas do horário de suporte. Crítica: impossibilidade de utilização, ou
+            perda de dados; alta: funcionalidade relevante afetada; normal: os restantes pedidos.
           </p>
         </Condicao>
 
@@ -279,9 +366,8 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           selo="se SaaS"
           ligada={c.disponibilidade.ligada}
           onLigar={(ligada) => alterar("disponibilidade", { ligada })}
-          texto={c.disponibilidade.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.disponibilidade}
-          onTexto={(texto) => alterar("disponibilidade", { texto })}
+          naoAplica={disponibilidade.aplica ? "" : disponibilidade.razao}
+          {...textoDe("disponibilidade")}
         >
           <div className="linha-campos linha-campos-numeros">
             <label className="campo-numero-rotulado">
@@ -308,21 +394,9 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
               <span className="meta">Comunicadas com, pelo menos, 5 dias úteis de antecedência.</span>
             </span>
           </label>
-          {!temSaaS && pedido.produtos.length > 0 && (
-            <p className="aviso aviso-atencao" role="status">
-              Nenhum produto do L1 é uma subscrição: a disponibilidade só faz sentido num serviço prestado pelo
-              fornecedor (SaaS). Desligue-a se não se aplicar.
-            </p>
-          )}
         </Condicao>
 
-        <Condicao
-          titulo="Penalizações"
-          selo="obrigatória"
-          texto={c.penalizacoes.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.penalizacoes}
-          onTexto={(texto) => alterar("penalizacoes", { texto })}
-        >
+        <Condicao titulo="Penalizações" selo="obrigatória" {...textoDe("penalizacoes")}>
           <div className="linha-campos linha-campos-numeros">
             <label className="campo-numero-rotulado">
               <span className="rotulo">Por hora de atraso (crítica)</span>
@@ -372,9 +446,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           selo="recomendada"
           ligada={c.prazo.ligada}
           onLigar={(ligada) => alterar("prazo", { ligada })}
-          texto={c.prazo.texto}
-          textoPorOmissao={TEXTOS_CONDICOES.prazo}
-          onTexto={(texto) => alterar("prazo", { texto })}
+          {...textoDe("prazo")}
         >
           <div className="linha-campos linha-campos-numeros">
             <label className="campo-numero-rotulado">
@@ -472,8 +544,9 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         <div>
           <h3>Continuar para o pedido</h3>
           <p className="painel-nota">
-            {ligadas} de {total} condições ligadas.
-            {erros.length > 0 && ` ${erros.length === 1 ? "1 questão" : `${erros.length} questões`} por resolver.`}
+            {erros.length === 0
+              ? "As condições estão completas."
+              : `${erros.length === 1 ? "1 questão" : `${erros.length} questões`} por resolver.`}
           </p>
         </div>
         <button type="button" className="botao-principal" onClick={onIrParaPedido}>

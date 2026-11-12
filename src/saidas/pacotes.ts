@@ -176,14 +176,14 @@ export function nomeDoPacoteDePecas(nomeProjeto: string, quando?: Date): string 
  * com os dois números, PDF), o eAvalia com a folha «Custos - Licenciamento», um
  * mapa de quantidades e preços por lote e o JSON do pedido.
  *
- * `pedido` traz o projeto carimbado e os preços de referência; a margem
+ * `pedido` traz o produto e os preços de referência; a margem
  * prudencial aplica-se aqui, uma vez, a todas as peças com preços.
  */
 export async function ficheirosDoPedidoLicenciamento(
   pedido: PedidoLicenciamento,
   quando = new Date(),
 ): Promise<FicheiroDoPacote[]> {
-  const base = nomeSeguro(pedido.nomeProjeto, "Projeto");
+  const base = nomeSeguro(pedido.nomeProduto, "Produto");
   const comMargem = comMargemLicenciamento(pedido);
   const informacao: FicheiroDoPacote = {
     nome: `${base}_Manifestacao_de_Necessidades_Licenciamento.docx`,

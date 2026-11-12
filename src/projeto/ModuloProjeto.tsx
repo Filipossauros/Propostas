@@ -27,11 +27,6 @@ interface Props {
   seguinte: { titulo: string; nota: string; onIr: () => void };
   /** O quadro «Como funciona» é o do pedido de serviços de bolsa de horas. */
   mostrarComoFunciona: boolean;
-  /**
-   * O benefício de fecho — a insuficiência de recursos humanos internos — é
-   * da bolsa de horas: no pedido de licenciamento não se mostra nem sai.
-   */
-  comBeneficioFixo?: boolean;
 }
 
 const CHAVE_COMO_FUNCIONA = "propostas.v2.comoFuncionaFechado";
@@ -57,8 +52,8 @@ function fecharComoFunciona() {
  * Módulo 1 · Projeto.
  *
  * O que é do projeto e não de nenhum perfil: o nome, a descrição e as três
- * listas da manifestação de necessidades. É o mesmo no pedido de serviços de
- * bolsa de horas e no pedido de licenciamento. Tem ficheiro próprio, só com a
+ * listas da manifestação de necessidades do pedido de serviços de bolsa de
+ * horas (o licenciamento tem o seu Módulo 1, o Produto). Tem ficheiro próprio, só com a
  * caracterização, e viaja também dentro do JSON dos perfis e do dos lotes;
  * qualquer um dos três o repõe aqui.
  */
@@ -71,7 +66,6 @@ export function ModuloProjeto({
   onAlterarJustificacao,
   seguinte,
   mostrarComoFunciona,
-  comBeneficioFixo = true,
 }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const inputProjetoRef = useRef<HTMLInputElement>(null);
@@ -159,8 +153,7 @@ export function ModuloProjeto({
           </div>
         </div>
         <p className="modulo-subtitulo">
-          Identifica o projeto e justifica a aquisição. Escreve-se uma vez e serve o pedido de serviços de bolsa de
-          horas e o pedido de licenciamento.
+          Identifica o projeto e justifica a aquisição dos serviços de bolsa de horas.
         </p>
         <p className="modulo-quem">
           <strong>Quem preenche:</strong> o gestor do projeto.
@@ -284,17 +277,15 @@ export function ModuloProjeto({
         titulo="Benefícios do projeto"
         nota={
           "Obrigatório. Um benefício por linha. Saem na manifestação de necessidades, como alíneas a., b., c.…, " +
-          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício." +
-          (comBeneficioFixo
-            ? " O último é fixo e fecha a lista nos pedidos de serviços de bolsa de horas: acrescente pelo menos um antes dele."
-            : " O benefício de fecho dos pedidos de serviços de bolsa de horas não se aplica ao licenciamento e não sai.")
+          "na identificação da necessidade e nos benefícios operacionais da avaliação custo-benefício. O último é " +
+          "fixo e fecha a lista em todos os projetos: acrescente pelo menos um antes dele."
         }
         nomeItem="benefício"
         rotuloColuna="Benefício"
         placeholder="ex.: Redução do tempo de registo clínico, com uma única aplicação em vez de várias"
         textoVazio="Ainda não há benefícios. Acrescente o primeiro."
         rotuloAdicionar="+ Adicionar benefício"
-        itemFixo={comBeneficioFixo ? BENEFICIO_FIXO : undefined}
+        itemFixo={BENEFICIO_FIXO}
         rotuloFixo="fixo"
         itens={justificacao.beneficios}
         onChange={(beneficios) => onAlterarJustificacao({ ...justificacao, beneficios })}

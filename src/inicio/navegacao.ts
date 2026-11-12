@@ -5,12 +5,14 @@
 // mostra-os separados, e cada módulo sabe de que grupo se veio, para o
 // «voltar» e os passos do topo serem os desse grupo.
 //
-// O Módulo 1 (Projeto) pertence a dois grupos: é a mesma caracterização no
-// pedido de serviços de bolsa de horas e no pedido de licenciamento.
+// No pedido de licenciamento, o Módulo 1 é o Produto, com dados próprios: o
+// que se adquire é um produto (um software, uma terminologia…), e não um
+// projeto.
 
 export type Pagina =
   | "inicio"
   | "projeto"
+  | "produto"
   | "perfis"
   | "lotes"
   | "licencas"
@@ -69,7 +71,7 @@ export const GRUPOS: Grupo[] = [
       "Aquisição de licenciamento de software, com o preço como único critério: do projeto ao Anexo Técnico " +
       "(manifestação de necessidades, eAvalia e mapas de quantidades e preços).",
     modulos: [
-      PROJETO,
+      { pagina: "produto", marca: "1", titulo: "Produto", descricao: "Caracterização e justificação" },
       { pagina: "licencas", marca: "L1", titulo: "Licenças", descricao: "Produtos, métrica e preço de referência" },
       { pagina: "condicoes", marca: "L2", titulo: "Condições", descricao: "Âmbito, manutenção, SLA e penalizações" },
       {

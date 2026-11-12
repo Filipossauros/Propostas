@@ -1,4 +1,4 @@
-// A folha «Custos - Licenciamento» do eAvalia, preenchida com os produtos do pedido.
+// A folha «Custos - Licenciamento» do eAvalia, preenchida com as licenças do pedido.
 //
 // A folha tem duas secções, cada uma com vinte blocos lado a lado — um por
 // produto, de três colunas (rótulo, valor, espaço): A–B, D–E, G–H, …, BF–BG.
@@ -16,7 +16,7 @@
 //    24  Custo total (fórmula a partir de H)   84  Custo total (fórmula)
 //    40/42/44/46  Manutenção (aquisição)       100/102/104/106
 //
-// Um produto «Solução Software Livre» vai para a secção do código aberto; os
+// Uma licença «Solução Software Livre» vai para a secção do código aberto; os
 // restantes, para a primeira. Os custos indiretos, o hardware, a manutenção
 // operacional e os outros custos ficam por preencher: não são objeto do pedido.
 //
@@ -31,11 +31,15 @@
 // resultado já calculado; nas duas células onde o modelo não tem fórmula (B24
 // e E24), escreve-se o valor.
 
-import type { NaturezaAquisicao, PedidoLicenciamento, ProdutoLicenca } from "../core/licenciamento";
+import type { Licenca, NaturezaAquisicao, PedidoLicenciamento } from "../core/licenciamento";
 import {
-  PRODUTOS_POR_SECCAO_EAVALIA,
+  LICENCAS_POR_SECCAO_EAVALIA,
   anosDoPedido,
-  valorDoProduto,
+  consultaMercadoEavalia,
+  tipoEavalia,
+  tipoLicenciamentoEavalia,
+  tipoSolucaoEavalia,
+  valorDaLicenca,
 } from "../core/licenciamento";
 import { celulaDeNumero, celulaDeTexto, ErroModeloEavalia, escreverCelula, textoDaMedida } from "./eavaliaModelo";
 import { lerFolhaDoEavalia, type FolhaDesenhavel } from "./folhaDoAlinhamento";
@@ -126,24 +130,25 @@ function confirmarModelo(xml: string, cadeias: string[]): void {
   esperado(100, "Manutenção evolutiva");
 }
 
-export function ehCodigoAberto(p: ProdutoLicenca): boolean {
-  return p.eavalia.tipoSolucao === "Solução Software Livre";
+export function ehCodigoAberto(l: Licenca, natureza: NaturezaAquisicao): boolean {
+  return tipoSolucaoEavalia(l, natureza) === "Solução Software Livre";
 }
 
 /**
- * A descrição do bloco: o produto (e a versão, se determinado). O tipo, o
+ * A descrição do bloco: a licença (e a versão, se determinada). O tipo, o
  * preço e a quantidade já têm células próprias, e a célula não quebra linha.
  */
-export function descricaoParaEavalia(p: ProdutoLicenca, natureza: NaturezaAquisicao): string {
-  const nome = (natureza === "determinado" ? p.produto.trim() : p.designacao.trim()) || "Produto";
-  const versao = natureza === "determinado" && p.versao.trim() !== "" ? ` ${p.versao.trim()}` : "";
+export function descricaoParaEavalia(l: Licenca, natureza: NaturezaAquisicao): string {
+  const nome = (natureza === "determinado" ? l.nomeComercial.trim() : l.designacao.trim()) || "Licença";
+  const versao = natureza === "determinado" && l.versao.trim() !== "" ? ` ${l.versao.trim()}` : "";
   return `${nome}${versao}`;
 }
 
-/** O preço unitário do período inteiro, como a folha o pede. */
-export function precoParaEavalia(p: ProdutoLicenca): number {
-  const preco = Number.isFinite(p.precoUnitario) ? p.precoUnitario : 0;
-  return p.direitoUso === "temporario" ? Math.round(preco * p.periodoMeses * 100) / 100 : preco;
+/** O preço unitário do período inteiro, como a folha o pede: o custo total da folha é preço × n.º de licenças. */
+export function precoParaEavalia(l: Licenca): number {
+  if (l.direitoUso !== "temporario") return Number.isFinite(l.precoUnitario) ? l.precoUnitario : 0;
+  const quantidade = l.quantidade > 0 ? l.quantidade : 1;
+  return Math.round((valorDaLicenca(l).licencas / quantidade) * 100) / 100;
 }
 
 /** Fórmula do modelo com o valor já calculado; sem fórmula no modelo, só o valor. */
@@ -155,25 +160,26 @@ function comValorCalculado(xml: string, ref: string, valor: number): string {
 }
 
 /**
- * Escreve os produtos na folha. `pedido` traz os preços como devem sair — já
+ * Escreve as licenças na folha. `pedido` traz os preços como devem sair — já
  * com a margem prudencial, se a houver.
  */
 export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicenciamento, cadeias: string[]): string {
   confirmarModelo(xml, cadeias);
   const nAnos = anosDoPedido(pedido).length;
-  const seccoes: Array<[LinhasDaSeccao, ProdutoLicenca[]]> = [
-    [PROPRIETARIO, pedido.produtos.filter((p) => !ehCodigoAberto(p))],
-    [CODIGO_ABERTO, pedido.produtos.filter(ehCodigoAberto)],
+  const natureza = pedido.natureza;
+  const seccoes: Array<[LinhasDaSeccao, Licenca[]]> = [
+    [PROPRIETARIO, pedido.licencas.filter((l) => !ehCodigoAberto(l, natureza))],
+    [CODIGO_ABERTO, pedido.licencas.filter((l) => ehCodigoAberto(l, natureza))],
   ];
   let folha = xml;
 
-  for (const [linhas, produtos] of seccoes) {
-    if (produtos.length > PRODUTOS_POR_SECCAO_EAVALIA) {
+  for (const [linhas, licencas] of seccoes) {
+    if (licencas.length > LICENCAS_POR_SECCAO_EAVALIA) {
       throw new ErroModeloEavalia(
-        `A folha «${NOME_FOLHA_CUSTOS_LICENCIAMENTO}» comporta ${PRODUTOS_POR_SECCAO_EAVALIA} produtos por secção.`,
+        `A folha «${NOME_FOLHA_CUSTOS_LICENCIAMENTO}» comporta ${LICENCAS_POR_SECCAO_EAVALIA} licenças por secção.`,
       );
     }
-    produtos.forEach((p, i) => {
+    licencas.forEach((p, i) => {
       const col = colunaDoBloco(i);
       const texto = (linha: number | undefined, valor: string) => {
         if (linha === undefined || valor.trim() === "") return;
@@ -185,20 +191,22 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
         folha = escreverCelula(folha, ref, (a) => celulaDeNumero(ref, a, valor));
       };
 
-      texto(linhas.tipoSolucao, p.eavalia.tipoSolucao);
-      texto(linhas.tipo, p.eavalia.tipo);
+      // O tipo, o tipo de licenciamento e a consulta ao mercado decorrem das
+      // escolhas do L1: do direito de uso, da modalidade e da natureza.
+      texto(linhas.tipoSolucao, tipoSolucaoEavalia(p, natureza));
+      texto(linhas.tipo, tipoEavalia(p));
       texto(linhas.ambito, p.eavalia.ambito);
       texto(
         linhas.fabricante,
         // Na aberta, o fabricante só se conhece na proposta; a célula não quebra linha, e o texto é curto.
         pedido.natureza === "determinado" ? p.fabricante : "Indicado na proposta",
       );
-      texto(linhas.consulta, p.eavalia.consultaMercado);
-      texto(linhas.descricao, descricaoParaEavalia(p, pedido.natureza));
-      texto(linhas.tipoLicenciamento, p.eavalia.tipoLicenciamento);
+      texto(linhas.consulta, consultaMercadoEavalia(natureza));
+      texto(linhas.descricao, descricaoParaEavalia(p, natureza));
+      texto(linhas.tipoLicenciamento, tipoLicenciamentoEavalia(p));
 
       const preco = precoParaEavalia(p);
-      const valor = valorDoProduto(p, nAnos);
+      const valor = valorDaLicenca(p, nAnos);
       if (preco > 0) numero(linhas.preco, preco);
       if (p.quantidade > 0) numero(linhas.quantidade, p.quantidade);
       if (preco > 0 && p.quantidade > 0) folha = comValorCalculado(folha, `${col}${linhas.total}`, valor.licencas);
@@ -217,14 +225,14 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
 
 /**
  * A folha de um eAvalia gerado, pronta a desenhar: só as colunas dos blocos
- * usados, e só até à manutenção da última secção com produtos.
+ * usados, e só até à manutenção da última secção com licenças.
  */
 export function lerFolhaDosCustosLicenciamento(
   xlsx: Uint8Array | ArrayBuffer,
   pedido: PedidoLicenciamento,
 ): Promise<FolhaDesenhavel> {
-  const abertos = pedido.produtos.filter(ehCodigoAberto).length;
-  const blocos = Math.max(1, abertos, pedido.produtos.length - abertos);
+  const abertos = pedido.licencas.filter((l) => ehCodigoAberto(l, pedido.natureza)).length;
+  const blocos = Math.max(1, abertos, pedido.licencas.length - abertos);
   const ateLinha = abertos > 0 ? ULTIMA_LINHA_CODIGO_ABERTO : ULTIMA_LINHA_PROPRIETARIO;
   return lerFolhaDoEavalia(xlsx, FOLHA_CUSTOS_LICENCIAMENTO, {
     ateLinha,

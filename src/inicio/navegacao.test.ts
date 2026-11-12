@@ -11,23 +11,28 @@ describe("organização da aplicação", () => {
     ]);
   });
 
-  it("o Projeto está nos dois pedidos; vale o grupo de onde se veio", () => {
+  it("o Projeto é da bolsa de horas; o licenciamento tem o seu Produto", () => {
     expect(grupoDaPagina("projeto").chave).toBe("bolsa");
-    expect(grupoDaPagina("projeto", "licenciamento").chave).toBe("licenciamento");
     // Um grupo que não tem a página não conta.
-    expect(grupoDaPagina("perfis", "licenciamento").chave).toBe("bolsa");
+    expect(grupoDaPagina("projeto", "licenciamento").chave).toBe("bolsa");
+    expect(grupoDaPagina("produto").chave).toBe("licenciamento");
   });
 
   it("o pedido de licenciamento: Projeto, L1, L2 e L3", () => {
     const grupo = GRUPOS.find((g) => g.chave === "licenciamento")!;
-    expect(grupo.modulos.map((m) => m.marca)).toEqual(["1", "L1", "L2", "L3"]);
+    expect(grupo.modulos.map((m) => [m.marca, m.titulo])).toEqual([
+      ["1", "Produto"],
+      ["L1", "Licenças"],
+      ["L2", "Condições"],
+      ["L3", "Pedido"],
+    ]);
     expect(localizacaoDoEndereco("#licenciamento/condicoes")).toEqual({ pagina: "condicoes", grupo: "licenciamento" });
   });
 
   it("a localização vai e vem pelo endereço", () => {
     for (const local of [
       { pagina: "perfis", grupo: "bolsa" },
-      { pagina: "projeto", grupo: "licenciamento" },
+      { pagina: "produto", grupo: "licenciamento" },
       { pagina: "vistaDirecao", grupo: "orcamento" },
     ] as const) {
       expect(localizacaoDoEndereco(enderecoDe(local))).toEqual(local);

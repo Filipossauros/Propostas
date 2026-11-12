@@ -40,7 +40,8 @@ import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
 import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
-import { ModuloLicencas, type ProjetoDoFicheiro } from "./licenciamento/ModuloLicencas";
+import { ModuloLicencas } from "./licenciamento/ModuloLicencas";
+import { ModuloProduto } from "./licenciamento/ModuloProduto";
 import { ModuloCondicoes } from "./licenciamento/ModuloCondicoes";
 import { ModuloPedidoLicenciamento } from "./licenciamento/ModuloPedidoLicenciamento";
 import {
@@ -50,6 +51,7 @@ import {
   validarCondicoes,
   validarLicencas,
   validarPedido,
+  validarProdutoLicenciamento,
   type PedidoLicenciamento,
 } from "./core/licenciamento";
 import { PaginaInicial, type EstadoDoModulo } from "./inicio/PaginaInicial";
@@ -140,19 +142,21 @@ function App() {
     normalizarPedidoLicenciamento,
   );
 
-  /** O projeto de um ficheiro de licenciamento, campo a campo, pelas regras de adoção. */
-  function adotarProjeto(p: ProjetoDoFicheiro) {
-    adotarNomeProjeto(p.nomeProjeto);
-    adotarDescricaoProjeto(p.descricaoProjeto);
-    adotarJustificacao(p.justificacao);
-  }
-
-  /** O projeto do exemplo substitui o que lá estiver — como o exemplo da bolsa de horas. */
-  function definirProjeto(p: ProjetoDoFicheiro) {
-    setNomeProjeto(p.nomeProjeto);
-    setDescricaoProjeto(p.descricaoProjeto);
-    setJustificacao(p.justificacao);
-  }
+  // A primeira versão do licenciamento usava o projeto da bolsa de horas. Um
+  // pedido dessa altura, já com licenças e sem produto, fica com esse projeto
+  // como produto — uma vez, para não perder o que estava escrito.
+  useEffect(() => {
+    if (licenciamento.nomeProduto.trim() === "" && licenciamento.licencas.length > 0 && nomeProjeto.trim() !== "") {
+      setLicenciamento((atual) => ({
+        ...atual,
+        nomeProduto: nomeProjeto,
+        descricaoProduto: descricaoProjeto,
+        justificacao: structuredClone(justificacao),
+      }));
+    }
+    // Só ao abrir a aplicação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Ponto único de alteração do catálogo.
@@ -209,9 +213,14 @@ function App() {
     estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
   }
 
-  if (licenciamento.produtos.length > 0) {
+  const produtoVazio =
+    licenciamento.nomeProduto.trim() === "" &&
+    licenciamento.descricaoProduto.trim() === "" &&
+    !temJustificacao(licenciamento.justificacao);
+  if (!produtoVazio) estados.produto = estadoPorErros(validarProdutoLicenciamento(licenciamento).length);
+  if (licenciamento.licencas.length > 0) {
     estados.licencas = estadoPorErros(validarLicencas(licenciamento).length);
-    estados.condicoes = estadoPorErros(validarCondicoes(licenciamento.condicoes).length);
+    estados.condicoes = estadoPorErros(validarCondicoes(licenciamento).length);
     estados.pedidoLicenciamento = estadoPorErros(validarPedido(licenciamento).length);
   }
 
@@ -265,24 +274,18 @@ function App() {
             onAlterarDescricaoProjeto={setDescricaoProjeto}
             justificacao={justificacao}
             onAlterarJustificacao={setJustificacao}
-            mostrarComoFunciona={grupo?.chave === "bolsa"}
-            comBeneficioFixo={grupo?.chave !== "licenciamento"}
-            seguinte={
-              grupo?.chave === "licenciamento"
-                ? {
-                    titulo: "as licenças",
-                    nota: "O projeto fica guardado neste navegador e é o ponto de partida do pedido de licenciamento.",
-                    onIr: () => irPara("licencas"),
-                  }
-                : {
-                    titulo: "os perfis",
-                    nota:
-                      "O projeto fica guardado neste navegador e segue nos ficheiros dos perfis e dos lotes. Pode " +
-                      "avançar com questões por resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.",
-                    onIr: () => irPara("perfis"),
-                  }
-            }
+            mostrarComoFunciona
+            seguinte={{
+              titulo: "os perfis",
+              nota:
+                "O projeto fica guardado neste navegador e segue nos ficheiros dos perfis e dos lotes. Pode " +
+                "avançar com questões por resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.",
+              onIr: () => irPara("perfis"),
+            }}
           />
+        )}
+        {aba === "produto" && (
+          <ModuloProduto pedido={licenciamento} onAlterar={setLicenciamento} onIrParaLicencas={() => irPara("licencas")} />
         )}
         {aba === "perfis" && (
           <ModuloPerfis
@@ -333,8 +336,6 @@ function App() {
           <ModuloLicencas
             pedido={licenciamento}
             onAlterar={setLicenciamento}
-            onDefinirProjeto={definirProjeto}
-            onAdotarProjeto={adotarProjeto}
             onIrParaCondicoes={() => irPara("condicoes")}
           />
         )}
@@ -349,9 +350,6 @@ function App() {
           <ModuloPedidoLicenciamento
             pedido={licenciamento}
             onAlterar={setLicenciamento}
-            nomeProjeto={nomeProjeto}
-            descricaoProjeto={descricaoProjeto}
-            justificacao={justificacao}
           />
         )}
 

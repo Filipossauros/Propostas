@@ -3,21 +3,26 @@
 // É o que o concorrente preenche e junta à proposta: o preço é o único aspeto
 // submetido à concorrência, e as quantidades, a métrica e o período são os do
 // caderno de encargos — fixos, bloqueados. Só se escreve nas células amarelas:
-// o preço unitário de cada produto e, numa aquisição aberta à concorrência, o
+// o preço unitário de cada linha e, numa aquisição aberta à concorrência, o
 // produto que se propõe (designação, fabricante e versão).
 //
-// O total de cada linha e o do lote são fórmulas: quem preenche vê a conta
-// feita, e quem analisa sabe que não foi escrita à mão.
+// Cada licença é uma linha; a licença perpétua com a manutenção em linha
+// própria dá duas — as licenças e a manutenção e suporte, com preço anual.
+//
+// O total de cada linha (quantidade × preço × períodos) e o do lote são
+// fórmulas: quem preenche vê a conta feita, e quem analisa sabe que não foi
+// escrita à mão.
 
 import ExcelJS from "exceljs";
-import type { PedidoLicenciamento, ProdutoLicenca } from "../core/licenciamento";
+import type { LoteLicenca, PedidoLicenciamento } from "../core/licenciamento";
 import {
+  anosDoPedido,
   designacaoDoLote,
+  linhasDoMapa,
   lotesEfetivos,
-  METRICAS,
-  nomeDoProduto,
   nomeProcedimentoLicenciamento,
-  type LoteLicenca,
+  type Licenca,
+  type LinhaDoMapa,
 } from "../core/licenciamento";
 import {
   COR_CAMPO_BG,
@@ -45,15 +50,14 @@ interface Coluna {
   largura: number;
 }
 
-/** O que a coluna «Unidade de preço» diz de cada produto. */
-export function unidadeDePreco(p: ProdutoLicenca): string {
-  if (p.direitoUso === "temporario") return "€ por licença e por mês";
-  return p.manutencao === "aParte" ? "€ por licença (perpétua)" : "€ por licença (perpétua, com manutenção)";
-}
-
-/** O multiplicador do preço: os meses, na subscrição; 1, na licença perpétua. */
-export function mesesDoPreco(p: ProdutoLicenca): number {
-  return p.direitoUso === "temporario" ? p.periodoMeses : 1;
+/** As linhas do mapa de um lote, pela ordem das licenças. */
+export function linhasDoLote(pedido: PedidoLicenciamento, lote: LoteLicenca): LinhaDoMapa[] {
+  const porId = new Map(pedido.licencas.map((l) => [l.id, l]));
+  const nAnos = anosDoPedido(pedido).length;
+  return lote.licencaIds
+    .map((id) => porId.get(id))
+    .filter((l): l is Licenca => l !== undefined)
+    .flatMap((l) => linhasDoMapa(l, pedido.natureza, nAnos));
 }
 
 export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteLicenca): ExcelJS.Workbook {
@@ -61,26 +65,23 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
   livro.creator = "Manifestações de Necessidades";
   const folha = livro.addWorksheet(`Lote ${lote.numero}`, { views: [{ state: "frozen", ySplit: 6 }] });
   const aberta = pedido.natureza === "aberta";
-  const porId = new Map(pedido.produtos.map((p) => [p.id, p]));
-  const produtos = lote.produtoIds.map((id) => porId.get(id)).filter((p): p is ProdutoLicenca => p !== undefined);
-  const comManutencao = produtos.some((p) => p.direitoUso === "perpetuo" && p.manutencao === "aParte");
+  const linhas = linhasDoLote(pedido, lote);
 
   const colunas: Coluna[] = [
-    { titulo: "N.º", largura: 6 },
-    { titulo: "Produto (caderno de encargos)", largura: 38 },
+    { titulo: "N.º", largura: 14 },
+    { titulo: "Linha (caderno de encargos)", largura: 40 },
     ...(aberta
       ? [
           { titulo: "Produto proposto", largura: 26 },
-          { titulo: "Fabricante", largura: 20 },
+          { titulo: "Fabricante / titular", largura: 20 },
           { titulo: "Versão / edição", largura: 14 },
         ]
       : []),
     { titulo: "Métrica", largura: 22 },
     { titulo: "Quantidade", largura: 12 },
-    { titulo: "Meses", largura: 9 },
-    { titulo: "Unidade de preço", largura: 24 },
+    { titulo: "Períodos", largura: 10 },
+    { titulo: "Unidade de preço", largura: 26 },
     { titulo: "Preço unitário (s/ IVA)", largura: 18 },
-    ...(comManutencao ? [{ titulo: "Manutenção anual (% do valor das licenças)", largura: 18 }] : []),
     { titulo: "Total (s/ IVA)", largura: 18 },
   ];
   colunas.forEach((c, i) => (folha.getColumn(i + 1).width = c.largura));
@@ -108,8 +109,7 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
     v.font = { color: { argb: COR_ROTULO_TEXTO } };
     v.alignment = { wrapText: true, vertical: "middle" };
   };
-  folha.getColumn(1).width = Math.max(colunas[0].largura, 14);
-  identificacao(2, "Procedimento", nomeProcedimentoLicenciamento(pedido.nomeProjeto));
+  identificacao(2, "Procedimento", nomeProcedimentoLicenciamento(pedido.nomeProduto));
   identificacao(3, "Lote", `Lote ${lote.numero} — ${designacaoDoLote(lote, pedido)}`);
 
   folha.mergeCells(4, 1, 4, n);
@@ -117,8 +117,8 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
   nota.value =
     "Preencha apenas as células a amarelo. O preço é o único aspeto submetido à concorrência: as quantidades, a " +
     "métrica e o período são os do caderno de encargos e não se alteram. Preços sem IVA, em euros, com duas casas " +
-    "decimais." +
-    (aberta ? " Identifique, em cada linha, o produto proposto, o fabricante e a versão ou edição." : "");
+    "decimais. O total de cada linha é quantidade × preço unitário × períodos." +
+    (aberta ? " Identifique, em cada linha de licença, o produto proposto, o fabricante e a versão ou edição." : "");
   nota.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
   nota.fill = fillSolido(COR_NOTA_BG);
   nota.alignment = { wrapText: true, vertical: "top" };
@@ -152,27 +152,34 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
   };
 
   const primeira = CABECALHO + 1;
-  produtos.forEach((p, i) => {
-    const linha = primeira + i;
+  linhas.forEach((linha, i) => {
+    const r = primeira + i;
     const valores: Record<string, ExcelJS.CellValue> = {
       "N.º": i + 1,
-      "Produto (caderno de encargos)": nomeDoProduto(p, pedido.natureza) || "Produto",
-      Métrica: p.metrica === "" ? "" : METRICAS[p.metrica].plural,
-      Quantidade: p.quantidade,
-      Meses: mesesDoPreco(p),
-      "Unidade de preço": unidadeDePreco(p),
+      "Linha (caderno de encargos)": linha.designacao,
+      Métrica: linha.metrica,
+      Quantidade: linha.quantidade,
+      Períodos: linha.periodos,
+      "Unidade de preço": linha.unidade,
     };
     colunas.forEach((c, j) => {
-      const cel = folha.getCell(linha, j + 1);
+      const cel = folha.getCell(r, j + 1);
       if (c.titulo in valores) {
         cel.value = valores[c.titulo];
         bloqueada(cel);
       }
     });
-    for (const titulo of ["Produto proposto", "Fabricante", "Versão / edição"]) {
-      if (col(titulo) > 0) aPreencher(folha.getCell(linha, col(titulo)));
+    for (const titulo of ["Produto proposto", "Fabricante / titular", "Versão / edição"]) {
+      if (col(titulo) === 0) continue;
+      const cel = folha.getCell(r, col(titulo));
+      // A linha da manutenção é do produto da linha anterior: não se identifica outra vez.
+      if (linha.tipo === "licenca") aPreencher(cel);
+      else {
+        cel.value = "—";
+        bloqueada(cel);
+      }
     }
-    const preco = folha.getCell(linha, col("Preço unitário (s/ IVA)"));
+    const preco = folha.getCell(r, col("Preço unitário (s/ IVA)"));
     aPreencher(preco);
     preco.numFmt = MOEDA;
     preco.dataValidation = {
@@ -185,31 +192,18 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
       error: "Indique um valor positivo, sem IVA.",
     };
 
-    const qtd = `${letra(col("Quantidade"))}${linha}`;
-    const meses = `${letra(col("Meses"))}${linha}`;
-    const pu = `${letra(col("Preço unitário (s/ IVA)"))}${linha}`;
-    let formula = `IF(${pu}="","",${qtd}*${pu}*${meses})`;
-    if (comManutencao) {
-      const manut = folha.getCell(linha, col("Manutenção anual (% do valor das licenças)"));
-      if (p.direitoUso === "perpetuo" && p.manutencao === "aParte") {
-        aPreencher(manut);
-        manut.numFmt = '0.00"%"';
-        const m = `${letra(col("Manutenção anual (% do valor das licenças)"))}${linha}`;
-        formula = `IF(${pu}="","",${qtd}*${pu}*(1+N(${m})/100*${p.periodoMeses}/12))`;
-      } else {
-        manut.value = "—";
-        bloqueada(manut);
-      }
-    }
-    const total = folha.getCell(linha, col("Total (s/ IVA)"));
-    total.value = { formula };
+    const qtd = `${letra(col("Quantidade"))}${r}`;
+    const periodos = `${letra(col("Períodos"))}${r}`;
+    const pu = `${letra(col("Preço unitário (s/ IVA)"))}${r}`;
+    const total = folha.getCell(r, col("Total (s/ IVA)"));
+    total.value = { formula: `IF(${pu}="","",${qtd}*${pu}*${periodos})` };
     bloqueada(total);
     total.numFmt = MOEDA;
     total.font = { bold: true, color: { argb: COR_CAMPO_BLOQUEADO_TEXTO } };
   });
 
   // O total do lote.
-  const ultima = primeira + produtos.length - 1;
+  const ultima = primeira + linhas.length - 1;
   const linhaTotal = ultima + 1;
   const colTotal = col("Total (s/ IVA)");
   folha.mergeCells(linhaTotal, 1, linhaTotal, colTotal - 1);
@@ -224,17 +218,6 @@ export function gerarWorkbookMapaPrecos(pedido: PedidoLicenciamento, lote: LoteL
   soma.font = { bold: true, color: { argb: COR_ROTULO_TEXTO } };
   soma.fill = fillSolido(COR_ROTULO_BG);
   soma.border = contorno(COR_GRELHA);
-
-  if (comManutencao) {
-    folha.mergeCells(linhaTotal + 2, 1, linhaTotal + 2, n);
-    const nm = folha.getCell(linhaTotal + 2, 1);
-    nm.value =
-      "Nas licenças perpétuas com manutenção à parte, indique a percentagem anual da manutenção sobre o valor das " +
-      "licenças; o total inclui a manutenção de todo o período do contrato.";
-    nm.font = { italic: true, size: 9, color: { argb: COR_NOTA_TEXTO } };
-    nm.alignment = { wrapText: true };
-    folha.getRow(linhaTotal + 2).height = 28;
-  }
 
   prepararImpressao(folha, { repetirAte: CABECALHO });
   folha.protect("", {
@@ -256,7 +239,7 @@ export async function gerarMapaPrecosBlob(pedido: PedidoLicenciamento, lote: Lot
   return new Blob([dados], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-/** Os lotes que levam mapa: todos os que têm produtos. */
+/** Os lotes que levam mapa: todos os que têm licenças. */
 export function lotesComMapa(pedido: PedidoLicenciamento): LoteLicenca[] {
-  return lotesEfetivos(pedido).filter((l) => l.produtoIds.length > 0);
+  return lotesEfetivos(pedido).filter((l) => l.licencaIds.length > 0);
 }

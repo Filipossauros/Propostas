@@ -3,19 +3,18 @@
 // O mesmo modelo, a mesma tipografia e a mesma estrutura da manifestação do
 // pedido de serviços de bolsa de horas — dez secções numeradas, a conclusão em
 // proposta de deliberação, a assinatura —, com o conteúdo próprio do
-// licenciamento: os produtos e a sua natureza (aberta à concorrência ou produto
-// determinado), o valor estimado por produto e por ano, e as condições do
+// licenciamento: o produto, as licenças e a sua natureza (aberta à concorrência ou licença
+// determinada), o valor estimado por licença e por ano, e as condições do
 // contrato nas Especificações Técnicas.
 //
 // O único aspeto submetido à concorrência é o preço: tudo o que está no
 // Anexo III são termos e condições do contrato.
 
 import type { BlocoDocumento } from "../core/documento";
-import type { PedidoLicenciamento, ProdutoLicenca, ValoresDoLote } from "../core/licenciamento";
+import type { PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
 import {
   DIREITOS_USO,
-  FUNDAMENTOS_PRODUTO,
-  HORARIOS_SUPORTE,
+  FUNDAMENTOS_LICENCA,
   MANUTENCOES,
   METRICAS,
   MODALIDADES,
@@ -27,9 +26,17 @@ import {
   justificacaoMargemLicenciamento,
   margemDoPedido,
   mesesDoContrato,
+  aplicabilidade,
+  aplicaNaoProdutivos,
+  horarioPorExtenso,
+  linhasDoMapa,
   metricaPorExtenso,
-  nomeDoProduto,
+  nomeDaLicenca,
   nomeProcedimentoLicenciamento,
+  objetoPorExtenso,
+  textoDaCondicao,
+  tipoSolucaoEavalia,
+  tituloDaManutencao,
   valorEstimado,
   valorPorAno,
   valoresDosLotes,
@@ -97,7 +104,7 @@ const SUSTENTABILIDADE_LICENCIAMENTO: Array<{ pergunta: string; resposta: boolea
     pergunta: "Existem requisitos ambientais?",
     resposta: false,
     justificacao:
-      "O objeto do contrato é o direito de utilização de software, sem fornecimento de bens físicos nem produção de " +
+      "O objeto do contrato é o direito de utilização de licenças, sem fornecimento de bens físicos nem produção de " +
       "resíduos relevantes, pelo que não se justifica a fixação de requisitos ambientais específicos, sem prejuízo do " +
       "cumprimento da legislação ambiental aplicável.",
   },
@@ -120,17 +127,17 @@ const SUSTENTABILIDADE_LICENCIAMENTO: Array<{ pergunta: string; resposta: boolea
     pergunta: "Existe incentivo à inovação?",
     resposta: false,
     justificacao:
-      "O licenciamento respeita a software com funcionalidades e características técnicas definidas, pelo que não se " +
+      "O licenciamento respeita a licenças com características técnicas e de utilização definidas, pelo que não se " +
       "justifica a adoção de mecanismos específicos de incentivo à inovação.",
   },
 ];
 
 const OBJETO_INDIVISIVEL_UM_PRODUTO =
-  "O objeto do contrato não é suscetível de divisão em lotes, por respeitar ao licenciamento de um único produto " +
-  "de software, cuja separação em prestações autónomas não é técnica nem economicamente viável.";
+  "O objeto do contrato não é suscetível de divisão em lotes, por respeitar a uma única licença, cuja separação em " +
+  "prestações autónomas não é técnica nem economicamente viável.";
 
 const OBJETO_INDIVISIVEL_VARIOS =
-  "Não se procede à divisão em lotes, uma vez que os produtos a licenciar constituem uma solução integrada, cujo " +
+  "Não se procede à divisão em lotes, uma vez que as licenças a adquirir constituem um conjunto integrado, cujo " +
   "funcionamento depende da compatibilidade entre os seus componentes; a fragmentação introduziria riscos de " +
   "incompatibilidade técnica, de duplicação de esforços de coordenação e de aumento dos custos de gestão, " +
   "revelando-se a contratação unitária mais eficiente e adequada à satisfação da necessidade.";
@@ -152,8 +159,8 @@ function beneficiosDoLicenciamento(pedido: PedidoLicenciamento): string[] {
 }
 
 function objetoDoPedido(pedido: PedidoLicenciamento): string {
-  const projeto = pedido.nomeProjeto.trim();
-  return `licenciamento de software para o projeto ${projeto === "" ? "[nome do projeto]" : projeto}`;
+  const produto = pedido.nomeProduto.trim();
+  return `licenciamento de ${produto === "" ? "[nome do produto]" : produto}`;
 }
 
 function periodoPorExtenso(meses: number): string {
@@ -161,8 +168,8 @@ function periodoPorExtenso(meses: number): string {
 }
 
 /** «1 200 utilizadores nomeados de Plataforma de gestão documental, em subscrição por 36 meses». */
-function utilizacaoDoProduto(p: ProdutoLicenca, pedido: PedidoLicenciamento): string {
-  const nome = nomeDoProduto(p, pedido.natureza) || "produto por designar";
+function utilizacaoDaLicenca(p: Licenca, pedido: PedidoLicenciamento): string {
+  const nome = nomeDaLicenca(p, pedido.natureza) || "licença por designar";
   const qtd = `${formatarNumero(p.quantidade)} ${metricaPorExtenso(p) || "licenças"}`;
   const tipo =
     p.direitoUso === "temporario"
@@ -171,19 +178,20 @@ function utilizacaoDoProduto(p: ProdutoLicenca, pedido: PedidoLicenciamento): st
   return `${qtd} de ${nome}, ${tipo}`;
 }
 
-function linhasDosProdutos(lotes: ValoresDoLote[], pedido: PedidoLicenciamento): string[][] {
+/** As linhas do mapa de preços de todos os lotes, como saem na memória de cálculo. */
+function linhasDoCalculo(lotes: ValoresDoLote[], pedido: PedidoLicenciamento, nAnos: number): string[][] {
   return lotes.flatMap((l) =>
-    l.linhas.map(({ produto: p, valor }) => [
-      l.lote.numero,
-      nomeDoProduto(p, pedido.natureza) || "—",
-      p.metrica === "" ? "—" : METRICAS[p.metrica].plural,
-      formatarNumero(p.quantidade),
-      p.direitoUso === "temporario" ? `${formatarMoeda(p.precoUnitario)}/mês` : formatarMoeda(p.precoUnitario),
-      periodoPorExtenso(p.periodoMeses),
-      formatarMoeda(valor.licencas),
-      valor.manutencao > 0 ? formatarMoeda(valor.manutencao) : "—",
-      formatarMoeda(valor.total),
-    ]),
+    l.linhas.flatMap(({ licenca }) =>
+      linhasDoMapa(licenca, pedido.natureza, nAnos).map((linha) => [
+        l.lote.numero,
+        linha.designacao,
+        linha.metrica || "—",
+        formatarNumero(linha.quantidade),
+        `${formatarMoeda(linha.precoUnitario)} ${linha.unidade.replace(/^€ /, "")}`,
+        formatarNumero(linha.periodos),
+        formatarMoeda(linha.total),
+      ]),
+    ),
   );
 }
 
@@ -195,7 +203,7 @@ function corpoLicenciamento(
   quando: Date,
 ): string {
   const objeto = objetoDoPedido(pedido);
-  const projeto = pedido.nomeProjeto.trim();
+  const produto = pedido.nomeProduto.trim();
   const margem = margemDoPedido(pedido);
   const justificacaoMargem = pedido.justificacaoMargem.trim() || justificacaoMargemLicenciamento(margem);
   const anos = anosDoPedido(pedido);
@@ -243,26 +251,26 @@ function corpoLicenciamento(
       proximo(),
       "Para efeitos do artigo 35.º-D do Código dos Contratos Públicos, na redação conferida pelo Decreto-Lei n.º " +
         `177/2026, de 4 de setembro, a necessidade a satisfazer consiste em assegurar, durante ${periodoPorExtenso(meses)}, ` +
-        "o direito de utilização do seguinte software:",
+        "o direito de utilização das seguintes licenças:",
       { depois: 80 },
     ),
   );
-  comPontuacao(pedido.produtos.map((x) => utilizacaoDoProduto(x, pedido))).forEach((t, i) =>
+  comPontuacao(pedido.licencas.map((x) => utilizacaoDaLicenca(x, pedido))).forEach((t, i) =>
     p.push(alinea(`${letra(i)}.`, t)),
   );
   if (determinado) {
     p.push(
       numerado(
         proximo(),
-        "A aquisição respeita a produtos determinados, cuja identificação se fundamenta nos seguintes termos:",
+        "A aquisição respeita a licenças determinadas, cuja identificação se fundamenta nos seguintes termos:",
         { depois: 80, antes: 80 },
       ),
     );
-    pedido.produtos.forEach((x, i) =>
+    pedido.licencas.forEach((x, i) =>
       p.push(
         alinea(`${letra(i)}.`, [
-          run(`${nomeDoProduto(x, "determinado") || "Produto"}: `, { negrito: true }),
-          x.fundamento === "" ? marcador("fundamento") : run(`${FUNDAMENTOS_PRODUTO[x.fundamento]}. `),
+          run(`${nomeDaLicenca(x, "determinado") || "Licença"}: `, { negrito: true }),
+          x.fundamento === "" ? marcador("fundamento") : run(`${FUNDAMENTOS_LICENCA[x.fundamento]}. `),
           x.explicacaoFundamento.trim() === ""
             ? marcador("explicação do fundamento")
             : run(`${x.explicacaoFundamento.trim().replace(/[.;]+$/, "")}.`),
@@ -274,7 +282,7 @@ function corpoLicenciamento(
       numerado(
         proximo(),
         "A aquisição é aberta à concorrência: a necessidade descreve-se pelas funcionalidades e características " +
-          "técnicas mínimas que o software tem de assegurar, constantes do Anexo III, sem referência a marca, " +
+          "mínimas que as licenças têm de assegurar, constantes do Anexo III, sem referência a marca, " +
           "fabricante ou produto determinado, competindo aos concorrentes identificar na proposta o produto que " +
           "propõem.",
         { antes: 80 },
@@ -291,17 +299,16 @@ function corpoLicenciamento(
   );
   p.push(numerado(proximo(), "A presente aquisição comporta os seguintes benefícios:", { depois: 80 }));
   const beneficios = beneficiosDoLicenciamento(pedido);
-  if (beneficios.length === 0) p.push(alinea("a.", [marcador("benefícios do projeto")]));
+  if (beneficios.length === 0) p.push(alinea("a.", [marcador("benefícios do produto")]));
   else comPontuacao(beneficios).forEach((b, i) => p.push(alinea(`${letra(i)}.`, b)));
-  p.push(numerado(proximo(), "Concluindo assim que a necessidade visa:", { depois: 80, antes: 80 }));
-  const descricao = pedido.descricaoProjeto.trim();
+  p.push(numerado(proximo(), "Concluindo assim que a necessidade respeita ao seguinte produto:", { depois: 80, antes: 80 }));
+  const descricao = pedido.descricaoProduto.trim().replace(/[.;]+$/, "");
   p.push(
-    alinea(
-      "a.",
-      descricao === ""
-        ? [marcador("descrição do projeto")]
-        : `${descricao.charAt(0).toUpperCase()}${descricao.slice(1).replace(/[.;]+$/, "")}.`,
-    ),
+    alinea("a.", [
+      produto === "" ? marcador("nome do produto") : run(produto, { negrito: true }),
+      run(" — "),
+      descricao === "" ? marcador("descrição do produto") : run(`${descricao}.`),
+    ]),
   );
 
   // III. Valor estimado
@@ -363,7 +370,7 @@ function corpoLicenciamento(
     .map((b) => b.charAt(0).toLowerCase() + b.slice(1));
   const criterios: Array<[string, string]> = [
     ["Beneficiários", BENEFICIARIOS],
-    ["Utilização prevista", `${enumerar(pedido.produtos.map((x) => utilizacaoDoProduto(x, pedido)))}.`],
+    ["Utilização prevista", `${enumerar(pedido.licencas.map((x) => utilizacaoDaLicenca(x, pedido)))}.`],
     ["Benefícios operacionais", beneficiosOperacionais.length === 0 ? "" : `${beneficiosOperacionais.join("; ")}.`],
     [
       "Custos",
@@ -405,11 +412,11 @@ function corpoLicenciamento(
   // VI. Divisão em lotes
   p.push(seccao(6, "Divisão em lotes"));
   if (lotes.length <= 1) {
-    p.push(paragrafo(pedido.produtos.length <= 1 ? OBJETO_INDIVISIVEL_UM_PRODUTO : OBJETO_INDIVISIVEL_VARIOS));
+    p.push(paragrafo(pedido.licencas.length <= 1 ? OBJETO_INDIVISIVEL_UM_PRODUTO : OBJETO_INDIVISIVEL_VARIOS));
   } else {
     p.push(
       paragrafo(
-        "O procedimento é configurado por lotes, correspondendo cada lote a produtos autónomos, suscetíveis de " +
+        "O procedimento é configurado por lotes, correspondendo cada lote a licenças autónomas, suscetíveis de " +
           "adjudicação separada, nos seguintes termos:",
         { depois: 80 },
       ),
@@ -417,7 +424,7 @@ function corpoLicenciamento(
     const linhas = lotes.map((l) => [
       l.lote.numero,
       designacaoDoLote(l.lote, pedido),
-      { linhas: l.linhas.map((x) => nomeDoProduto(x.produto, pedido.natureza) || "—") },
+      { linhas: l.linhas.map((x) => nomeDaLicenca(x.licenca, pedido.natureza) || "—") },
       formatarMoeda(l.total),
     ]);
     p.push(
@@ -425,7 +432,7 @@ function corpoLicenciamento(
         [
           { titulo: "Lote", alinhamento: "direita", peso: 8 },
           { titulo: "Designação", peso: 30 },
-          { titulo: "Produtos", peso: 42 },
+          { titulo: "Licenças", peso: 42 },
           { titulo: "Valor estimado (s/ IVA)", alinhamento: "direita", peso: 20 },
         ],
         linhas,
@@ -449,9 +456,10 @@ function corpoLicenciamento(
 
   // VII. Gestão, monitorização e controlo
   p.push(seccao(7, "Gestão, monitorização e controlo"));
+  const comDisponibilidadeVII = c.disponibilidade.ligada && aplicabilidade("disponibilidade", pedido).aplica;
   const instrumentos = [
     ...(c.suporte.ligada ? ["os tempos máximos de resposta e de resolução dos incidentes"] : []),
-    ...(c.disponibilidade.ligada ? ["a disponibilidade mensal do serviço"] : []),
+    ...(comDisponibilidadeVII ? ["a disponibilidade mensal do serviço"] : []),
     ...(c.prazo.ligada ? ["o prazo de disponibilização das licenças"] : []),
   ];
   p.push(
@@ -462,12 +470,12 @@ function corpoLicenciamento(
         ", aplicando, em caso de incumprimento, as penalizações aí previstas.",
     ),
   );
-  if (c.suporte.ligada || c.disponibilidade.ligada) {
+  if (c.suporte.ligada || comDisponibilidadeVII) {
     p.push(
       paragrafo(
         "O adjudicatário remete ao gestor do contrato, até ao 5.º dia útil do mês seguinte, um relatório mensal dos " +
           "incidentes registados, com os tempos de resposta e de resolução" +
-          (c.disponibilidade.ligada ? " e a disponibilidade apurada" : "") +
+          (comDisponibilidadeVII ? " e a disponibilidade apurada" : "") +
           ".",
       ),
     );
@@ -497,7 +505,7 @@ function corpoLicenciamento(
   p.push(
     alinea("b)", [nome(juri.coordenador, "nome do coordenador"), run(" – Coordenador da "), nome(juri.unidade, "unidade")], RECUO),
   );
-  p.push(alinea("c)", [nome(juri.gestorProjeto, "nome do gestor de projeto"), run(` – Gestor do Projeto ${projeto}`)], RECUO));
+  p.push(alinea("c)", [nome(juri.gestorProjeto, "nome do gestor do produto"), run(` – Gestor do Produto ${produto}`)], RECUO));
 
   // X. Conclusão
   p.push(seccao(10, "Conclusão"));
@@ -547,25 +555,24 @@ function corpoLicenciamento(
   p.push(numerado("2.", [run("Pressupostos dos cálculos", { negrito: true })], { comOSeguinte: true, depois: 80 }));
   p.push(
     recuado(
-      "Na subscrição, o valor de cada produto resulta da quantidade × preço unitário mensal × número de meses. Na " +
-        "licença perpétua, resulta da quantidade × preço unitário, acrescido, quando a manutenção é contratada à " +
-        "parte, da percentagem anual de manutenção sobre o valor das licenças, pelo período do contrato.",
+      "O valor de cada linha resulta da quantidade × preço unitário × períodos: na subscrição, os meses ou os anos do " +
+        "período, conforme o preço seja mensal ou anual; na licença perpétua, um só. A manutenção da licença " +
+        "perpétua, quando contratada, tem linha própria, com preço anual de referência igual à percentagem anual " +
+        "de manutenção sobre o valor das licenças.",
     ),
   );
   p.push(
     tabela(
       [
         { titulo: "Lote", alinhamento: "direita", peso: 6 },
-        { titulo: "Produto", peso: 22 },
-        { titulo: "Métrica", peso: 13 },
-        { titulo: "Qtd.", alinhamento: "direita", peso: 7 },
-        { titulo: "Preço unit. (s/ IVA)", alinhamento: "direita", peso: 11 },
-        { titulo: "Período", alinhamento: "direita", peso: 8 },
-        { titulo: "Licenças (s/ IVA)", alinhamento: "direita", peso: 11 },
-        { titulo: "Manutenção (s/ IVA)", alinhamento: "direita", peso: 11 },
-        { titulo: "Total (s/ IVA)", alinhamento: "direita", peso: 11 },
+        { titulo: "Linha do mapa de preços", peso: 30 },
+        { titulo: "Métrica", peso: 15 },
+        { titulo: "Qtd.", alinhamento: "direita", peso: 8 },
+        { titulo: "Preço unitário (s/ IVA)", alinhamento: "direita", peso: 17 },
+        { titulo: "Períodos", alinhamento: "direita", peso: 9 },
+        { titulo: "Total (s/ IVA)", alinhamento: "direita", peso: 15 },
       ],
-      linhasDosProdutos(lotes, pedido),
+      linhasDoCalculo(lotes, pedido, anos.length),
       { legenda: margem > 0 ? `Preços unitários com a margem prudencial de ${formatarNumero(margem)} %.` : undefined, sz: 16 },
     ),
   );
@@ -603,28 +610,28 @@ function corpoLicenciamento(
     p.push(
       tabela(
         [
-          { titulo: "Produto", peso: 46 },
+          { titulo: "Licença", peso: 46 },
           { titulo: "Preço de referência (s/ IVA)", alinhamento: "direita", peso: 20 },
           { titulo: "Margem prudencial", alinhamento: "direita", peso: 14 },
           { titulo: "Preço considerado (s/ IVA)", alinhamento: "direita", peso: 20 },
         ],
-        original.produtos.map((x, i) => [
-          nomeDoProduto(x, pedido.natureza) || "—",
+        original.licencas.map((x, i) => [
+          nomeDaLicenca(x, pedido.natureza) || "—",
           formatarMoeda(x.precoUnitario),
           `${formatarNumero(margem)} %`,
-          formatarMoeda(pedido.produtos[i].precoUnitario),
+          formatarMoeda(pedido.licencas[i].precoUnitario),
         ]),
         { legenda: "Preço unitário de cada produto, antes e depois da margem prudencial." },
       ),
     );
   }
   p.push(numerado("3.", [run("Origem dos preços de referência", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  pedido.produtos.forEach((x, i) =>
+  pedido.licencas.forEach((x, i) =>
     p.push(
       alinea(
         `${letra(i)}.`,
         [
-          run(`${nomeDoProduto(x, pedido.natureza) || "Produto"}: `),
+          run(`${nomeDaLicenca(x, pedido.natureza) || "Licença"}: `),
           x.origemPreco === "" ? marcador("origem do preço") : run(`${ORIGENS_PRECO[x.origemPreco]}.`),
         ],
         RECUO_ALINEA,
@@ -665,37 +672,38 @@ function corpoLicenciamento(
 
   ponto3("Descrição");
   p.push(
-    recuado(
-      descricao === "" ? [marcador("descrição do projeto")] : [run(`O Projeto ${projeto} visa ${descricao.replace(/[.;]+$/, "")}.`)],
-    ),
+    recuado([
+      produto === "" ? marcador("nome do produto") : run(produto, { negrito: true }),
+      run(" — "),
+      descricao === "" ? marcador("descrição do produto") : run(`${descricao}.`),
+    ]),
   );
 
-  ponto3(determinado ? "Identificação dos produtos" : "Descrição do software e requisitos mínimos");
+  ponto3(determinado ? "Identificação das licenças" : "Descrição das licenças e requisitos mínimos");
   if (determinado) {
     p.push(
       tabela(
         [
           { titulo: "Lote", alinhamento: "direita", peso: 8 },
-          { titulo: "Produto", peso: 36 },
-          { titulo: "Fabricante", peso: 30 },
+          { titulo: "Licença", peso: 36 },
+          { titulo: "Fabricante / titular dos direitos", peso: 30 },
           { titulo: "Versão / edição mínima", peso: 26 },
         ],
         lotes.flatMap((l) =>
-          l.linhas.map(({ produto: x }) => [l.lote.numero, x.produto.trim() || "—", x.fabricante.trim() || "—", x.versao.trim() || "—"]),
+          l.linhas.map(({ licenca: x }) => [l.lote.numero, x.nomeComercial.trim() || "—", x.fabricante.trim() || "—", x.versao.trim() || "—"]),
         ),
       ),
     );
   } else {
     p.push(
       recuado(
-        "O software a fornecer deve cumprir, em cada produto, os requisitos mínimos seguintes. O concorrente " +
-          "identifica na proposta o produto, o fabricante e a versão ou edição propostos.",
+        "Cada licença a fornecer deve cumprir os requisitos mínimos seguintes. O concorrente identifica na proposta " +
+          "o produto, o fabricante ou titular e a versão ou edição propostos.",
       ),
     );
     lotes.forEach((l) =>
-      l.linhas.forEach(({ produto: x }) => {
-        p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Produto"}`, 2));
-        p.push(recuado([run("Categoria de software: "), x.categoria.trim() === "" ? marcador("categoria") : run(`${x.categoria.trim()}.`)]));
+      l.linhas.forEach(({ licenca: x }) => {
+        p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Licença"}`, 2));
         const funcionais = x.requisitosFuncionais.map((r) => r.designacao.trim()).filter((r) => r !== "");
         const tecnicos = x.requisitosTecnicos.map((r) => r.designacao.trim()).filter((r) => r !== "");
         p.push(tabela([{ titulo: "Requisitos funcionais mínimos", peso: 100 }], funcionais.map((r) => [r])));
@@ -708,25 +716,27 @@ function corpoLicenciamento(
   p.push(
     tabela(
       [
-        { titulo: "Lote", alinhamento: "direita", peso: 6 },
-        { titulo: "Produto", peso: 22 },
-        { titulo: "Direito de uso", peso: 14 },
-        { titulo: "Modalidade", peso: 14 },
-        { titulo: "Métrica", peso: 14 },
-        { titulo: "Quantidade", alinhamento: "direita", peso: 9 },
+        { titulo: "Lote", alinhamento: "direita", peso: 5 },
+        { titulo: "Licença", peso: 19 },
+        { titulo: "Objeto", peso: 12 },
+        { titulo: "Direito de uso", peso: 12 },
+        { titulo: "Modalidade", peso: 12 },
+        { titulo: "Métrica", peso: 13 },
+        { titulo: "Quantidade", alinhamento: "direita", peso: 8 },
         { titulo: "Período", alinhamento: "direita", peso: 8 },
-        { titulo: "Manutenção", peso: 13 },
+        { titulo: "Manutenção", peso: 11 },
       ],
       lotes.flatMap((l) =>
-        l.linhas.map(({ produto: x }) => [
+        l.linhas.map(({ licenca: x }) => [
           l.lote.numero,
-          nomeDoProduto(x, pedido.natureza) || "—",
+          nomeDaLicenca(x, pedido.natureza) || "—",
+          objetoPorExtenso(x),
           DIREITOS_USO[x.direitoUso],
           MODALIDADES[x.modalidade],
           x.metrica === "" ? "—" : METRICAS[x.metrica].singular,
           formatarNumero(x.quantidade),
           periodoPorExtenso(x.periodoMeses),
-          x.manutencao === "aParte" ? "À parte" : MANUTENCOES[x.manutencao],
+          x.direitoUso === "temporario" ? MANUTENCOES.incluida : MANUTENCOES[x.manutencao],
         ]),
       ),
       { sz: 16 },
@@ -735,13 +745,13 @@ function corpoLicenciamento(
 
   if (c.prazo.ligada) {
     ponto3("Prazo de disponibilização");
-    p.push(recuado(`${c.prazo.texto.trim().replace(/[.;]+$/, "")}: ${c.prazo.diasUteis} dias úteis.`));
+    p.push(recuado(`${textoDaCondicao("prazo", pedido).trim().replace(/[.;]+$/, "")}: ${c.prazo.diasUteis} dias úteis.`));
   }
 
   ponto3("Âmbito da licença");
-  p.push(recuado(c.ambito.texto.trim()));
+  p.push(recuado(textoDaCondicao("ambito", pedido).trim()));
   if (c.ambito.entidades.trim() !== "") p.push(recuado(`Entidades abrangidas: ${c.ambito.entidades.trim().replace(/[.;]+$/, "")}.`));
-  if (c.ambito.naoProdutivosSemCusto)
+  if (c.ambito.naoProdutivosSemCusto && aplicaNaoProdutivos(pedido))
     p.push(
       recuado(
         "A utilização em ambientes não produtivos (teste, formação e recuperação) não é contabilizada para efeitos " +
@@ -750,22 +760,32 @@ function corpoLicenciamento(
     );
 
   ponto3("Direito de uso e transmissão");
-  p.push(recuado(c.direitoUso.texto.trim()));
+  p.push(recuado(textoDaCondicao("direitoUso", pedido).trim()));
+  if (c.direitoUso.sublicenciamento)
+    p.push(
+      recuado(
+        "A entidade adjudicante pode sublicenciar a utilização das licenças às entidades e aos fornecedores " +
+          "abrangidos pelo âmbito da licença, dentro do período e das quantidades contratados, sem encargos " +
+          "adicionais, respondendo pelo uso que os sublicenciados delas fizerem.",
+      ),
+    );
   if (c.direitoUso.transmissao)
     p.push(
       recuado(
-        "As licenças podem ser transmitidas, sem custo, a outra entidade do Serviço Nacional de Saúde, mediante " +
-          "comunicação prévia ao adjudicatário.",
+        "As licenças podem ser transmitidas, por inteiro e sem custo, a outra entidade do Serviço Nacional de Saúde, " +
+          "mantendo-se as condições do contrato.",
       ),
     );
 
-  ponto3("Manutenção e atualizações");
-  p.push(recuado(c.manutencao.texto.trim()));
+  if (aplicabilidade("manutencao", pedido).aplica) {
+    ponto3(tituloDaManutencao(pedido));
+    p.push(recuado(textoDaCondicao("manutencao", pedido).trim()));
+  }
 
   if (c.suporte.ligada) {
     ponto3("Suporte técnico e níveis de serviço (SLA)");
-    p.push(recuado(c.suporte.texto.trim()));
-    p.push(recuado(`Horário do suporte: ${HORARIOS_SUPORTE[c.suporte.horario].toLowerCase()}.`));
+    p.push(recuado(textoDaCondicao("suporte", pedido).trim()));
+    p.push(recuado(`Horário do suporte: ${horarioPorExtenso(c.suporte)}.`));
     const tempos = [c.suporte.critica, c.suporte.alta, c.suporte.normal];
     p.push(
       tabela(
@@ -782,18 +802,16 @@ function corpoLicenciamento(
           `${formatarNumero(tempos[i].resolucao)} h`,
         ]),
         {
-          legenda:
-            c.suporte.horario === "uteis"
-              ? "Tempos contados em horas do horário de suporte, a partir da abertura do pedido."
-              : "Tempos contados em horas seguidas, a partir da abertura do pedido.",
+          legenda: "Tempos contados em horas do horário de suporte, a partir da abertura do pedido.",
         },
       ),
     );
   }
 
-  if (c.disponibilidade.ligada) {
+  const comDisponibilidade = c.disponibilidade.ligada && aplicabilidade("disponibilidade", pedido).aplica;
+  if (comDisponibilidade) {
     ponto3("Disponibilidade do serviço");
-    p.push(recuado(c.disponibilidade.texto.trim()));
+    p.push(recuado(textoDaCondicao("disponibilidade", pedido).trim()));
     p.push(
       recuado(
         `Disponibilidade mensal mínima: ${formatarNumero(c.disponibilidade.percentagem)} %.` +
@@ -805,7 +823,7 @@ function corpoLicenciamento(
   }
 
   ponto3("Penalizações");
-  p.push(recuado(c.penalizacoes.texto.trim()));
+  p.push(recuado(textoDaCondicao("penalizacoes", pedido).trim()));
   const pen = [
     ...(c.suporte.ligada
       ? [
@@ -814,7 +832,7 @@ function corpoLicenciamento(
           )} % do valor mensal do contrato`,
         ]
       : [`Por cada hora de atraso no cumprimento das obrigações de serviço: ${formatarNumero(c.penalizacoes.porHoraCritica)} % do valor mensal do contrato`]),
-    ...(c.disponibilidade.ligada
+    ...(comDisponibilidade
       ? ["Por cada décima de ponto percentual abaixo da disponibilidade mínima: a mesma percentagem do valor mensal do contrato"]
       : []),
     `Limite mensal das penalizações: ${formatarNumero(c.penalizacoes.limiteMensal)} % do valor mensal do contrato`,
@@ -846,7 +864,7 @@ function corpoLicenciamento(
       "O preço é o único aspeto da execução do contrato submetido à concorrência; os requisitos e as condições " +
         "constantes do presente anexo são termos e condições do contrato a celebrar, que a proposta não pode " +
         "contrariar. O concorrente apresenta o preço no mapa de quantidades e preços de cada lote, sem IVA" +
-        (determinado ? "." : ", identificando, em cada linha, o produto, o fabricante e a versão propostos."),
+        (determinado ? "." : ", identificando, em cada linha de licença, o produto, o fabricante e a versão propostos."),
     ),
   );
 
@@ -892,23 +910,23 @@ export async function gerarManifestacaoLicenciamentoBlob(
   xml += tituloAnexo("Anexo V – Custos - Licenciamento (eAvalia)");
   xml += paragrafo(
     "Reprodução da folha «Custos - Licenciamento» do pedido de parecer prévio eAvalia que acompanha a presente " +
-      "informação, com a classificação, o preço unitário e o número de licenças de cada produto.",
+      "informação, com a classificação, o preço unitário e o número de licenças de cada licença.",
   );
   xml +=
     custos.length > 0
       ? paginasDeImagem(custos, "eAvalia — Custos - Licenciamento", { docPr: 2000, relacao: "rIdCustos", ficheiro: "custos" }, relacao)
       : tabela(
           [
-            { titulo: "Produto", peso: 34 },
+            { titulo: "Licença", peso: 34 },
             { titulo: "Tipo de solução", peso: 22 },
             { titulo: "Quantidade", alinhamento: "direita", peso: 12 },
             { titulo: "Licenças (s/ IVA)", alinhamento: "direita", peso: 16 },
             { titulo: "Manutenção (s/ IVA)", alinhamento: "direita", peso: 16 },
           ],
           valoresDosLotes(pedido).flatMap((l) =>
-            l.linhas.map(({ produto: x, valor }) => [
-              nomeDoProduto(x, pedido.natureza) || "—",
-              x.eavalia.tipoSolucao || "—",
+            l.linhas.map(({ licenca: x, valor }) => [
+              nomeDaLicenca(x, pedido.natureza) || "—",
+              tipoSolucaoEavalia(x, pedido.natureza) || "—",
               formatarNumero(x.quantidade),
               formatarMoeda(valor.licencas),
               valor.manutencao > 0 ? formatarMoeda(valor.manutencao) : "—",
@@ -921,5 +939,5 @@ export async function gerarManifestacaoLicenciamentoBlob(
 
 /** O título do PDF: o n.º da informação e o nome do procedimento. */
 export function tituloDoPdfLicenciamento(pedido: PedidoLicenciamento): string {
-  return `Informação ${pedido.numeroInformacao.trim()} — ${nomeProcedimentoLicenciamento(pedido.nomeProjeto) || pedido.nomeProjeto.trim()}`;
+  return `Informação ${pedido.numeroInformacao.trim()} — ${nomeProcedimentoLicenciamento(pedido.nomeProduto) || pedido.nomeProduto.trim()}`;
 }

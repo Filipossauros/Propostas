@@ -2668,3 +2668,100 @@ tbody.grupo-projeto.projeto-alvo td {
   width: 110px;
   flex: none;
 }
+
+.aviso-info {
+  background: var(--azul-100);
+  color: var(--texto);
+  margin: 0 0 14px;
+}
+
+/* As explicações (i): fechadas, uma linha com a pergunta; abertas, o texto por baixo. */
+.explicacao {
+  margin: 6px 0 4px 26px;
+  font-size: 0.84rem;
+}
+
+.explicacao summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--azul-700);
+  list-style: none;
+}
+
+.explicacao summary::-webkit-details-marker {
+  display: none;
+}
+
+.explicacao-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+.explicacao-texto {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--azul-500);
+  background: var(--azul-100);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+  line-height: 1.5;
+}
+
+.explicacao-texto ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.explicacao-texto li + li {
+  margin-top: 4px;
+}
+
+.painel > .explicacao {
+  margin-left: 0;
+}
+
+/* Os valores do eAvalia que decorrem de outras escolhas: mostram-se, não se escolhem. */
+.valores-derivados {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.valor-derivado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--superficie-alt);
+}
+
+.campo-bloqueado,
+select.campo-bloqueado:disabled {
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+}
+
+.campo-hora {
+  flex: 0 0 auto;
+  width: 90px;
+}
+
+/* Um campo que não se edita (a quantidade de uma licença única) não leva o amarelo dos campos a preencher. */
+.modulo-licenciamento input.campo-bloqueado,
+.modulo-licenciamento .campo-numero-rotulado .campo-numero input.campo-bloqueado {
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+  border-color: var(--borda);
+}

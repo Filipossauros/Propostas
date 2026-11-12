@@ -1,12 +1,8 @@
 import { useState } from "react";
-import type { JustificacaoProjeto } from "../core/types";
 import { anosDeInicioAdmitidos } from "../core/types";
 import type { ErroValidacao } from "../core/perfil";
-import { validarDescricaoProjeto, validarNomeProjeto } from "../core/perfil";
-import { validarJustificacao } from "../core/justificacao";
 import type { PedidoLicenciamento } from "../core/licenciamento";
 import {
-  METRICAS,
   PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO,
   anosDoPedido,
   comIva,
@@ -15,12 +11,14 @@ import {
   ehJustificacaoMargemPorOmissao,
   justificacaoMargemLicenciamento,
   margemDoPedido,
-  moverProdutoParaLote,
-  nomeDoProduto,
+  linhasDoMapa,
+  moverLicencaParaLote,
+  nomeDaLicenca,
   nomeProcedimentoLicenciamento,
   validarCondicoes,
   validarLicencas,
   validarPedido,
+  validarProdutoLicenciamento,
   valorEstimado,
   valorPorAno,
   valoresDosLotes,
@@ -31,14 +29,10 @@ import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDoPedidoLicenciamento, nomeDoPacoteDeLicenciamento } from "../saidas/pacotes";
 import { CampoNumero } from "../ui/CampoNumero";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
-import { InformacaoEavaliaEditor } from "../modulo2/InformacaoEavaliaEditor";
 
 interface Props {
   pedido: PedidoLicenciamento;
   onAlterar: (atualizar: (atual: PedidoLicenciamento) => PedidoLicenciamento) => void;
-  nomeProjeto: string;
-  descricaoProjeto: string;
-  justificacao: JustificacaoProjeto;
 }
 
 /**
@@ -46,37 +40,32 @@ interface Props {
  * o pacote com a manifestação de necessidades, o eAvalia, os mapas de
  * quantidades e preços e o JSON do pedido.
  */
-export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, descricaoProjeto, justificacao }: Props) {
+export function ModuloPedidoLicenciamento({ pedido, onAlterar }: Props) {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   const [aGerar, setAGerar] = useState(false);
 
-  const nomeProcedimento = nomeProcedimentoLicenciamento(nomeProjeto);
+  const nomeProcedimento = nomeProcedimentoLicenciamento(pedido.nomeProduto);
   const anosDeInicio = anosDeInicioAdmitidos();
   const anos = anosDoPedido(pedido);
   const comMargem = comMargemLicenciamento(pedido);
   const lotes = valoresDosLotes(pedido);
   const lotesComMargem = valoresDosLotes(comMargem);
   const margem = margemDoPedido(pedido);
-  const exportavel: PedidoLicenciamento = { ...pedido, nomeProjeto, descricaoProjeto, justificacao };
 
   const noModulo = (sufixo: string, lista: ErroValidacao[]) =>
     lista.map((e) => ({ ...e, mensagem: `${e.mensagem} (${sufixo})` }));
-  const errosDoProjeto = noModulo("Módulo 1 · Projeto", [
-    ...validarNomeProjeto(nomeProjeto),
-    ...validarDescricaoProjeto(descricaoProjeto),
-    ...validarJustificacao(justificacao),
-  ]);
+  const errosDoProduto = noModulo("Módulo 1 · Produto", validarProdutoLicenciamento(pedido));
   const errosDasLicencas = noModulo("L1 · Licenças", validarLicencas(pedido));
-  const errosDasCondicoes = noModulo("L2 · Condições", validarCondicoes(pedido.condicoes));
+  const errosDasCondicoes = noModulo("L2 · Condições", validarCondicoes(pedido));
   const errosDoPedido = validarPedido(pedido);
-  const erros = [...errosDoProjeto, ...errosDasLicencas, ...errosDasCondicoes, ...errosDoPedido];
+  const erros = [...errosDoProduto, ...errosDasLicencas, ...errosDasCondicoes, ...errosDoPedido];
   const comPdf = pedido.numeroInformacao.trim() !== "" && pedido.numeroOrcamento.trim() !== "";
 
   async function descarregar() {
     setMensagem(null);
     setAGerar(true);
     try {
-      await descarregarPacote(nomeDoPacoteDeLicenciamento(nomeProjeto), await ficheirosDoPedidoLicenciamento(exportavel));
+      await descarregarPacote(nomeDoPacoteDeLicenciamento(pedido.nomeProduto), await ficheirosDoPedidoLicenciamento(pedido));
     } catch (erro) {
       console.error(erro);
       setMensagem({
@@ -98,7 +87,7 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
           <h2>Módulo L3 · Pedido e Anexo Técnico</h2>
         </div>
         <p className="modulo-subtitulo">
-          Agrupa os produtos em lotes, fixa o período e a margem, nomeia o júri e descarrega o pedido completo.
+          Agrupa as licenças em lotes, fixa o período e a margem, nomeia o júri e descarrega o pedido completo.
         </p>
         <p className="modulo-quem">
           <strong>Quem preenche:</strong> o responsável do procedimento.
@@ -120,11 +109,11 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
             readOnly
             aria-readonly="true"
             placeholder={`${PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO}…`}
-            title="Formado a partir do nome do projeto. Altere o nome do projeto no Módulo 1."
+            title="Formado a partir do nome do produto. Altere o nome do produto no Módulo 1."
           />
         </label>
         <p className="ajuda">
-          O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO.trim()}» seguido do nome do projeto, e
+          O nome do procedimento é «{PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO.trim()}» seguido do nome do produto, e
           altera-se alterando esse nome no Módulo 1. Todos os preços unitários são introduzidos sem IVA.
         </p>
 
@@ -202,11 +191,11 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
         <header className="painel-cabecalho">
           <h3>Lotes</h3>
           <p className="painel-nota">
-            Por omissão, um lote por produto. Para juntar produtos, mude o lote de um deles para o lote do outro.
+            Por omissão, um lote por licença. Para juntar licenças, mude o lote de uma delas para o lote da outra.
           </p>
         </header>
 
-        {lotes.length === 0 && <p className="estado-vazio">Ainda não há produtos. Acrescente-os no L1.</p>}
+        {lotes.length === 0 && <p className="estado-vazio">Ainda não há licenças. Acrescente-as no L1.</p>}
 
         <div className="lista-lotes">
           {lotes.map((l) => (
@@ -234,13 +223,13 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
                 <table className="tabela">
                   <thead>
                     <tr>
-                      <th scope="col">Produto</th>
+                      <th scope="col">Linha do mapa de preços</th>
                       <th scope="col">Métrica</th>
                       <th scope="col" className="numerico">
                         Qtd.
                       </th>
                       <th scope="col" className="numerico">
-                        Meses
+                        Períodos
                       </th>
                       <th scope="col" className="numerico">
                         Preço unit. <span className="cabecalho-nota">s/ IVA</span>
@@ -252,41 +241,42 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
                     </tr>
                   </thead>
                   <tbody>
-                    {l.linhas.map(({ produto: p, valor }) => (
-                      <tr key={p.id}>
-                        <td>{nomeDoProduto(p, pedido.natureza) || "(produto sem nome)"}</td>
-                        <td>{p.metrica === "" ? "—" : METRICAS[p.metrica].singular}</td>
-                        <td className="numerico">{formatarNumero(p.quantidade)}</td>
-                        <td className="numerico">{p.periodoMeses}</td>
-                        <td className="numerico">
-                          {formatarMoeda(p.precoUnitario)}
-                          {p.direitoUso === "temporario" && <span className="meta"> /mês</span>}
-                        </td>
-                        <td className="numerico">
-                          {formatarMoeda(valor.total)}
-                          {valor.manutencao > 0 && <span className="meta"> incl. manutenção</span>}
-                        </td>
-                        <td>
-                          <select
-                            className="seletor-lote"
-                            value={l.lote.id}
-                            aria-label={`Lote de ${nomeDoProduto(p, pedido.natureza) || "produto"}`}
-                            onChange={(e) =>
-                              onAlterar((atual) =>
-                                moverProdutoParaLote(atual, p.id, e.target.value === "" ? null : e.target.value),
-                              )
-                            }
-                          >
-                            {lotes.map((x) => (
-                              <option key={x.lote.id} value={x.lote.id}>
-                                Lote {x.lote.numero}
-                              </option>
-                            ))}
-                            {l.linhas.length > 1 && <option value="">Novo lote</option>}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
+                    {l.linhas.flatMap(({ licenca }) =>
+                      linhasDoMapa(licenca, pedido.natureza, anos.length).map((linha, k) => (
+                        <tr key={`${licenca.id}-${linha.tipo}`}>
+                          <td>{linha.designacao}</td>
+                          <td>{linha.metrica || "—"}</td>
+                          <td className="numerico">{formatarNumero(linha.quantidade)}</td>
+                          <td className="numerico">{formatarNumero(linha.periodos)}</td>
+                          <td className="numerico">
+                            {formatarMoeda(linha.precoUnitario)}
+                            <span className="meta"> {linha.unidade.replace(/^€ /, "")}</span>
+                          </td>
+                          <td className="numerico">{formatarMoeda(linha.total)}</td>
+                          <td>
+                            {k === 0 && (
+                              <select
+                                className="seletor-lote"
+                                value={l.lote.id}
+                                aria-label={`Lote de ${nomeDaLicenca(licenca, pedido.natureza) || "licença"}`}
+                                onChange={(e) =>
+                                  onAlterar((atual) =>
+                                    moverLicencaParaLote(atual, licenca.id, e.target.value === "" ? null : e.target.value),
+                                  )
+                                }
+                              >
+                                {lotes.map((x) => (
+                                  <option key={x.lote.id} value={x.lote.id}>
+                                    Lote {x.lote.numero}
+                                  </option>
+                                ))}
+                                {l.linhas.length > 1 && <option value="">Novo lote</option>}
+                              </select>
+                            )}
+                          </td>
+                        </tr>
+                      )),
+                    )}
                   </tbody>
                   <tfoot>
                     <tr>
@@ -324,7 +314,7 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
           <h3>Resumo do procedimento</h3>
         </header>
         {lotes.length === 0 ? (
-          <p className="estado-vazio">A tabela aparece quando houver produtos.</p>
+          <p className="estado-vazio">A tabela aparece quando houver licenças.</p>
         ) : (
           <div className="tabela-envolvente">
             <table className="tabela tabela-resumo-licenciamento">
@@ -400,7 +390,7 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
         )}
         {margem > 0 && (
           <p className="ajuda">
-            Valores com a margem prudencial de {formatarNumero(margem)} % já aplicada ao preço unitário de cada produto
+            Valores com a margem prudencial de {formatarNumero(margem)} % já aplicada ao preço unitário de cada licença
             — os mesmos que saem no Anexo Técnico.
           </p>
         )}
@@ -449,24 +439,13 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
           />
         </label>
         <p className="ajuda">
-          A margem prudencial é uma percentagem acrescentada ao preço unitário de referência de cada produto para
+          A margem prudencial é uma percentagem acrescentada ao preço unitário de referência de cada licença para
           acautelar variações de preço até à adjudicação e durante a execução do contrato (por exemplo, a revisão das
-          tabelas dos fabricantes), de modo a que o valor estimado não fique abaixo do que o mercado praticará. O
-          fundamento é obrigatório. Acima de 0 %, a margem passa a todos os valores do Anexo Técnico — produtos, lotes,
+          tabelas dos fabricantes ou titulares), de modo a que o valor estimado não fique abaixo do que o mercado praticará. O
+          fundamento é obrigatório. Acima de 0 %, a margem passa a todos os valores do Anexo Técnico — licenças, lotes,
           anos, valor estimado, eAvalia e mapas de preços. O texto por omissão acompanha a margem enquanto não for
           alterado.
         </p>
-      </section>
-
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Informação eAvalia</h3>
-          <p className="painel-nota">Respostas às medidas de alinhamento tecnológico do pedido de parecer prévio.</p>
-        </header>
-        <InformacaoEavaliaEditor
-          eavalia={pedido.eavalia}
-          onChange={(eavalia) => onAlterar((atual) => ({ ...atual, eavalia }))}
-        />
       </section>
 
       <section className="painel">
@@ -483,7 +462,7 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
               ["diretor", "Diretor", "Nome do diretor"],
               ["coordenador", "Coordenador", "Nome do coordenador"],
               ["unidade", "Unidade (coordenação)", "ex.: Unidade de Planeamento, Arquitetura, Conformidade e Engenharia"],
-              ["gestorProjeto", "Gestor de projeto", "Nome do gestor de projeto"],
+              ["gestorProjeto", "Gestor do produto", "Nome do gestor do produto"],
             ] as const
           ).map(([campo, rotulo, exemplo]) => (
             <label key={campo} className="campo">
@@ -533,9 +512,9 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
         </p>
         <ul className="verificacao-anexo">
           {[
-            { nome: "Projeto (Módulo 1)", lista: errosDoProjeto },
+            { nome: "Produto (Módulo 1)", lista: errosDoProduto },
             {
-              nome: `Licenças (L1) · ${pedido.produtos.length === 1 ? "1 produto" : `${pedido.produtos.length} produtos`}`,
+              nome: `Licenças (L1) · ${pedido.licencas.length === 1 ? "1 licença" : `${pedido.licencas.length} licenças`}`,
               lista: errosDasLicencas,
             },
             { nome: "Condições do contrato (L2)", lista: errosDasCondicoes },
@@ -564,7 +543,8 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar, nomeProjeto, desc
         </ul>
         <p className="ajuda">
           <strong>O ZIP vai conter:</strong> a manifestação de necessidades em Word{comPdf ? " e em PDF" : ""}, o pedido
-          de parecer prévio eAvalia («Alinhamento Tecnológico» e «Custos - Licenciamento»),{" "}
+          de parecer prévio eAvalia («Alinhamento Tecnológico», com todas as medidas «Não aplicável», e «Custos -
+          Licenciamento»),{" "}
           {lotes.length === 1 ? "1 mapa" : `${lotes.length} mapas`} de quantidades e preços em Excel (um por lote) e o
           JSON do pedido.
         </p>
