@@ -203,6 +203,19 @@ describe("manifestação de necessidades do licenciamento", () => {
     expect(texto).not.toContain("Rastreabilidade da execução");
   });
 
+  it("os pressupostos só falam dos tipos de licença escolhidos; o direito de uso é facultativo", async () => {
+    const snomed1 = snomed();
+    snomed1.condicoes = { ...snomed1.condicoes, direitoUso: { ...snomed1.condicoes.direitoUso, ligada: false } };
+    const texto = await textoDe(snomed1);
+    expect(texto).toContain("os períodos são os anos do período");
+    expect(texto).not.toContain("licença perpétua");
+    expect(texto).not.toContain("consulta preliminar ao mercado");
+    expect(texto).not.toContain("Direito de uso e transmissão");
+    const software = await textoDe(exemplo());
+    expect(software).toContain("A manutenção da licença perpétua tem linha própria");
+    expect(software).toContain("Direito de uso e transmissão");
+  });
+
   it("a origem do preço leva a referência", async () => {
     expect(await textoDe(snomed())).toContain("Tabela pública do fabricante ou titular (https://www.snomed.org/member-fees)");
   });

@@ -9,6 +9,7 @@ import {
   consultaMercadoEavalia,
   criarLicenca,
   ehJustificacaoMargemPorOmissao,
+  justificacaoMargemDoPedido,
   horarioPorExtenso,
   importarPedidoLicenciamentoJSON,
   importarProdutoJSON,
@@ -122,6 +123,17 @@ describe("licenciamento — cálculos", () => {
     expect(comMargem.licencas[0].precoUnitario).toBe(15.95);
     expect(comMargem.licencas[1].precoUnitario).toBe(2090);
     expect(valorEstimado(comMargem)).toBeGreaterThan(valorEstimado(pedido));
+  });
+
+  it("o fundamento da margem a 0 % só nomeia as origens escolhidas", () => {
+    const snomed = pedidoLicenciamentoExemplo(2027);
+    const texto = justificacaoMargemDoPedido(snomed);
+    expect(texto).toContain("resultam da tabela pública do fabricante ou titular");
+    expect(texto).not.toContain("consulta preliminar");
+    expect(justificacaoMargemDoPedido(pedidoLicenciamentoExemploSoftware(2027))).toContain(
+      "resultam da consulta preliminar ao mercado e da tabela pública do fabricante ou titular",
+    );
+    expect(ehJustificacaoMargemPorOmissao(texto)).toBe(true);
   });
 
   it("o fundamento da margem por omissão acompanha a margem", () => {

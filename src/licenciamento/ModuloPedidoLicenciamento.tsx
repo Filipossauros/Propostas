@@ -8,8 +8,7 @@ import {
   comIva,
   comMargemLicenciamento,
   designacaoDoLote,
-  ehJustificacaoMargemPorOmissao,
-  justificacaoMargemLicenciamento,
+  justificacaoMargemDoPedido,
   margemDoPedido,
   linhasDoMapa,
   moverLicencaParaLote,
@@ -415,15 +414,7 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar }: Props) {
               sufixo="%"
               invalido={!(pedido.margemPrudencial >= 0)}
               aria-label="Margem prudencial"
-              onChange={(margemPrudencial) =>
-                onAlterar((atual) => ({
-                  ...atual,
-                  margemPrudencial,
-                  justificacaoMargem: ehJustificacaoMargemPorOmissao(atual.justificacaoMargem)
-                    ? justificacaoMargemLicenciamento(margemPrudencial)
-                    : atual.justificacaoMargem,
-                }))
-              }
+              onChange={(margemPrudencial) => onAlterar((atual) => ({ ...atual, margemPrudencial }))}
             />
           </label>
         </div>
@@ -433,11 +424,20 @@ export function ModuloPedidoLicenciamento({ pedido, onAlterar }: Props) {
           </span>
           <textarea
             rows={5}
-            value={pedido.justificacaoMargem}
-            aria-invalid={pedido.justificacaoMargem.trim() === ""}
+            value={justificacaoMargemDoPedido(pedido)}
+            aria-invalid={justificacaoMargemDoPedido(pedido).trim() === ""}
             onChange={(e) => onAlterar((atual) => ({ ...atual, justificacaoMargem: e.target.value }))}
           />
         </label>
+        {pedido.justificacaoMargem !== null && (
+          <button
+            type="button"
+            className="botao-discreto"
+            onClick={() => onAlterar((atual) => ({ ...atual, justificacaoMargem: null }))}
+          >
+            Repor o texto por omissão
+          </button>
+        )}
         <p className="ajuda">
           A margem prudencial é uma percentagem acrescentada ao preço unitário de referência de cada licença para
           acautelar variações de preço até à adjudicação e durante a execução do contrato (por exemplo, a revisão das

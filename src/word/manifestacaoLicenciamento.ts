@@ -21,7 +21,7 @@ import {
   comIva,
   comMargemLicenciamento,
   designacaoDoLote,
-  justificacaoMargemLicenciamento,
+  justificacaoMargemDoPedido,
   margemDoPedido,
   mesesDoContrato,
   aplicabilidade,
@@ -199,6 +199,33 @@ function linhasDoCalculo(lotes: ValoresDoLote[], pedido: PedidoLicenciamento, nA
   );
 }
 
+/**
+ * Os pressupostos do cálculo — só os dos tipos de licença que o pedido tem:
+ * subscrição (mensal ou anual), licença perpétua, manutenção em linha própria
+ * e serviços associados.
+ */
+function pressupostosDoCalculo(licencas: Licenca[], comServicos: boolean): string {
+  const frases = ["O valor de cada linha do mapa de preços resulta da quantidade × preço unitário × períodos."];
+  const subscricoes = licencas.filter((l) => l.direitoUso === "temporario");
+  if (subscricoes.length > 0) {
+    const mensal = subscricoes.some((l) => l.periodicidadePreco === "mensal");
+    const anual = subscricoes.some((l) => l.periodicidadePreco === "anual");
+    const periodos = mensal && anual ? "os meses ou os anos do período, conforme o preço seja mensal ou anual" : mensal ? "os meses do período" : "os anos do período";
+    frases.push(`Na subscrição, os períodos são ${periodos}.`);
+  }
+  const perpetuas = licencas.filter((l) => l.direitoUso === "perpetuo");
+  if (perpetuas.length > 0) {
+    frases.push("Na licença perpétua, o preço é pago uma só vez.");
+    if (perpetuas.some((l) => l.manutencao === "aParte"))
+      frases.push(
+        "A manutenção da licença perpétua tem linha própria, com preço anual de referência igual à percentagem " +
+          "anual de manutenção sobre o valor das licenças, pelos anos do período.",
+      );
+  }
+  if (comServicos) frases.push("Os serviços associados têm um preço global, numa linha própria.");
+  return frases.join(" ");
+}
+
 function corpoLicenciamento(
   original: PedidoLicenciamento,
   pedido: PedidoLicenciamento,
@@ -209,7 +236,7 @@ function corpoLicenciamento(
   const objeto = objetoDoPedido(pedido);
   const produto = pedido.nomeProduto.trim();
   const margem = margemDoPedido(pedido);
-  const justificacaoMargem = pedido.justificacaoMargem.trim() || justificacaoMargemLicenciamento(margem);
+  const justificacaoMargem = justificacaoMargemDoPedido(original);
   const anos = anosDoPedido(pedido);
   const meses = mesesDoContrato(pedido);
   const estimado = valorEstimado(pedido);
@@ -564,10 +591,7 @@ function corpoLicenciamento(
   p.push(numerado("2.", [run("Pressupostos dos cálculos", { negrito: true })], { comOSeguinte: true, depois: 80 }));
   p.push(
     recuado(
-      "O valor de cada linha resulta da quantidade × preço unitário × períodos: na subscrição, os meses ou os anos do " +
-        "período, conforme o preço seja mensal ou anual; na licença perpétua, um só. A manutenção da licença " +
-        "perpétua, quando contratada, tem linha própria, com preço anual de referência igual à percentagem anual " +
-        "de manutenção sobre o valor das licenças.",
+      pressupostosDoCalculo(soLicencas, servicos.length > 0),
     ),
   );
   p.push(
@@ -779,9 +803,11 @@ function corpoLicenciamento(
       ),
     );
 
-  ponto3("Direito de uso e transmissão");
-  p.push(recuado(textoDaCondicao("direitoUso", pedido).trim()));
-  for (const frase of frasesDoDireitoDeUso(c.direitoUso)) p.push(recuado(frase));
+  if (c.direitoUso.ligada) {
+    ponto3("Direito de uso e transmissão");
+    p.push(recuado(textoDaCondicao("direitoUso", pedido).trim()));
+    for (const frase of frasesDoDireitoDeUso(c.direitoUso)) p.push(recuado(frase));
+  }
 
   if (aplicabilidade("manutencao", pedido).aplica) {
     ponto3(tituloDaManutencao(pedido));

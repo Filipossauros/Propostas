@@ -91,13 +91,20 @@ function Condicao({
         ) : (
           <strong className="condicao-titulo">{titulo}</strong>
         )}
-        <span className={`selo-condicao selo-condicao-${selo === "obrigatória" ? "obrigatoria" : "opcional"}`}>{selo}</span>
+        <span className={`selo-condicao selo-condicao-${selo === "obrigatória" ? "obrigatoria" : "opcional"}`}>
+          {selo}
+        </span>
       </div>
       {ativa && (
         <>
           <label className="campo">
             <span className="rotulo-oculto">Texto da condição «{titulo}»</span>
-            <textarea rows={3} value={texto} aria-invalid={texto.trim() === ""} onChange={(e) => onTexto(e.target.value)} />
+            <textarea
+              rows={3}
+              value={texto}
+              aria-invalid={texto.trim() === ""}
+              onChange={(e) => onTexto(e.target.value)}
+            />
           </label>
           {personalizado ? (
             <button type="button" className="botao-discreto" onClick={onRepor}>
@@ -117,7 +124,15 @@ function Horas({ rotulo, valor, onChange }: { rotulo: string; valor: number; onC
   return (
     <label className="campo-numero-rotulado">
       <span className="rotulo">{rotulo}</span>
-      <CampoNumero valor={valor} min={0} step={1} sufixo="h" aria-label={rotulo} invalido={!(valor > 0)} onChange={onChange} />
+      <CampoNumero
+        valor={valor}
+        min={0}
+        step={1}
+        sufixo="h"
+        aria-label={rotulo}
+        invalido={!(valor > 0)}
+        onChange={onChange}
+      />
     </label>
   );
 }
@@ -170,7 +185,15 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
 
   const manutencao = aplicabilidade("manutencao", pedido);
   const disponibilidade = aplicabilidade("disponibilidade", pedido);
-  const resumo = [...new Set(pedido.licencas.filter((l) => l.objeto !== "servico").map((l) => `${objetoPorExtenso(l).toLowerCase()} (${l.direitoUso === "temporario" ? "subscrição" : "perpétua"})`))];
+  const resumo = [
+    ...new Set(
+      pedido.licencas
+        .filter((l) => l.objeto !== "servico")
+        .map(
+          (l) => `${objetoPorExtenso(l).toLowerCase()} (${l.direitoUso === "temporario" ? "subscrição" : "perpétua"})`,
+        ),
+    ),
+  ];
   const horaValida = (h: string) => HORA.test(h.trim());
 
   return (
@@ -239,42 +262,59 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           )}
         </Condicao>
 
-        <div className="condicao">
+        <div className={c.direitoUso.ligada ? "condicao" : "condicao condicao-desligada"}>
           <div className="condicao-cabecalho">
-            <strong className="condicao-titulo">Direito de uso e transmissão</strong>
-            <span className="selo-condicao selo-condicao-obrigatoria">obrigatória</span>
+            <label className="campo-opcao condicao-interruptor">
+              <input
+                type="checkbox"
+                checked={c.direitoUso.ligada}
+                onChange={(e) => alterar("direitoUso", { ligada: e.target.checked })}
+              />
+              <span>
+                <strong>Direito de uso e transmissão</strong>
+              </span>
+            </label>
+            <span className="selo-condicao selo-condicao-opcional">facultativa</span>
           </div>
-          <p className="texto-padronizado">{textoDaCondicao("direitoUso", pedido)}</p>
-          <p className="ajuda">Texto padronizado, a partir do direito de uso das licenças do L1. Escolha as opções:</p>
-          <label className="campo-opcao">
-            <input
-              type="checkbox"
-              checked={c.direitoUso.sublicenciamento}
-              onChange={(e) => alterar("direitoUso", { sublicenciamento: e.target.checked })}
-            />
-            <span>
-              <strong>Sublicenciamento a terceiros abrangidos pelo âmbito</strong>
-              <span className="meta">A entidade adjudicante pode autorizar outros a usar a licença, sem custo.</span>
-            </span>
-          </label>
-          <Explicacao pergunta="O que é o sublicenciamento?">{EXPLICACAO_SUBLICENCIAMENTO}</Explicacao>
-          <label className="campo-opcao">
-            <input
-              type="checkbox"
-              checked={c.direitoUso.transmissao}
-              onChange={(e) => alterar("direitoUso", { transmissao: e.target.checked })}
-            />
-            <span>
-              <strong>Transmissão a outra entidade do SNS, sem custo</strong>
-              <span className="meta">A licença passa, por inteiro, para outra entidade do SNS.</span>
-            </span>
-          </label>
-          <Explicacao pergunta="O que é a transmissão?">{EXPLICACAO_TRANSMISSAO}</Explicacao>
-          {frasesDoDireitoDeUso(c.direitoUso).map((f) => (
-            <p key={f} className="texto-padronizado">
-              {f}
-            </p>
-          ))}
+          {c.direitoUso.ligada && (
+            <>
+              <p className="texto-padronizado">{textoDaCondicao("direitoUso", pedido)}</p>
+              <p className="ajuda">
+                Texto padronizado, a partir do direito de uso das licenças do L1. Escolha as opções:
+              </p>
+              <label className="campo-opcao">
+                <input
+                  type="checkbox"
+                  checked={c.direitoUso.sublicenciamento}
+                  onChange={(e) => alterar("direitoUso", { sublicenciamento: e.target.checked })}
+                />
+                <span>
+                  <strong>Sublicenciamento a terceiros abrangidos pelo âmbito</strong>
+                  <span className="meta">
+                    A entidade adjudicante pode autorizar outros a usar a licença, sem custo.
+                  </span>
+                </span>
+              </label>
+              <Explicacao pergunta="O que é o sublicenciamento?">{EXPLICACAO_SUBLICENCIAMENTO}</Explicacao>
+              <label className="campo-opcao">
+                <input
+                  type="checkbox"
+                  checked={c.direitoUso.transmissao}
+                  onChange={(e) => alterar("direitoUso", { transmissao: e.target.checked })}
+                />
+                <span>
+                  <strong>Transmissão a outra entidade do SNS, sem custo</strong>
+                  <span className="meta">A licença passa, por inteiro, para outra entidade do SNS.</span>
+                </span>
+              </label>
+              <Explicacao pergunta="O que é a transmissão?">{EXPLICACAO_TRANSMISSAO}</Explicacao>
+              {frasesDoDireitoDeUso(c.direitoUso).map((f) => (
+                <p key={f} className="texto-padronizado">
+                  {f}
+                </p>
+              ))}
+            </>
+          )}
         </div>
       </section>
 
@@ -454,14 +494,16 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
                 step={1}
                 sufixo="% do contrato"
                 aria-label="Limite global das penalizações"
-                invalido={!(c.penalizacoes.limiteGlobal > 0) || c.penalizacoes.limiteGlobal > LIMITE_GLOBAL_PENALIZACOES}
+                invalido={
+                  !(c.penalizacoes.limiteGlobal > 0) || c.penalizacoes.limiteGlobal > LIMITE_GLOBAL_PENALIZACOES
+                }
                 onChange={(limiteGlobal) => alterar("penalizacoes", { limiteGlobal })}
               />
             </label>
           </div>
           <p className="ajuda">
-            Em percentagem do valor mensal do contrato (o preço do lote a dividir pelos meses). O limite global não
-            pode exceder {LIMITE_GLOBAL_PENALIZACOES} % do preço contratual (art.º 329.º do CCP).
+            Em percentagem do valor mensal do contrato (o preço do lote a dividir pelos meses). O limite global não pode
+            exceder {LIMITE_GLOBAL_PENALIZACOES} % do preço contratual (art.º 329.º do CCP).
           </p>
         </Condicao>
 

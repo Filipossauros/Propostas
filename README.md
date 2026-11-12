@@ -349,7 +349,9 @@ SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade 
 de cada ano a partir de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano,
 mais a manutenção em linha própria (percentagem anual de referência sobre o valor das licenças) pelo
 período. As métricas «Licença nacional», «Licença institucional» e «Pacote / edição» têm sempre quantidade 1; o
-pacote leva a capacidade por extenso (por exemplo, «até 500 análises por dia»). O período vai até
+pacote leva a capacidade por extenso (por exemplo, «até 500 análises por dia»). Os pressupostos do cálculo, no Word, só
+falam dos tipos de licença que o pedido tem, e o fundamento da margem a 0 % só nomeia as origens de preço
+escolhidas (texto por omissão, editável e reponível no L3). O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
 A origem do preço «procedimento anterior» pede o n.º do procedimento; «tabela pública», a ligação ou a
 indicação da tabela.
@@ -357,7 +359,7 @@ indicação da tabela.
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
 a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. O
-direito de uso não tem texto livre: sai um texto padronizado, com as opções de sublicenciamento e de
+direito de uso é facultativo e não tem texto livre: sai um texto padronizado, com as opções de sublicenciamento e de
 transmissão a outra entidade do SNS, cada uma com explicação (i). As penalizações são facultativas e vêm
 desligadas: podem ficar para a formulação do contrato. Os entregáveis também são facultativos, escolhidos
 de uma lista fixa (acesso, documentação de apoio, manuais, registos das sessões de trabalho). O horário de suporte é dias úteis, 7 dias por

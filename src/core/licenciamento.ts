@@ -245,7 +245,8 @@ export interface TemposDeSeveridade {
  */
 export interface CondicoesContrato {
   ambito: { texto: string | null; entidades: string; naoProdutivosSemCusto: boolean };
-  direitoUso: { texto: string | null; sublicenciamento: boolean; transmissao: boolean };
+  /** Facultativo: com ele desligado, a condição não sai. */
+  direitoUso: { ligada: boolean; texto: string | null; sublicenciamento: boolean; transmissao: boolean };
   manutencao: { texto: string | null };
   suporte: {
     ligada: boolean;
@@ -307,7 +308,7 @@ export const EXPLICACAO_NAO_PRODUTIVOS =
 export function condicoesIniciais(): CondicoesContrato {
   return {
     ambito: { texto: null, entidades: "", naoProdutivosSemCusto: true },
-    direitoUso: { texto: null, sublicenciamento: false, transmissao: true },
+    direitoUso: { ligada: true, texto: null, sublicenciamento: false, transmissao: true },
     manutencao: { texto: null },
     suporte: {
       ligada: true,
@@ -361,7 +362,8 @@ export interface PedidoLicenciamento {
   encargosPlurianuais: { ativo: boolean; anoInicio: number };
   taxaIva: number;
   margemPrudencial: number;
-  justificacaoMargem: string;
+  /** `null` é o fundamento por omissão (ver `justificacaoMargemDoPedido`). */
+  justificacaoMargem: string | null;
   juri: JuriTecnico;
   numeroInformacao: string;
   numeroOrcamento: string;
@@ -374,29 +376,72 @@ export function nomeProcedimentoLicenciamento(nomeProduto: string): string {
   return nome === "" ? "" : `${PREFIXO_NOME_PROCEDIMENTO_LICENCIAMENTO}${nome}`;
 }
 
-/** O fundamento da margem a 0 %, por omissão — no licenciamento, os preços vêm do mercado. */
-export const JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO =
+/** Como se diz cada origem do preço no fundamento da margem. */
+const ORIGEM_NO_FUNDAMENTO: Record<Exclude<OrigemPreco, "">, string> = {
+  consultaPreliminar: "da consulta preliminar ao mercado",
+  procedimentoAnterior: "de procedimentos anteriores",
+  tabelaPublica: "da tabela pública do fabricante ou titular",
+};
+
+/**
+ * O fundamento da margem por omissão. A 0 %, diz de onde vêm os preços — só as
+ * origens efetivamente escolhidas nas licenças.
+ */
+export function justificacaoMargemLicenciamento(margem: number, origens: OrigemPreco[] = []): string {
+  if (margem > 0) {
+    return (
+      `A margem prudencial de ${formatarNumeroLic(margem)} % destina-se a acautelar a variação dos preços de tabela ` +
+      "dos fabricantes e titulares e das condições de mercado até à adjudicação e ao longo da execução do contrato, e " +
+      "é aplicada ao preço unitário de cada licença, refletindo-se em todos os valores por licença, por lote e por " +
+      "ano apresentados na presente informação."
+    );
+  }
+  const escolhidas = (Object.keys(ORIGEM_NO_FUNDAMENTO) as Array<Exclude<OrigemPreco, "">>).filter((o) => origens.includes(o));
+  const fontes = escolhidas.map((o) => ORIGEM_NO_FUNDAMENTO[o]);
+  const resultam =
+    fontes.length === 0
+      ? "Os preços unitários considerados correspondem aos preços de referência indicados para cada licença"
+      : `Os preços unitários considerados resultam ${
+          fontes.length === 1 ? fontes[0] : `${fontes.slice(0, -1).join(", ")} e ${fontes[fontes.length - 1]}`
+        }${fontes.length > 1 ? ", conforme indicado para cada licença" : ""}`;
+  return (
+    `Não foi aplicada margem prudencial autónoma ao valor estimado. ${resultam}, refletindo os preços efetivamente ` +
+    "praticados. Considera-se, assim, que a margem prudencial se encontra incorporada nos valores unitários " +
+    "adotados, os quais asseguram, com razoabilidade, a suficiência do valor estimado para a satisfação da " +
+    "necessidade identificada."
+  );
+}
+
+/** O fundamento da margem: o escrito à mão, ou o por omissão (que acompanha a margem e as origens dos preços). */
+export function justificacaoMargemDoPedido(pedido: Pick<PedidoLicenciamento, "justificacaoMargem" | "margemPrudencial" | "licencas">): string {
+  return (
+    pedido.justificacaoMargem ??
+    justificacaoMargemLicenciamento(margemDoPedido(pedido), pedido.licencas.map((l) => l.origemPreco))
+  );
+}
+
+/** O texto por omissão da versão anterior, que passa a acompanhar as escolhas. */
+const JUSTIFICACAO_SEM_MARGEM_ANTERIOR =
   "Não foi aplicada margem prudencial autónoma ao valor estimado. Os preços unitários considerados resultam da " +
   "consulta ao mercado, de procedimentos anteriores ou da tabela pública do fabricante ou titular, conforme " +
   "indicado para cada licença, refletindo os preços efetivamente praticados. Considera-se, assim, que a margem " +
   "prudencial se encontra incorporada nos valores unitários adotados, os quais asseguram, com razoabilidade, a " +
   "suficiência do valor estimado para a satisfação da necessidade identificada.";
 
-export function justificacaoMargemLicenciamento(margem: number): string {
-  if (!(margem > 0)) return JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO;
-  return (
-    `A margem prudencial de ${formatarNumeroLic(margem)} % destina-se a acautelar a variação dos preços de tabela ` +
-    "dos fabricantes e titulares e das condições de mercado até à adjudicação e ao longo da execução do contrato, e " +
-    "é aplicada ao preço unitário de cada licença, refletindo-se em todos os valores por licença, por lote e por " +
-    "ano apresentados na presente informação."
-  );
-}
-
+/** Se um fundamento gravado é um dos textos por omissão (de agora ou da versão anterior). */
 export function ehJustificacaoMargemPorOmissao(texto: string): boolean {
   const t = texto.trim();
-  if (t === "" || t === JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO) return true;
+  if (t === "" || t === JUSTIFICACAO_SEM_MARGEM_ANTERIOR) return true;
+  if (/^Não foi aplicada margem prudencial autónoma ao valor estimado\./.test(t) && t.endsWith("necessidade identificada."))
+    return t === justificacaoMargemLicenciamento(0, origensNoTexto(t));
   const modelo = justificacaoMargemLicenciamento(1).replace(/^A margem prudencial de 1 %/, "");
   return t.replace(/^A margem prudencial de [\d\s.,]+ %/, "") === modelo;
+}
+
+function origensNoTexto(t: string): OrigemPreco[] {
+  return (Object.entries(ORIGEM_NO_FUNDAMENTO) as Array<[Exclude<OrigemPreco, "">, string]>)
+    .filter(([, frase]) => t.includes(frase))
+    .map(([o]) => o);
 }
 
 function formatarNumeroLic(valor: number): string {
@@ -449,7 +494,7 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
     encargosPlurianuais: { ativo: false, anoInicio },
     taxaIva: TAXA_IVA_PADRAO,
     margemPrudencial: 0,
-    justificacaoMargem: JUSTIFICACAO_SEM_MARGEM_LICENCIAMENTO,
+    justificacaoMargem: null,
     juri: juriInicial(),
     numeroInformacao: "",
     numeroOrcamento: "",
@@ -1175,7 +1220,7 @@ export function validarPedido(pedido: PedidoLicenciamento): ErroValidacao[] {
   if (!(pedido.taxaIva >= 0)) erros.push(falta("taxaIva", "A taxa de IVA tem de ser um número não negativo."));
   if (!(pedido.margemPrudencial >= 0))
     erros.push(falta("margemPrudencial", "A margem prudencial tem de ser um número não negativo."));
-  if (pedido.justificacaoMargem.trim() === "")
+  if (justificacaoMargemDoPedido(pedido).trim() === "")
     erros.push(falta("justificacaoMargem", "Escreva o fundamento da margem prudencial."));
   if (pedido.licencas.some((l) => !ehServico(l) && l.periodoMeses > 12) && !pedido.encargosPlurianuais.ativo)
     erros.push(
@@ -1389,6 +1434,7 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
     },
     direitoUso: {
+      ligada: booleano(d.ligada, true),
       // Sem texto livre: sai sempre o padronizado.
       texto: null,
       sublicenciamento: booleano(d.sublicenciamento, false),
@@ -1488,7 +1534,10 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
     },
     taxaIva: numero(r.taxaIva, TAXA_IVA_PADRAO),
     margemPrudencial: numero(r.margemPrudencial, 0),
-    justificacaoMargem: texto(r.justificacaoMargem, base.justificacaoMargem),
+    justificacaoMargem:
+      typeof r.justificacaoMargem === "string" && !ehJustificacaoMargemPorOmissao(r.justificacaoMargem)
+        ? r.justificacaoMargem
+        : null,
     juri: {
       diretor: texto(juri.diretor),
       coordenador: texto(juri.coordenador),
