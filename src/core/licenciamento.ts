@@ -143,27 +143,38 @@ export type Metrica =
   | ""
   | "utilizadorNomeado"
   | "utilizadorConcorrente"
-  | "dispositivo"
-  | "core"
-  | "instancia"
   | "volume"
   | "nacional"
-  | "institucional"
-  | "pacote";
+  | "institucional";
 /** A métrica no singular e no plural: «1 utilizador nomeado», «1 200 utilizadores nomeados». */
 export const METRICAS: Record<Exclude<Metrica, "">, { singular: string; plural: string }> = {
   utilizadorNomeado: { singular: "Utilizador nomeado", plural: "Utilizadores nomeados" },
   utilizadorConcorrente: { singular: "Utilizador concorrente", plural: "Utilizadores concorrentes" },
-  dispositivo: { singular: "Dispositivo", plural: "Dispositivos" },
-  core: { singular: "Core / processador", plural: "Cores / processadores" },
-  instancia: { singular: "Instância / servidor", plural: "Instâncias / servidores" },
-  volume: { singular: "Unidade de volume (transações, GB…)", plural: "Unidades de volume" },
+  volume: { singular: "Unidade de volume (indicar qual)", plural: "Unidades de volume" },
   nacional: { singular: "Licença nacional (território)", plural: "Licenças nacionais" },
   institucional: { singular: "Licença institucional (entidade)", plural: "Licenças institucionais" },
-  pacote: { singular: "Pacote / edição (capacidade indicada)", plural: "Pacotes / edições" },
 };
 /** As métricas de licença única: a quantidade é sempre 1. */
-export const METRICAS_UNICAS: ReadonlyArray<Exclude<Metrica, "">> = ["nacional", "institucional", "pacote"];
+export const METRICAS_UNICAS: ReadonlyArray<Exclude<Metrica, "">> = ["nacional", "institucional"];
+
+/**
+ * A forma do preço: unitário (quantidade × preço) ou global (só o preço final;
+ * a quantidade descreve a dimensão da licença, mas não multiplica o preço).
+ */
+export type FormaPreco = "unitario" | "global";
+
+/**
+ * A convocatória de uma aquisição aberta à concorrência: dirigida a qualquer
+ * interessado ou, na consulta prévia (art.os 112.º a 114.º do CCP), a entidades
+ * escolhidas — pelo menos três, com o motivo da escolha.
+ */
+export interface ConviteEntidades {
+  ativo: boolean;
+  motivo: string;
+  entidades: ItemPerfil[];
+}
+/** O mínimo de entidades convidadas na consulta prévia (art.º 112.º do CCP). */
+export const MINIMO_ENTIDADES_CONVIDADAS = 3;
 
 export type OrigemPreco =
   | ""
@@ -196,7 +207,7 @@ export interface FontePreco {
   numero: string;
   /** Contrato anterior: o ano. */
   ano: number;
-  /** Contrato anterior: o preço unitário de então, em euros. */
+  /** Contrato anterior: o preço de então (unitário, ou global), em euros. */
   precoAnterior: number;
   /** Orçamento: quem o deu. */
   entidade: string;
@@ -239,8 +250,11 @@ export interface Licenca {
   // Aberta à concorrência: a descrição, sem marca.
   /** Designação da licença no procedimento, ex.: «Plataforma de gestão documental». */
   designacao: string;
-  requisitosFuncionais: ItemPerfil[];
-  requisitosTecnicos: ItemPerfil[];
+  /**
+   * Os requisitos mínimos, um por linha — funcionais e técnicos, numa só lista.
+   * No serviço associado, são as atividades.
+   */
+  requisitos: ItemPerfil[];
   // Licença determinada: a identificação e o fundamento.
   /** A licença como o fabricante ou titular a designa, ex.: «Afiliação nacional SNOMED International». */
   nomeComercial: string;
@@ -276,10 +290,12 @@ export interface Licenca {
   origemPreco: FontePreco;
   /** Uma segunda origem, facultativa, que confirma a primeira (tipo vazio: nenhuma). */
   origemComplementar: FontePreco;
-  /** A capacidade do pacote ou edição, ex.: «até 500 análises por dia». */
-  capacidade: string;
+  /** A unidade concreta, na métrica «Unidade de volume»: «GB de armazenamento», «análises por dia». */
+  unidadeVolume: string;
+  /** Preço unitário (quantidade × preço) ou global (só o preço final). */
+  formaPreco: FormaPreco;
   /**
-   * O preço unitário de referência COM IVA, como se escreve no L1. O sem IVA
+   * O preço de referência COM IVA (unitário, ou global), como se escreve no L1. O sem IVA
    * (`precoUnitario`), com que se fazem as contas, deriva dele e da taxa de IVA
    * do pedido — ver `comTaxaIva`.
    */
@@ -299,9 +315,22 @@ export const HORARIOS_SUPORTE: Record<HorarioSuporte, string> = {
   personalizado: "Personalizado",
 };
 
-export interface TemposDeSeveridade {
+/** Um nível de serviço (SLA): tempos máximos, em horas do horário de suporte. */
+export interface NivelServico {
+  id: string;
+  nome: string;
+  descricao: string;
   resposta: number;
   resolucao: number;
+}
+
+/** Os três níveis por omissão. */
+export function niveisServicoPorOmissao(): NivelServico[] {
+  return [
+    { id: "sla-critica", nome: "Crítica", descricao: "Serviço indisponível, ou perda ou corrupção de dados, sem alternativa de contorno", resposta: 2, resolucao: 8 },
+    { id: "sla-alta", nome: "Alta", descricao: "Funcionalidade relevante afetada, sem alternativa de contorno razoável", resposta: 4, resolucao: 24 },
+    { id: "sla-normal", nome: "Normal", descricao: "Restantes incidentes e pedidos de esclarecimento", resposta: 8, resolucao: 72 },
+  ];
 }
 
 /**
@@ -309,7 +338,7 @@ export interface TemposDeSeveridade {
  * licenças do L1 enquanto não for alterado à mão.
  */
 export interface CondicoesContrato {
-  ambito: { texto: string | null; entidades: string; naoProdutivosSemCusto: boolean };
+  ambito: { texto: string | null; naoProdutivosSemCusto: boolean };
   manutencao: { texto: string | null };
   suporte: {
     ligada: boolean;
@@ -319,27 +348,18 @@ export interface CondicoesContrato {
     diasPersonalizados: string;
     horaInicio: string;
     horaFim: string;
-    critica: TemposDeSeveridade;
-    alta: TemposDeSeveridade;
-    normal: TemposDeSeveridade;
   };
+  /** Facultativos, e só com suporte: os níveis de serviço, editáveis. */
+  sla: { ligada: boolean; niveis: NivelServico[] };
   disponibilidade: { ligada: boolean; texto: string | null; percentagem: number; janelasForaDoHorario: boolean };
-  /** Facultativas: podem ficar para a formulação do contrato. */
+  /**
+   * Facultativas: podem ficar para a formulação do contrato. A penalização por
+   * hora aplica-se ao primeiro nível de serviço (o mais grave).
+   */
   penalizacoes: { ligada: boolean; texto: string | null; porHoraCritica: number; limiteMensal: number; limiteGlobal: number };
   prazo: { ligada: boolean; texto: string | null; diasUteis: number };
-  /** Facultativos: o que o adjudicatário entrega, escolhido de uma lista fixa. */
-  entregaveis: { ligada: boolean } & Record<Entregavel, boolean>;
   proprias: Array<{ id: string; titulo: string; texto: string }>;
 }
-
-export type Entregavel = "acesso" | "documentacao" | "manuais" | "registos";
-/** Os entregáveis, como saem no Anexo III. */
-export const ENTREGAVEIS: Record<Entregavel, string> = {
-  acesso: "Licenças ou subscrição ativas, com as credenciais de acesso",
-  documentacao: "Documentação de apoio à utilização do produto",
-  manuais: "Manuais de utilização e de configuração",
-  registos: "Registos das sessões de trabalho realizadas",
-};
 
 export type CondicaoComTexto = "ambito" | "manutencao" | "suporte" | "disponibilidade" | "penalizacoes" | "prazo";
 
@@ -353,7 +373,7 @@ export const EXPLICACAO_NAO_PRODUTIVOS =
 
 export function condicoesIniciais(): CondicoesContrato {
   return {
-    ambito: { texto: null, entidades: "", naoProdutivosSemCusto: true },
+    ambito: { texto: null, naoProdutivosSemCusto: true },
     manutencao: { texto: null },
     suporte: {
       ligada: true,
@@ -362,14 +382,11 @@ export function condicoesIniciais(): CondicoesContrato {
       diasPersonalizados: "",
       horaInicio: "09:00",
       horaFim: "18:00",
-      critica: { resposta: 2, resolucao: 8 },
-      alta: { resposta: 4, resolucao: 24 },
-      normal: { resposta: 8, resolucao: 72 },
     },
+    sla: { ligada: true, niveis: niveisServicoPorOmissao() },
     disponibilidade: { ligada: true, texto: null, percentagem: 99.5, janelasForaDoHorario: true },
     penalizacoes: { ligada: false, texto: null, porHoraCritica: 0.5, limiteMensal: 10, limiteGlobal: 20 },
     prazo: { ligada: true, texto: null, diasUteis: 10 },
-    entregaveis: { ligada: false, acesso: true, documentacao: true, manuais: true, registos: false },
     proprias: [],
   };
 }
@@ -400,6 +417,8 @@ export interface PedidoLicenciamento {
   beneficiarios: string | null;
   beneficiosOperacionais: string | null;
   natureza: NaturezaAquisicao;
+  /** Só na aquisição aberta à concorrência: o convite a entidades escolhidas. */
+  convite: ConviteEntidades;
   licencas: Licenca[];
   condicoes: CondicoesContrato;
   lotes: LoteLicenca[];
@@ -504,8 +523,7 @@ export function criarLicenca(): Licenca {
   return {
     id: gerarId(),
     designacao: "",
-    requisitosFuncionais: [],
-    requisitosTecnicos: [],
+    requisitos: [],
     nomeComercial: "",
     fabricante: "",
     versao: "",
@@ -525,7 +543,8 @@ export function criarLicenca(): Licenca {
     precoUnitario: 0,
     origemPreco: fonteVazia(),
     origemComplementar: fonteVazia(),
-    capacidade: "",
+    unidadeVolume: "",
+    formaPreco: "unitario",
     precoComIva: 0,
     notaPreco: "",
   };
@@ -541,6 +560,7 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
     beneficiarios: null,
     beneficiosOperacionais: null,
     natureza: "aberta",
+    convite: { ativo: false, motivo: "", entidades: [] },
     licencas: [],
     condicoes: condicoesIniciais(),
     lotes: [],
@@ -563,9 +583,24 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
 export function comAlteracao(licenca: Licenca, alteracao: Partial<Licenca>): Licenca {
   const nova = { ...licenca, ...alteracao };
   if (nova.direitoUso === "temporario" && nova.manutencao === "aParte") nova.manutencao = "incluida";
-  if (nova.metrica !== "" && METRICAS_UNICAS.includes(nova.metrica)) nova.quantidade = 1;
-  if (ehServico(nova)) nova.quantidade = 1;
+  if (nova.metrica !== "" && METRICAS_UNICAS.includes(nova.metrica)) {
+    nova.quantidade = 1;
+    nova.formaPreco = "unitario";
+  }
+  if (ehServico(nova)) {
+    nova.quantidade = 1;
+    nova.formaPreco = "unitario";
+  }
   return nova;
+}
+
+/** A quantidade que multiplica o preço: 1 no preço global. */
+export function quantidadeDoPreco(l: Pick<Licenca, "quantidade" | "formaPreco">): number {
+  return l.formaPreco === "global" ? 1 : l.quantidade;
+}
+
+export function ehPrecoGlobal(l: Pick<Licenca, "formaPreco">): boolean {
+  return l.formaPreco === "global";
 }
 
 // --------------------------------------------------------------------------
@@ -617,17 +652,20 @@ export function objetoPorExtenso(l: Pick<Licenca, "objeto" | "objetoOutro">): st
   return OBJETOS_LICENCA[l.objeto];
 }
 
-export function metricaPorExtenso(l: Pick<Licenca, "metrica" | "quantidade" | "capacidade">): string {
+export function metricaPorExtenso(l: Pick<Licenca, "metrica" | "quantidade" | "unidadeVolume">): string {
   if (l.metrica === "") return "";
-  if (l.metrica === "pacote") return l.capacidade.trim() ? `pacote (${l.capacidade.trim()})` : "pacote";
+  if (l.metrica === "volume") return l.unidadeVolume.trim() || "unidades de volume";
   const m = METRICAS[l.metrica];
   return (l.quantidade === 1 ? m.singular : m.plural).toLowerCase();
 }
 
-/** A métrica como sai nas colunas dos quadros: «Utilizadores nomeados», «Pacote (até 500 análises/dia)». */
-export function metricaDaColuna(l: Pick<Licenca, "metrica" | "capacidade">): string {
+/** A métrica como sai nas colunas dos quadros: «Utilizadores nomeados», «GB de armazenamento». */
+export function metricaDaColuna(l: Pick<Licenca, "metrica" | "unidadeVolume">): string {
   if (l.metrica === "") return "";
-  if (l.metrica === "pacote") return l.capacidade.trim() ? `Pacote (${l.capacidade.trim()})` : "Pacote";
+  if (l.metrica === "volume") {
+    const u = l.unidadeVolume.trim();
+    return u === "" ? METRICAS.volume.plural : u.charAt(0).toUpperCase() + u.slice(1);
+  }
   return METRICAS[l.metrica].plural;
 }
 
@@ -661,7 +699,7 @@ export function referenciaDaFonte(f: FontePreco): string {
     case "contratoAnterior":
       if (f.numero.trim()) partes.push(`n.º ${f.numero.trim()}`);
       if (f.ano > 0) partes.push(`de ${f.ano}`);
-      if (f.precoAnterior > 0) partes.push(`preço unitário de então ${euros(f.precoAnterior)} com IVA`);
+      if (f.precoAnterior > 0) partes.push(`preço de então ${euros(f.precoAnterior)} com IVA`);
       break;
     case "orcamento":
       if (f.entidade.trim()) partes.push(f.entidade.trim());
@@ -800,12 +838,13 @@ function precoMensal(l: Licenca): number {
  * O valor de uma licença, sem IVA, com os preços como estão (aplique-se antes a
  * margem, se for caso disso).
  *
+ *   (no preço global, a quantidade conta 1: o preço é o da licença inteira)
  *   subscrição: quantidade × preço × períodos (meses, ou anos), repartido mês a mês;
  *   perpétua:   quantidade × preço, no primeiro ano, e a manutenção em linha
  *               própria — a percentagem anual sobre esse valor, pelos meses do período.
  */
 export function valorDaLicenca(l: Licenca, nAnos = 1): ValorDaLicenca {
-  const qtd = num(l.quantidade);
+  const qtd = num(quantidadeDoPreco(l));
   const meses = Math.min(num(l.periodoMeses), MESES_MAXIMOS);
   const anos = Math.max(1, nAnos);
   const acerta = (porAno: number[], total: number) => {
@@ -857,7 +896,12 @@ export function linhasDoMapa(l: Licenca, natureza: NaturezaAquisicao, nAnos = 1)
   const valor = valorDaLicenca(l, nAnos);
   const nome = nomeDaLicenca(l, natureza) || "Licença";
   const meses = Math.min(num(l.periodoMeses), MESES_MAXIMOS);
-  const metrica = metricaDaColuna(l);
+  const global = ehPrecoGlobal(l);
+  // No preço global, a quantidade dimensiona a licença, e o preço é o da licença inteira.
+  const metrica = global
+    ? `Preço global — até ${formatarNumeroLic(l.quantidade)} ${metricaPorExtenso(l) || "licenças"}`
+    : metricaDaColuna(l);
+  const quantidade = global ? 1 : l.quantidade;
   if (ehServico(l)) {
     return [
       {
@@ -881,9 +925,15 @@ export function linhasDoMapa(l: Licenca, natureza: NaturezaAquisicao, nAnos = 1)
         tipo: "licenca",
         designacao: nome,
         metrica,
-        quantidade: l.quantidade,
+        quantidade,
         periodos: anual ? meses / 12 : meses,
-        unidade: anual ? "€ por licença e por ano" : "€ por licença e por mês",
+        unidade: global
+          ? anual
+            ? "€ por ano (preço global)"
+            : "€ por mês (preço global)"
+          : anual
+            ? "€ por licença e por ano"
+            : "€ por licença e por mês",
         precoUnitario: l.precoUnitario,
         total: valor.licencas,
       },
@@ -895,9 +945,15 @@ export function linhasDoMapa(l: Licenca, natureza: NaturezaAquisicao, nAnos = 1)
       tipo: "licenca",
       designacao: `${nome} — licenças perpétuas`,
       metrica,
-      quantidade: l.quantidade,
+      quantidade,
       periodos: 1,
-      unidade: l.manutencao === "incluida" ? "€ por licença (perpétua, com manutenção)" : "€ por licença (perpétua)",
+      unidade: global
+        ? l.manutencao === "incluida"
+          ? "€ (preço global, perpétuas, com manutenção)"
+          : "€ (preço global, perpétuas)"
+        : l.manutencao === "incluida"
+          ? "€ por licença (perpétua, com manutenção)"
+          : "€ por licença (perpétua)",
       precoUnitario: l.precoUnitario,
       total: valor.licencas,
     },
@@ -1105,10 +1161,9 @@ export function textoPorOmissao(chave: CondicaoComTexto, pedido: PedidoLicenciam
     }
     case "suporte":
       return software && !outros
-        ? "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do " +
-            "incidente."
-        : "Apoio à utilização e ao acesso às edições, em língua portuguesa ou inglesa, com tempos máximos de " +
-            "resposta e de resolução por severidade do pedido.";
+        ? "Suporte técnico em língua portuguesa, no horário indicado, para o esclarecimento de dúvidas e a " +
+            "resolução de incidentes."
+        : "Apoio à utilização e ao acesso às edições, em língua portuguesa ou inglesa, no horário indicado.";
     case "disponibilidade":
       return (
         "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do " +
@@ -1132,11 +1187,11 @@ export function textoDaCondicao(chave: CondicaoComTexto, pedido: PedidoLicenciam
   return pedido.condicoes[chave].texto ?? textoPorOmissao(chave, pedido);
 }
 
-const HORA = /^([01]\d|2[0-4]):([0-5]\d)$/;
+const HORA = /^([01]\d|2[0-3]):([0-5]\d)$|^(24):(00)$/;
 
 function minutos(hora: string): number {
   const m = HORA.exec(hora.trim());
-  return m === null ? Number.NaN : Number(m[1]) * 60 + Number(m[2]);
+  return m === null ? Number.NaN : Number(m[1] ?? m[3]) * 60 + Number(m[2] ?? m[4]);
 }
 
 /** «Dias úteis, das 09:00 às 18:00», «Todos os dias, 24 horas por dia»… */
@@ -1147,7 +1202,8 @@ export function horarioPorExtenso(s: CondicoesContrato["suporte"]): string {
       : s.horario === "7dias"
         ? "Todos os dias, incluindo fins de semana e feriados"
         : s.diasPersonalizados.trim() || "[dias]";
-  const continuo = minutos(s.horaInicio) === 0 && minutos(s.horaFim) === 24 * 60;
+  // Das 00:00 às 23:59 é o dia inteiro (e às 24:00, nos pedidos anteriores).
+  const continuo = minutos(s.horaInicio) === 0 && minutos(s.horaFim) >= 23 * 60 + 59;
   return continuo ? `${dias}, 24 horas por dia` : `${dias}, das ${s.horaInicio.trim()} às ${s.horaFim.trim()}`;
 }
 
@@ -1185,9 +1241,9 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
   const de = (texto: string) => falta(l.id, `${nome}: ${texto}`);
   if (ehServico(l)) {
     if (l.designacao.trim() === "") erros.push(de("indique a designação do serviço."));
-    if (l.requisitosFuncionais.filter((r) => r.designacao.trim() !== "").length === 0)
+    if (l.requisitos.filter((r) => r.designacao.trim() !== "").length === 0)
       erros.push(de("indique pelo menos uma atividade do serviço."));
-    if (l.requisitosFuncionais.some((r) => r.designacao.trim() === ""))
+    if (l.requisitos.some((r) => r.designacao.trim() === ""))
       erros.push(de("há atividades por escrever — preencha-as ou remova-as."));
     if (!(l.precoUnitario > 0)) erros.push(de("falta o preço global de referência."));
     erros.push(...validarOrigem(l, de));
@@ -1195,9 +1251,9 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
   }
   if (natureza === "aberta") {
     if (l.designacao.trim() === "") erros.push(de("indique a designação da licença no procedimento."));
-    if (l.requisitosFuncionais.filter((r) => r.designacao.trim() !== "").length === 0)
-      erros.push(de("indique pelo menos um requisito funcional mínimo."));
-    if (l.requisitosFuncionais.some((r) => r.designacao.trim() === "") || l.requisitosTecnicos.some((r) => r.designacao.trim() === ""))
+    if (l.requisitos.filter((r) => r.designacao.trim() !== "").length === 0)
+      erros.push(de("indique pelo menos um requisito mínimo."));
+    if (l.requisitos.some((r) => r.designacao.trim() === ""))
       erros.push(de("há requisitos por escrever — preencha-os ou remova-os."));
   } else {
     if (l.nomeComercial.trim() === "") erros.push(de("indique a licença."));
@@ -1217,9 +1273,10 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
     erros.push(de("indique a percentagem anual de referência da manutenção."));
   if (l.eavalia.ambito === "") erros.push(de("escolha o âmbito (eAvalia)."));
   if (l.metrica === "") erros.push(de("escolha a métrica de licenciamento."));
-  if (l.metrica === "pacote" && l.capacidade.trim() === "") erros.push(de("indique a capacidade do pacote ou edição."));
+  if (l.metrica === "volume" && l.unidadeVolume.trim() === "") erros.push(de("indique a unidade de volume."));
   if (!Number.isInteger(l.quantidade) || l.quantidade < 1) erros.push(de("a quantidade tem de ser um número inteiro positivo."));
-  if (!(l.precoUnitario > 0)) erros.push(de("falta o preço unitário de referência."));
+  if (!(l.precoUnitario > 0))
+    erros.push(de(ehPrecoGlobal(l) ? "falta o preço global de referência." : "falta o preço unitário de referência."));
   erros.push(...validarOrigem(l, de));
   return erros;
 }
@@ -1278,16 +1335,42 @@ export function validarFonte(
 /** Quantos blocos de licença tem cada secção da folha «Custos - Licenciamento». */
 export const LICENCAS_POR_SECCAO_EAVALIA = 20;
 
+/** O que falta no convite a entidades escolhidas (só na aquisição aberta). */
+export function validarConvite(pedido: Pick<PedidoLicenciamento, "natureza" | "convite">): ErroValidacao[] {
+  const c = pedido.convite;
+  if (pedido.natureza !== "aberta" || !c.ativo) return [];
+  const erros: ErroValidacao[] = [];
+  if (c.motivo.trim() === "") erros.push(falta("convite", "Convite: indique o motivo do convite a estas entidades."));
+  const nomes = c.entidades.map((e) => e.designacao.trim()).filter((n) => n !== "");
+  if (nomes.length < MINIMO_ENTIDADES_CONVIDADAS)
+    erros.push(
+      falta(
+        "convite",
+        `Convite: indique pelo menos ${MINIMO_ENTIDADES_CONVIDADAS} entidades a convidar (art.º 112.º do CCP).`,
+      ),
+    );
+  if (c.entidades.some((e) => e.designacao.trim() === ""))
+    erros.push(falta("convite", "Convite: há entidades por escrever — preencha-as ou remova-as."));
+  if (new Set(nomes.map((n) => n.toLowerCase())).size < nomes.length)
+    erros.push(falta("convite", "Convite: há entidades repetidas."));
+  return erros;
+}
+
 /** O que falta nas licenças (L1). */
 export function validarLicencas(pedido: PedidoLicenciamento): ErroValidacao[] {
   if (pedido.licencas.filter((l) => !ehServico(l)).length === 0)
     return [falta("licencas", "Acrescente pelo menos uma licença (os serviços associados não bastam).")];
-  const erros = pedido.licencas.flatMap((l) => validarLicenca(l, pedido.natureza));
+  const erros = [...validarConvite(pedido), ...pedido.licencas.flatMap((l) => validarLicenca(l, pedido.natureza))];
   const licencas = pedido.licencas.filter((l) => !ehServico(l));
   const livres = licencas.filter((l) => tipoSolucaoEavalia(l, pedido.natureza) === "Solução Software Livre").length;
   if (livres > LICENCAS_POR_SECCAO_EAVALIA || licencas.length - livres > LICENCAS_POR_SECCAO_EAVALIA)
     erros.push(falta("licencas", `O formulário eAvalia comporta ${LICENCAS_POR_SECCAO_EAVALIA} licenças por secção.`));
   return erros;
+}
+
+/** Os níveis de serviço só contam ligados e com suporte técnico. */
+export function slaAplica(pedido: Pick<PedidoLicenciamento, "condicoes">): boolean {
+  return pedido.condicoes.suporte.ligada && pedido.condicoes.sla.ligada;
 }
 
 /** O que falta nas condições do contrato (L2), só nas que se aplicam e estão ligadas. */
@@ -1300,24 +1383,26 @@ export function validarCondicoes(pedido: PedidoLicenciamento): ErroValidacao[] {
   texto("ambito", "Âmbito da licença");
   if (aplicabilidade("manutencao", pedido).aplica) texto("manutencao", tituloDaManutencao(pedido));
   if (c.suporte.ligada) {
-    texto("suporte", "Suporte técnico e SLA");
+    texto("suporte", "Suporte técnico");
     if (c.suporte.horario === "personalizado" && c.suporte.diasPersonalizados.trim() === "")
-      erros.push(falta("suporte", "Suporte técnico e SLA: indique os dias do horário personalizado."));
+      erros.push(falta("suporte", "Suporte técnico: indique os dias do horário personalizado."));
     const [inicio, fim] = [minutos(c.suporte.horaInicio), minutos(c.suporte.horaFim)];
     if (Number.isNaN(inicio) || Number.isNaN(fim))
-      erros.push(falta("suporte", "Suporte técnico e SLA: escreva as horas no formato 09:00."));
+      erros.push(falta("suporte", "Suporte técnico: escreva as horas no formato 09:00."));
     else if (fim <= inicio)
-      erros.push(falta("suporte", "Suporte técnico e SLA: a hora de fim tem de ser depois da de início."));
-    for (const [nome, t] of [
-      ["crítica", c.suporte.critica],
-      ["alta", c.suporte.alta],
-      ["normal", c.suporte.normal],
-    ] as const) {
-      if (!(t.resposta > 0) || !(t.resolucao > 0))
-        erros.push(falta("suporte", `Suporte técnico e SLA: indique os tempos da severidade ${nome}.`));
-      else if (t.resolucao < t.resposta)
-        erros.push(falta("suporte", `Suporte técnico e SLA: na severidade ${nome}, a resolução não pode ser antes da resposta.`));
-    }
+      erros.push(falta("suporte", "Suporte técnico: a hora de fim tem de ser depois da de início."));
+  }
+  if (slaAplica(pedido)) {
+    if (c.sla.niveis.length === 0)
+      erros.push(falta("sla", "Níveis de serviço: acrescente pelo menos um nível, ou desligue-os."));
+    c.sla.niveis.forEach((n, i) => {
+      const nome = n.nome.trim() || `${i + 1}`;
+      if (n.nome.trim() === "") erros.push(falta("sla", `Níveis de serviço: dê um nome ao nível ${i + 1}.`));
+      if (!(n.resposta > 0) || !(n.resolucao > 0))
+        erros.push(falta("sla", `Níveis de serviço: indique os tempos do nível ${nome}.`));
+      else if (n.resolucao < n.resposta)
+        erros.push(falta("sla", `Níveis de serviço: no nível ${nome}, a resolução não pode ser antes da resposta.`));
+    });
   }
   if (c.disponibilidade.ligada && aplicabilidade("disponibilidade", pedido).aplica) {
     texto("disponibilidade", "Disponibilidade");
@@ -1342,8 +1427,6 @@ export function validarCondicoes(pedido: PedidoLicenciamento): ErroValidacao[] {
     if (!(Number.isInteger(c.prazo.diasUteis) && c.prazo.diasUteis > 0))
       erros.push(falta("prazo", "Prazo de disponibilização: indique o número de dias úteis."));
   }
-  if (c.entregaveis.ligada && !(Object.keys(ENTREGAVEIS) as Entregavel[]).some((k) => c.entregaveis[k]))
-    erros.push(falta("entregaveis", "Entregáveis: escolha pelo menos um."));
   c.proprias.forEach((p, i) => {
     if (p.titulo.trim() === "" || p.texto.trim() === "")
       erros.push(falta(p.id, `Condição própria ${i + 1}: escreva o título e o texto.`));
@@ -1527,8 +1610,10 @@ function normalizarLicenca(bruto: unknown): Licenca {
   const licenca: Licenca = {
     id: texto(r.id) || base.id,
     designacao: texto(r.designacao),
-    requisitosFuncionais: normalizarItens(r.requisitosFuncionais),
-    requisitosTecnicos: normalizarItens(r.requisitosTecnicos),
+    // Pedidos anteriores separavam os requisitos funcionais dos técnicos: juntam-se, por esta ordem.
+    requisitos: Array.isArray(r.requisitos)
+      ? normalizarItens(r.requisitos)
+      : [...normalizarItens(r.requisitosFuncionais), ...normalizarItens(r.requisitosTecnicos)],
     // Pedidos anteriores chamavam «produto» ao nome comercial.
     nomeComercial: texto(r.nomeComercial ?? r.produto),
     fabricante: texto(r.fabricante),
@@ -1553,7 +1638,8 @@ function normalizarLicenca(bruto: unknown): Licenca {
     precoUnitario: numero(r.precoUnitario),
     origemPreco: normalizarFonte(r.origemPreco, r.referenciaPreco),
     origemComplementar: normalizarFonte(r.origemComplementar),
-    capacidade: texto(r.capacidade),
+    unidadeVolume: texto(r.unidadeVolume),
+    formaPreco: r.formaPreco === "global" ? "global" : "unitario",
     precoComIva: numero(r.precoComIva),
     notaPreco: texto(r.notaPreco),
   };
@@ -1569,6 +1655,8 @@ const TEXTOS_ANTERIORES = new Set([
   "Direito de uso pelo período contratado ou, quando adquirido em regime perpétuo, sem limite temporal, intransmissível a terceiros alheios ao Serviço Nacional de Saúde.",
   "Acesso, durante a vigência do contrato, a todas as correções, versões e atualizações de segurança publicadas pelo fabricante, sem custo adicional para a entidade adjudicante.",
   "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do incidente. O incumprimento destes tempos dá lugar às penalizações previstas.",
+  "Suporte técnico em língua portuguesa, com tempos máximos de resposta e de resolução por severidade do incidente.",
+  "Apoio à utilização e ao acesso às edições, em língua portuguesa ou inglesa, com tempos máximos de resposta e de resolução por severidade do pedido.",
   "Disponibilidade mensal mínima do serviço, medida pelo adjudicatário e reportada mensalmente ao gestor do contrato, excluídas as janelas de manutenção previamente acordadas.",
   "Pelo incumprimento dos níveis de serviço, o adjudicatário fica sujeito a penalizações contratuais, sem prejuízo da resolução do contrato nos termos legais.",
   "Licenças e acessos disponibilizados à entidade adjudicante no prazo máximo indicado, a contar da data de assinatura do contrato.",
@@ -1582,9 +1670,16 @@ function textoDeCondicao(v: unknown): string | null {
 function normalizarCondicoes(bruto: unknown): CondicoesContrato {
   const base = condicoesIniciais();
   const r = objeto(bruto);
-  const sev = (v: unknown, o: TemposDeSeveridade): TemposDeSeveridade => {
-    const s = objeto(v);
-    return { resposta: numero(s.resposta, o.resposta), resolucao: numero(s.resolucao, o.resolucao) };
+  const omissao = niveisServicoPorOmissao();
+  const nivel = (v: unknown, o: NivelServico): NivelServico => {
+    const n = objeto(v);
+    return {
+      id: texto(n.id) || o.id || gerarId(),
+      nome: texto(n.nome, o.nome),
+      descricao: texto(n.descricao, o.descricao),
+      resposta: numero(n.resposta, o.resposta),
+      resolucao: numero(n.resolucao, o.resolucao),
+    };
   };
   const a = objeto(r.ambito);
   const m = objeto(r.manutencao);
@@ -1592,13 +1687,15 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
   const di = objeto(r.disponibilidade);
   const pe = objeto(r.penalizacoes);
   const pr = objeto(r.prazo);
-  const en = objeto(r.entregaveis);
-  // O antigo «24x7» é o horário de 7 dias, 24 horas por dia.
+  const sl = objeto(r.sla);
+  // Pedidos anteriores guardavam as três severidades no suporte.
+  const niveis: NivelServico[] = Array.isArray(sl.niveis)
+    ? sl.niveis.map((n) => nivel(n, { id: "", nome: "", descricao: "", resposta: 0, resolucao: 0 }))
+    : [nivel(s.critica, omissao[0]), nivel(s.alta, omissao[1]), nivel(s.normal, omissao[2])];  // O antigo «24x7» é o horário de 7 dias, 24 horas por dia.
   const horario: HorarioSuporte = s.horario === "24x7" ? "7dias" : deLista(s.horario, chaves(HORARIOS_SUPORTE), "") || "uteis";
   return {
     ambito: {
       texto: textoDeCondicao(a.texto),
-      entidades: texto(a.entidades),
       naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
     },
     manutencao: { texto: textoDeCondicao(m.texto) },
@@ -1608,11 +1705,9 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       horario,
       diasPersonalizados: texto(s.diasPersonalizados),
       horaInicio: texto(s.horaInicio, s.horario === "24x7" ? "00:00" : base.suporte.horaInicio),
-      horaFim: texto(s.horaFim, s.horario === "24x7" ? "24:00" : base.suporte.horaFim),
-      critica: sev(s.critica, base.suporte.critica),
-      alta: sev(s.alta, base.suporte.alta),
-      normal: sev(s.normal, base.suporte.normal),
+      horaFim: texto(s.horaFim, s.horario === "24x7" ? "23:59" : base.suporte.horaFim),
     },
+    sla: { ligada: booleano(sl.ligada, true), niveis },
     disponibilidade: {
       ligada: booleano(di.ligada, true),
       texto: textoDeCondicao(di.texto),
@@ -1630,13 +1725,6 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
       ligada: booleano(pr.ligada, true),
       texto: textoDeCondicao(pr.texto),
       diasUteis: numero(pr.diasUteis, base.prazo.diasUteis),
-    },
-    entregaveis: {
-      ligada: booleano(en.ligada, false),
-      acesso: booleano(en.acesso, base.entregaveis.acesso),
-      documentacao: booleano(en.documentacao, base.entregaveis.documentacao),
-      manuais: booleano(en.manuais, base.entregaveis.manuais),
-      registos: booleano(en.registos, base.entregaveis.registos),
     },
     proprias: Array.isArray(r.proprias)
       ? r.proprias.map((x) => {
@@ -1685,6 +1773,10 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
     beneficiarios: textoOuNulo(r.beneficiarios),
     beneficiosOperacionais: textoOuNulo(r.beneficiosOperacionais),
     natureza: r.natureza === "determinado" ? "determinado" : "aberta",
+    convite: (() => {
+      const c = objeto(r.convite);
+      return { ativo: booleano(c.ativo, false), motivo: texto(c.motivo), entidades: normalizarItens(c.entidades) };
+    })(),
     licencas: brutas.map(normalizarLicenca),
     condicoes: normalizarCondicoes(r.condicoes),
     lotes,
@@ -1761,7 +1853,7 @@ const JURI_EXEMPLO: JuriTecnico = {
 };
 
 /**
- * O exemplo: a SNOMED CT, uma licença determinada de terminologia, de âmbito
+ * O exemplo: a SNOMED CT, uma licença confiada a determinada entidade, de terminologia, de âmbito
  * nacional, em subscrição anual — o caso que não é software.
  */
 export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear()): PedidoLicenciamento {
@@ -1769,7 +1861,7 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     ...criarLicenca(),
     id: "lic-snomed",
     designacao: "Licença nacional de terminologia clínica de referência",
-    requisitosFuncionais: itensExemplo("lic-snomed-f", [
+    requisitos: itensExemplo("lic-snomed-f", [
       "Utilização da terminologia em todo o território nacional, por entidades públicas e privadas",
       "Acesso às edições internacionais e à criação da extensão nacional",
     ]),
@@ -1806,11 +1898,13 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     licencas: [snomed],
     condicoes: {
       ...pedido.condicoes,
-      suporte: {
-        ...pedido.condicoes.suporte,
-        critica: { resposta: 4, resolucao: 24 },
-        alta: { resposta: 8, resolucao: 48 },
-        normal: { resposta: 24, resolucao: 120 },
+      sla: {
+        ligada: true,
+        niveis: niveisServicoPorOmissao().map((n, i) => ({
+          ...n,
+          resposta: [4, 8, 24][i],
+          resolucao: [24, 48, 120][i],
+        })),
       },
     },
     lotes: [{ id: "lote-snomed", numero: "1", designacao: "", licencaIds: ["lic-snomed"] }],
@@ -1819,19 +1913,23 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
   };
 }
 
-/** Um segundo exemplo, de software: aberta à concorrência, subscrição e licença perpétua com manutenção. */
+/**
+ * Um segundo exemplo, de software: aberto à concorrência, com convite a três
+ * entidades, uma subscrição e licenças perpétuas a preço global, com manutenção.
+ */
 export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFullYear()): PedidoLicenciamento {
   const gestao: Licenca = {
     ...criarLicenca(),
     id: "lic-gd",
     designacao: "Plataforma de gestão documental",
-    requisitosFuncionais: itensExemplo("lic-gd-f", [
+    requisitos: itensExemplo("lic-gd-f", [
       "Gestão de documentos com versões, classificação e pesquisa de texto integral",
       "Fluxos de aprovação configuráveis sem programação",
       "Assinatura eletrónica qualificada integrada",
       "Integração por API REST com os sistemas da SPMS",
+      "Autenticação por SSO (SAML 2.0 / OIDC)",
+      "Alojamento dos dados na União Europeia",
     ]),
-    requisitosTecnicos: itensExemplo("lic-gd-t", ["Autenticação por SSO (SAML 2.0 / OIDC)", "Alojamento dos dados na União Europeia"]),
     direitoUso: "temporario",
     modalidade: "aquisicao",
     periodoMeses: 36,
@@ -1851,26 +1949,28 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
     ...criarLicenca(),
     id: "lic-bd",
     designacao: "Sistema de gestão de base de dados relacional",
-    requisitosFuncionais: itensExemplo("lic-bd-f", [
+    requisitos: itensExemplo("lic-bd-f", [
       "Replicação síncrona entre dois centros de dados",
       "Cópias de segurança em linha, sem paragem do serviço",
+      "Suporte a SQL ANSI e a procedimentos armazenados",
     ]),
-    requisitosTecnicos: itensExemplo("lic-bd-t", ["Suporte a SQL ANSI e a procedimentos armazenados"]),
     direitoUso: "perpetuo",
     modalidade: "aquisicao",
     periodoMeses: 36,
     manutencao: "aParte",
     percentagemManutencao: 22,
     eavalia: { tipoSolucao: "", ambito: "Servidor" },
-    metrica: "core",
-    quantidade: 64,
-    precoUnitario: 1900,
+    // Preço global: as licenças para até 250 utilizadores concorrentes, num só valor.
+    metrica: "utilizadorConcorrente",
+    quantidade: 250,
+    formaPreco: "global",
+    precoUnitario: 121_600,
     origemPreco: {
       ...fonteVazia("tabelaPublica"),
       ligacao: "Tabela de preços do fabricante, edição de 2026",
       data: "2026-10-01",
     },
-    origemComplementar: { ...fonteVazia("contratoAnterior"), numero: "CP 45/2023", ano: 2023, precoAnterior: 2150 },
+    origemComplementar: { ...fonteVazia("contratoAnterior"), numero: "CP 45/2023", ano: 2023, precoAnterior: 136_000 },
   };
   return {
     ...pedidoLicenciamentoInicial(anoInicio),
@@ -1882,6 +1982,13 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
       objetivos: itensExemplo("ad-obj", ["Desmaterializar os processos administrativos da SPMS"]),
       beneficios: itensExemplo("ad-ben", ["Redução do tempo de tramitação dos processos"]),
       riscos: itensExemplo("ad-ris", ["Interrupção do acesso ao arquivo documental no termo das licenças atuais"]),
+    },
+    convite: {
+      ativo: true,
+      motivo:
+        "São as entidades que, no mercado nacional, comercializam e dão suporte em língua portuguesa a " +
+        "plataformas de gestão documental com a escala exigida, conforme a consulta preliminar ao mercado.",
+      entidades: itensExemplo("ad-conv", ["Documenta Sistemas, S.A.", "Arquivo Digital, Lda.", "Gestão Documental Ibérica, S.A."]),
     },
     licencas: comPrecosCoerentes([gestao, bd], TAXA_IVA_PADRAO),
     lotes: [

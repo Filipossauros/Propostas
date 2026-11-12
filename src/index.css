@@ -2803,3 +2803,40 @@ select.campo-bloqueado:disabled {
   flex: 0 0 auto;
   width: 240px;
 }
+
+/* L2 · Níveis de serviço: tabela editável (nível, descrição, resposta, resolução). */
+.grelha-sla {
+  display: grid;
+  grid-template-columns: 26px minmax(110px, 0.8fr) minmax(200px, 2.2fr) 110px 110px 36px;
+  align-items: center;
+  gap: 10px;
+}
+.tabela-sla .linha-edicao {
+  padding: 6px 0;
+}
+.tabela-sla .campo-numero input {
+  width: 100%;
+  min-width: 0;
+}
+.modulo-licenciamento .forma-preco {
+  margin-bottom: 14px;
+}
+.modulo-licenciamento .forma-preco > .rotulo {
+  display: block;
+  margin-bottom: 6px;
+}
+.modulo-licenciamento .campo-convite-motivo {
+  margin-top: 14px;
+}
+@media (max-width: 720px) {
+  .grelha-sla {
+    grid-template-columns: 1fr 1fr;
+  }
+  .grelha-sla > .pega,
+  .grelha-sla.tabela-edicao-cabecalho {
+    display: none;
+  }
+  .grelha-sla > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}

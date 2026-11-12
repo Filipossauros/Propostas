@@ -37,6 +37,7 @@ import {
   anosDoPedido,
   consultaMercadoEavalia,
   ehServico,
+  quantidadeDoPreco,
   lotesEfetivos,
   tipoEavalia,
   tipoLicenciamentoEavalia,
@@ -149,7 +150,8 @@ export function descricaoParaEavalia(l: Licenca, natureza: NaturezaAquisicao): s
 /** O preço unitário do período inteiro, como a folha o pede: o custo total da folha é preço × n.º de licenças. */
 export function precoParaEavalia(l: Licenca): number {
   if (l.direitoUso !== "temporario") return Number.isFinite(l.precoUnitario) ? l.precoUnitario : 0;
-  const quantidade = l.quantidade > 0 ? l.quantidade : 1;
+  const q = quantidadeDoPreco(l);
+  const quantidade = q > 0 ? q : 1;
   return Math.round((valorDaLicenca(l).licencas / quantidade) * 100) / 100;
 }
 
@@ -211,8 +213,10 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
       const preco = precoParaEavalia(p);
       const valor = valorDaLicenca(p, nAnos);
       if (preco > 0) numero(linhas.preco, preco);
-      if (p.quantidade > 0) numero(linhas.quantidade, p.quantidade);
-      if (preco > 0 && p.quantidade > 0) folha = comValorCalculado(folha, `${col}${linhas.total}`, valor.licencas);
+      // No preço global, a folha leva 1: o preço é o da licença inteira.
+      const quantidade = quantidadeDoPreco(p);
+      if (quantidade > 0) numero(linhas.quantidade, quantidade);
+      if (preco > 0 && quantidade > 0) folha = comValorCalculado(folha, `${col}${linhas.total}`, valor.licencas);
 
       // A manutenção em linha própria vai na manutenção evolutiva e corretiva;
       // os serviços associados do mesmo lote, na instalação, configuração e

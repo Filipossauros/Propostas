@@ -153,10 +153,14 @@ describe("manifestação de necessidades do licenciamento", () => {
     const texto = await textoDe(exemplo());
     expect(texto).toContain("MANIFESTAÇÃO DE NECESSIDADES PARA A AQUISIÇÃO DE LICENCIAMENTO DE ARQUIVO DIGITAL");
     expect(texto).toContain("828 256,00 €");
-    expect(texto).toContain("Requisitos funcionais mínimos");
+    expect(texto).toContain("Requisitos mínimos");
+    expect(texto).not.toContain("Requisitos técnicos mínimos");
+    expect(texto).toContain("Autenticação por SSO");
     expect(texto).toContain("Fluxos de aprovação configuráveis sem programação");
     expect(texto).toContain("sem referência a marca");
-    expect(texto).toContain("Suporte técnico e níveis de serviço (SLA)");
+    expect(texto).toContain("Suporte técnico");
+    expect(texto).toContain("Níveis de serviço (SLA)");
+    expect(texto).toContain("Serviço indisponível, ou perda ou corrupção de dados");
     // As penalizações são facultativas, e vêm desligadas.
     expect(texto).not.toContain("artigo 329.º do CCP");
     expect(texto).toContain("O preço é o único aspeto da execução do contrato submetido à concorrência");
@@ -239,5 +243,49 @@ describe("manifestação de necessidades do licenciamento", () => {
       "Mapas de quantidades e precos/Arquivo_Digital_Mapa_de_Precos_Lote_2.xlsx",
       "Arquivo_Digital_Pedido_Licenciamento.json",
     ]);
+  });
+});
+
+describe("manifestação do licenciamento — convite, níveis de serviço e preço global", () => {
+  async function textoWord(pedido: PedidoLicenciamento): Promise<string> {
+    const zip = await JSZip.loadAsync(await (await gerarManifestacaoLicenciamentoBlob(pedido, QUANDO)).arrayBuffer());
+    return (await zip.file("word/document.xml")!.async("string")).replace(/<[^>]+>/g, "");
+  }
+
+  it("o convite sai com o motivo e a tabela das entidades; sem ele, não sai", async () => {
+    const texto = await textoWord(exemplo());
+    expect(texto).toContain("Propõe-se que o convite à apresentação de propostas seja dirigido às entidades seguintes");
+    expect(texto).toContain("comercializam e dão suporte em língua portuguesa");
+    expect(texto).toContain("Entidade a convidar");
+    expect(texto).toContain("Gestão Documental Ibérica, S.A.");
+    const sem = exemplo();
+    const semTexto = await textoWord({ ...sem, convite: { ...sem.convite, ativo: false } });
+    expect(semTexto).not.toContain("Entidade a convidar");
+  });
+
+  it("os níveis de serviço editados saem na tabela, e a penalização refere o primeiro", async () => {
+    const base = exemplo();
+    const pedido: PedidoLicenciamento = {
+      ...base,
+      condicoes: {
+        ...base.condicoes,
+        sla: { ligada: true, niveis: [{ id: "u", nome: "Urgente", descricao: "Paragem total", resposta: 1, resolucao: 4 }] },
+        penalizacoes: { ...base.condicoes.penalizacoes, ligada: true },
+      },
+    };
+    const texto = await textoWord(pedido);
+    expect(texto).toContain("Níveis de serviço (SLA)");
+    expect(texto).toContain("Paragem total");
+    expect(texto).toContain("de nível «Urgente»");
+    expect(texto).not.toContain("Alta");
+    const desligado = await textoWord({ ...pedido, condicoes: { ...pedido.condicoes, sla: { ...pedido.condicoes.sla, ligada: false } } });
+    expect(desligado).not.toContain("Níveis de serviço (SLA)");
+  });
+
+  it("a prestação confiada a determinada entidade, e o preço global com a dimensão", async () => {
+    expect(await textoWord(snomed())).toContain("A prestação é confiada a determinada entidade");
+    const texto = await textoWord(exemplo());
+    expect(texto).toContain("até 250 utilizadores concorrentes");
+    expect(texto).toContain("No preço global, a quantidade indica a dimensão da licença");
   });
 });

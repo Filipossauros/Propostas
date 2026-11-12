@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 //
 // O caso da subscrição de threat intelligence: dois pacotes de utilizadores,
-// dois pacotes com capacidade diária (sandbox e API), um serviço associado
-// com preço próprio e os entregáveis — tudo num lote, como licença
-// determinada.
+// duas licenças com capacidade diária a preço global (sandbox e API, em
+// unidades de volume) e um serviço associado com preço próprio — tudo num
+// lote, confiado a determinada entidade.
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import {
@@ -49,18 +49,25 @@ function pedido(): PedidoLicenciamento {
     licenca("drp", "DRP Solution Package", { metrica: "utilizadorNomeado", quantidade: 2, precoUnitario: 20000 }),
     licenca("cyb", "CyberOps Solution Package", { metrica: "utilizadorNomeado", quantidade: 2, precoUnitario: 25000 }),
     licenca("sbx", "Recorded Future Sandbox enterprise cloud edition", {
-      metrica: "pacote",
-      quantidade: 1,
-      capacidade: "até 500 análises por dia",
+      metrica: "volume",
+      unidadeVolume: "análises por dia",
+      quantidade: 500,
+      formaPreco: "global",
       precoUnitario: 30000,
     }),
-    licenca("api", "API", { metrica: "pacote", quantidade: 1, capacidade: "5.000 chamadas por dia", precoUnitario: 10000 }),
+    licenca("api", "API", {
+      metrica: "volume",
+      unidadeVolume: "chamadas por dia",
+      quantidade: 5000,
+      formaPreco: "global",
+      precoUnitario: 10000,
+    }),
     {
       ...criarLicenca(),
       id: "srv",
       objeto: "servico",
       designacao: "Suporte para adaptar as métricas da plataforma às necessidades da SPMS",
-      requisitosFuncionais: [{ id: "a1", designacao: "Configuração dos indicadores e alertas" }],
+      requisitos: [{ id: "a1", designacao: "Configuração dos indicadores e alertas" }],
       precoUnitario: 8000,
       origemPreco: { ...fonteVazia("orcamento"), entidade: "Recorded Future", data: "2026-10-20" },
     },
@@ -71,10 +78,6 @@ function pedido(): PedidoLicenciamento {
     licencas,
     lotes: [{ id: "lote", numero: "1", designacao: "Threat Intelligence", licencaIds: licencas.map((l) => l.id) }],
     encargosPlurianuais: { ativo: false, anoInicio: 2027 },
-    condicoes: {
-      ...base.condicoes,
-      entregaveis: { ligada: true, acesso: true, documentacao: true, manuais: true, registos: true },
-    },
   };
 }
 
@@ -85,7 +88,7 @@ describe("threat intelligence", () => {
     expect(valorEstimado(p)).toBe(40_000 + 50_000 + 30_000 + 10_000 + 8_000);
   });
 
-  it("mapa: um lote, com a capacidade na métrica e o serviço como linha de preço global", () => {
+  it("mapa: um lote, com a capacidade no preço global e o serviço como linha de preço global", () => {
     const p = pedido();
     const folha = gerarWorkbookMapaPrecos(p, lotesEfetivos(p)[0]).worksheets[0];
     const linhas = [7, 8, 9, 10, 11].map((r) => folha.getRow(r).values as unknown[]);
@@ -96,7 +99,7 @@ describe("threat intelligence", () => {
       "API — Recorded Future",
       "Suporte para adaptar as métricas da plataforma às necessidades da SPMS",
     ]);
-    expect(linhas[2]).toContain("Pacote (até 500 análises por dia)");
+    expect(linhas[2]).toContain("Preço global — até 500 análises por dia");
     expect(linhas[4]).toContain("€ (preço global)");
   });
 
@@ -110,14 +113,14 @@ describe("threat intelligence", () => {
     expect(celula("B46")).toMatch(/<v>8000<\/v>/);
   });
 
-  it("Word: serviços associados e entregáveis no Anexo III", async () => {
+  it("Word: serviços associados no Anexo III, e já sem entregáveis", async () => {
     const zip = await JSZip.loadAsync(await (await gerarManifestacaoLicenciamentoBlob(pedido(), QUANDO)).arrayBuffer());
     const texto = (await zip.file("word/document.xml")!.async("string")).replace(/<[^>]+>/g, "");
     expect(texto).toContain("A aquisição inclui ainda os seguintes serviços associados, com preço próprio");
     expect(texto).toContain("Serviços associados");
     expect(texto).toContain("Atividades do serviço");
-    expect(texto).toContain("Entregáveis");
-    expect(texto).toContain("Registos das sessões de trabalho realizadas");
-    expect(texto).toContain("Pacote (até 500 análises por dia)");
+    expect(texto).not.toContain("Entregáveis");
+    expect(texto).toContain("até 500 análises por dia");
+    expect(texto).toContain("No preço global, a quantidade indica a dimensão da licença");
   });
 });

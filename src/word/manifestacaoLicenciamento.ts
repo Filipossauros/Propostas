@@ -11,7 +11,7 @@
 // Anexo III são termos e condições do contrato.
 
 import type { BlocoDocumento } from "../core/documento";
-import type { Entregavel, PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
+import type { PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
 import {
   DIREITOS_USO,
   FUNDAMENTOS_LICENCA,
@@ -31,7 +31,9 @@ import {
   metricaPorExtenso,
   nomeDaLicenca,
   nomeProcedimentoLicenciamento,
-  ENTREGAVEIS,
+  ehPrecoGlobal,
+  quantidadeDoPreco,
+  slaAplica,
   beneficiariosDoPedido,
   beneficiosOperacionaisDoPedido,
   ehServico,
@@ -147,12 +149,6 @@ const OBJETO_INDIVISIVEL_VARIOS =
   "incompatibilidade técnica, de duplicação de esforços de coordenação e de aumento dos custos de gestão, " +
   "revelando-se a contratação unitária mais eficiente e adequada à satisfação da necessidade.";
 
-const DEFINICAO_SEVERIDADES: Array<[string, string]> = [
-  ["Crítica", "serviço indisponível, ou perda ou corrupção de dados, sem alternativa de contorno"],
-  ["Alta", "funcionalidade relevante afetada, sem alternativa de contorno razoável"],
-  ["Normal", "restantes incidentes e pedidos de esclarecimento"],
-];
-
 /**
  * Os benefícios escritos no Módulo 1. O benefício de fecho da bolsa de horas —
  * a insuficiência de recursos humanos internos — não se aplica a licenças.
@@ -175,7 +171,7 @@ function periodoPorExtenso(meses: number): string {
 /** «1 200 utilizadores nomeados de Plataforma de gestão documental, em subscrição por 36 meses». */
 function utilizacaoDaLicenca(p: Licenca, pedido: PedidoLicenciamento): string {
   const nome = nomeDaLicenca(p, pedido.natureza) || "licença por designar";
-  const qtd = `${formatarNumero(p.quantidade)} ${metricaPorExtenso(p) || "licenças"}`;
+  const qtd = `${ehPrecoGlobal(p) ? "até " : ""}${formatarNumero(p.quantidade)} ${metricaPorExtenso(p) || "licenças"}`;
   const tipo =
     p.direitoUso === "temporario"
       ? `em subscrição por ${periodoPorExtenso(p.periodoMeses)}`
@@ -207,6 +203,11 @@ function linhasDoCalculo(lotes: ValoresDoLote[], pedido: PedidoLicenciamento, nA
  */
 function pressupostosDoCalculo(licencas: Licenca[], comServicos: boolean): string {
   const frases = ["O valor de cada linha do mapa de preços resulta da quantidade × preço unitário × períodos."];
+  if (licencas.some(ehPrecoGlobal))
+    frases.push(
+      "No preço global, a quantidade indica a dimensão da licença e não multiplica o preço: a linha tem " +
+        "quantidade 1 e o preço é o da licença inteira.",
+    );
   const subscricoes = licencas.filter((l) => l.direitoUso === "temporario");
   if (subscricoes.length > 0) {
     const mensal = subscricoes.some((l) => l.periodicidadePreco === "mensal");
@@ -307,7 +308,8 @@ function corpoLicenciamento(
     p.push(
       numerado(
         proximo(),
-        "A aquisição respeita a licenças determinadas, cuja identificação se fundamenta nos seguintes termos:",
+        "A prestação é confiada a determinada entidade, fundamentando-se a identificação das licenças nos " +
+          "seguintes termos:",
         { depois: 80, antes: 80 },
       ),
     );
@@ -332,7 +334,32 @@ function corpoLicenciamento(
           "propõem.",
         { antes: 80 },
       ),
-    );
+    );    if (pedido.convite.ativo) {
+      const motivo = pedido.convite.motivo.trim().replace(/[.;]+$/, "");
+      p.push(
+        numerado(
+          proximo(),
+          [
+            run(
+              "Propõe-se que o convite à apresentação de propostas seja dirigido às entidades seguintes (artigos " +
+                "112.º a 114.º do CCP), pelo seguinte motivo: ",
+            ),
+            motivo === "" ? marcador("motivo do convite") : run(`${motivo}.`),
+          ],
+          { depois: 80, antes: 80 },
+        ),
+      );
+      const entidades = pedido.convite.entidades.map((e) => e.designacao.trim()).filter((e) => e !== "");
+      p.push(
+        tabela(
+          [
+            { titulo: "N.º", alinhamento: "direita", peso: 8 },
+            { titulo: "Entidade a convidar", peso: 92 },
+          ],
+          entidades.map((e, i) => [String(i + 1), e]),
+        ),
+      );
+    }
   }
   p.push(
     numerado(
@@ -770,10 +797,8 @@ function corpoLicenciamento(
     lotes.forEach((l) =>
       l.linhas.filter(({ licenca: x }) => !ehServico(x)).forEach(({ licenca: x }) => {
         p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Licença"}`, 2));
-        const funcionais = x.requisitosFuncionais.map((r) => r.designacao.trim()).filter((r) => r !== "");
-        const tecnicos = x.requisitosTecnicos.map((r) => r.designacao.trim()).filter((r) => r !== "");
-        p.push(tabela([{ titulo: "Requisitos funcionais mínimos", peso: 100 }], funcionais.map((r) => [r])));
-        if (tecnicos.length > 0) p.push(tabela([{ titulo: "Requisitos técnicos mínimos", peso: 100 }], tecnicos.map((r) => [r])));
+        const requisitos = x.requisitos.map((r) => r.designacao.trim()).filter((r) => r !== "");
+        p.push(tabela([{ titulo: "Requisitos mínimos", peso: 100 }], requisitos.map((r) => [r])));
       }),
     );
   }
@@ -800,7 +825,7 @@ function corpoLicenciamento(
           DIREITOS_USO[x.direitoUso],
           MODALIDADES[x.modalidade],
           metricaDaColuna(x) || "—",
-          formatarNumero(x.quantidade),
+          ehPrecoGlobal(x) ? `até ${formatarNumero(x.quantidade)}` : formatarNumero(x.quantidade),
           periodoPorExtenso(x.periodoMeses),
           x.direitoUso === "temporario" ? MANUTENCOES.incluida : MANUTENCOES[x.manutencao],
         ]),
@@ -820,7 +845,7 @@ function corpoLicenciamento(
     lotes.forEach((l) =>
       l.linhas.filter(({ licenca: x }) => ehServico(x)).forEach(({ licenca: x }) => {
         p.push(subtitulo(`Lote ${l.lote.numero} — ${x.designacao.trim() || "Serviço"}`, 2));
-        const atividades = x.requisitosFuncionais.map((r) => r.designacao.trim()).filter((r) => r !== "");
+        const atividades = x.requisitos.map((r) => r.designacao.trim()).filter((r) => r !== "");
         p.push(tabela([{ titulo: "Atividades do serviço", peso: 100 }], atividades.map((r) => [r])));
       }),
     );
@@ -833,7 +858,6 @@ function corpoLicenciamento(
 
   ponto3("Âmbito da licença");
   p.push(recuado(textoDaCondicao("ambito", pedido).trim()));
-  if (c.ambito.entidades.trim() !== "") p.push(recuado(`Entidades abrangidas: ${c.ambito.entidades.trim().replace(/[.;]+$/, "")}.`));
   if (c.ambito.naoProdutivosSemCusto && aplicaNaoProdutivos(pedido))
     p.push(
       recuado(
@@ -849,23 +873,25 @@ function corpoLicenciamento(
   }
 
   if (c.suporte.ligada) {
-    ponto3("Suporte técnico e níveis de serviço (SLA)");
+    ponto3("Suporte técnico");
     p.push(recuado(textoDaCondicao("suporte", pedido).trim()));
     p.push(recuado(`Horário do suporte: ${horarioPorExtenso(c.suporte)}.`));
-    const tempos = [c.suporte.critica, c.suporte.alta, c.suporte.normal];
+  }
+  if (slaAplica(pedido)) {
+    ponto3("Níveis de serviço (SLA)");
     p.push(
       tabela(
         [
-          { titulo: "Severidade", peso: 16 },
-          { titulo: "Definição", peso: 48 },
+          { titulo: "Nível", peso: 16 },
+          { titulo: "Descrição", peso: 48 },
           { titulo: "Tempo máximo de resposta", alinhamento: "direita", peso: 18 },
           { titulo: "Tempo máximo de resolução", alinhamento: "direita", peso: 18 },
         ],
-        DEFINICAO_SEVERIDADES.map(([sev, def], i) => [
-          sev,
-          def,
-          `${formatarNumero(tempos[i].resposta)} h`,
-          `${formatarNumero(tempos[i].resolucao)} h`,
+        c.sla.niveis.map((n) => [
+          n.nome.trim() || "—",
+          n.descricao.trim() || "—",
+          `${formatarNumero(n.resposta)} h`,
+          `${formatarNumero(n.resolucao)} h`,
         ]),
         {
           legenda: "Tempos contados em horas do horário de suporte, a partir da abertura do pedido.",
@@ -892,9 +918,11 @@ function corpoLicenciamento(
     ponto3("Penalizações");
     p.push(recuado(textoDaCondicao("penalizacoes", pedido).trim()));
     const pen = [
-      ...(c.suporte.ligada
+      ...(slaAplica(pedido) && c.sla.niveis.length > 0
         ? [
-            `Por cada hora de atraso na resolução de um incidente de severidade crítica, face ao tempo máximo fixado: ${formatarNumero(
+            `Por cada hora de atraso na resolução de um pedido de nível «${
+              c.sla.niveis[0].nome.trim() || "1"
+            }», face ao tempo máximo fixado: ${formatarNumero(
               c.penalizacoes.porHoraCritica,
             )} % do valor mensal do contrato`,
           ]
@@ -912,13 +940,6 @@ function corpoLicenciamento(
         { antes: 80 },
       ),
     );
-  }
-
-  if (c.entregaveis.ligada) {
-    const itens = (Object.keys(ENTREGAVEIS) as Entregavel[]).filter((k) => c.entregaveis[k]).map((k) => ENTREGAVEIS[k]);
-    ponto3("Entregáveis");
-    p.push(recuado("O adjudicatário entrega à entidade adjudicante:", { depois: 80 }));
-    comPontuacao(itens).forEach((t, i) => p.push(alinea(`${letra(i)}.`, t, RECUO_ALINEA)));
   }
 
   for (const propria of c.proprias) {
@@ -1002,7 +1023,7 @@ export async function gerarManifestacaoLicenciamentoBlob(
             l.linhas.filter(({ licenca: x }) => !ehServico(x)).map(({ licenca: x, valor }) => [
               nomeDaLicenca(x, pedido.natureza) || "—",
               tipoSolucaoEavalia(x, pedido.natureza) || "—",
-              formatarNumero(x.quantidade),
+              formatarNumero(quantidadeDoPreco(x)),
               formatarMoeda(valor.licencas),
               valor.manutencao > 0 ? formatarMoeda(valor.manutencao) : "—",
             ]),

@@ -2,13 +2,11 @@ import type { ReactNode } from "react";
 import type {
   CondicaoComTexto,
   CondicoesContrato,
-  Entregavel,
   HorarioSuporte,
+  NivelServico,
   PedidoLicenciamento,
-  TemposDeSeveridade,
 } from "../core/licenciamento";
 import {
-  ENTREGAVEIS,
   EXPLICACAO_NAO_PRODUTIVOS,
   HORARIOS_SUPORTE,
   LIMITE_GLOBAL_PENALIZACOES,
@@ -16,6 +14,7 @@ import {
   aplicabilidade,
   condicoesIniciais,
   horarioPorExtenso,
+  niveisServicoPorOmissao,
   objetoPorExtenso,
   textoDaCondicao,
   tituloDaManutencao,
@@ -56,11 +55,12 @@ function Condicao({
   onLigar?: (ligada: boolean) => void;
   /** A razão por que não se aplica, ou vazio. */
   naoAplica?: string;
-  texto: string;
+  /** O texto da condição; sem ele (os níveis de serviço), ficam só os parâmetros. */
+  texto?: string;
   /** Se o texto foi escrito à mão (e já não acompanha as licenças). */
-  personalizado: boolean;
-  onTexto: (texto: string) => void;
-  onRepor: () => void;
+  personalizado?: boolean;
+  onTexto?: (texto: string) => void;
+  onRepor?: () => void;
   children?: ReactNode;
 }) {
   if (naoAplica) {
@@ -94,43 +94,30 @@ function Condicao({
       </div>
       {ativa && (
         <>
-          <label className="campo">
-            <span className="rotulo-oculto">Texto da condição «{titulo}»</span>
-            <textarea
-              rows={3}
-              value={texto}
-              aria-invalid={texto.trim() === ""}
-              onChange={(e) => onTexto(e.target.value)}
-            />
-          </label>
-          {personalizado ? (
-            <button type="button" className="botao-discreto" onClick={onRepor}>
-              Repor o texto por omissão
-            </button>
-          ) : (
-            <p className="ajuda">Texto por omissão, adaptado às licenças do L1. Pode alterá-lo.</p>
+          {texto !== undefined && (
+            <>
+              <label className="campo">
+                <span className="rotulo-oculto">Texto da condição «{titulo}»</span>
+                <textarea
+                  rows={3}
+                  value={texto}
+                  aria-invalid={texto.trim() === ""}
+                  onChange={(e) => onTexto?.(e.target.value)}
+                />
+              </label>
+              {personalizado ? (
+                <button type="button" className="botao-discreto" onClick={onRepor}>
+                  Repor o texto por omissão
+                </button>
+              ) : (
+                <p className="ajuda">Texto por omissão, adaptado às licenças do L1. Pode alterá-lo.</p>
+              )}
+            </>
           )}
           {children}
         </>
       )}
     </div>
-  );
-}
-
-function Horas({ rotulo, valor, onChange }: { rotulo: string; valor: number; onChange: (valor: number) => void }) {
-  return (
-    <label className="campo-numero-rotulado">
-      <span className="rotulo">{rotulo}</span>
-      <CampoNumero
-        valor={valor}
-        min={0}
-        step={1}
-        sufixo="h"
-        aria-label={rotulo}
-        invalido={!(valor > 0)}
-        onChange={onChange}
-      />
-    </label>
   );
 }
 
@@ -160,8 +147,8 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
     onRepor: () => alterar(chave, { texto: null } as Partial<CondicoesContrato[typeof chave]>),
   });
 
-  function severidade(chave: "critica" | "alta" | "normal", alteracao: Partial<TemposDeSeveridade>) {
-    alterar("suporte", { [chave]: { ...c.suporte[chave], ...alteracao } });
+  function alterarNivel(id: string, alteracao: Partial<NivelServico>) {
+    alterar("sla", { niveis: c.sla.niveis.map((n) => (n.id === id ? { ...n, ...alteracao } : n)) });
   }
 
   function alterarPropria(id: string, alteracao: Partial<{ titulo: string; texto: string }>) {
@@ -230,17 +217,6 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         </header>
 
         <Condicao titulo="Âmbito da licença" selo="obrigatória" {...textoDe("ambito")}>
-          <div className="linha-campos linha-campos-separada">
-            <label className="campo-crescente">
-              <span className="rotulo">Entidades abrangidas</span>
-              <input
-                type="text"
-                value={c.ambito.entidades}
-                placeholder="facultativo — ex.: SPMS, E.P.E. e Unidades Locais de Saúde"
-                onChange={(e) => alterar("ambito", { entidades: e.target.value })}
-              />
-            </label>
-          </div>
           {aplicaNaoProdutivos(pedido) && (
             <>
               <label className="campo-opcao">
@@ -273,7 +249,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         />
 
         <Condicao
-          titulo="Suporte técnico e SLA"
+          titulo="Suporte técnico"
           selo="recomendada"
           ligada={c.suporte.ligada}
           onLigar={(ligada) => alterar("suporte", { ligada })}
@@ -329,32 +305,108 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </label>
           </div>
           <p className="ajuda">
-            Sai assim: «{horarioPorExtenso(c.suporte)}». Horas no formato 09:00; das 00:00 às 24:00 é o dia inteiro.
+            Sai assim: «{horarioPorExtenso(c.suporte)}». Horas no formato 09:00; das 00:00 às 23:59 é o dia inteiro.
           </p>
-          {(
-            [
-              ["critica", "Crítica"],
-              ["alta", "Alta"],
-              ["normal", "Normal"],
-            ] as const
-          ).map(([chave, nome]) => (
-            <div key={chave} className="linha-campos linha-campos-numeros">
-              <Horas
-                rotulo={`${nome} — resposta`}
-                valor={c.suporte[chave].resposta}
-                onChange={(resposta) => severidade(chave, { resposta })}
-              />
-              <Horas
-                rotulo={`${nome} — resolução`}
-                valor={c.suporte[chave].resolucao}
-                onChange={(resolucao) => severidade(chave, { resolucao })}
-              />
-            </div>
-          ))}
+        </Condicao>
+
+        <Condicao
+          titulo="Níveis de serviço (SLA)"
+          selo="facultativa"
+          ligada={c.sla.ligada}
+          onLigar={(ligada) => alterar("sla", { ligada })}
+          naoAplica={
+            c.suporte.ligada ? "" : "Os níveis de serviço contam-se no horário do suporte técnico, que está desligado."
+          }
+        >
           <p className="ajuda">
-            Tempos máximos por severidade, em horas do horário de suporte. Crítica: impossibilidade de utilização, ou
-            perda de dados; alta: funcionalidade relevante afetada; normal: os restantes pedidos.
+            Tempos máximos por nível, em horas do horário de suporte. Por omissão, os três níveis abaixo; pode
+            alterá-los, acrescentar ou retirar. A penalização por hora de atraso aplica-se ao primeiro nível.
           </p>
+          {c.sla.niveis.length === 0 ? (
+            <p className="estado-vazio">
+              Sem níveis de serviço. Acrescente o primeiro, ou reponha os três por omissão.
+            </p>
+          ) : (
+            <div className="tabela-edicao tabela-sla">
+              <div className="grelha-sla tabela-edicao-cabecalho">
+                <span />
+                <span>Nível</span>
+                <span>Descrição</span>
+                <span>Resposta</span>
+                <span>Resolução</span>
+                <span />
+              </div>
+              {c.sla.niveis.map((n, i) => (
+                <div key={n.id} className="grelha-sla linha-edicao">
+                  <span className="pega" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={n.nome}
+                    placeholder="ex.: Crítica"
+                    aria-label={`Nome do nível ${i + 1}`}
+                    aria-invalid={n.nome.trim() === ""}
+                    onChange={(e) => alterarNivel(n.id, { nome: e.target.value })}
+                  />
+                  <input
+                    type="text"
+                    value={n.descricao}
+                    placeholder="ex.: Serviço indisponível, sem alternativa de contorno"
+                    aria-label={`Descrição do nível ${i + 1}`}
+                    onChange={(e) => alterarNivel(n.id, { descricao: e.target.value })}
+                  />
+                  <CampoNumero
+                    valor={n.resposta}
+                    min={0}
+                    step={1}
+                    sufixo="h"
+                    aria-label={`Resposta do nível ${i + 1}`}
+                    invalido={!(n.resposta > 0)}
+                    onChange={(resposta) => alterarNivel(n.id, { resposta })}
+                  />
+                  <CampoNumero
+                    valor={n.resolucao}
+                    min={0}
+                    step={1}
+                    sufixo="h"
+                    aria-label={`Resolução do nível ${i + 1}`}
+                    invalido={!(n.resolucao > 0) || n.resolucao < n.resposta}
+                    onChange={(resolucao) => alterarNivel(n.id, { resolucao })}
+                  />
+                  <button
+                    type="button"
+                    className="botao-icone botao-perigo"
+                    title="Remover o nível"
+                    aria-label={`Remover o nível ${i + 1}`}
+                    onClick={() => alterar("sla", { niveis: c.sla.niveis.filter((x) => x.id !== n.id) })}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="acoes">
+            <button
+              type="button"
+              className="botao-secundario"
+              onClick={() =>
+                alterar("sla", {
+                  niveis: [...c.sla.niveis, { id: gerarId(), nome: "", descricao: "", resposta: 0, resolucao: 0 }],
+                })
+              }
+            >
+              + Acrescentar nível
+            </button>
+            <button
+              type="button"
+              className="botao-discreto"
+              onClick={() => alterar("sla", { niveis: niveisServicoPorOmissao() })}
+            >
+              Repor os três níveis por omissão
+            </button>
+          </div>
         </Condicao>
 
         <Condicao
@@ -471,42 +523,6 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
             </label>
           </div>
         </Condicao>
-      </section>
-
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Entregáveis</h3>
-        </header>
-        <div className={c.entregaveis.ligada ? "condicao" : "condicao condicao-desligada"}>
-          <div className="condicao-cabecalho">
-            <label className="campo-opcao condicao-interruptor">
-              <input
-                type="checkbox"
-                checked={c.entregaveis.ligada}
-                onChange={(e) => alterar("entregaveis", { ligada: e.target.checked })}
-              />
-              <span>
-                <strong>Entregáveis</strong>
-              </span>
-            </label>
-            <span className="selo-condicao selo-condicao-opcional">facultativa</span>
-          </div>
-          {c.entregaveis.ligada && (
-            <>
-              <p className="ajuda">O que o adjudicatário entrega. Escolha as opções:</p>
-              {(Object.entries(ENTREGAVEIS) as Array<[Entregavel, string]>).map(([chave, texto]) => (
-                <label key={chave} className="campo-opcao">
-                  <input
-                    type="checkbox"
-                    checked={c.entregaveis[chave]}
-                    onChange={(e) => alterar("entregaveis", { [chave]: e.target.checked })}
-                  />
-                  <span>{texto}</span>
-                </label>
-              ))}
-            </>
-          )}
-        </div>
       </section>
 
       <section className="painel">

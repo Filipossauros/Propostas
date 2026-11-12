@@ -4,6 +4,8 @@ import type {
   FundamentoLicenca,
   Licenca,
   Manutencao,
+  ConviteEntidades,
+  FormaPreco,
   Metrica,
   Modalidade,
   NaturezaAquisicao,
@@ -19,6 +21,9 @@ import {
   MANUTENCOES,
   MESES_MAXIMOS,
   METRICAS,
+  MINIMO_ENTIDADES_CONVIDADAS,
+  ehPrecoGlobal,
+  metricaPorExtenso,
   METRICAS_UNICAS,
   MODALIDADES,
   OBJETOS_LICENCA,
@@ -54,21 +59,28 @@ interface Props {
   onIrParaCondicoes: () => void;
 }
 
-const NATUREZAS: Array<{ valor: NaturezaAquisicao; titulo: string; texto: string }> = [
+const NATUREZAS: Array<{
+  valor: NaturezaAquisicao;
+  titulo: string;
+  texto: string;
+}> = [
   {
     valor: "aberta",
     titulo: "Aberta à concorrência",
     texto:
-      "Concurso público ou consulta prévia. Descreve-se a licença e os requisitos mínimos; qualquer fabricante pode " +
-      "concorrer. No eAvalia: «Submissão à concorrência» e consulta ao mercado «Sim».",
+      "Concurso público ou, com convite a entidades escolhidas, consulta prévia. Descreve-se a licença e os " +
+      "requisitos mínimos; qualquer fabricante pode concorrer. No eAvalia: «Submissão à concorrência» e consulta " +
+      "ao mercado «Sim».",
   },
   {
     valor: "determinado",
-    titulo: "Licença determinada",
+    titulo: "Confiada a determinada entidade",
     texto:
-      "Renovação ou alargamento de uma plataforma já instalada, direitos exclusivos do fabricante ou titular, ou " +
-      "compatibilidade técnica. Identifica-se a licença e fundamenta-se a escolha (art.º 24.º do CCP). No eAvalia: " +
-      "consulta ao mercado «Não», salvo se o preço vier de uma consulta preliminar.",
+      "Por motivos técnicos ou de proteção de direitos exclusivos, a prestação só pode ser confiada a determinada " +
+      "entidade (art.º 24.º, n.º 1, alínea e), do CCP): renovação ou alargamento de uma plataforma já instalada, " +
+      "direitos exclusivos do fabricante ou titular, ou compatibilidade técnica. Identifica-se a licença e " +
+      "fundamenta-se a escolha. No eAvalia: consulta ao mercado «Não», salvo se o preço vier de uma consulta " +
+      "preliminar.",
   },
 ];
 
@@ -98,6 +110,104 @@ function Escolha<T extends string>({
         ))}
       </select>
     </label>
+  );
+}
+
+const FORMAS_PRECO: Array<{
+  valor: FormaPreco;
+  titulo: string;
+  texto: string;
+}> = [
+  {
+    valor: "unitario",
+    titulo: "Preço unitário",
+    texto: "Quantidade × preço unitário. O concorrente cota o preço de cada licença; o mapa de preços multiplica.",
+  },
+  {
+    valor: "global",
+    titulo: "Preço global",
+    texto:
+      "Indica-se só o preço final. A quantidade descreve a dimensão da licença, mas não multiplica o preço; o " +
+      "concorrente cota um valor único.",
+  },
+];
+
+/** O convite a entidades escolhidas (consulta prévia), só na aquisição aberta. */
+function PainelConvite({ pedido, onAlterar }: Pick<Props, "pedido" | "onAlterar">) {
+  const c = pedido.convite;
+  const alterar = (alteracao: Partial<ConviteEntidades>) =>
+    onAlterar((atual) => ({
+      ...atual,
+      convite: { ...atual.convite, ...alteracao },
+    }));
+  const opcoes = [
+    {
+      ativo: false,
+      titulo: "Não",
+      texto: "Procedimento aberto a qualquer interessado (concurso público).",
+    },
+    {
+      ativo: true,
+      titulo: "Sim",
+      texto: `Consulta prévia: convite direto a pelo menos ${MINIMO_ENTIDADES_CONVIDADAS} entidades (art.os 112.º a 114.º do CCP).`,
+    },
+  ];
+  return (
+    <>
+      <section className="painel">
+        <header className="painel-cabecalho">
+          <h3>Convite a entidades específicas</h3>
+          <p className="painel-nota">
+            Pretende-se dirigir o convite a entidades escolhidas, em vez de um procedimento aberto a qualquer
+            interessado?
+          </p>
+        </header>
+        <div className="opcoes-natureza" role="radiogroup" aria-label="Convite a entidades específicas">
+          {opcoes.map((o) => (
+            <label
+              key={o.titulo}
+              className={c.ativo === o.ativo ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"}
+            >
+              <input
+                type="radio"
+                name="convite-entidades"
+                checked={c.ativo === o.ativo}
+                onChange={() => alterar({ ativo: o.ativo })}
+              />
+              <span>
+                <strong>{o.titulo}</strong>
+                <span className="meta">{o.texto}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {c.ativo && (
+          <label className="campo campo-convite-motivo">
+            <span className="rotulo">Motivo do convite a estas entidades (sai na manifestação de necessidades)</span>
+            <textarea
+              rows={3}
+              value={c.motivo}
+              placeholder="ex.: São as entidades que, no mercado nacional, comercializam e dão suporte a plataformas com a escala exigida."
+              aria-invalid={c.motivo.trim() === ""}
+              onChange={(e) => alterar({ motivo: e.target.value })}
+            />
+          </label>
+        )}
+      </section>
+      {c.ativo && (
+        <ListaItensEditor
+          titulo="Entidades a convidar"
+          nota={`Uma entidade por linha, pelo menos ${MINIMO_ENTIDADES_CONVIDADAS}. Saem numa tabela na manifestação de necessidades.`}
+          nomeItem="entidade"
+          rotuloColuna="Entidade"
+          placeholder="ex.: Documenta Sistemas, S.A."
+          textoVazio="Ainda não há entidades. Acrescente a primeira."
+          rotuloAdicionar="+ Adicionar entidade"
+          itens={c.entidades}
+          onChange={(entidades) => alterar({ entidades })}
+        />
+      )}
+    </>
   );
 }
 
@@ -143,17 +253,24 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
 
   function remover(l: Licenca) {
     if (!confirm(`Remover «${nomeDaLicenca(l, pedido.natureza) || "licença sem nome"}»?`)) return;
-    onAlterar((atual) => ({ ...atual, licencas: atual.licencas.filter((x) => x.id !== l.id) }));
+    onAlterar((atual) => ({
+      ...atual,
+      licencas: atual.licencas.filter((x) => x.id !== l.id),
+    }));
     if (idEmEdicao === l.id) setIdEmEdicao(null);
   }
 
   async function importar(ficheiro: File) {
     try {
       const importado = importarPedidoLicenciamentoJSON(await ficheiro.text());
-      if (pedido.licencas.length > 0 && !confirm("Substituir o pedido em edição (com o produto) pelo do ficheiro?")) return;
+      if (pedido.licencas.length > 0 && !confirm("Substituir o pedido em edição (com o produto) pelo do ficheiro?"))
+        return;
       onAlterar(() => importado);
       setIdEmEdicao(importado.licencas[0]?.id ?? null);
-      setMensagem({ tipo: "sucesso", texto: `Pedido importado: ${importado.licencas.length} licença(s).` });
+      setMensagem({
+        tipo: "sucesso",
+        texto: `Pedido importado: ${importado.licencas.length} licença(s).`,
+      });
     } catch (erro) {
       setMensagem({
         tipo: "erro",
@@ -167,11 +284,16 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
     const exemplo = pedidoLicenciamentoExemplo();
     onAlterar(() => exemplo);
     setIdEmEdicao(exemplo.licencas[0].id);
-    setMensagem({ tipo: "sucesso", texto: "Exemplo carregado: a licença nacional da SNOMED CT, com o produto do Módulo 1." });
+    setMensagem({
+      tipo: "sucesso",
+      texto: "Exemplo carregado: a licença nacional da SNOMED CT, com o produto do Módulo 1.",
+    });
   }
 
   function recomecar() {
-    if (!confirm("Apagar o pedido de licenciamento em edição (produto, licenças, condições e lotes) e recomeçar do zero?"))
+    if (
+      !confirm("Apagar o pedido de licenciamento em edição (produto, licenças, condições e lotes) e recomeçar do zero?")
+    )
       return;
     onAlterar(() => pedidoLicenciamentoInicial());
     setIdEmEdicao(null);
@@ -179,68 +301,76 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
   }
 
   const servico = emEdicao !== null && ehServico(emEdicao);
-  const origensDoPreco = emEdicao === null ? null : (
-    <div className="origens-preco">
-      <EditorOrigemPreco
-        rotulo="Origem do preço de referência"
-        fonte={emEdicao.origemPreco}
-        onChange={(origemPreco) => alterarLicenca({ origemPreco })}
-      />
-      <label className="campo-opcao">
-        <input
-          type="checkbox"
-          checked={emEdicao.origemComplementar.tipo !== ""}
-          onChange={(e) =>
-            alterarLicenca({
-              origemComplementar: e.target.checked
-                ? fonteVazia(emEdicao.origemPreco.tipo === "orcamento" ? "contratoAnterior" : "orcamento")
-                : fonteVazia(),
-            })
-          }
-        />
-        <span>
-          <strong>Acrescentar uma origem complementar</strong>
-          <span className="meta">Uma segunda fonte, que confirma a primeira — torna o valor estimado mais defensável.</span>
-        </span>
-      </label>
-      {emEdicao.origemComplementar.tipo !== "" && (
+  const origensDoPreco =
+    emEdicao === null ? null : (
+      <div className="origens-preco">
         <EditorOrigemPreco
-          rotulo="Origem complementar"
-          fonte={emEdicao.origemComplementar}
-          excluir={emEdicao.origemPreco.tipo}
-          onChange={(origemComplementar) => alterarLicenca({ origemComplementar })}
+          rotulo="Origem do preço de referência"
+          fonte={emEdicao.origemPreco}
+          onChange={(origemPreco) => alterarLicenca({ origemPreco })}
         />
-      )}
-      <p className="ajuda">Os preços de referência são sempre em euros, com IVA.</p>
-    </div>
-  );
+        <label className="campo-opcao">
+          <input
+            type="checkbox"
+            checked={emEdicao.origemComplementar.tipo !== ""}
+            onChange={(e) =>
+              alterarLicenca({
+                origemComplementar: e.target.checked
+                  ? fonteVazia(emEdicao.origemPreco.tipo === "orcamento" ? "contratoAnterior" : "orcamento")
+                  : fonteVazia(),
+              })
+            }
+          />
+          <span>
+            <strong>Acrescentar uma origem complementar</strong>
+            <span className="meta">
+              Uma segunda fonte, que confirma a primeira — torna o valor estimado mais defensável.
+            </span>
+          </span>
+        </label>
+        {emEdicao.origemComplementar.tipo !== "" && (
+          <EditorOrigemPreco
+            rotulo="Origem complementar"
+            fonte={emEdicao.origemComplementar}
+            excluir={emEdicao.origemPreco.tipo}
+            onChange={(origemComplementar) => alterarLicenca({ origemComplementar })}
+          />
+        )}
+        <p className="ajuda">Os preços de referência são sempre em euros, com IVA.</p>
+      </div>
+    );
 
   /** O preço escreve-se com IVA; o sem IVA, com que se fazem as contas, deriva da taxa do pedido (L3). */
   const alterarPreco = (precoComIva: number) =>
-    alterarLicenca({ precoComIva, precoUnitario: semIvaDe(precoComIva, pedido.taxaIva) });
-  const semIvaENota = emEdicao === null ? null : (
-    <>
-      {emEdicao.precoComIva > 0 && (
-        <p className="ajuda">
-          Sem IVA: {formatarMoeda(emEdicao.precoUnitario)} (IVA a {formatarNumero(pedido.taxaIva)} %, a taxa do L3). O
-          valor estimado e as peças usam o preço sem IVA.
-        </p>
-      )}
-      <label className="campo">
-        <span className="rotulo">Nota ao preço de referência (facultativa)</span>
-        <textarea
-          rows={2}
-          value={emEdicao.notaPreco}
-          placeholder="ex.: Preço da renovação de 2025, a que o fabricante aplicou um aumento de 5 %."
-          onChange={(e) => alterarLicenca({ notaPreco: e.target.value })}
-        />
-      </label>
-    </>
-  );
+    alterarLicenca({
+      precoComIva,
+      precoUnitario: semIvaDe(precoComIva, pedido.taxaIva),
+    });
+  const semIvaENota =
+    emEdicao === null ? null : (
+      <>
+        {emEdicao.precoComIva > 0 && (
+          <p className="ajuda">
+            Sem IVA: {formatarMoeda(emEdicao.precoUnitario)} (IVA a {formatarNumero(pedido.taxaIva)} %, a taxa do L3). O
+            valor estimado e as peças usam o preço sem IVA.
+          </p>
+        )}
+        <label className="campo">
+          <span className="rotulo">Nota ao preço de referência (facultativa)</span>
+          <textarea
+            rows={2}
+            value={emEdicao.notaPreco}
+            placeholder="ex.: Preço da renovação de 2025, a que o fabricante aplicou um aumento de 5 %."
+            onChange={(e) => alterarLicenca({ notaPreco: e.target.value })}
+          />
+        </label>
+      </>
+    );
 
   const valor = emEdicao === null ? null : valorDaLicenca(emEdicao, Math.ceil(emEdicao.periodoMeses / 12) || 1);
   const unica = emEdicao !== null && emEdicao.metrica !== "" && METRICAS_UNICAS.includes(emEdicao.metrica);
   const anual = emEdicao?.direitoUso === "temporario" && emEdicao.periodicidadePreco === "anual";
+  const global = emEdicao !== null && !unica && ehPrecoGlobal(emEdicao);
 
   return (
     <div className="modulo modulo-licenciamento">
@@ -271,8 +401,8 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
         <header className="painel-cabecalho">
           <h3>Natureza da aquisição</h3>
           <p className="painel-nota">
-            Decide o que se descreve: numa aquisição aberta à concorrência descreve-se a necessidade; quando a licença
-            está determinada, identifica-se e fundamenta-se a escolha.
+            Decide o que se descreve: numa aquisição aberta à concorrência descreve-se a necessidade; quando a prestação
+            é confiada a determinada entidade, identifica-se a licença e fundamenta-se a escolha.
           </p>
         </header>
         <div className="opcoes-natureza" role="radiogroup" aria-label="Natureza da aquisição">
@@ -301,10 +431,14 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
         </p>
       </section>
 
+      {pedido.natureza === "aberta" && <PainelConvite pedido={pedido} onAlterar={onAlterar} />}
+
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Licenças</h3>
-          <p className="painel-nota">Cada licença é uma linha do mapa de quantidades e preços. Escolha uma para a editar em baixo.</p>
+          <p className="painel-nota">
+            Cada licença é uma linha do mapa de quantidades e preços. Escolha uma para a editar em baixo.
+          </p>
         </header>
 
         {pedido.licencas.length === 0 ? (
@@ -327,7 +461,9 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                       {resumoDoTipo(l)}
                       {l.quantidade > 0 &&
                         l.metrica !== "" &&
-                        ` · ${formatarNumero(l.quantidade)} ${(l.quantidade === 1 ? METRICAS[l.metrica].singular : METRICAS[l.metrica].plural).toLowerCase()}`}
+                        ` · ${ehPrecoGlobal(l) ? "até " : ""}${formatarNumero(l.quantidade)} ${metricaPorExtenso(l)}${
+                          ehPrecoGlobal(l) ? " (preço global)" : ""
+                        }`}
                       {" · "}
                       {porResolver.length === 0 ? (
                         <span className="estado-perfil">completa</span>
@@ -424,8 +560,8 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             placeholder="ex.: Configuração dos indicadores e alertas da plataforma"
             textoVazio="Ainda não há atividades. Acrescente a primeira."
             rotuloAdicionar="+ Adicionar atividade"
-            itens={emEdicao.requisitosFuncionais}
-            onChange={(requisitosFuncionais) => alterarLicenca({ requisitosFuncionais })}
+            itens={emEdicao.requisitos}
+            onChange={(requisitos) => alterarLicenca({ requisitos })}
           />
 
           <section className="painel">
@@ -481,33 +617,19 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
               </section>
 
               <ListaItensEditor
-                titulo="Requisitos funcionais mínimos"
+                titulo="Requisitos mínimos"
                 nota={
-                  "Obrigatório. Um requisito por linha: o que a licença tem de permitir, sem marca nem produto. Saem " +
-                  "no Anexo III, em tabela, e são condições do contrato — não se pontuam."
+                  "Obrigatório. Um requisito por linha — o que a licença tem de permitir e as exigências técnicas " +
+                  "(autenticação, alojamento, integração, segurança), sem marca nem produto. Saem no Anexo III, numa " +
+                  "única tabela, e são condições do contrato — não se pontuam."
                 }
-                nomeItem="requisito funcional"
-                rotuloColuna="Requisito funcional mínimo"
+                nomeItem="requisito"
+                rotuloColuna="Requisito mínimo"
                 placeholder="ex.: Fluxos de aprovação configuráveis sem programação"
-                textoVazio="Ainda não há requisitos funcionais. Acrescente o primeiro."
-                rotuloAdicionar="+ Adicionar requisito funcional"
-                itens={emEdicao.requisitosFuncionais}
-                onChange={(requisitosFuncionais) => alterarLicenca({ requisitosFuncionais })}
-              />
-
-              <ListaItensEditor
-                titulo="Requisitos técnicos mínimos"
-                nota={
-                  "Opcional. Um requisito por linha: autenticação, alojamento, integração, formatos, segurança. Saem " +
-                  "no Anexo III, por baixo dos funcionais."
-                }
-                nomeItem="requisito técnico"
-                rotuloColuna="Requisito técnico mínimo"
-                placeholder="ex.: Autenticação por SSO (SAML 2.0 / OIDC)"
-                textoVazio="Esta licença não tem requisitos técnicos próprios."
-                rotuloAdicionar="+ Adicionar requisito técnico"
-                itens={emEdicao.requisitosTecnicos}
-                onChange={(requisitosTecnicos) => alterarLicenca({ requisitosTecnicos })}
+                textoVazio="Ainda não há requisitos. Acrescente o primeiro."
+                rotuloAdicionar="+ Adicionar requisito"
+                itens={emEdicao.requisitos}
+                onChange={(requisitos) => alterarLicenca({ requisitos })}
               />
             </>
           ) : (
@@ -668,7 +790,11 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                   rotulo="Tipo de solução"
                   valor={emEdicao.eavalia.tipoSolucao}
                   opcoes={iguais(TIPOS_SOLUCAO_DETERMINADA)}
-                  onChange={(tipoSolucao) => alterarLicenca({ eavalia: { ...emEdicao.eavalia, tipoSolucao } })}
+                  onChange={(tipoSolucao) =>
+                    alterarLicenca({
+                      eavalia: { ...emEdicao.eavalia, tipoSolucao },
+                    })
+                  }
                 />
               )}
               <Escolha
@@ -699,6 +825,33 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             <header className="painel-cabecalho">
               <h3>Métrica, quantidade e preço de referência</h3>
             </header>
+            {!unica && (
+              <div className="forma-preco">
+                <span className="rotulo">Forma do preço</span>
+                <div className="opcoes-natureza" role="radiogroup" aria-label="Forma do preço">
+                  {FORMAS_PRECO.map((f) => (
+                    <label
+                      key={f.valor}
+                      className={
+                        emEdicao.formaPreco === f.valor ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="forma-preco"
+                        value={f.valor}
+                        checked={emEdicao.formaPreco === f.valor}
+                        onChange={() => alterarLicenca({ formaPreco: f.valor })}
+                      />
+                      <span>
+                        <strong>{f.titulo}</strong>
+                        <span className="meta">{f.texto}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="linha-campos">
               <Escolha<Exclude<Metrica, "">>
                 rotulo="Métrica de licenciamento"
@@ -718,23 +871,23 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
               )}
             </div>
             {origensDoPreco}
-            {emEdicao.metrica === "pacote" && (
+            {emEdicao.metrica === "volume" && (
               <div className="linha-campos linha-campos-separada">
                 <label className="campo-crescente">
-                  <span className="rotulo">Capacidade do pacote ou edição</span>
+                  <span className="rotulo">Unidade de volume</span>
                   <input
                     type="text"
-                    value={emEdicao.capacidade}
-                    placeholder="ex.: até 500 análises por dia"
-                    aria-invalid={emEdicao.capacidade.trim() === ""}
-                    onChange={(e) => alterarLicenca({ capacidade: e.target.value })}
+                    value={emEdicao.unidadeVolume}
+                    placeholder="ex.: GB de armazenamento, análises por dia, documentos digitalizados"
+                    aria-invalid={emEdicao.unidadeVolume.trim() === ""}
+                    onChange={(e) => alterarLicenca({ unidadeVolume: e.target.value })}
                   />
                 </label>
               </div>
             )}
             <div className="linha-campos linha-campos-numeros">
               <label className="campo-numero-rotulado">
-                <span className="rotulo">Quantidade</span>
+                <span className="rotulo">{global ? "Quantidade abrangida" : "Quantidade"}</span>
                 {unica ? (
                   <span className="campo-numero">
                     <input type="number" value={1} readOnly aria-readonly="true" className="campo-bloqueado" />
@@ -746,19 +899,22 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                     min={1}
                     step={1}
                     aria-label="Quantidade"
+                    sufixo={emEdicao.metrica !== "" ? metricaPorExtenso({ ...emEdicao, quantidade: 2 }) : undefined}
                     invalido={!Number.isInteger(emEdicao.quantidade) || emEdicao.quantidade < 1}
                     onChange={(quantidade) => alterarLicenca({ quantidade })}
                   />
                 )}
               </label>
               <label className="campo-numero-rotulado">
-                <span className="rotulo">Preço unitário de referência (c/ IVA)</span>
+                <span className="rotulo">
+                  {global ? "Preço global de referência (c/ IVA)" : "Preço unitário de referência (c/ IVA)"}
+                </span>
                 <CampoNumero
                   valor={emEdicao.precoComIva}
                   min={0}
                   step={0.01}
                   sufixo={emEdicao.direitoUso === "temporario" ? (anual ? "€ / ano" : "€ / mês") : "€"}
-                  aria-label="Preço unitário de referência"
+                  aria-label={global ? "Preço global de referência" : "Preço unitário de referência"}
                   invalido={!(emEdicao.precoComIva > 0)}
                   onChange={alterarPreco}
                 />
@@ -767,19 +923,25 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             {semIvaENota}
             {unica && (
               <p className="ajuda">
-                {emEdicao.metrica === "pacote"
-                  ? "Pacote ou edição: compra-se um, com a capacidade indicada, e a quantidade fica em 1. O preço é o do pacote inteiro."
-                  : "Licença única: cobre todo o território ou toda a entidade, e a quantidade fica em 1. O preço é o da licença inteira."}
+                Licença única: cobre todo o território ou toda a entidade, e a quantidade fica em 1. O preço é o da
+                licença inteira.
+              </p>
+            )}
+            {global && (
+              <p className="ajuda">
+                Preço global: a quantidade descreve a dimensão da licença («até {formatarNumero(emEdicao.quantidade)}{" "}
+                {metricaPorExtenso(emEdicao) || "licenças"}») e não multiplica o preço. No mapa de preços, o concorrente
+                cota um valor único.
               </p>
             )}
             {valor !== null && valor.total > 0 && (
               <p className="ajuda">
                 <strong>Valor estimado desta licença: {formatarMoeda(valor.total)} sem IVA</strong> (
                 {emEdicao.direitoUso === "temporario"
-                  ? `${formatarNumero(emEdicao.quantidade)} × ${formatarMoeda(emEdicao.precoUnitario)} × ${
+                  ? `${global ? "" : `${formatarNumero(emEdicao.quantidade)} × `}${formatarMoeda(emEdicao.precoUnitario)} × ${
                       anual ? `${formatarNumero(emEdicao.periodoMeses / 12)} anos` : `${emEdicao.periodoMeses} meses`
                     }`
-                  : `${formatarNumero(emEdicao.quantidade)} × ${formatarMoeda(emEdicao.precoUnitario)}${
+                  : `${global ? "" : `${formatarNumero(emEdicao.quantidade)} × `}${formatarMoeda(emEdicao.precoUnitario)}${
                       valor.manutencao > 0 ? ` + manutenção ${formatarMoeda(valor.manutencao)}` : ""
                     }`}
                 ), antes da margem prudencial, que se fixa no L3.

@@ -21,6 +21,8 @@ import {
   justificacaoMargemLicenciamento,
   linhasDoMapa,
   lotesEfetivos,
+  metricaPorExtenso,
+  validarConvite,
   mesesPorAno,
   moverLicencaParaLote,
   nomeProcedimentoLicenciamento,
@@ -90,7 +92,7 @@ describe("licenciamento — cálculos", () => {
       direitoUso: "perpetuo" as const,
       manutencao: "aParte" as const,
       percentagemManutencao: 22,
-      metrica: "core" as const,
+      metrica: "utilizadorConcorrente" as const,
       quantidade: 64,
       precoUnitario: 1900,
       periodoMeses: 36,
@@ -126,7 +128,8 @@ describe("licenciamento — cálculos", () => {
     const pedido = { ...pedidoLicenciamentoExemploSoftware(2027), margemPrudencial: 10 };
     const comMargem = comMargemLicenciamento(pedido);
     expect(comMargem.licencas[0].precoUnitario).toBe(15.95);
-    expect(comMargem.licencas[1].precoUnitario).toBe(2090);
+    // A base de dados tem preço global: a margem cresce o preço da licença inteira.
+    expect(comMargem.licencas[1].precoUnitario).toBe(133_760);
     expect(valorEstimado(comMargem)).toBeGreaterThan(valorEstimado(pedido));
   });
 
@@ -259,7 +262,7 @@ describe("licenciamento — validação", () => {
 
   it("aberta pede designação e requisitos; determinada pede licença, titular, fundamento e tipo de solução", () => {
     const aberta = validarLicencas({ ...pedidoLicenciamentoInicial(), licencas: [criarLicenca()] }).map((e) => e.mensagem);
-    expect(aberta.some((m) => m.includes("requisito funcional"))).toBe(true);
+    expect(aberta.some((m) => m.includes("requisito mínimo"))).toBe(true);
     expect(aberta.some((m) => m.includes("tipo de solução"))).toBe(false);
     const det = validarLicencas({ ...pedidoLicenciamentoInicial(), natureza: "determinado", licencas: [criarLicenca()] }).map(
       (e) => e.mensagem,
@@ -384,7 +387,8 @@ describe("licenciamento — ficheiros", () => {
     expect(lido.lotes[0].licencaIds).toEqual(["p1"]);
     expect(lido.condicoes.ambito.texto).toBeNull();
     expect(lido.condicoes.suporte.horario).toBe("7dias");
-    expect(lido.condicoes.suporte.horaFim).toBe("24:00");
+    // O dia inteiro é das 00:00 às 23:59.
+    expect(lido.condicoes.suporte.horaFim).toBe("23:59");
   });
 
   it("o ficheiro do produto vai e vem, e importa-se também do pedido e de um projeto", () => {
@@ -407,5 +411,102 @@ describe("licenciamento — ficheiros", () => {
 
   it("recusa um ficheiro de outro tipo", () => {
     expect(() => importarPedidoLicenciamentoJSON(JSON.stringify({ tipo: "lotes" }))).toThrow(/pedido de licenciamento/);
+  });
+});
+
+describe("licenciamento — convite, requisitos, preço global, métricas e níveis de serviço", () => {
+  it("o convite a entidades escolhidas pede motivo e pelo menos três entidades, sem repetições", () => {
+    const pedido = pedidoLicenciamentoExemploSoftware(2027);
+    expect(validarConvite(pedido)).toEqual([]);
+    const curto = {
+      ...pedido,
+      convite: { ativo: true, motivo: "", entidades: [{ id: "a", designacao: "A, S.A." }, { id: "b", designacao: "a, s.a." }] },
+    };
+    const msgs = validarConvite(curto).map((e) => e.mensagem);
+    expect(msgs.some((m) => m.includes("motivo"))).toBe(true);
+    expect(msgs.some((m) => m.includes("pelo menos 3"))).toBe(true);
+    expect(msgs.some((m) => m.includes("repetidas"))).toBe(true);
+    // Desligado, ou numa prestação confiada a determinada entidade, não conta.
+    expect(validarConvite({ ...curto, convite: { ...curto.convite, ativo: false } })).toEqual([]);
+    expect(validarConvite({ ...curto, natureza: "determinado" })).toEqual([]);
+    // E vai e vem no ficheiro.
+    const lido = normalizarPedidoLicenciamento(JSON.parse(pedidoLicenciamentoParaJSON(pedido)));
+    expect(lido.convite.entidades.map((e) => e.designacao)).toEqual([
+      "Documenta Sistemas, S.A.",
+      "Arquivo Digital, Lda.",
+      "Gestão Documental Ibérica, S.A.",
+    ]);
+  });
+
+  it("os requisitos funcionais e técnicos de um pedido anterior juntam-se numa só lista", () => {
+    const lido = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      licencas: [
+        {
+          id: "l",
+          requisitosFuncionais: [{ id: "f", designacao: "Funcional" }],
+          requisitosTecnicos: [{ id: "t", designacao: "Técnico" }],
+        },
+      ],
+    });
+    expect(lido.licencas[0].requisitos.map((r) => r.designacao)).toEqual(["Funcional", "Técnico"]);
+  });
+
+  it("no preço global, a quantidade dimensiona a licença e não multiplica o preço", () => {
+    const l = comAlteracao(criarLicenca(), {
+      metrica: "utilizadorNomeado",
+      quantidade: 1200,
+      formaPreco: "global",
+      direitoUso: "temporario",
+      periodicidadePreco: "anual",
+      periodoMeses: 36,
+      precoUnitario: 32_800,
+    });
+    expect(valorDaLicenca(l, 3).total).toBe(98_400);
+    const [linha] = linhasDoMapa(l, "aberta", 3);
+    expect([linha.quantidade, linha.periodos, linha.unidade]).toEqual([1, 3, "€ por ano (preço global)"]);
+    expect(linha.metrica).toBe("Preço global — até 1200 utilizadores nomeados");
+    // Na licença única, não há forma do preço: volta ao unitário.
+    expect(comAlteracao(l, { metrica: "nacional" }).formaPreco).toBe("unitario");
+  });
+
+  it("a unidade de volume é obrigatória e as métricas retiradas ficam por escolher", () => {
+    const l = { ...criarLicenca(), metrica: "volume" as const, quantidade: 500, unidadeVolume: "" };
+    const msgs = validarLicencas({ ...pedidoLicenciamentoInicial(), licencas: [l] }).map((e) => e.mensagem);
+    expect(msgs.some((m) => m.includes("unidade de volume"))).toBe(true);
+    expect(metricaPorExtenso({ ...l, unidadeVolume: "GB de armazenamento" })).toBe("GB de armazenamento");
+    for (const antiga of ["dispositivo", "core", "instancia", "pacote"]) {
+      const lido = normalizarPedidoLicenciamento({ tipo: "licenciamento", licencas: [{ id: "x", metrica: antiga }] });
+      expect(lido.licencas[0].metrica).toBe("");
+    }
+  });
+
+  it("os níveis de serviço: três por omissão, editáveis, e lidos das severidades antigas", () => {
+    expect(pedidoLicenciamentoInicial().condicoes.sla.niveis.map((n) => n.nome)).toEqual(["Crítica", "Alta", "Normal"]);
+    const lido = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      condicoes: { suporte: { critica: { resposta: 1, resolucao: 4 }, alta: { resposta: 3, resolucao: 12 } } },
+    });
+    expect(lido.condicoes.sla.niveis.map((n) => [n.nome, n.resposta, n.resolucao])).toEqual([
+      ["Crítica", 1, 4],
+      ["Alta", 3, 12],
+      ["Normal", 8, 72],
+    ]);
+    const pedido = pedidoLicenciamentoExemploSoftware(2027);
+    const semNome = {
+      ...pedido,
+      condicoes: { ...pedido.condicoes, sla: { ligada: true, niveis: [{ id: "x", nome: "", descricao: "", resposta: 5, resolucao: 2 }] } },
+    };
+    const msgs = validarCondicoes(semNome).map((e) => e.mensagem);
+    expect(msgs.some((m) => m.includes("dê um nome ao nível 1"))).toBe(true);
+    expect(msgs.some((m) => m.includes("a resolução não pode ser antes da resposta"))).toBe(true);
+    // Sem suporte, os níveis não contam.
+    const semSuporte = { ...semNome, condicoes: { ...semNome.condicoes, suporte: { ...semNome.condicoes.suporte, ligada: false } } };
+    expect(validarCondicoes(semSuporte).some((e) => e.campo === "sla")).toBe(false);
+  });
+
+  it("das 00:00 às 23:59 é o dia inteiro", () => {
+    const s = { ...pedidoLicenciamentoInicial().condicoes.suporte, horario: "7dias" as const, horaInicio: "00:00", horaFim: "23:59" };
+    expect(horarioPorExtenso(s)).toBe("Todos os dias, incluindo fins de semana e feriados, 24 horas por dia");
   });
 });

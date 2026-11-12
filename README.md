@@ -319,14 +319,21 @@ conteúdo.
 | Módulo | Quem usa | O que faz |
 |---|---|---|
 | **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição, e os beneficiários da avaliação custo-benefício (com texto por omissão, editável). Os benefícios operacionais não se mostram: formam-se a partir dos benefícios do produto. Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
-| **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência |
-| **L2 · Condições** | Responsável do produto | Âmbito, manutenção, suporte e SLA, disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
+| **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição (e, na aberta, o convite a entidades escolhidas) e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência (unitário ou global) |
+| **L2 · Condições** | Responsável do produto | Âmbito, manutenção, suporte técnico, níveis de serviço (SLA), disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
 | **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, júri e Anexo Técnico |
 
 **Natureza da aquisição.** **Aberta à concorrência**: cada licença descreve-se sem marca (designação e
-requisitos funcionais e técnicos mínimos, linha a linha) e o concorrente identifica o produto no mapa de
-preços. **Licença determinada**: identifica-se a licença, o fabricante ou titular dos direitos e a versão,
-e fundamenta-se a escolha (plataforma instalada, direitos exclusivos — art.º 24.º do CCP —, renovação).
+requisitos mínimos, funcionais e técnicos, numa só lista, linha a linha) e o concorrente identifica o
+produto no mapa de preços. **Confiada a determinada entidade** (a expressão do art.º 24.º, n.º 1, alínea
+e), do CCP): identifica-se a licença, o fabricante ou titular dos direitos e a versão, e fundamenta-se a
+escolha (plataforma instalada, direitos exclusivos, renovação).
+
+**Convite a entidades específicas.** Na aquisição aberta, pode dirigir-se o convite a entidades escolhidas
+(consulta prévia, art.ºs 112.º a 114.º do CCP): indica-se o motivo e as entidades, linha a linha — pelo
+menos três, sem repetições. No Word, sai o motivo e uma tabela com as entidades a convidar. As verificações
+do art.º 113.º (limites à escolha e entidades especialmente relacionadas) ficam com a equipa de
+contratação.
 
 **Serviço associado.** Uma linha pode ser um serviço com preço próprio (suporte para adaptar a plataforma,
 configuração, formação): tem designação, atividades e um preço global, no mesmo lote. Não é uma licença:
@@ -338,18 +345,26 @@ extenso), direito de uso (subscrição ou perpétuo), modalidade e manutenção.
 manutenção pode estar incluída, não ser contratada ou ter **linha própria** no mapa de preços, com preço
 anual, no mesmo procedimento e lote.
 
-**Classificação eAvalia.** Só se escolhem o âmbito e, na licença determinada, o tipo de solução (com a
+**Classificação eAvalia.** Só se escolhem o âmbito e, na prestação confiada a determinada entidade, o tipo de solução (com a
 explicação de cada um). O resto não se mostra e decorre das escolhas: na aberta, «Submissão à concorrência» e consulta ao
-mercado «Sim»; na determinada, consulta «Não», salvo com consulta preliminar; o tipo vem do direito de uso (subscrição → «Subscrição ou
+mercado «Sim»; na confiada a determinada entidade, consulta «Não», salvo com consulta preliminar; o tipo vem do direito de uso (subscrição → «Subscrição ou
 SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade (aquisição e alargamento →
 «Aquisição novas licenças»; renovação e upgrade → «Actualizações/Upgrades/Correções»). As medidas do
 «Alinhamento Tecnológico» saem todas «Não aplicável».
 
+**Métricas.** Utilizador nomeado, utilizador concorrente, unidade de volume (com a unidade concreta
+escrita à mão, por exemplo «GB de armazenamento»), licença nacional e licença institucional. As duas
+últimas têm sempre quantidade 1. As métricas de equipamento (dispositivo, core, instância) e o pacote
+saíram: nos pedidos anteriores que as usavam, a métrica fica por escolher.
+
+**Forma do preço.** **Preço unitário**: quantidade × preço unitário. **Preço global**: indica-se só o preço
+final; a quantidade descreve a dimensão da licença («até 250 utilizadores concorrentes») e não multiplica o
+preço — no mapa de preços e no eAvalia a linha tem quantidade 1, e o concorrente cota um valor único.
+
 **Valor estimado.** Subscrição: quantidade × preço (mensal ou anual) × meses ou anos, repartido pelos meses
 de cada ano a partir de janeiro do ano de início. Licença perpétua: quantidade × preço no primeiro ano,
 mais a manutenção em linha própria (percentagem anual de referência sobre o valor das licenças) pelo
-período. As métricas «Licença nacional», «Licença institucional» e «Pacote / edição» têm sempre quantidade 1; o
-pacote leva a capacidade por extenso (por exemplo, «até 500 análises por dia»). Os pressupostos do cálculo, no Word, só
+período. No preço global, a quantidade conta 1. Os pressupostos do cálculo, no Word, só
 falam dos tipos de licença que o pedido tem, e o fundamento da margem a 0 % só nomeia as origens de preço
 escolhidas (texto por omissão, editável e reponível no L3). O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
@@ -366,9 +381,13 @@ na aquisição aberta e sempre que o preço venha de uma consulta preliminar.
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
 a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. As penalizações são facultativas e vêm
-desligadas: podem ficar para a formulação do contrato. Os entregáveis também são facultativos, escolhidos
-de uma lista fixa (acesso, documentação de apoio, manuais, registos das sessões de trabalho). O horário de suporte é dias úteis, 7 dias por
-semana ou personalizado, com as horas editáveis.
+desligadas: podem ficar para a formulação do contrato; a penalização por hora de atraso aplica-se ao
+primeiro nível de serviço. O suporte técnico tem o texto e o horário; os **níveis de serviço (SLA)** são um
+bloco à parte, facultativo (ligado por omissão, e só com suporte), numa tabela editável — nível,
+descrição, tempos máximos de resposta e de resolução —, com três níveis por omissão (crítica, alta,
+normal), que se podem alterar, acrescentar ou retirar. Já não há entregáveis nem entidades abrangidas:
+o que for preciso escreve-se nas condições próprias. O horário de suporte é dias úteis, 7 dias por
+semana ou personalizado, com as horas editáveis (das 00:00 às 23:59 é o dia inteiro).
 
 **O Anexo Técnico (ZIP)** leva a manifestação de necessidades no modelo da DAG (Word e, com o n.º da
 informação e o n.º de orçamento, PDF), o pedido eAvalia com a folha **«Custos - Licenciamento»** preenchida
