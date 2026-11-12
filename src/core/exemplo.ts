@@ -19,6 +19,7 @@ import type {
 import { N_BLOCOS_PADRAO, SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, postoTrabalhoInicial } from "./types";
 import type { DeclaracaoAtribuida } from "./avaliacaoProcedimento";
 import { JUSTIFICACAO_SEM_MARGEM } from "./margem";
+import { referenciaValorHoraInicial } from "./referenciaValorHora";
 
 function req(id: string, designacao: string, mesesMinimos: number): Requisito {
   return { id, designacao, mesesMinimos };
@@ -127,6 +128,7 @@ export const LOTES_EXEMPLO: LotesJSON = {
   umLotePorConcorrente: true,
   margemPrudencial: 0,
   justificacaoMargem: JUSTIFICACAO_SEM_MARGEM,
+  referenciaValorHora: referenciaValorHoraInicial(),
   juri: {
     diretor: "Maria Exemplo",
     coordenador: "Filipe Mealha",

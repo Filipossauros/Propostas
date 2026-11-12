@@ -45,6 +45,7 @@ import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { usePodeCarregarExemplo } from "../ui/contextoExemplos";
 import { EditorLote } from "./EditorLote";
 import { TabelaValores } from "./TabelaValores";
+import { ReferenciaValorHoraEditor } from "./ReferenciaValorHoraEditor";
 
 interface Props {
   /** Catálogo de perfis do Módulo 2 — a fonte única de verdade dos requisitos. */
@@ -482,6 +483,8 @@ export function Modulo2({
         )}
       </section>
 
+      <ReferenciaValorHoraEditor config={config} onAlterarConfig={onAlterarConfig} />
+
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Lotes</h3>
@@ -563,7 +566,7 @@ export function Modulo2({
                   margemPrudencial,
                   // O fundamento por omissão acompanha a margem; um escrito à mão fica.
                   justificacaoMargem: ehJustificacaoPorOmissao(atual.justificacaoMargem)
-                    ? justificacaoPorOmissao(margemPrudencial)
+                    ? justificacaoPorOmissao(margemPrudencial, atual.referenciaValorHora.fundamento)
                     : atual.justificacaoMargem,
                 }))
               }
@@ -585,8 +588,8 @@ export function Modulo2({
           A margem prudencial é uma percentagem acrescentada ao valor hora de referência de cada perfil para
           acautelar variações de preço até à adjudicação e durante a execução do contrato (por exemplo, inflação ou
           atualizações salariais), de modo a que o valor estimado não fique abaixo do que o mercado praticará. O
-          fundamento é obrigatório. Os valores hora são a média das propostas dos últimos procedimentos: a 0 %, a margem
-          considera-se neles incorporada e o fundamento di-lo. Acima de 0 %, a margem é aplicada ao valor hora de
+          fundamento é obrigatório. Os valores hora assentam na tabela de referência (rates médias das propostas, valores
+          adjudicados, ou ambos): a 0 %, a margem considera-se neles incorporada e o fundamento di-lo, conforme a base. Acima de 0 %, a margem é aplicada ao valor hora de
           cada perfil e passa a todos os valores do Anexo Técnico — perfis, lotes, anos, valor estimado e eAvalia. O
           texto por omissão acompanha a margem enquanto não for alterado.
         </p>

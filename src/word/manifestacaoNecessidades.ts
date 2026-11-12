@@ -51,9 +51,15 @@ import modeloBase64 from "./modelos/Manifestacao_Necessidades.docx?base64";
 import modeloAnteriorBase64 from "./modelos/Pedido_Encargos_Plurianuais.docx?base64";
 import {
   dataPorExtenso,
-  RATES_DE_REFERENCIA,
   rodapeComLinhaUnica,
 } from "./informacaoSpms";
+import {
+  diferencaMediaBase,
+  procedimentosDe,
+  usaAdjudicados,
+  usaRateMedia,
+  type ReferenciaValorHora,
+} from "../core/referenciaValorHora";
 import { gerarEavaliaBlob } from "../excel/eavalia";
 import { lerFolhaDoAlinhamento } from "../excel/folhaDoAlinhamento";
 import {
@@ -77,6 +83,82 @@ export interface QuestaoDeSustentabilidade {
 }
 
 export const DIRECAO = "Direção de Arquitetura, Negócio e Análise de Dados";
+
+const porHora = (v: number) => `${formatarMoeda(v)}/h`;
+
+/**
+ * O valor unitário no Anexo I, ponto 3: o parágrafo e a tabela da base dos
+ * valores hora — rates médias das propostas, valores adjudicados, ou ambos —,
+ * como ficaram na tabela de referência do Módulo 3.
+ */
+function blocosDaReferenciaValorHora(ref: ReferenciaValorHora): string[] {
+  const p: string[] = [];
+  const ambos = ref.fundamento === "ambos";
+  if (usaRateMedia(ref.fundamento)) {
+    p.push(
+      recuado(
+        `Relativamente ao valor unitário, o mesmo foi apurado${ambos ? ", em parte," : ""} de acordo com o valor ` +
+          "médio das propostas obtidas nos últimos concursos públicos realizados pela SPMS, E.P.E. para a aquisição " +
+          "de serviços de natureza equivalente, mediante a seguinte tabela:",
+      ),
+    );
+    p.push(
+      tabela(
+        [
+          { titulo: "Perfil", peso: 22 },
+          { titulo: "Procedimento(s)", peso: 11 },
+          { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 10 },
+          { titulo: "Rate do valor base do procedimento (€/h)", alinhamento: "direita", peso: 15 },
+          { titulo: "Rate mais alta válida (proposta) (€/h)", alinhamento: "direita", peso: 14 },
+          { titulo: "Rate média das propostas (€/h)", alinhamento: "direita", peso: 14 },
+          { titulo: "Diferença da rate média para valor base", alinhamento: "direita", peso: 14 },
+        ],
+        ref.media.map((r) => {
+          const dif = diferencaMediaBase(r);
+          return [
+            r.perfil.trim() || "—",
+            { linhas: procedimentosDe(r).length > 0 ? procedimentosDe(r) : ["—"] },
+            formatarNumero(r.propostas),
+            porHora(r.base),
+            porHora(r.maisAlta),
+            porHora(r.media),
+            dif === null ? "—" : `${dif}%`,
+          ];
+        }),
+        { sz: ANOS },
+      ),
+    );
+  }
+  if (usaAdjudicados(ref.fundamento)) {
+    p.push(
+      recuado(
+        ambos
+          ? "Foram ainda considerados os valores hora adjudicados em procedimentos anteriores de natureza " +
+              "equivalente, constantes da tabela seguinte:"
+          : "Relativamente ao valor unitário, o mesmo foi apurado de acordo com os valores hora adjudicados em " +
+              "procedimentos anteriores de natureza equivalente, constantes da tabela seguinte:",
+      ),
+    );
+    p.push(
+      tabela(
+        [
+          { titulo: "Perfil", peso: 34 },
+          { titulo: "Procedimento ou contrato", peso: 30 },
+          { titulo: "Ano da adjudicação", alinhamento: "direita", peso: 14 },
+          { titulo: "Valor hora adjudicado (€/h)", alinhamento: "direita", peso: 22 },
+        ],
+        ref.adjudicados.map((r) => [
+          r.perfil.trim() || "—",
+          r.procedimento.trim() || "—",
+          r.ano > 0 ? String(r.ano) : "—",
+          porHora(r.valorHora),
+        ]),
+        { sz: ANOS },
+      ),
+    );
+  }
+  return p;
+}
 
 // Os textos da avaliação custo-benefício e da sustentabilidade são os mesmos
 // em todas as manifestações desta natureza — prestação de serviços de
@@ -1253,52 +1335,7 @@ function corpo(
         "natureza similar.",
     ),
   );
-  p.push(
-    recuado(
-      "Relativamente ao valor unitário, o mesmo foi apurado de acordo com o valor médio das propostas obtidas nos " +
-        "últimos concursos públicos realizados pela SPMS, E.P.E. para a aquisição de serviços de natureza " +
-        "equivalente, mediante a seguinte tabela:",
-    ),
-  );
-  p.push(
-    tabela(
-      [
-        { titulo: "Perfil", peso: 22 },
-        { titulo: "Procedimento(s)", peso: 11 },
-        { titulo: "N.º propostas admitidas", alinhamento: "direita", peso: 10 },
-        {
-          titulo: "Rate do valor base do procedimento (€/h)",
-          alinhamento: "direita",
-          peso: 15,
-        },
-        {
-          titulo: "Rate mais alta válida (proposta) (€/h)",
-          alinhamento: "direita",
-          peso: 14,
-        },
-        {
-          titulo: "Rate média das propostas (€/h)",
-          alinhamento: "direita",
-          peso: 14,
-        },
-        {
-          titulo: "Diferença da rate média para valor base",
-          alinhamento: "direita",
-          peso: 14,
-        },
-      ],
-      RATES_DE_REFERENCIA.map((r) => [
-        r.perfil,
-        { linhas: r.procedimentos },
-        r.propostas,
-        r.base,
-        r.maisAlta,
-        r.media,
-        r.diferenca,
-      ]),
-      { sz: ANOS },
-    ),
-  );
+  p.push(...blocosDaReferenciaValorHora(config.referenciaValorHora));
   p.push(recuado(justificacaoMargem));
   p.push(
     numerado("4.", [run("Rastreabilidade da execução", { negrito: true })], {

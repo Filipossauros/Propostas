@@ -53,6 +53,111 @@
   "umLotePorConcorrente": true,
   "margemPrudencial": 0,
   "justificacaoMargem": "Não foi aplicada margem prudencial autónoma ao valor estimado. Os valores unitários por hora considerados correspondem à média das rates das propostas apresentadas nos últimos procedimentos aquisitivos de natureza equivalente promovidos pela SPMS, E.P.E., refletindo, por isso, os preços efetivamente praticados no mercado e a dispersão de valores entre concorrentes. Considera-se, assim, que a margem prudencial se encontra incorporada nos valores unitários adotados, os quais asseguram, com razoabilidade, a suficiência do valor estimado para a satisfação da necessidade identificada.",
+  "referenciaValorHora": {
+    "fundamento": "media",
+    "media": [
+      {
+        "perfil": "Analista Funcional",
+        "procedimentos": "20260065\n20260066\n20260080",
+        "propostas": 28,
+        "base": 54.1,
+        "maisAlta": 46.5,
+        "media": 26.22,
+        "id": "78b22db8-5030-4f15-b355-49495d5950fc"
+      },
+      {
+        "perfil": "Arquiteto de Sistemas",
+        "procedimentos": "20260080",
+        "propostas": 4,
+        "base": 59.51,
+        "maisAlta": 52,
+        "media": 47.31,
+        "id": "2fab2490-2d31-4a6d-a2e2-804bd32b4202"
+      },
+      {
+        "perfil": "Backend — Java data access",
+        "procedimentos": "20260065",
+        "propostas": 6,
+        "base": 54.1,
+        "maisAlta": 46.5,
+        "media": 29.29,
+        "id": "be9da149-fdeb-4ee9-811a-fd0cf0344a14"
+      },
+      {
+        "perfil": "Backend — System Integration",
+        "procedimentos": "20260080",
+        "propostas": 4,
+        "base": 54.1,
+        "maisAlta": 38.13,
+        "media": 27.3,
+        "id": "e0449965-1310-4012-ba49-9094dfff4ea5"
+      },
+      {
+        "perfil": "Consultor de Administração de Sistemas e Observabilidade",
+        "procedimentos": "20260081",
+        "propostas": 1,
+        "base": 54.1,
+        "maisAlta": 28.12,
+        "media": 28.12,
+        "id": "92944047-f1eb-4669-8e63-909faf3ff6e3"
+      },
+      {
+        "perfil": "Frontend",
+        "procedimentos": "20260081",
+        "propostas": 7,
+        "base": 54.1,
+        "maisAlta": 46.5,
+        "media": 27.5,
+        "id": "91ceed2a-c402-4e6f-8203-532159e9d90f"
+      },
+      {
+        "perfil": "Tester",
+        "procedimentos": "20260065\n20260066\n20260080\n20260081",
+        "propostas": 23,
+        "base": 27.05,
+        "maisAlta": 27.05,
+        "media": 22.6,
+        "id": "5403fe0f-b670-453d-8854-791fcaa33075"
+      },
+      {
+        "perfil": "UX-UI Designer",
+        "procedimentos": "20260066",
+        "propostas": 13,
+        "base": 54.1,
+        "maisAlta": 37.25,
+        "media": 27.64,
+        "id": "f5b5a1b9-c200-4088-851f-b2e86d2e7ddd"
+      },
+      {
+        "perfil": "Gestor de Projeto",
+        "procedimentos": "20230160",
+        "propostas": 6,
+        "base": 40.5,
+        "maisAlta": 39.7,
+        "media": 34.13,
+        "id": "a9483399-67dd-4214-b560-de09aa79d0b9"
+      },
+      {
+        "perfil": "Developer de Integração",
+        "procedimentos": "20230160",
+        "propostas": 4,
+        "base": 35.14,
+        "maisAlta": 34.9,
+        "media": 30.08,
+        "id": "7b3cb1a4-e7fe-4336-9d2f-327e27688356"
+      },
+      {
+        "perfil": "Suporte IOP",
+        "procedimentos": "20230160",
+        "propostas": 8,
+        "base": 35.14,
+        "maisAlta": 34.9,
+        "media": 30.95,
+        "id": "643581bc-e910-41a8-a0f3-bd5ee2fddfa5"
+      }
+    ],
+    "adjudicados": []
+  },
   "juri": {
     "diretor": "Maria Exemplo",
     "coordenador": "Filipe Mealha",

@@ -11,6 +11,7 @@
 // à parte — é a margem, e não o valor já acrescido, que se decide.
 
 import type { LotesJSON } from "./types";
+import type { FundamentoValorHora } from "./referenciaValorHora";
 
 // Sem importar de `lotes.ts`, que lê daqui o texto por omissão.
 const formatarNumero = (valor: number) =>
@@ -25,6 +26,24 @@ export const JUSTIFICACAO_SEM_MARGEM =
   "valores unitários adotados, os quais asseguram, com razoabilidade, a suficiência do valor estimado para a " +
   "satisfação da necessidade identificada.";
 
+const FIM_SEM_MARGEM =
+  "Considera-se, assim, que a margem prudencial se encontra incorporada nos valores unitários adotados, os quais " +
+  "asseguram, com razoabilidade, a suficiência do valor estimado para a satisfação da necessidade identificada.";
+
+/** O fundamento da margem a 0 %, conforme a base dos valores hora (tabela de referência do Módulo 3). */
+export function justificacaoSemMargem(fundamento: FundamentoValorHora = "media"): string {
+  if (fundamento === "media") return JUSTIFICACAO_SEM_MARGEM;
+  const base =
+    fundamento === "adjudicado"
+      ? "correspondem aos valores hora adjudicados em procedimentos aquisitivos anteriores de natureza equivalente " +
+        "promovidos pela SPMS, E.P.E., refletindo, por isso, os preços efetivamente contratados para serviços " +
+        "equivalentes. "
+      : "correspondem à média das rates das propostas apresentadas nos últimos procedimentos aquisitivos de " +
+        "natureza equivalente promovidos pela SPMS, E.P.E. e aos valores hora adjudicados em procedimentos " +
+        "anteriores de natureza equivalente, refletindo, por isso, os preços efetivamente praticados no mercado. ";
+  return `Não foi aplicada margem prudencial autónoma ao valor estimado. Os valores unitários por hora considerados ${base}${FIM_SEM_MARGEM}`;
+}
+
 /** O fundamento de uma margem acima de 0 %, por omissão. */
 export function justificacaoComMargem(margem: number): string {
   return (
@@ -36,8 +55,8 @@ export function justificacaoComMargem(margem: number): string {
 }
 
 /** O texto por omissão para uma margem. */
-export function justificacaoPorOmissao(margem: number): string {
-  return margem > 0 ? justificacaoComMargem(margem) : JUSTIFICACAO_SEM_MARGEM;
+export function justificacaoPorOmissao(margem: number, fundamento: FundamentoValorHora = "media"): string {
+  return margem > 0 ? justificacaoComMargem(margem) : justificacaoSemMargem(fundamento);
 }
 
 /**
@@ -47,7 +66,7 @@ export function justificacaoPorOmissao(margem: number): string {
  */
 export function ehJustificacaoPorOmissao(texto: string): boolean {
   const t = texto.trim();
-  if (t === "" || t === JUSTIFICACAO_SEM_MARGEM) return true;
+  if (t === "" || (["media", "adjudicado", "ambos"] as const).some((f) => t === justificacaoSemMargem(f))) return true;
   const modelo = justificacaoComMargem(0).replace("0 %", "");
   return (
     t.replace(

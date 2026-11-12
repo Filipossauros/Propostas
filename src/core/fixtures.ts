@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import { SCHEMA_VERSION_ATUAL, TAXA_IVA_PADRAO, encargosPlurianuaisIniciais, postoTrabalhoInicial } from "./types";
 import { criarPerfilEmLote } from "./lotes";
+import { referenciaValorHoraInicial } from "./referenciaValorHora";
 
 export function ma(ano: number, mes: number): MesAno {
   return { ano, mes };
@@ -122,6 +123,7 @@ export function lotesComPerfis(entradas: Array<{ numero: string; perfis: PerfilJ
     umLotePorConcorrente: false,
     margemPrudencial: 0,
     justificacaoMargem: "Fundamento de teste",
+    referenciaValorHora: referenciaValorHoraInicial(),
     juri: { diretor: "Diretor", coordenador: "Coordenador", unidade: "Unidade", gestorProjeto: "Gestor" },
     numeroInformacao: "",
     numeroOrcamento: "",

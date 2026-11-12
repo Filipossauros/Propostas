@@ -2840,3 +2840,43 @@ select.campo-bloqueado:disabled {
     grid-column: 1 / -1;
   }
 }
+
+/* Módulo 3 · Tabela de referência do valor hora. */
+.opcoes-natureza.opcoes-tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.titulo-tabela-referencia {
+  margin: 18px 0 8px;
+  font-size: 0.95rem;
+}
+.tabela-referencia td {
+  vertical-align: top;
+}
+.tabela-referencia th,
+.tabela-referencia td {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.tabela-referencia input[type="text"],
+.tabela-referencia textarea {
+  width: 100%;
+  min-width: 120px;
+}
+.tabela-referencia td:first-child {
+  min-width: 200px;
+}
+.tabela-referencia textarea {
+  resize: vertical;
+  min-height: 36px;
+}
+.tabela-referencia .campo-numero {
+  width: auto;
+}
+.tabela-referencia .campo-numero input {
+  width: 78px;
+}
+@media (max-width: 720px) {
+  .opcoes-natureza.opcoes-tres {
+    grid-template-columns: 1fr;
+  }
+}

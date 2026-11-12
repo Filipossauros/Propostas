@@ -1,3 +1,4 @@
+import type { ReferenciaValorHora } from "./referenciaValorHora";
 // Modelo de dados partilhado.
 //
 // O fluxo tem três papéis distintos, e o modelo acompanha-os:
@@ -388,6 +389,12 @@ export interface LotesJSON {
   margemPrudencial: number;
   /** O fundamento da margem — obrigatório, e com texto por omissão para 0 % e para acima. */
   justificacaoMargem: string;
+  /**
+   * A tabela de referência do valor hora: a base, genérica, dos valores hora
+   * dos lotes (rates médias das propostas, valores adjudicados, ou ambos). Não
+   * se liga perfil a perfil aos lotes. Sai no Anexo I da manifestação.
+   */
+  referenciaValorHora: ReferenciaValorHora;
   /** O júri técnico do procedimento, e quem assina a manifestação de necessidades. */
   juri: JuriTecnico;
   /**

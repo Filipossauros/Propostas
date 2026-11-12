@@ -41,6 +41,11 @@ import {
 } from "./perfil";
 import { justificacaoInicial, normalizarJustificacao } from "./justificacao";
 import { JUSTIFICACAO_SEM_MARGEM, justificacaoPorOmissao } from "./margem";
+import {
+  normalizarReferenciaValorHora,
+  referenciaValorHoraInicial,
+  validarReferenciaValorHora,
+} from "./referenciaValorHora";
 import { gerarId } from "./id";
 
 /**
@@ -91,6 +96,7 @@ export function lotesIniciais(): LotesJSON {
     umLotePorConcorrente: false,
     margemPrudencial: 0,
     justificacaoMargem: JUSTIFICACAO_SEM_MARGEM,
+    referenciaValorHora: referenciaValorHoraInicial(),
     juri: juriInicial(),
     numeroInformacao: "",
     numeroOrcamento: "",
@@ -301,6 +307,7 @@ export function validarLotes(config: LotesJSON): ErroValidacao[] {
     ...erros,
     ...validarNBlocos(config),
     ...validarMargem(config),
+    ...validarReferenciaValorHora(config.referenciaValorHora),
     ...validarPostoTrabalho(config.postoTrabalho),
     ...validarEavalia(config.eavalia),
     ...validarEncargosPlurianuais(config),
@@ -410,19 +417,21 @@ function lerJuri(bruto: unknown): JuriTecnico {
  */
 function camposDaManifestacao(
   config: LotesJSON,
-): Pick<LotesJSON, "margemPrudencial" | "justificacaoMargem" | "juri"> {
+): Pick<LotesJSON, "margemPrudencial" | "justificacaoMargem" | "referenciaValorHora" | "juri"> {
   const bruto = config as Partial<LotesJSON>;
   const margem =
     Number.isFinite(bruto.margemPrudencial) &&
     (bruto.margemPrudencial as number) >= 0
       ? (bruto.margemPrudencial as number)
       : 0;
+  const referenciaValorHora = normalizarReferenciaValorHora(bruto.referenciaValorHora);
   return {
     margemPrudencial: margem,
     justificacaoMargem:
       typeof bruto.justificacaoMargem === "string"
         ? bruto.justificacaoMargem
-        : justificacaoPorOmissao(margem),
+        : justificacaoPorOmissao(margem, referenciaValorHora.fundamento),
+    referenciaValorHora,
     juri: lerJuri(bruto.juri),
   };
 }

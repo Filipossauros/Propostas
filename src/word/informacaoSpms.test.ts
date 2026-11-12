@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dataPorExtenso, RATES_DE_REFERENCIA, rodapeComLinhaUnica } from "./informacaoSpms";
+import { dataPorExtenso, rodapeComLinhaUnica } from "./informacaoSpms";
+import { TABELA_RATES_SPMS } from "../core/referenciaValorHora";
 
 describe("dataPorExtenso", () => {
   it("escreve a data em português", () => {
@@ -17,9 +18,9 @@ describe("rodapeComLinhaUnica", () => {
   });
 });
 
-describe("RATES_DE_REFERENCIA", () => {
+describe("TABELA_RATES_SPMS", () => {
   it("leva os onze perfis, o Suporte IOP incluído", () => {
-    expect(RATES_DE_REFERENCIA).toHaveLength(11);
-    expect(RATES_DE_REFERENCIA.map((r) => r.perfil)).toContain("Suporte IOP");
+    expect(TABELA_RATES_SPMS).toHaveLength(11);
+    expect(TABELA_RATES_SPMS.map((r) => r.perfil)).toContain("Suporte IOP");
   });
 });
