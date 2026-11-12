@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import {
   criarLicenca,
+  fonteVazia,
   lotesEfetivos,
   pedidoLicenciamentoExemplo,
   validarCondicoes,
@@ -37,7 +38,7 @@ function licenca(id: string, nome: string, alteracao: Partial<Licenca>): Licenca
     periodoMeses: 12,
     periodicidadePreco: "anual",
     eavalia: { tipoSolucao: "Software Proprietário sem alternativas", ambito: "Outro" },
-    origemPreco: "consultaPreliminar",
+    origemPreco: { ...fonteVazia("orcamento"), entidade: "Recorded Future", data: "2026-10-20" },
     ...alteracao,
   };
 }
@@ -61,7 +62,7 @@ function pedido(): PedidoLicenciamento {
       designacao: "Suporte para adaptar as métricas da plataforma às necessidades da SPMS",
       requisitosFuncionais: [{ id: "a1", designacao: "Configuração dos indicadores e alertas" }],
       precoUnitario: 8000,
-      origemPreco: "consultaPreliminar",
+      origemPreco: { ...fonteVazia("orcamento"), entidade: "Recorded Future", data: "2026-10-20" },
     },
   ];
   return {

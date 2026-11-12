@@ -340,7 +340,7 @@ anual, no mesmo procedimento e lote.
 
 **Classificação eAvalia.** Só se escolhem o âmbito e, na licença determinada, o tipo de solução (com a
 explicação de cada um). O resto não se mostra e decorre das escolhas: na aberta, «Submissão à concorrência» e consulta ao
-mercado «Sim»; na determinada, consulta «Não»; o tipo vem do direito de uso (subscrição → «Subscrição ou
+mercado «Sim»; na determinada, consulta «Não», salvo com consulta preliminar; o tipo vem do direito de uso (subscrição → «Subscrição ou
 SaaS»; perpétuo → «Licenças»); o tipo de licenciamento vem da modalidade (aquisição e alargamento →
 «Aquisição novas licenças»; renovação e upgrade → «Actualizações/Upgrades/Correções»). As medidas do
 «Alinhamento Tecnológico» saem todas «Não aplicável».
@@ -353,8 +353,13 @@ pacote leva a capacidade por extenso (por exemplo, «até 500 análises por dia�
 falam dos tipos de licença que o pedido tem, e o fundamento da margem a 0 % só nomeia as origens de preço
 escolhidas (texto por omissão, editável e reponível no L3). O período vai até
 36 meses (art.º 48.º do CCP); acima de 12 pede encargos plurianuais; com preço anual, só anos completos.
-A origem do preço «procedimento anterior» pede o n.º do procedimento; «tabela pública», a ligação ou a
-indicação da tabela.
+Cada licença tem uma origem do preço de referência, com os campos que permitem verificá-la: contrato em
+vigor ou procedimento anterior (n.º, ano, preço de então, atualização), orçamento do fabricante, titular ou
+distribuidor (entidade, data, referência), consulta preliminar ao mercado (data, entidades consultadas,
+respostas, critério), tabela pública (ligação, data, desconto) ou contratos semelhantes no portal BASE
+(ligações). Uma segunda origem, facultativa, confirma a primeira. Os preços são sempre em euros. No Word,
+as origens saem num quadro (licença, origem, referência, data). A consulta ao mercado do eAvalia é «Sim»
+na aquisição aberta e sempre que o preço venha de uma consulta preliminar.
 
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:

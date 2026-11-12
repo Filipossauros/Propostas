@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { FontePreco } from "./licenciamento";
 import {
   anosDoPedido,
+  fonteVazia,
+  origemPorExtenso,
   aplicabilidade,
   beneficiariosDoPedido,
   beneficiosOperacionaisDoPedido,
@@ -128,10 +131,10 @@ describe("licenciamento — cálculos", () => {
   it("o fundamento da margem a 0 % só nomeia as origens escolhidas", () => {
     const snomed = pedidoLicenciamentoExemplo(2027);
     const texto = justificacaoMargemDoPedido(snomed);
-    expect(texto).toContain("resultam da tabela pública do fabricante ou titular");
+    expect(texto).toContain("resultam de orçamentos do fabricante, titular ou distribuidor");
     expect(texto).not.toContain("consulta preliminar");
     expect(justificacaoMargemDoPedido(pedidoLicenciamentoExemploSoftware(2027))).toContain(
-      "resultam da consulta preliminar ao mercado e da tabela pública do fabricante ou titular",
+      "resultam do contrato em vigor ou de procedimentos anteriores, da consulta preliminar ao mercado e da tabela pública do fabricante ou titular",
     );
     expect(ehJustificacaoMargemPorOmissao(texto)).toBe(true);
   });
@@ -273,12 +276,39 @@ describe("licenciamento — validação", () => {
     expect(mensagens.some((m) => m.includes("anos completos"))).toBe(true);
   });
 
-  it("procedimento anterior e tabela pública pedem a referência", () => {
+  it("cada origem pede os seus campos; a complementar tem de ser diferente", () => {
     const pedido = pedidoLicenciamentoExemplo(2027);
-    pedido.licencas[0] = { ...pedido.licencas[0], origemPreco: "procedimentoAnterior", referenciaPreco: "" };
-    expect(validarLicencas(pedido).some((e) => e.mensagem.includes("n.º do procedimento anterior"))).toBe(true);
-    pedido.licencas[0] = { ...pedido.licencas[0], origemPreco: "tabelaPublica" };
-    expect(validarLicencas(pedido).some((e) => e.mensagem.includes("tabela pública"))).toBe(true);
+    const msgs = (fonte: FontePreco, complementar = fonteVazia()) => {
+      pedido.licencas[0] = { ...pedido.licencas[0], origemPreco: fonte, origemComplementar: complementar };
+      return validarLicencas(pedido).map((e) => e.mensagem).join(" | ");
+    };
+    expect(msgs(fonteVazia("contratoAnterior"))).toContain("n.º do contrato");
+    expect(msgs(fonteVazia("orcamento"))).toContain("quem deu o orçamento");
+    expect(msgs({ ...fonteVazia("consultaPreliminar"), entidadesConsultadas: 2, respostas: 3 })).toContain("respostas");
+    expect(msgs(fonteVazia("tabelaPublica"))).toContain("data em que a tabela");
+    expect(msgs(fonteVazia("contratosBase"))).toContain("portal BASE");
+    const orc = { ...fonteVazia("orcamento"), entidade: "X", data: "2026-10-01" };
+    expect(msgs(orc, orc)).toContain("diferente da principal");
+    expect(msgs(orc, { ...fonteVazia("contratosBase"), ligacao: "https://www.base.gov.pt/x" })).toBe("");
+  });
+
+  it("origem por extenso e migração da versão anterior", () => {
+    const orc = { ...fonteVazia("orcamento"), entidade: "SNOMED International", referencia: "Q-1", data: "2026-10-15" };
+    expect(origemPorExtenso(orc)).toBe(
+      "Orçamento do fabricante, titular ou distribuidor (SNOMED International; ref. Q-1), de 15/10/2026",
+    );
+    const antigo = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      licencas: [{ id: "a", origemPreco: "procedimentoAnterior", referenciaPreco: "CP 1/2024" }],
+    });
+    expect(antigo.licencas[0].origemPreco).toMatchObject({ tipo: "contratoAnterior", numero: "CP 1/2024" });
+  });
+
+  it("a consulta ao mercado do eAvalia é «Sim» com consulta preliminar, mesmo na licença determinada", () => {
+    const l = criarLicenca();
+    expect(consultaMercadoEavalia("determinado", l)).toBe("Não");
+    expect(consultaMercadoEavalia("determinado", { ...l, origemComplementar: fonteVazia("consultaPreliminar") })).toBe("Sim");
+    expect(consultaMercadoEavalia("aberta", l)).toBe("Sim");
   });
 
   it("o direito de uso não tem texto livre", () => {

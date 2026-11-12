@@ -204,7 +204,7 @@ export function preencherCustosLicenciamento(xml: string, pedido: PedidoLicencia
         // Na aberta, o fabricante só se conhece na proposta; a célula não quebra linha, e o texto é curto.
         pedido.natureza === "determinado" ? p.fabricante : "Indicado na proposta",
       );
-      texto(linhas.consulta, consultaMercadoEavalia(natureza));
+      texto(linhas.consulta, consultaMercadoEavalia(natureza, p));
       texto(linhas.descricao, descricaoParaEavalia(p, natureza));
       texto(linhas.tipoLicenciamento, tipoLicenciamentoEavalia(p));
 

@@ -2776,3 +2776,30 @@ select.campo-bloqueado:disabled {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+
+/* As origens do preço de referência: cada uma num bloco, com os seus campos. */
+.origens-preco {
+  margin-top: 14px;
+}
+
+.origem-preco {
+  padding: 10px 12px;
+  border-left: 3px solid var(--azul-500);
+  background: var(--superficie-alt);
+  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+}
+
+.origem-preco + .campo-opcao,
+.campo-opcao + .origem-preco {
+  margin-top: 10px;
+}
+
+.campo-data {
+  flex: 0 0 auto;
+  width: 170px;
+}
+
+.campo-criterio {
+  flex: 0 0 auto;
+  width: 240px;
+}

@@ -217,7 +217,10 @@ describe("manifestação de necessidades do licenciamento", () => {
   });
 
   it("a origem do preço leva a referência", async () => {
-    expect(await textoDe(snomed())).toContain("Tabela pública do fabricante ou titular (https://www.snomed.org/member-fees)");
+    const texto = await textoDe(snomed());
+    expect(texto).toContain("Orçamento do fabricante, titular ou distribuidor");
+    expect(texto).toContain("SNOMED International; ref. Fatura pró-forma da afiliação");
+    expect(texto).toContain("15/10/2026");
   });
 
   it("o sublicenciamento e a transmissão saem quando escolhidos", async () => {

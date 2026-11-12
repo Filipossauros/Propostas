@@ -165,12 +165,74 @@ export const METRICAS: Record<Exclude<Metrica, "">, { singular: string; plural: 
 /** As métricas de licença única: a quantidade é sempre 1. */
 export const METRICAS_UNICAS: ReadonlyArray<Exclude<Metrica, "">> = ["nacional", "institucional", "pacote"];
 
-export type OrigemPreco = "" | "consultaPreliminar" | "procedimentoAnterior" | "tabelaPublica";
+export type OrigemPreco =
+  | ""
+  | "contratoAnterior"
+  | "orcamento"
+  | "consultaPreliminar"
+  | "tabelaPublica"
+  | "contratosBase";
 export const ORIGENS_PRECO: Record<Exclude<OrigemPreco, "">, string> = {
+  contratoAnterior: "Contrato em vigor ou procedimento anterior",
+  orcamento: "Orçamento do fabricante, titular ou distribuidor",
   consultaPreliminar: "Consulta preliminar ao mercado (art.º 35.º-A do CCP)",
-  procedimentoAnterior: "Procedimento anterior",
   tabelaPublica: "Tabela pública do fabricante ou titular",
+  contratosBase: "Contratos públicos semelhantes (portal BASE)",
 };
+
+export type CriterioConsulta = "" | "media" | "minimo";
+export const CRITERIOS_CONSULTA: Record<Exclude<CriterioConsulta, "">, string> = {
+  media: "Média das respostas",
+  minimo: "Preço mais baixo das respostas",
+};
+
+/**
+ * De onde vem um preço de referência, com o que permite verificá-lo. Cada
+ * origem usa só os seus campos; os preços são sempre em euros, sem IVA.
+ */
+export interface FontePreco {
+  tipo: OrigemPreco;
+  /** Contrato anterior: o n.º do contrato ou do procedimento. */
+  numero: string;
+  /** Contrato anterior: o ano. */
+  ano: number;
+  /** Contrato anterior: o preço unitário de então, em euros. */
+  precoAnterior: number;
+  /** Contrato anterior: a atualização aplicada desde então, em %. */
+  atualizacao: number;
+  /** Orçamento: quem o deu. */
+  entidade: string;
+  /** Orçamento: a referência do documento. */
+  referencia: string;
+  /** Data do orçamento, da consulta ou da consulta da tabela (aaaa-mm-dd). */
+  data: string;
+  /** Consulta preliminar: entidades consultadas e respostas recebidas. */
+  entidadesConsultadas: number;
+  respostas: number;
+  criterio: CriterioConsulta;
+  /** Tabela pública: a ligação; contratos BASE: as ligações, uma por linha. */
+  ligacao: string;
+  /** Tabela pública: o desconto aplicado ao preço de tabela, em %. */
+  desconto: number;
+}
+
+export function fonteVazia(tipo: OrigemPreco = ""): FontePreco {
+  return {
+    tipo,
+    numero: "",
+    ano: 0,
+    precoAnterior: 0,
+    atualizacao: 0,
+    entidade: "",
+    referencia: "",
+    data: "",
+    entidadesConsultadas: 0,
+    respostas: 0,
+    criterio: "",
+    ligacao: "",
+    desconto: 0,
+  };
+}
 
 /** O prazo máximo de vigência (art.º 48.º do CCP): três anos, como na bolsa de horas. */
 export const MESES_MAXIMOS = ANOS_PLURIANUAIS * 12;
@@ -213,12 +275,10 @@ export interface Licenca {
    * uma vez, na licença perpétua.
    */
   precoUnitario: number;
-  origemPreco: OrigemPreco;
-  /**
-   * A referência da origem do preço: o n.º do procedimento anterior, ou a
-   * ligação (ou indicação) da tabela pública.
-   */
-  referenciaPreco: string;
+  /** A origem principal do preço de referência. */
+  origemPreco: FontePreco;
+  /** Uma segunda origem, facultativa, que confirma a primeira (tipo vazio: nenhuma). */
+  origemComplementar: FontePreco;
   /** A capacidade do pacote ou edição, ex.: «até 500 análises por dia». */
   capacidade: string;
 }
@@ -378,9 +438,11 @@ export function nomeProcedimentoLicenciamento(nomeProduto: string): string {
 
 /** Como se diz cada origem do preço no fundamento da margem. */
 const ORIGEM_NO_FUNDAMENTO: Record<Exclude<OrigemPreco, "">, string> = {
+  contratoAnterior: "do contrato em vigor ou de procedimentos anteriores",
+  orcamento: "de orçamentos do fabricante, titular ou distribuidor",
   consultaPreliminar: "da consulta preliminar ao mercado",
-  procedimentoAnterior: "de procedimentos anteriores",
   tabelaPublica: "da tabela pública do fabricante ou titular",
+  contratosBase: "de contratos públicos semelhantes publicados no portal BASE",
 };
 
 /**
@@ -416,8 +478,13 @@ export function justificacaoMargemLicenciamento(margem: number, origens: OrigemP
 export function justificacaoMargemDoPedido(pedido: Pick<PedidoLicenciamento, "justificacaoMargem" | "margemPrudencial" | "licencas">): string {
   return (
     pedido.justificacaoMargem ??
-    justificacaoMargemLicenciamento(margemDoPedido(pedido), pedido.licencas.map((l) => l.origemPreco))
+    justificacaoMargemLicenciamento(margemDoPedido(pedido), origensDoPedido(pedido))
   );
+}
+
+/** Os tipos de origem de preço usados nas licenças, principais e complementares. */
+export function origensDoPedido(pedido: Pick<PedidoLicenciamento, "licencas">): OrigemPreco[] {
+  return pedido.licencas.flatMap((l) => [l.origemPreco.tipo, l.origemComplementar.tipo]).filter((t) => t !== "");
 }
 
 /** O texto por omissão da versão anterior, que passa a acompanhar as escolhas. */
@@ -471,8 +538,8 @@ export function criarLicenca(): Licenca {
     quantidade: 0,
     periodicidadePreco: "mensal",
     precoUnitario: 0,
-    origemPreco: "",
-    referenciaPreco: "",
+    origemPreco: fonteVazia(),
+    origemComplementar: fonteVazia(),
     capacidade: "",
   };
 }
@@ -532,8 +599,17 @@ export function tipoLicenciamentoEavalia(l: Pick<Licenca, "modalidade">): TipoLi
     : "Actualizações/Upgrades/Correções";
 }
 
-export function consultaMercadoEavalia(natureza: NaturezaAquisicao): RespostaConsultaMercado {
-  return natureza === "aberta" ? "Sim" : "Não";
+/**
+ * A consulta ao mercado do eAvalia: «Sim» na aquisição aberta à concorrência
+ * e sempre que o preço da licença venha (também) de uma consulta preliminar.
+ */
+export function consultaMercadoEavalia(
+  natureza: NaturezaAquisicao,
+  l?: Pick<Licenca, "origemPreco" | "origemComplementar">,
+): RespostaConsultaMercado {
+  if (natureza === "aberta") return "Sim";
+  const consulta = l !== undefined && [l.origemPreco.tipo, l.origemComplementar.tipo].includes("consultaPreliminar");
+  return consulta ? "Sim" : "Não";
 }
 
 // --------------------------------------------------------------------------
@@ -582,13 +658,54 @@ export function resumoDoTipo(l: Licenca): string {
   return `${objeto} · Licenças perpétuas${manut}`;
 }
 
-/** A origem do preço, com a referência: «Procedimento anterior (n.º 123/2025)». */
-export function origemPorExtenso(l: Pick<Licenca, "origemPreco" | "referenciaPreco">): string {
-  if (l.origemPreco === "") return "";
-  const ref = l.referenciaPreco.trim();
-  if (l.origemPreco === "procedimentoAnterior" && ref) return `${ORIGENS_PRECO.procedimentoAnterior} (n.º ${ref})`;
-  if (l.origemPreco === "tabelaPublica" && ref) return `${ORIGENS_PRECO.tabelaPublica} (${ref})`;
-  return ORIGENS_PRECO[l.origemPreco];
+/** Uma data aaaa-mm-dd como dd/mm/aaaa. */
+export function dataCurta(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  return m === null ? iso.trim() : `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+const euros = (v: number) =>
+  `${new Intl.NumberFormat("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)} €`;
+
+/** A referência de uma origem, por extenso: o que permite verificá-la. */
+export function referenciaDaFonte(f: FontePreco): string {
+  const partes: string[] = [];
+  switch (f.tipo) {
+    case "contratoAnterior":
+      if (f.numero.trim()) partes.push(`n.º ${f.numero.trim()}`);
+      if (f.ano > 0) partes.push(`de ${f.ano}`);
+      if (f.precoAnterior > 0) partes.push(`preço unitário de então ${euros(f.precoAnterior)}`);
+      if (f.atualizacao > 0) partes.push(`atualizado em ${formatarNumeroLic(f.atualizacao)} %`);
+      break;
+    case "orcamento":
+      if (f.entidade.trim()) partes.push(f.entidade.trim());
+      if (f.referencia.trim()) partes.push(`ref. ${f.referencia.trim()}`);
+      break;
+    case "consultaPreliminar":
+      if (f.entidadesConsultadas > 0)
+        partes.push(`${f.entidadesConsultadas} ${f.entidadesConsultadas === 1 ? "entidade consultada" : "entidades consultadas"}`);
+      partes.push(`${f.respostas} ${f.respostas === 1 ? "resposta" : "respostas"}`);
+      if (f.criterio !== "") partes.push(`considerado: ${CRITERIOS_CONSULTA[f.criterio].toLowerCase()}`);
+      break;
+    case "tabelaPublica":
+      if (f.ligacao.trim()) partes.push(f.ligacao.trim());
+      if (f.desconto > 0) partes.push(`desconto de ${formatarNumeroLic(f.desconto)} %`);
+      break;
+    case "contratosBase":
+      partes.push(...f.ligacao.split(/\n+/).map((x) => x.trim()).filter((x) => x !== ""));
+      break;
+    case "":
+      break;
+  }
+  return partes.join("; ");
+}
+
+/** A origem por extenso, numa frase: «Orçamento do fabricante, titular ou distribuidor (SNOMED International; ref. Q-12), de 12/10/2026». */
+export function origemPorExtenso(f: FontePreco): string {
+  if (f.tipo === "") return "";
+  const ref = referenciaDaFonte(f);
+  const data = f.data.trim() ? `, de ${dataCurta(f.data)}` : "";
+  return `${ORIGENS_PRECO[f.tipo]}${ref ? ` (${ref})` : ""}${data}`;
 }
 
 /** Os beneficiários por omissão, na avaliação custo-benefício. */
@@ -614,6 +731,7 @@ export function beneficiosOperacionaisDoPedido(
 ): string {
   return pedido.beneficiosOperacionais ?? beneficiosOperacionaisPorOmissao(pedido.justificacao);
 }
+
 
 // --------------------------------------------------------------------------
 // Cálculos
@@ -1130,12 +1248,55 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
 }
 
 function validarOrigem(l: Licenca, de: (texto: string) => ErroValidacao): ErroValidacao[] {
-  if (l.origemPreco === "") return [de("indique a origem do preço de referência.")];
-  if (l.origemPreco === "procedimentoAnterior" && l.referenciaPreco.trim() === "")
-    return [de("indique o n.º do procedimento anterior.")];
-  if (l.origemPreco === "tabelaPublica" && l.referenciaPreco.trim() === "")
-    return [de("indique a ligação ou a referência da tabela pública.")];
-  return [];
+  if (l.origemPreco.tipo === "") return [de("indique a origem do preço de referência.")];
+  const erros = validarFonte(l.origemPreco, "", de);
+  if (l.origemComplementar.tipo !== "") {
+    if (l.origemComplementar.tipo === l.origemPreco.tipo)
+      erros.push(de("a origem complementar tem de ser diferente da principal."));
+    else erros.push(...validarFonte(l.origemComplementar, " (origem complementar)", de));
+  }
+  return erros;
+}
+
+/** O que falta numa origem de preço, conforme o tipo. */
+export function validarFonte(
+  f: FontePreco,
+  qual: string,
+  de: (texto: string) => ErroValidacao,
+): ErroValidacao[] {
+  const erros: ErroValidacao[] = [];
+  const falta = (texto: string) => erros.push(de(`${texto}${qual}.`));
+  const anoAtual = new Date().getFullYear();
+  switch (f.tipo) {
+    case "contratoAnterior":
+      if (f.numero.trim() === "") falta("indique o n.º do contrato ou do procedimento anterior");
+      if (!(Number.isInteger(f.ano) && f.ano >= 2000 && f.ano <= anoAtual)) falta("indique o ano do contrato anterior");
+      if (!(f.atualizacao >= 0)) falta("a atualização não pode ser negativa");
+      break;
+    case "orcamento":
+      if (f.entidade.trim() === "") falta("indique quem deu o orçamento");
+      if (f.data.trim() === "") falta("indique a data do orçamento");
+      break;
+    case "consultaPreliminar":
+      if (f.data.trim() === "") falta("indique a data da consulta preliminar");
+      if (!(Number.isInteger(f.entidadesConsultadas) && f.entidadesConsultadas >= 1))
+        falta("indique quantas entidades foram consultadas");
+      else if (!(Number.isInteger(f.respostas) && f.respostas >= 0 && f.respostas <= f.entidadesConsultadas))
+        falta("as respostas têm de ser entre 0 e o número de entidades consultadas");
+      if (f.criterio === "") falta("indique o critério usado (média ou preço mais baixo)");
+      break;
+    case "tabelaPublica":
+      if (f.ligacao.trim() === "") falta("indique a ligação ou a indicação da tabela pública");
+      if (f.data.trim() === "") falta("indique a data em que a tabela foi consultada");
+      if (!(f.desconto >= 0 && f.desconto < 100)) falta("o desconto tem de estar entre 0 e 100 %");
+      break;
+    case "contratosBase":
+      if (f.ligacao.trim() === "") falta("indique as ligações dos contratos no portal BASE");
+      break;
+    case "":
+      break;
+  }
+  return erros;
 }
 
 /** Quantos blocos de licença tem cada secção da folha «Custos - Licenciamento». */
@@ -1353,6 +1514,37 @@ function chaves<T extends string>(registo: Record<T, unknown>): T[] {
   return Object.keys(registo) as T[];
 }
 
+/**
+ * Uma origem de preço gravada. Aceita a da versão anterior — só o tipo, e a
+ * referência num campo à parte: o «procedimento anterior» passa a contrato
+ * anterior, com o número; a tabela pública fica com a ligação.
+ */
+function normalizarFonte(bruto: unknown, referenciaAntiga?: unknown): FontePreco {
+  if (typeof bruto === "string") {
+    const ref = texto(referenciaAntiga);
+    if (bruto === "procedimentoAnterior") return { ...fonteVazia("contratoAnterior"), numero: ref };
+    if (bruto === "tabelaPublica") return { ...fonteVazia("tabelaPublica"), ligacao: ref };
+    if (bruto === "consultaPreliminar") return fonteVazia("consultaPreliminar");
+    return fonteVazia();
+  }
+  const r = objeto(bruto);
+  return {
+    tipo: deLista(r.tipo, chaves(ORIGENS_PRECO), ""),
+    numero: texto(r.numero),
+    ano: numero(r.ano),
+    precoAnterior: numero(r.precoAnterior),
+    atualizacao: numero(r.atualizacao),
+    entidade: texto(r.entidade),
+    referencia: texto(r.referencia),
+    data: texto(r.data),
+    entidadesConsultadas: numero(r.entidadesConsultadas),
+    respostas: numero(r.respostas),
+    criterio: deLista(r.criterio, chaves(CRITERIOS_CONSULTA), ""),
+    ligacao: texto(r.ligacao),
+    desconto: numero(r.desconto),
+  };
+}
+
 function normalizarLicenca(bruto: unknown): Licenca {
   const r = objeto(bruto);
   const base = criarLicenca();
@@ -1384,8 +1576,8 @@ function normalizarLicenca(bruto: unknown): Licenca {
     quantidade: numero(r.quantidade),
     periodicidadePreco: r.periodicidadePreco === "anual" ? "anual" : "mensal",
     precoUnitario: numero(r.precoUnitario),
-    origemPreco: deLista(r.origemPreco, chaves(ORIGENS_PRECO), ""),
-    referenciaPreco: texto(r.referenciaPreco),
+    origemPreco: normalizarFonte(r.origemPreco, r.referenciaPreco),
+    origemComplementar: normalizarFonte(r.origemComplementar),
     capacidade: texto(r.capacidade),
   };
   return comAlteracao(licenca, {});
@@ -1616,8 +1808,12 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     quantidade: 1,
     periodicidadePreco: "anual",
     precoUnitario: 120000,
-    origemPreco: "tabelaPublica",
-    referenciaPreco: "https://www.snomed.org/member-fees",
+    origemPreco: {
+      ...fonteVazia("orcamento"),
+      entidade: "SNOMED International",
+      referencia: "Fatura pró-forma da afiliação",
+      data: "2026-10-15",
+    },
   };
   const pedido = pedidoLicenciamentoInicial(anoInicio);
   return {
@@ -1660,7 +1856,13 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
     metrica: "utilizadorNomeado",
     quantidade: 1200,
     precoUnitario: 14.5,
-    origemPreco: "consultaPreliminar",
+    origemPreco: {
+      ...fonteVazia("consultaPreliminar"),
+      data: "2026-09-30",
+      entidadesConsultadas: 4,
+      respostas: 3,
+      criterio: "media",
+    },
   };
   const bd: Licenca = {
     ...criarLicenca(),
@@ -1680,8 +1882,12 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
     metrica: "core",
     quantidade: 64,
     precoUnitario: 1900,
-    origemPreco: "tabelaPublica",
-    referenciaPreco: "Tabela de preços do fabricante, edição de 2026",
+    origemPreco: {
+      ...fonteVazia("tabelaPublica"),
+      ligacao: "Tabela de preços do fabricante, edição de 2026",
+      data: "2026-10-01",
+    },
+    origemComplementar: { ...fonteVazia("contratoAnterior"), numero: "CP 45/2023", ano: 2023, precoAnterior: 1750, atualizacao: 8 },
   };
   return {
     ...pedidoLicenciamentoInicial(anoInicio),

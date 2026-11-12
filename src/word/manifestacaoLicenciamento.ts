@@ -38,7 +38,9 @@ import {
   frasesDoDireitoDeUso,
   metricaDaColuna,
   objetoPorExtenso,
-  origemPorExtenso,
+  ORIGENS_PRECO,
+  dataCurta,
+  referenciaDaFonte,
   textoDaCondicao,
   tipoSolucaoEavalia,
   tituloDaManutencao,
@@ -659,18 +661,30 @@ function corpoLicenciamento(
     );
   }
   p.push(numerado("3.", [run("Origem dos preços de referência", { negrito: true })], { comOSeguinte: true, depois: 80 }));
-  pedido.licencas.forEach((x, i) =>
+  {
+    const linhas: string[][] = pedido.licencas.flatMap((x) =>
+      [x.origemPreco, x.origemComplementar]
+        .filter((f, k) => k === 0 || f.tipo !== "")
+        .map((f, k) => [
+          k === 0 ? nomeDaLicenca(x, pedido.natureza) || "Licença" : "",
+          f.tipo === "" ? "[por indicar]" : `${ORIGENS_PRECO[f.tipo]}${k === 1 ? " (complementar)" : ""}`,
+          referenciaDaFonte(f) || "—",
+          f.data.trim() ? dataCurta(f.data) : "—",
+        ]),
+    );
     p.push(
-      alinea(
-        `${letra(i)}.`,
+      tabela(
         [
-          run(`${nomeDaLicenca(x, pedido.natureza) || "Licença"}: `),
-          x.origemPreco === "" ? marcador("origem do preço") : run(`${origemPorExtenso(x)}.`),
+          { titulo: "Licença", peso: 26 },
+          { titulo: "Origem", peso: 26 },
+          { titulo: "Referência", peso: 36 },
+          { titulo: "Data", alinhamento: "direita", peso: 12 },
         ],
-        RECUO_ALINEA,
+        linhas,
+        { legenda: "Preços de referência em euros, sem IVA.", sz: 16 },
       ),
-    ),
-  );
+    );
+  }
   p.push(recuado(justificacaoMargem, { antes: 80 }));
 
   // Anexo III — especificações técnicas

@@ -8,7 +8,6 @@ import type {
   Modalidade,
   NaturezaAquisicao,
   ObjetoLicenca,
-  OrigemPreco,
   PedidoLicenciamento,
   PeriodicidadePreco,
 } from "../core/licenciamento";
@@ -23,11 +22,11 @@ import {
   METRICAS_UNICAS,
   MODALIDADES,
   OBJETOS_LICENCA,
-  ORIGENS_PRECO,
   PERIODICIDADES,
   TIPOS_SOLUCAO_DETERMINADA,
   comAlteracao,
   ehServico,
+  fonteVazia,
   criarLicenca,
   importarPedidoLicenciamentoJSON,
   nomeDaLicenca,
@@ -42,6 +41,7 @@ import { formatarMoeda, formatarNumero } from "../core/lotes";
 import { ErroImportacao } from "../core/perfil";
 import { gerarId } from "../core/id";
 import { ListaItensEditor } from "../modulo1/ListaItensEditor";
+import { EditorOrigemPreco } from "./EditorOrigemPreco";
 import { CampoNumero } from "../ui/CampoNumero";
 import { Explicacao } from "../ui/Explicacao";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
@@ -67,7 +67,7 @@ const NATUREZAS: Array<{ valor: NaturezaAquisicao; titulo: string; texto: string
     texto:
       "Renovação ou alargamento de uma plataforma já instalada, direitos exclusivos do fabricante ou titular, ou " +
       "compatibilidade técnica. Identifica-se a licença e fundamenta-se a escolha (art.º 24.º do CCP). No eAvalia: " +
-      "consulta ao mercado «Não».",
+      "consulta ao mercado «Não», salvo se o preço vier de uma consulta preliminar.",
   },
 ];
 
@@ -178,37 +178,40 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
   }
 
   const servico = emEdicao !== null && ehServico(emEdicao);
-  const escolhaDaOrigem = emEdicao === null ? null : (
-          <Escolha<Exclude<OrigemPreco, "">>
-            rotulo="Origem do preço de referência"
-            valor={emEdicao.origemPreco}
-            opcoes={deRegisto(ORIGENS_PRECO)}
-            onChange={(origemPreco) => alterarLicenca({ origemPreco })}
-          />
-  );
-  const referenciaDoPreco = emEdicao === null ? null : (
-    <>
-      {(emEdicao.origemPreco === "procedimentoAnterior" || emEdicao.origemPreco === "tabelaPublica") && (
-              <div className="linha-campos linha-campos-separada">
-                <label className="campo-crescente">
-                  <span className="rotulo">
-                    {emEdicao.origemPreco === "procedimentoAnterior"
-                      ? "N.º do procedimento anterior"
-                      : "Ligação ou indicação da tabela pública"}
-                  </span>
-                  <input
-                    type="text"
-                    value={emEdicao.referenciaPreco}
-                    placeholder={
-                      emEdicao.origemPreco === "procedimentoAnterior" ? "ex.: CP 123/2025" : "ex.: https://… ou «Tabela de preços 2026, p. 4»"
-                    }
-                    aria-invalid={emEdicao.referenciaPreco.trim() === ""}
-                    onChange={(e) => alterarLicenca({ referenciaPreco: e.target.value })}
-                  />
-                </label>
-              </div>
-            )}
-    </>
+  const origensDoPreco = emEdicao === null ? null : (
+    <div className="origens-preco">
+      <EditorOrigemPreco
+        rotulo="Origem do preço de referência"
+        fonte={emEdicao.origemPreco}
+        onChange={(origemPreco) => alterarLicenca({ origemPreco })}
+      />
+      <label className="campo-opcao">
+        <input
+          type="checkbox"
+          checked={emEdicao.origemComplementar.tipo !== ""}
+          onChange={(e) =>
+            alterarLicenca({
+              origemComplementar: e.target.checked
+                ? fonteVazia(emEdicao.origemPreco.tipo === "orcamento" ? "contratoAnterior" : "orcamento")
+                : fonteVazia(),
+            })
+          }
+        />
+        <span>
+          <strong>Acrescentar uma origem complementar</strong>
+          <span className="meta">Uma segunda fonte, que confirma a primeira — torna o valor estimado mais defensável.</span>
+        </span>
+      </label>
+      {emEdicao.origemComplementar.tipo !== "" && (
+        <EditorOrigemPreco
+          rotulo="Origem complementar"
+          fonte={emEdicao.origemComplementar}
+          excluir={emEdicao.origemPreco.tipo}
+          onChange={(origemComplementar) => alterarLicenca({ origemComplementar })}
+        />
+      )}
+      <p className="ajuda">Os preços de referência são sempre em euros, sem IVA.</p>
+    </div>
   );
 
   const valor = emEdicao === null ? null : valorDaLicenca(emEdicao, Math.ceil(emEdicao.periodoMeses / 12) || 1);
@@ -405,8 +408,7 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
             <header className="painel-cabecalho">
               <h3>Preço de referência</h3>
             </header>
-            <div className="linha-campos">{escolhaDaOrigem}</div>
-            {referenciaDoPreco}
+            {origensDoPreco}
             <div className="linha-campos linha-campos-numeros">
               <label className="campo-numero-rotulado">
                 <span className="rotulo">Preço global de referência (s/ IVA)</span>
@@ -689,9 +691,8 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                   onChange={(periodicidadePreco) => periodicidadePreco !== "" && alterarLicenca({ periodicidadePreco })}
                 />
               )}
-              {escolhaDaOrigem}
             </div>
-            {referenciaDoPreco}
+            {origensDoPreco}
             {emEdicao.metrica === "pacote" && (
               <div className="linha-campos linha-campos-separada">
                 <label className="campo-crescente">
