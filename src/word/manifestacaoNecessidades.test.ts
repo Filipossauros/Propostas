@@ -283,6 +283,7 @@ describe("gerarManifestacaoBlob — tabela de referência do valor hora", () => 
         fundamento: "media",
         media: [{ id: "m", perfil: "Perfil editado", procedimentos: "P1\nP2", propostas: 5, base: 50, maisAlta: 45, media: 40 }],
         adjudicados: [adjudicado],
+        textoLivre: "",
       },
     });
     expect(texto).toContain("valor médio das propostas obtidas nos últimos concursos públicos");
@@ -294,13 +295,29 @@ describe("gerarManifestacaoBlob — tabela de referência do valor hora", () => 
 
   it("os valores adjudicados saem com a sua tabela; com ambos, saem as duas", async () => {
     const base = exemplo();
-    const so = await textoDe({ ...base, referenciaValorHora: { fundamento: "adjudicado", media: base.referenciaValorHora.media, adjudicados: [adjudicado] } });
+    const so = await textoDe({ ...base, referenciaValorHora: { ...base.referenciaValorHora, fundamento: "adjudicado", adjudicados: [adjudicado] } });
     expect(so).toContain("de acordo com os valores hora adjudicados em procedimentos anteriores");
     expect(so).toContain("CP 2024/0112");
     expect(so).toContain("Valor hora adjudicado (€/h)");
     expect(so).not.toContain("Rate média das propostas (€/h)");
-    const ambos = await textoDe({ ...base, referenciaValorHora: { fundamento: "ambos", media: base.referenciaValorHora.media, adjudicados: [adjudicado] } });
+    const ambos = await textoDe({ ...base, referenciaValorHora: { ...base.referenciaValorHora, fundamento: "ambos", adjudicados: [adjudicado] } });
     expect(ambos).toContain("Rate média das propostas (€/h)");
     expect(ambos).toContain("Foram ainda considerados os valores hora adjudicados");
+  });
+
+  it("o texto livre sai em vez das tabelas, um parágrafo por linha", async () => {
+    const base = exemplo();
+    const texto = await textoDe({
+      ...base,
+      referenciaValorHora: {
+        ...base.referenciaValorHora,
+        fundamento: "livre",
+        textoLivre: "Valores da tabela salarial de referência.\nAcrescidos dos encargos sociais.",
+      },
+    });
+    expect(texto).toContain("Valores da tabela salarial de referência.");
+    expect(texto).toContain("Acrescidos dos encargos sociais.");
+    expect(texto).not.toContain("Rate média das propostas (€/h)");
+    expect(texto).not.toContain("Valor hora adjudicado (€/h)");
   });
 });

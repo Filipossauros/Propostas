@@ -93,6 +93,13 @@ const porHora = (v: number) => `${formatarMoeda(v)}/h`;
  */
 function blocosDaReferenciaValorHora(ref: ReferenciaValorHora): string[] {
   const p: string[] = [];
+  if (ref.fundamento === "livre") {
+    const t = ref.textoLivre.trim();
+    // Um parágrafo por linha escrita, como no campo.
+    for (const linha of t.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "")) p.push(recuado(linha));
+    if (t === "") p.push(recuado([marcador("fundamentação do valor hora")]));
+    return p;
+  }
   const ambos = ref.fundamento === "ambos";
   if (usaRateMedia(ref.fundamento)) {
     p.push(

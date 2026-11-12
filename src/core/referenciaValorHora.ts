@@ -10,7 +10,7 @@
 import type { ErroValidacao } from "./perfil";
 import { gerarId } from "./id";
 
-export type FundamentoValorHora = "media" | "adjudicado" | "ambos";
+export type FundamentoValorHora = "media" | "adjudicado" | "ambos" | "livre";
 
 export const FUNDAMENTOS_VALOR_HORA: Record<FundamentoValorHora, { titulo: string; texto: string }> = {
   media: {
@@ -24,6 +24,10 @@ export const FUNDAMENTOS_VALOR_HORA: Record<FundamentoValorHora, { titulo: strin
   ambos: {
     titulo: "Ambos",
     texto: "Uma tabela de cada: rates médias das propostas e valores adjudicados.",
+  },
+  livre: {
+    titulo: "Texto livre",
+    texto: "Escreve-se a fundamentação dos valores hora, sem tabela.",
   },
 };
 
@@ -53,6 +57,8 @@ export interface ReferenciaValorHora {
   fundamento: FundamentoValorHora;
   media: LinhaRateMedia[];
   adjudicados: LinhaAdjudicado[];
+  /** A fundamentação escrita à mão, quando o fundamento é «Texto livre». */
+  textoLivre: string;
 }
 
 type SemId<T> = Omit<T, "id">;
@@ -87,7 +93,7 @@ export function linhasRatesSpms(): LinhaRateMedia[] {
 }
 
 export function referenciaValorHoraInicial(): ReferenciaValorHora {
-  return { fundamento: "media", media: linhasRatesSpms(), adjudicados: [] };
+  return { fundamento: "media", media: linhasRatesSpms(), adjudicados: [], textoLivre: "" };
 }
 
 export function linhaRateMediaVazia(): LinhaRateMedia {
@@ -99,11 +105,11 @@ export function linhaAdjudicadoVazia(): LinhaAdjudicado {
 }
 
 export function usaRateMedia(f: FundamentoValorHora): boolean {
-  return f !== "adjudicado";
+  return f === "media" || f === "ambos";
 }
 
 export function usaAdjudicados(f: FundamentoValorHora): boolean {
-  return f !== "media";
+  return f === "adjudicado" || f === "ambos";
 }
 
 /** A diferença da rate média para o valor base, em percentagem inteira; `null` sem valor base. */
@@ -130,7 +136,7 @@ export function normalizarReferenciaValorHora(bruto: unknown): ReferenciaValorHo
   if (bruto === undefined || bruto === null) return referenciaValorHoraInicial();
   const r = objeto(bruto);
   const fundamento: FundamentoValorHora =
-    r.fundamento === "adjudicado" || r.fundamento === "ambos" ? r.fundamento : "media";
+    r.fundamento === "adjudicado" || r.fundamento === "ambos" || r.fundamento === "livre" ? r.fundamento : "media";
   const media = Array.isArray(r.media)
     ? r.media.map((x) => {
         const o = objeto(x);
@@ -157,13 +163,15 @@ export function normalizarReferenciaValorHora(bruto: unknown): ReferenciaValorHo
         };
       })
     : [];
-  return { fundamento, media, adjudicados };
+  return { fundamento, media, adjudicados, textoLivre: texto(r.textoLivre) };
 }
 
 /** O que falta na tabela: só nas partes que o fundamento usa. */
 export function validarReferenciaValorHora(ref: ReferenciaValorHora, anoAtual = new Date().getFullYear()): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   const falta = (mensagem: string) => erros.push({ campo: "referenciaValorHora", mensagem });
+  if (ref.fundamento === "livre" && ref.textoLivre.trim() === "")
+    falta("Valor hora de referência: escreva a fundamentação dos valores hora.");
   if (usaRateMedia(ref.fundamento)) {
     if (ref.media.length === 0) falta("Valor hora de referência: acrescente pelo menos uma linha de rates médias.");
     ref.media.forEach((l, i) => {

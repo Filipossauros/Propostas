@@ -34,7 +34,10 @@ const FIM_SEM_MARGEM =
 export function justificacaoSemMargem(fundamento: FundamentoValorHora = "media"): string {
   if (fundamento === "media") return JUSTIFICACAO_SEM_MARGEM;
   const base =
-    fundamento === "adjudicado"
+    fundamento === "livre"
+      ? "correspondem aos valores de referência fundamentados na presente informação, refletindo, por isso, os " +
+        "preços praticados no mercado para serviços de natureza equivalente. "
+      : fundamento === "adjudicado"
       ? "correspondem aos valores hora adjudicados em procedimentos aquisitivos anteriores de natureza equivalente " +
         "promovidos pela SPMS, E.P.E., refletindo, por isso, os preços efetivamente contratados para serviços " +
         "equivalentes. "
@@ -66,7 +69,7 @@ export function justificacaoPorOmissao(margem: number, fundamento: FundamentoVal
  */
 export function ehJustificacaoPorOmissao(texto: string): boolean {
   const t = texto.trim();
-  if (t === "" || (["media", "adjudicado", "ambos"] as const).some((f) => t === justificacaoSemMargem(f))) return true;
+  if (t === "" || (["media", "adjudicado", "ambos", "livre"] as const).some((f) => t === justificacaoSemMargem(f))) return true;
   const modelo = justificacaoComMargem(0).replace("0 %", "");
   return (
     t.replace(

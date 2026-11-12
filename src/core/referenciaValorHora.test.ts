@@ -57,8 +57,21 @@ describe("tabela de referência do valor hora", () => {
       fundamento: "ambos",
       media: [{ id: "m", perfil: "Tester", procedimentos: "1", propostas: 2, base: 30, maisAlta: 28, media: 25 }],
       adjudicados: [{ id: "a", perfil: "Tester", procedimento: "CP 1/2024", ano: 2024, valorHora: 26 }],
+      textoLivre: "",
     };
     expect(normalizarReferenciaValorHora(JSON.parse(JSON.stringify(gravada)))).toEqual(gravada);
+  });
+
+  it("no texto livre, só o texto conta, e é obrigatório", () => {
+    const ref = { ...referenciaValorHoraInicial(), fundamento: "livre" as const, media: [] };
+    expect(validarReferenciaValorHora(ref).map((e) => e.mensagem)).toEqual([
+      "Valor hora de referência: escreva a fundamentação dos valores hora.",
+    ]);
+    expect(validarReferenciaValorHora({ ...ref, textoLivre: "Fundamentação." })).toEqual([]);
+    expect(normalizarReferenciaValorHora({ fundamento: "livre", textoLivre: "X" }).fundamento).toBe("livre");
+    const t = justificacaoPorOmissao(0, "livre");
+    expect(t).toContain("valores de referência fundamentados na presente informação");
+    expect(ehJustificacaoPorOmissao(t)).toBe(true);
   });
 
   it("o fundamento da margem a 0 % acompanha a base", () => {

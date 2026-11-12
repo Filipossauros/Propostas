@@ -2842,8 +2842,16 @@ select.campo-bloqueado:disabled {
 }
 
 /* Módulo 3 · Tabela de referência do valor hora. */
-.opcoes-natureza.opcoes-tres {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 1000px) and (min-width: 721px) {
+  .opcoes-natureza.opcoes-quatro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.opcoes-natureza.opcoes-quatro {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.campo-texto-livre-valor-hora {
+  margin-top: 14px;
 }
 .titulo-tabela-referencia {
   margin: 18px 0 8px;
@@ -2876,7 +2884,7 @@ select.campo-bloqueado:disabled {
   width: 78px;
 }
 @media (max-width: 720px) {
-  .opcoes-natureza.opcoes-tres {
+  .opcoes-natureza.opcoes-quatro {
     grid-template-columns: 1fr;
   }
 }

@@ -483,8 +483,6 @@ export function Modulo2({
         )}
       </section>
 
-      <ReferenciaValorHoraEditor config={config} onAlterarConfig={onAlterarConfig} />
-
       <section className="painel">
         <header className="painel-cabecalho">
           <h3>Lotes</h3>
@@ -510,6 +508,8 @@ export function Modulo2({
           + Adicionar lote
         </button>
       </section>
+
+      <ReferenciaValorHoraEditor config={config} onAlterarConfig={onAlterarConfig} />
 
       {erros.length > 0 && (
         <section className="painel painel-erros">

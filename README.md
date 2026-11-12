@@ -247,19 +247,20 @@ manifestações desta natureza. O **júri técnico** — diretor, coordenador,
 unidade e gestor de projeto — escreve-se no Módulo 3: o coordenador assina a
 informação, e a unidade sai na assinatura por baixo da direção.
 
-**Valor hora de referência.** No Módulo 3, antes dos lotes, uma tabela visível e
+**Valor hora de referência.** No Módulo 3, depois dos lotes, uma tabela visível e
 editável fundamenta, de forma genérica, os valores hora — sem ligação perfil a
 perfil: o preço/hora de cada perfil continua a escrever-se no lote. A base é a
 **rate média das propostas** dos últimos procedimentos (perfil, procedimentos,
 propostas admitidas, rate do valor base, mais alta e média; a diferença da média
 para o valor base calcula-se), os **valores anteriormente adjudicados** (perfil,
-procedimento ou contrato, ano e valor hora adjudicado), ou **ambos**. Parte do
+procedimento ou contrato, ano e valor hora adjudicado), **ambos**, ou **texto
+livre** (a fundamentação escrita à mão, sem tabela, que sai tal como está escrita). Parte do
 quadro de referência da SPMS, que se pode repor. Sai no Anexo I da manifestação
 (ponto 3), com o parágrafo e a tabela da base escolhida.
 
 **Margem prudencial.** A 0 % (por omissão), a margem considera-se incorporada nos
 valores hora, e o fundamento — obrigatório — di-lo, conforme a base da tabela de
-referência (rate média, valores adjudicados, ou ambos). Acima de 0 %, a margem
+referência (rate média, valores adjudicados, ambos, ou texto livre). Acima de 0 %, a margem
 aplica-se ao valor hora de cada perfil, arredondado ao cêntimo, e passa a todos
 os valores: perfis, lotes, anos, valor estimado, eAvalia, o resumo do Módulo 3 e a
 vista geral. O JSON do agrupamento guarda os valores de referência e a margem à

@@ -51,27 +51,40 @@ export function ReferenciaValorHoraEditor({ config, onAlterarConfig }: Props) {
       </header>
 
       <span className="rotulo">Fundamento dos valores hora</span>
-      <div className="opcoes-natureza opcoes-tres" role="radiogroup" aria-label="Fundamento dos valores hora">
-        {(Object.entries(FUNDAMENTOS_VALOR_HORA) as Array<[FundamentoValorHora, { titulo: string; texto: string }]>).map(
-          ([valor, f]) => (
-            <label
-              key={valor}
-              className={ref.fundamento === valor ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"}
-            >
-              <input
-                type="radio"
-                name="fundamento-valor-hora"
-                checked={ref.fundamento === valor}
-                onChange={() => alterar({ fundamento: valor })}
-              />
-              <span>
-                <strong>{f.titulo}</strong>
-                <span className="meta">{f.texto}</span>
-              </span>
-            </label>
-          ),
-        )}
+      <div className="opcoes-natureza opcoes-quatro" role="radiogroup" aria-label="Fundamento dos valores hora">
+        {(
+          Object.entries(FUNDAMENTOS_VALOR_HORA) as Array<[FundamentoValorHora, { titulo: string; texto: string }]>
+        ).map(([valor, f]) => (
+          <label
+            key={valor}
+            className={ref.fundamento === valor ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"}
+          >
+            <input
+              type="radio"
+              name="fundamento-valor-hora"
+              checked={ref.fundamento === valor}
+              onChange={() => alterar({ fundamento: valor })}
+            />
+            <span>
+              <strong>{f.titulo}</strong>
+              <span className="meta">{f.texto}</span>
+            </span>
+          </label>
+        ))}
       </div>
+
+      {ref.fundamento === "livre" && (
+        <label className="campo campo-texto-livre-valor-hora">
+          <span className="rotulo">Fundamentação dos valores hora (sai no Anexo I, ponto 3)</span>
+          <textarea
+            rows={6}
+            value={ref.textoLivre}
+            placeholder="ex.: Relativamente ao valor unitário, o mesmo foi apurado com base em…"
+            aria-invalid={ref.textoLivre.trim() === ""}
+            onChange={(e) => alterar({ textoLivre: e.target.value })}
+          />
+        </label>
+      )}
 
       {usaRateMedia(ref.fundamento) && (
         <>
@@ -191,7 +204,11 @@ export function ReferenciaValorHoraEditor({ config, onAlterarConfig }: Props) {
               type="button"
               className="botao-discreto"
               onClick={() => {
-                if (confirm("Repor as rates médias com o quadro de referência da SPMS? As linhas atuais são substituídas."))
+                if (
+                  confirm(
+                    "Repor as rates médias com o quadro de referência da SPMS? As linhas atuais são substituídas.",
+                  )
+                )
                   alterar({ media: linhasRatesSpms() });
               }}
             >
@@ -295,10 +312,12 @@ export function ReferenciaValorHoraEditor({ config, onAlterarConfig }: Props) {
           </div>
         </>
       )}
-      <p className="ajuda">
-        A diferença da rate média para o valor base calcula-se sozinha. As linhas não têm de coincidir com os perfis
-        dos lotes: a tabela fundamenta os valores hora no seu conjunto.
-      </p>
+      {ref.fundamento !== "livre" && (
+        <p className="ajuda">
+          A diferença da rate média para o valor base calcula-se sozinha. As linhas não têm de coincidir com os perfis
+          dos lotes: a tabela fundamenta os valores hora no seu conjunto.
+        </p>
+      )}
     </section>
   );
 }
