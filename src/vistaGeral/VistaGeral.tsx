@@ -22,6 +22,8 @@ import {
   type Biblioteca,
 } from "../core/biblioteca";
 import { orcamentoComBiblioteca } from "../core/orcamentoDaBiblioteca";
+import { alteradosDepois, aprovarCenario, desfazerUltimaAprovacao, ultimaAprovacao } from "../core/aprovacao";
+import { cenariosAtivos } from "../core/cenarios";
 import { formatarMoeda } from "../core/lotes";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDaVistaGeral, nomeDoPacoteDaVistaGeral } from "../saidas/pacotes";
@@ -79,6 +81,8 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
     </div>
   );
   const candidatos = biblioteca.pedidos.filter((p) => !p.arquivado);
+  const aprovacao = ultimaAprovacao(guardado);
+  const nCenarios = cenariosAtivos(orcamento.cenarios).length;
 
   /**
    * Altera o orçamento guardado. A alteração parte da versão guardada já posta
@@ -182,6 +186,43 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
     setOrcamento((atual) => comProjetoDeslocado(atual, projetoId, passos));
   }
 
+  /** O cenário passa a ser o orçamento, e os cortes passam para os pedidos (nova versão). */
+  function aprovar(cenarioId: string) {
+    const r = aprovarCenario(guardado, biblioteca, cenarioId);
+    if (r === null) return;
+    onAlterarBiblioteca(() => r.biblioteca);
+    setGuardado(r.orcamento);
+    setLeitura("orcamento");
+    const a = ultimaAprovacao(r.orcamento);
+    setMensagem({
+      tipo: "sucesso",
+      texto: `Cenário «${a?.cenarioNome ?? ""}» aprovado: é agora o orçamento da unidade.`,
+    });
+    window.scrollTo({ top: 0 });
+  }
+
+  function desfazer() {
+    const a = ultimaAprovacao(guardado);
+    if (a === null) return;
+    const mudados = alteradosDepois(a, biblioteca);
+    const aviso =
+      mudados.length > 0
+        ? ` Atenção: ${mudados.join(", ")} ${mudados.length === 1 ? "foi alterado" : "foram alterados"} depois da aprovação, e essas alterações perdem-se.`
+        : "";
+    if (
+      !confirm(
+        `Desfazer a aprovação do cenário «${a.cenarioNome}»? Os pedidos voltam à versão anterior, e o orçamento e os ` +
+          `cenários voltam a como estavam antes da aprovação.${aviso}`,
+      )
+    )
+      return;
+    const r = desfazerUltimaAprovacao(guardado, biblioteca);
+    if (r === null) return;
+    onAlterarBiblioteca(() => r.biblioteca);
+    setGuardado(r.orcamento);
+    setMensagem({ tipo: "sucesso", texto: `Aprovação do cenário «${a.cenarioNome}» desfeita.` });
+  }
+
   function recomecar() {
     if (
       !confirm(
@@ -206,12 +247,28 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
           </div>
         </div>
         <p>
-          Os pedidos da unidade lado a lado — de bolsa de horas e de licenciamento: quantas pessoas e quanto dinheiro
-          em cada um, e que fatia da equipa cada um ocupa. Acompanha os pedidos da biblioteca marcados «no orçamento».
+          Os pedidos da unidade lado a lado — de bolsa de horas e de licenciamento: quantas pessoas e quanto dinheiro em
+          cada um, e que fatia da equipa cada um ocupa. Acompanha os pedidos da biblioteca marcados «no orçamento».
         </p>
       </div>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
+
+      {aprovacao !== null && (
+        <section className="painel painel-revisto" aria-label="Orçamento revisto">
+          <div className="painel-revisto-texto">
+            <p>
+              <span className="etiqueta-aprovado">Orçamento revisto</span> Cenário «{aprovacao.cenarioNome}» aprovado em{" "}
+              {new Date(aprovacao.em).toLocaleDateString("pt-PT")}
+              {guardado.aprovacoes.length > 1 ? ` (revisão ${guardado.aprovacoes.length})` : ""}.
+            </p>
+            {aprovacao.resumo.length > 0 && <p className="meta">{aprovacao.resumo.join(" · ")}</p>}
+          </div>
+          <button type="button" className="botao-secundario" onClick={desfazer}>
+            Desfazer a aprovação
+          </button>
+        </section>
+      )}
 
       <div className="seletor-vista" role="group" aria-label="Leitura da vista">
         <button
@@ -228,13 +285,15 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
           aria-pressed={leitura === "cenarios"}
           onClick={() => setLeitura("cenarios")}
         >
-          Cenários de corte{orcamento.cenarios.length > 0 ? ` (${orcamento.cenarios.length})` : ""}
+          Cenários de corte{nCenarios > 0 ? ` (${nCenarios})` : ""}
         </button>
       </div>
 
       {leitura === "cenarios" && (
         <CenariosDeCorte
           orcamento={orcamento}
+          biblioteca={biblioteca}
+          onAprovar={aprovar}
           barraColapso={barraColapso}
           colapsados={colapsados}
           onAlternarColapso={alternarColapso}
@@ -334,8 +393,8 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
             <p className="ajuda">
               Os ficheiros importados (lotes de colegas, pedidos, perfis) entram na biblioteca e ficam marcados aqui. Um
               orçamento descarregado antes da biblioteca carrega-se com «Carregar Vista Geral»: os seus projetos ficam
-              como importados, até haver na biblioteca um pedido com o mesmo nome. O orçamento fica guardado
-              neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto de trabalho.
+              como importados, até haver na biblioteca um pedido com o mesmo nome. O orçamento fica guardado neste
+              navegador, incluindo os nomes dos elementos internos, e não sai deste posto de trabalho.
             </p>
           </section>
 
@@ -388,7 +447,8 @@ export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: P
         <p className="ajuda">
           Um ZIP com o Excel e o JSON. O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por
           projeto — e, havendo cenários de corte, uma folha «Comparação» com o orçamento e os cenários lado a lado e o
-          detalhe de cada cenário. O JSON leva os cenários, para os retomar noutro posto. O nome do ficheiro leva os anos de início dos projetos carregados.
+          detalhe de cada cenário. O JSON leva os cenários, para os retomar noutro posto. O nome do ficheiro leva os
+          anos de início dos projetos carregados.
         </p>
       </section>
     </>

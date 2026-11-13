@@ -17,6 +17,7 @@ import { aplicarIva, horasPorAnoDe, taxaIva } from "./lotes";
 import { ErroImportacao } from "./perfil";
 import { gerarId } from "./id";
 import { normalizarCenarios, type Cenario } from "./cenarios";
+import { normalizarPedido, type PedidoNaBiblioteca } from "./biblioteca";
 
 /** Uma pessoa da equipa afeta ao projeto, registada pelo nome. */
 export interface ElementoInterno {
@@ -84,10 +85,40 @@ export interface OrcamentoUnidade {
   projetos: ProjetoVistaGeral[];
   /** Variações do orçamento com menos pessoas: ver `cenarios.ts`. */
   cenarios: Cenario[];
+  /** As aprovações de cenários, da mais antiga à mais recente: ver `aprovacao.ts`. */
+  aprovacoes: Aprovacao[];
+}
+
+/**
+ * Um cenário aprovado: passou a ser o orçamento revisto, e os pedidos que
+ * cortava passaram a uma nova versão. Guarda o que havia antes, para se poder
+ * desfazer.
+ */
+export interface Aprovacao {
+  id: string;
+  cenarioId: string;
+  cenarioNome: string;
+  /** Data ISO. */
+  em: string;
+  /** O que mudou, em frases curtas, para se mostrar. */
+  resumo: string[];
+  /** Os pedidos alterados, tal como estavam antes da aprovação. */
+  pedidosAntes: PedidoNaBiblioteca[];
+  /** Como ficaram (versão e data), para se saber se foram alterados depois. */
+  pedidosDepois: Array<{ id: string; versao: number; atualizadoEm: string }>;
+  /** O orçamento guardado antes: projetos (com os internos) e cenários. */
+  orcamentoAntes: { projetos: ProjetoVistaGeral[]; cenarios: Cenario[] };
 }
 
 export function orcamentoInicial(): OrcamentoUnidade {
-  return { schemaVersion: SCHEMA_VERSION_ATUAL, tipo: "orcamentoUnidade", unidade: "", projetos: [], cenarios: [] };
+  return {
+    schemaVersion: SCHEMA_VERSION_ATUAL,
+    tipo: "orcamentoUnidade",
+    unidade: "",
+    projetos: [],
+    cenarios: [],
+    aprovacoes: [],
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -470,7 +501,48 @@ export function normalizarOrcamento(bruto: object): OrcamentoUnidade {
     unidade: typeof registo.unidade === "string" ? registo.unidade : "",
     projetos: Array.isArray(registo.projetos) ? registo.projetos.map((p) => normalizarProjeto(p)) : [],
     cenarios: normalizarCenarios(registo.cenarios),
+    aprovacoes: normalizarAprovacoes(registo.aprovacoes),
   };
+}
+
+/** Uma aprovação ilegível não se pode desfazer com segurança: descarta-se. */
+function normalizarAprovacoes(bruto: unknown): Aprovacao[] {
+  if (!Array.isArray(bruto)) return [];
+  return bruto.flatMap((x) => {
+    if (typeof x !== "object" || x === null) return [];
+    const a = x as Record<string, unknown>;
+    const texto = (v: unknown) => (typeof v === "string" ? v : "");
+    const antes = (typeof a.orcamentoAntes === "object" && a.orcamentoAntes !== null ? a.orcamentoAntes : {}) as Record<
+      string,
+      unknown
+    >;
+    if (!Array.isArray(a.pedidosAntes) || !Array.isArray(antes.projetos)) return [];
+    try {
+      return [
+        {
+          id: texto(a.id) || gerarId(),
+          cenarioId: texto(a.cenarioId),
+          cenarioNome: texto(a.cenarioNome) || "Cenário",
+          em: texto(a.em),
+          resumo: Array.isArray(a.resumo) ? a.resumo.filter((r): r is string => typeof r === "string") : [],
+          pedidosAntes: a.pedidosAntes.map(normalizarPedido).filter((p): p is PedidoNaBiblioteca => p !== null),
+          pedidosDepois: (Array.isArray(a.pedidosDepois) ? a.pedidosDepois : []).flatMap((d) => {
+            if (typeof d !== "object" || d === null) return [];
+            const r = d as Record<string, unknown>;
+            return texto(r.id) !== ""
+              ? [{ id: texto(r.id), versao: Number(r.versao) || 1, atualizadoEm: texto(r.atualizadoEm) }]
+              : [];
+          }),
+          orcamentoAntes: {
+            projetos: antes.projetos.map((p) => normalizarProjeto(p)),
+            cenarios: normalizarCenarios(antes.cenarios),
+          },
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
 }
 
 function normalizarProjeto(bruto: unknown): ProjetoVistaGeral {
@@ -503,7 +575,7 @@ function normalizarEntrada(bruto: unknown): EntradaVistaGeral {
       ? { horasPorAno: Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => numero((e.horasPorAno as unknown[])[i])) }
       : {}),
     ...(e.quantidade !== undefined ? { quantidade: numero(e.quantidade) } : {}),
-    ...(e.quantidadeAjustavel === true ? { quantidadeAjustavel: true } : {}),
+    ...(typeof e.quantidadeAjustavel === "boolean" ? { quantidadeAjustavel: e.quantidadeAjustavel } : {}),
     ...(typeof e.unidadeQuantidade === "string" ? { unidadeQuantidade: e.unidadeQuantidade } : {}),
     lote: typeof e.lote === "string" ? e.lote : "",
     perfil: typeof e.perfil === "string" ? e.perfil : "(perfil sem designação)",

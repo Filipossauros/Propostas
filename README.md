@@ -448,10 +448,31 @@ internas) e o valor de cada ano; há também «Colapsar todos» e «Expandir tod
   dos do orçamento, com a diferença. Como as tabelas têm um ano por coluna, o orçamento ocupa mais
   largura do que as outras páginas.
 
+Nos cortes, o número do orçamento (pessoas, quantidade, valor de cada ano) fica riscado ao lado do novo.
+
+**Aprovar um cenário** («Aprovar este cenário…») torna-o o orçamento revisto. Antes, um diálogo mostra
+o que muda em cada pedido; avisa quando um pedido já tem n.º de informação (se a informação já seguiu,
+terá de ser refeita). Ao aprovar:
+
+- cada pedido cortado passa a uma nova versão (v2, v3, …), com as pessoas, as horas, o valor hora (sem
+  a margem prudencial) e as quantidades do cenário. Na biblioteca fica o estado «Revisto» e a nota da
+  aprovação. As peças da nova versão descarregam-se de novo no pedido;
+- o que fica vazio sai: um perfil sem elementos sai do lote, um lote sem perfis (ou sem licenças) sai
+  do pedido, e um perfil que deixou de estar em lotes sai dos perfis;
+- um pedido cortado por inteiro não é esvaziado: sai do orçamento e fica na biblioteca como estava;
+- os projetos importados de ficheiro ficam com as linhas do cenário, e os internos movidos ficam no
+  projeto de destino;
+- o cenário aprovado e os outros são arquivados (podem desarquivar-se, e os cortes passam a aplicar-se
+  ao orçamento atual).
+
+O orçamento mostra «Orçamento revisto», com **«Desfazer a aprovação»**: os pedidos voltam à versão
+anterior, e o orçamento e os cenários a como estavam. Se um pedido foi alterado depois da aprovação,
+avisa-se de que essas alterações se perdem.
+
 Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao perfil, e não aos
 identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de
-ter onde se aplicar é assinalado. Os cenários viajam no JSON da Vista Geral, e o Excel leva uma folha
-«Comparação» e o detalhe de cada cenário.
+ter onde se aplicar é assinalado. Os cenários (e as aprovações) viajam no JSON da Vista Geral, e o Excel
+leva uma folha «Comparação» e o detalhe de cada cenário em curso (os arquivados não entram).
 
 ## Princípios
 

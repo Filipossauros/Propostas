@@ -32,6 +32,7 @@ function orcamento(): OrcamentoUnidade {
     tipo: "orcamentoUnidade",
     unidade: "UPACE",
     cenarios: [],
+    aprovacoes: [],
     projetos: [
       {
         id: "pa",

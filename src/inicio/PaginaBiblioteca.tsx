@@ -115,7 +115,8 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
   }
 
   function apagar(p: PedidoNaBiblioteca) {
-    if (!confirm(`Apagar o pedido «${nomeParaListas(p)}»? Não se pode desfazer. Pode exportá-lo antes, em JSON.`)) return;
+    if (!confirm(`Apagar o pedido «${nomeParaListas(p)}»? Não se pode desfazer. Pode exportá-lo antes, em JSON.`))
+      return;
     onAlterar((b) => semPedido(b, p.id));
   }
 
@@ -161,8 +162,8 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
       </div>
       <p className="ajuda">
         Todos os pedidos — de bolsa de horas e de licenciamento — ficam guardados neste navegador; nada sai deste
-        computador. Importa-se uma biblioteca descarregada, um pedido, um agrupamento de lotes ou um ficheiro de
-        perfis. A análise de propostas abre-se na barra de cima: é outro momento, depois de recebidas as propostas.
+        computador. Importa-se uma biblioteca descarregada, um pedido, um agrupamento de lotes ou um ficheiro de perfis.
+        A análise de propostas abre-se na barra de cima: é outro momento, depois de recebidas as propostas.
       </p>
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
@@ -185,8 +186,8 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
       {biblioteca.pedidos.length === 0 ? (
         <section className="painel">
           <p className="estado-vazio">
-            A biblioteca ainda não tem pedidos. Crie o primeiro — de bolsa de horas ou de licenciamento — ou importe
-            um ficheiro.
+            A biblioteca ainda não tem pedidos. Crie o primeiro — de bolsa de horas ou de licenciamento — ou importe um
+            ficheiro.
           </p>
         </section>
       ) : visiveis.length === 0 ? (
@@ -234,7 +235,17 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                         </span>
                       )}
                     </td>
-                    <td>v{p.versao}</td>
+                    <td>
+                      v{p.versao}
+                      {p.historico.length > 0 && (
+                        <span
+                          className="meta meta-bloco"
+                          title={p.historico.map((h) => `v${h.versao}: ${h.nota}`).join("\n")}
+                        >
+                          {p.historico.at(-1)?.nota}
+                        </span>
+                      )}
+                    </td>
                     <td className="numerico">{valor === null ? "—" : formatarMoeda(valor)}</td>
                     <td className="celula-no-orcamento">
                       <input
@@ -242,7 +253,9 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                         checked={p.noOrcamento}
                         disabled={p.arquivado}
                         aria-label={`${nomeParaListas(p)} no orçamento`}
-                        title={p.arquivado ? "Um pedido arquivado não entra no orçamento" : "Entra no orçamento da unidade"}
+                        title={
+                          p.arquivado ? "Um pedido arquivado não entra no orçamento" : "Entra no orçamento da unidade"
+                        }
                         onChange={(e) => onAlterar((b) => comNoOrcamento(b, [p.id], e.target.checked))}
                       />
                     </td>

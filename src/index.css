@@ -3104,8 +3104,8 @@ select.campo-bloqueado:disabled {
   color: var(--verde);
 }
 .etiqueta-estado-revisto {
-  background: #e0eaff;
-  color: #2d3fa6;
+  background: var(--azul-100);
+  color: var(--azul-500);
 }
 .etiqueta-estado-arquivado {
   background: var(--superficie-alt);
@@ -3355,4 +3355,104 @@ select.campo-bloqueado:disabled {
 }
 .app.app-largo {
   max-width: 1440px;
+}
+
+/* Fase 4: aprovar um cenário */
+.acoes-aprovar {
+  align-items: center;
+  margin-top: 14px;
+}
+.acoes-aprovar .ajuda {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+.numero-cortado {
+  color: var(--vermelho);
+  font-weight: 600;
+}
+.cenarios-arquivados {
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+.cenarios-arquivados summary {
+  cursor: pointer;
+  color: var(--texto-suave);
+}
+.cenarios-arquivados ul {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.cenarios-arquivados li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borda);
+}
+.etiqueta-aprovado {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--verde-fundo);
+  color: var(--verde);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.painel-revisto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-left: 4px solid var(--verde);
+}
+.painel-revisto-texto p {
+  margin: 0;
+}
+.painel-revisto-texto .meta {
+  margin-top: 4px;
+}
+.dialogo-aprovar {
+  max-width: 40rem;
+}
+.previsao-aprovacao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.previsao-pedido {
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  padding: 10px 12px;
+}
+.previsao-pedido-titulo {
+  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.previsao-pedido ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+.etiqueta-versao,
+.etiqueta-sai {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.etiqueta-versao {
+  background: var(--verde-fundo);
+  color: var(--verde);
+}
+.etiqueta-sai {
+  background: var(--vermelho-fundo);
+  color: var(--vermelho);
 }

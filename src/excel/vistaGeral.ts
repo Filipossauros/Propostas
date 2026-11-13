@@ -27,7 +27,7 @@ import {
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
 } from "../core/vistaGeral";
-import { aplicarCenario, type Cenario } from "../core/cenarios";
+import { aplicarCenario, cenariosAtivos, type Cenario } from "../core/cenarios";
 import { prepararImpressao } from "./impressao";
 import {
   cabecalho,
@@ -87,7 +87,9 @@ function linhasDoProjeto(projeto: ProjetoVistaGeral, anos: number[]): Celula[][]
   return linhas.map((meio) => [texto(projeto.nome), ...meio]);
 }
 
-export function gerarWorkbookVistaGeral(orcamento: OrcamentoUnidade): ExcelJS.Workbook {
+export function gerarWorkbookVistaGeral(completo: OrcamentoUnidade): ExcelJS.Workbook {
+  // Os cenários arquivados (o aprovado e os que partiam do orçamento anterior) não entram.
+  const orcamento = { ...completo, cenarios: cenariosAtivos(completo.cenarios) };
   const livro = new ExcelJS.Workbook();
   livro.creator = "Propostas";
   livro.created = new Date();

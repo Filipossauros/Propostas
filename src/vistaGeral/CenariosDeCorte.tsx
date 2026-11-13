@@ -3,6 +3,8 @@ import { formatarMoeda, formatarNumero } from "../core/lotes";
 import {
   alteracoesSemEfeito,
   aplicarCenario,
+  cenariosAtivos,
+  cenarioTemAlteracoes,
   comInternoMovido,
   comHorasNoAno,
   comPassoDeHoras,
@@ -43,9 +45,14 @@ import {
 import { BotaoColapsar, EtiquetaDoProjeto, resumoDoProjeto } from "./projetoColapsavel";
 import { ResumoGeral } from "./ResumoGeral";
 import { CampoNumero } from "../ui/CampoNumero";
+import type { Biblioteca } from "../core/biblioteca";
+import { DialogoAprovarCenario } from "./DialogoAprovarCenario";
 
 interface Props {
   orcamento: OrcamentoUnidade;
+  biblioteca: Biblioteca;
+  /** Aprova o cenário: passa a ser o orçamento, e os cortes passam para os pedidos. */
+  onAprovar: (cenarioId: string) => void;
   /** Os botões de colapsar e expandir todos os projetos. */
   barraColapso: React.ReactNode;
   colapsados: ReadonlySet<string>;
@@ -64,6 +71,8 @@ interface Props {
  */
 export function CenariosDeCorte({
   orcamento,
+  biblioteca,
+  onAprovar,
   barraColapso,
   colapsados,
   onAlternarColapso,
@@ -72,7 +81,18 @@ export function CenariosDeCorte({
   onDeslocarProjeto,
 }: Props) {
   const [ativoId, setAtivoId] = useState<string | null>(null);
-  const cenario = orcamento.cenarios.find((c) => c.id === ativoId) ?? orcamento.cenarios[0] ?? null;
+  const [aAprovar, setAAprovar] = useState(false);
+  const ativos = cenariosAtivos(orcamento.cenarios);
+  const arquivados = orcamento.cenarios.filter((c) => c.arquivado === true);
+  const cenario = ativos.find((c) => c.id === ativoId) ?? ativos[0] ?? null;
+
+  function desarquivar(id: string) {
+    onAlterar((atual) => ({
+      ...atual,
+      cenarios: atual.cenarios.map((c) => (c.id === id ? { ...c, arquivado: false } : c)),
+    }));
+    setAtivoId(id);
+  }
 
   function alterarCenario(alterar: (c: Cenario) => Cenario) {
     if (cenario === null) return;
@@ -123,7 +143,7 @@ export function CenariosDeCorte({
         </header>
 
         <div className="barra-cenarios">
-          {orcamento.cenarios.map((c) => (
+          {ativos.map((c) => (
             <button
               key={c.id}
               type="button"
@@ -151,7 +171,9 @@ export function CenariosDeCorte({
 
         {cenario === null ? (
           <p className="estado-vazio">
-            Ainda não há cenários. Crie o primeiro para começar a cortar pessoas sem mexer no orçamento.
+            {arquivados.length > 0
+              ? "Não há cenários em curso. Crie um novo para cortar a partir do orçamento atual."
+              : "Ainda não há cenários. Crie o primeiro para começar a cortar pessoas sem mexer no orçamento."}
           </p>
         ) : (
           <>
@@ -165,9 +187,63 @@ export function CenariosDeCorte({
               />
             </label>
             <Comparacao orcamento={orcamento} cenario={cenario} />
+            <div className="acoes acoes-aprovar">
+              <button
+                type="button"
+                className="botao-principal"
+                disabled={!cenarioTemAlteracoes(cenario)}
+                onClick={() => setAAprovar(true)}
+              >
+                Aprovar este cenário…
+              </button>
+              <p className="ajuda">
+                {cenarioTemAlteracoes(cenario)
+                  ? "O cenário passa a ser o orçamento revisto, e os pedidos cortados passam a uma nova versão. Mostra-se antes o que muda; pode desfazer-se."
+                  : "Sem cortes, não há o que aprovar."}
+              </p>
+            </div>
           </>
         )}
+
+        {arquivados.length > 0 && (
+          <details className="cenarios-arquivados">
+            <summary>Cenários arquivados ({arquivados.length})</summary>
+            <ul>
+              {arquivados.map((c) => (
+                <li key={c.id}>
+                  <span>
+                    <strong>{c.nome}</strong>{" "}
+                    {c.aprovadoEm !== undefined ? (
+                      <span className="etiqueta-aprovado">aprovado em {dataCurta(c.aprovadoEm)}</span>
+                    ) : (
+                      <span className="meta">arquivado</span>
+                    )}
+                  </span>
+                  <button type="button" className="botao-discreto" onClick={() => desarquivar(c.id)}>
+                    Desarquivar
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="ajuda">
+              Um cenário desarquivado volta a aplicar os seus cortes, agora sobre o orçamento atual.
+            </p>
+          </details>
+        )}
       </section>
+
+      {aAprovar && cenario !== null && (
+        <DialogoAprovarCenario
+          orcamento={orcamento}
+          biblioteca={biblioteca}
+          cenario={cenario}
+          onFechar={() => setAAprovar(false)}
+          onAprovar={() => {
+            setAAprovar(false);
+            onAprovar(cenario.id);
+          }}
+        />
+      )}
 
       {cenario !== null && (
         <>
@@ -193,10 +269,10 @@ export function CenariosDeCorte({
             <header className="painel-cabecalho">
               <h3>Cortes, linha a linha</h3>
               <p className="painel-nota">
-                Num perfil, use − e + para retirar ou repor pessoas, ajuste as horas de cada ano (por elemento) em passos
-                de {PASSO_HORAS} h — com −{PASSO_HORAS} / +{PASSO_HORAS}, ou escrevendo-as — e altere o valor hora (sem IVA): o valor
-                de cada ano acompanha. Numa licença de preço unitário corte a quantidade; qualquer licença pode ser
-                retirada. Os internos não se cortam, mas podem passar para outro projeto.
+                Num perfil, use − e + para retirar ou repor pessoas, ajuste as horas de cada ano (por elemento) em
+                passos de {PASSO_HORAS} h — com −{PASSO_HORAS} / +{PASSO_HORAS}, ou escrevendo-as — e altere o valor
+                hora (sem IVA): o valor de cada ano acompanha. Numa licença de preço unitário corte a quantidade;
+                qualquer licença pode ser retirada. Os internos não se cortam, mas podem passar para outro projeto.
               </p>
             </header>
             {barraColapso}
@@ -344,7 +420,8 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
           const alteradas = projeto.entradas.filter((e) => linhaAlterada(cenario, projeto, e)).length;
           const partesDoResumo: string[] = [];
           if (cortadas > 0) partesDoResumo.push(`−${cortadas} ${cortadas === 1 ? "pessoa" : "pessoas"}`);
-          if (retiradas > 0) partesDoResumo.push(`${retiradas} ${retiradas === 1 ? "licença retirada" : "licenças retiradas"}`);
+          if (retiradas > 0)
+            partesDoResumo.push(`${retiradas} ${retiradas === 1 ? "licença retirada" : "licenças retiradas"}`);
           if (partesDoResumo.length === 0 && alteradas > 0)
             partesDoResumo.push(`${alteradas} ${alteradas === 1 ? "linha alterada" : "linhas alteradas"}`);
           const resumoDosCortes = partesDoResumo.join(" · ") || "sem cortes";
@@ -394,7 +471,10 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                     <span className="meta">{resumoDoProjeto(projeto)}</span>
                   </td>
                   <td className="numerico">{antes}</td>
-                  <td className="numerico">{depois}</td>
+                  <td className="numerico">
+                    {depois}
+                    {depois !== antes && <span className="valor-anterior">{antes}</span>}
+                  </td>
                   <td className="numerico">
                     <span className="meta">—</span>
                   </td>
@@ -438,7 +518,9 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                           <input
                             type="checkbox"
                             checked={retirada}
-                            onChange={(e) => onAlterarCenario((c) => comRetirada(c, projeto, entrada, e.target.checked))}
+                            onChange={(e) =>
+                              onAlterarCenario((c) => comRetirada(c, projeto, entrada, e.target.checked))
+                            }
                           />
                           <span>Retirar do cenário</span>
                         </label>
@@ -462,6 +544,11 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                         ) : (
                           <span className="meta">{retirada ? "0" : "—"}</span>
                         )}
+                        {entrada.quantidadeAjustavel === true &&
+                          !retirada &&
+                          quantidade !== (entrada.quantidade ?? 0) && (
+                            <span className="valor-anterior">{formatarNumero(entrada.quantidade ?? 0)}</span>
+                          )}
                         {entrada.quantidadeAjustavel === true && entrada.unidadeQuantidade !== undefined && (
                           <span className="meta meta-bloco">{entrada.unidadeQuantidade}</span>
                         )}
@@ -475,7 +562,9 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                         return (
                           <td key={ano} className="numerico">
                             {valor === null ? <span className="meta">—</span> : formatarMoeda(valor)}
-                            {alterada && antes !== null && <span className="valor-anterior">{formatarMoeda(antes)}</span>}
+                            {alterada && antes !== null && (
+                              <span className="valor-anterior">{formatarMoeda(antes)}</span>
+                            )}
                           </td>
                         );
                       })}
@@ -510,7 +599,7 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                         >
                           −
                         </button>
-                        <span>{ficam}</span>
+                        <span className={ficam !== entrada.pessoas ? "numero-cortado" : undefined}>{ficam}</span>
                         <button
                           type="button"
                           aria-label={`Repor uma pessoa em ${entrada.perfil} (${projeto.nome})`}
@@ -520,6 +609,7 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                           +
                         </button>
                       </span>
+                      {ficam !== entrada.pessoas && <span className="valor-anterior">{entrada.pessoas}</span>}
                     </td>
                     <td className="numerico celula-valor-hora">
                       <CampoNumero
@@ -640,6 +730,9 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
             </td>
             <td className="numerico">
               <strong>{pessoasDaUnidade(noCenario)}</strong>
+              {pessoasDaUnidade(noCenario) !== pessoasDaUnidade(orcamento) && (
+                <span className="valor-anterior">{pessoasDaUnidade(orcamento)}</span>
+              )}
             </td>
             <td />
             {totaisPorAnoDaUnidade(noCenario).map((total, i) => (
@@ -681,7 +774,12 @@ function CampoHoras({
   };
   return (
     <span className="passo-horas" role="group" aria-label={rotulo}>
-      <button type="button" aria-label={`Menos ${PASSO_HORAS} h — ${rotulo}`} disabled={horas <= 0} onClick={() => onPasso(-1)}>
+      <button
+        type="button"
+        aria-label={`Menos ${PASSO_HORAS} h — ${rotulo}`}
+        disabled={horas <= 0}
+        onClick={() => onPasso(-1)}
+      >
         −{PASSO_HORAS}
       </button>
       <input
@@ -709,4 +807,9 @@ function CampoHoras({
       <span className="passo-horas-unidade">h</span>
     </span>
   );
+}
+
+function dataCurta(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-PT");
 }

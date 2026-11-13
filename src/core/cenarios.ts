@@ -58,6 +58,24 @@ export interface Cenario {
   nome: string;
   cortes: CorteDeLinha[];
   movimentos: MovimentoDeInterno[];
+  /**
+   * Arquivado: fora da lista de trabalho. Acontece aos cenários quando um deles
+   * é aprovado — o aprovado passou a ser o orçamento, e os outros partiam do
+   * orçamento anterior.
+   */
+  arquivado?: boolean;
+  /** Data ISO em que o cenário foi aprovado (passou a ser o orçamento revisto). */
+  aprovadoEm?: string;
+}
+
+/** Os cenários em que se trabalha: os não arquivados. */
+export function cenariosAtivos(cenarios: Cenario[]): Cenario[] {
+  return cenarios.filter((c) => c.arquivado !== true);
+}
+
+/** Se o cenário muda alguma coisa — sem cortes nem movimentos, não há o que aprovar. */
+export function cenarioTemAlteracoes(cenario: Cenario): boolean {
+  return cenario.cortes.length > 0 || cenario.movimentos.length > 0;
 }
 
 export function novoCenario(nome: string): Cenario {
@@ -74,7 +92,10 @@ export function nomeLivre(cenarios: Cenario[], base = "Cenário"): string {
 }
 
 export function duplicarCenario(cenario: Cenario, nome: string): Cenario {
-  return { ...structuredClone(cenario), id: gerarId(), nome };
+  const copia: Cenario = { ...structuredClone(cenario), id: gerarId(), nome };
+  delete copia.arquivado;
+  delete copia.aprovadoEm;
+  return copia;
 }
 
 function eDaLinha(corte: CorteDeLinha, projeto: ProjetoVistaGeral, entrada: EntradaVistaGeral): boolean {
@@ -421,6 +442,8 @@ export function normalizarCenarios(bruto: unknown): Cenario[] {
       {
         id: texto(r.id) || gerarId(),
         nome: texto(r.nome).trim() || "Cenário",
+        ...(r.arquivado === true ? { arquivado: true } : {}),
+        ...(texto(r.aprovadoEm) !== "" ? { aprovadoEm: texto(r.aprovadoEm) } : {}),
         cortes: (Array.isArray(r.cortes) ? r.cortes : []).flatMap((x) => {
           if (typeof x !== "object" || x === null) return [];
           const k = x as Record<string, unknown>;

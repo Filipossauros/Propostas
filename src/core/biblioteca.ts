@@ -63,6 +63,14 @@ export interface DadosBolsa {
   lotes: LotesJSON;
 }
 
+/** Uma versão do pedido: quando nasceu e porquê (ex.: a aprovação de um cenário do orçamento). */
+export interface VersaoDoPedido {
+  versao: number;
+  /** Data ISO. */
+  em: string;
+  nota: string;
+}
+
 interface Comum {
   id: string;
   /** Datas ISO. */
@@ -73,6 +81,8 @@ interface Comum {
   /** Se entra no orçamento da unidade. */
   noOrcamento: boolean;
   arquivado: boolean;
+  /** O que mudou o pedido fora dos módulos (as aprovações do orçamento), do mais antigo ao mais recente. */
+  historico: VersaoDoPedido[];
 }
 
 export type PedidoNaBiblioteca =
@@ -104,7 +114,15 @@ export function dadosBolsaIniciais(): DadosBolsa {
 }
 
 function comum(agora: string): Comum {
-  return { id: gerarId(), criadoEm: agora, atualizadoEm: agora, versao: 1, noOrcamento: false, arquivado: false };
+  return {
+    id: gerarId(),
+    criadoEm: agora,
+    atualizadoEm: agora,
+    versao: 1,
+    noOrcamento: false,
+    arquivado: false,
+    historico: [],
+  };
 }
 
 export function novoPedidoBolsa(dados: DadosBolsa = dadosBolsaIniciais(), agora = new Date().toISOString()): PedidoNaBiblioteca {
@@ -316,7 +334,17 @@ function normalizarDadosBolsa(bruto: unknown): DadosBolsa {
   };
 }
 
-function normalizarPedido(bruto: unknown): PedidoNaBiblioteca | null {
+function normalizarHistorico(bruto: unknown): VersaoDoPedido[] {
+  if (!Array.isArray(bruto)) return [];
+  return bruto.flatMap((x) => {
+    const r = objeto(x);
+    const versao = Number(r.versao);
+    return Number.isInteger(versao) && versao >= 1 ? [{ versao, em: texto(r.em), nota: texto(r.nota) }] : [];
+  });
+}
+
+/** Um pedido guardado (na biblioteca, ou numa aprovação do orçamento), posto em dia. `null` se não é um pedido. */
+export function normalizarPedido(bruto: unknown): PedidoNaBiblioteca | null {
   const r = objeto(bruto);
   if (r.tipo !== "bolsa" && r.tipo !== "licenciamento") return null;
   const agora = new Date().toISOString();
@@ -327,6 +355,7 @@ function normalizarPedido(bruto: unknown): PedidoNaBiblioteca | null {
     versao: typeof r.versao === "number" && Number.isInteger(r.versao) && r.versao >= 1 ? r.versao : 1,
     noOrcamento: r.noOrcamento === true,
     arquivado: r.arquivado === true,
+    historico: normalizarHistorico(r.historico),
   };
   return r.tipo === "bolsa"
     ? { ...c, tipo: "bolsa", dados: normalizarDadosBolsa(r.dados) }
