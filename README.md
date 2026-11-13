@@ -263,8 +263,9 @@ perfil: o preço/hora de cada perfil continua a escrever-se no lote. A base é a
 propostas admitidas, rate do valor base, mais alta e média; a diferença da média
 para o valor base calcula-se), os **valores anteriormente adjudicados** (perfil,
 procedimento ou contrato, ano e valor hora adjudicado), **ambos**, ou **texto
-livre** (a fundamentação escrita à mão, sem tabela, que sai tal como está escrita). Parte do
-quadro de referência da SPMS, que se pode repor. Sai no Anexo I da manifestação
+livre** (a fundamentação escrita à mão, sem tabela, que sai tal como está escrita). Num pedido
+novo, as tabelas começam vazias; o botão «Preencher com a tabela da SPMS» copia o quadro de
+referência da SPMS para as rates médias (os agrupamentos gravados antes da tabela recebem esse quadro). Sai no Anexo I da manifestação
 (ponto 3), com o parágrafo e a tabela da base escolhida.
 
 **Margem prudencial.** A 0 % (por omissão), a margem considera-se incorporada nos

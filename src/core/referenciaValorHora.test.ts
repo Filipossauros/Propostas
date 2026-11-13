@@ -6,18 +6,23 @@ import {
   normalizarReferenciaValorHora,
   procedimentosDe,
   referenciaValorHoraInicial,
+  referenciaValorHoraSpms,
   validarReferenciaValorHora,
 } from "./referenciaValorHora";
 import { JUSTIFICACAO_SEM_MARGEM, ehJustificacaoPorOmissao, justificacaoPorOmissao } from "./margem";
 import { lotesIniciais, normalizarLotesGuardados, validarLotes } from "./lotes";
 
 describe("tabela de referência do valor hora", () => {
-  it("parte do quadro da SPMS, com a rate média como fundamento", () => {
+  it("um pedido novo parte da tabela vazia, com a rate média como fundamento; o quadro da SPMS preenche-a", () => {
     const ref = referenciaValorHoraInicial();
     expect(ref.fundamento).toBe("media");
-    expect(ref.media.map((l) => l.perfil)).toEqual(TABELA_RATES_SPMS.map((l) => l.perfil));
+    expect(ref.media).toEqual([]);
     expect(ref.adjudicados).toEqual([]);
-    expect(validarReferenciaValorHora(ref)).toEqual([]);
+    expect(validarReferenciaValorHora(ref).length).toBeGreaterThan(0);
+    const spms = referenciaValorHoraSpms();
+    expect(spms.media.map((l) => l.perfil)).toEqual(TABELA_RATES_SPMS.map((l) => l.perfil));
+    expect(validarReferenciaValorHora(spms)).toEqual([]);
+    expect(lotesIniciais().referenciaValorHora.media).toEqual([]);
   });
 
   it("a diferença da média para a base calcula-se, como no quadro de sempre", () => {
@@ -31,7 +36,7 @@ describe("tabela de referência do valor hora", () => {
   });
 
   it("valida só a parte que o fundamento usa", () => {
-    const ref = { ...referenciaValorHoraInicial(), fundamento: "adjudicado" as const };
+    const ref = { ...referenciaValorHoraSpms(), fundamento: "adjudicado" as const };
     expect(validarReferenciaValorHora(ref).map((e) => e.mensagem)).toEqual([
       "Valor hora de referência: acrescente pelo menos uma linha de valores adjudicados.",
     ]);

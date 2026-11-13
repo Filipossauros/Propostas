@@ -64,14 +64,37 @@ export interface ReferenciaValorHora {
 type SemId<T> = Omit<T, "id">;
 
 /**
- * O quadro de referência da SPMS: as rates dos concursos anteriores. É o ponto
- * de partida da tabela, que depois se edita no Módulo 3.
+ * O quadro de referência da SPMS: as rates dos concursos anteriores. Um pedido
+ * novo começa com a tabela vazia (como a dos valores adjudicados); o quadro
+ * preenche-se com um botão no Módulo 3, e é o que recebem os agrupamentos
+ * gravados antes de haver tabela (os seus valores hora partiam dele).
  */
 export const TABELA_RATES_SPMS: ReadonlyArray<SemId<LinhaRateMedia>> = [
-  { perfil: "Analista Funcional", procedimentos: "20260065\n20260066\n20260080", propostas: 28, base: 54.1, maisAlta: 46.5, media: 26.22 },
+  {
+    perfil: "Analista Funcional",
+    procedimentos: "20260065\n20260066\n20260080",
+    propostas: 28,
+    base: 54.1,
+    maisAlta: 46.5,
+    media: 26.22,
+  },
   { perfil: "Arquiteto de Sistemas", procedimentos: "20260080", propostas: 4, base: 59.51, maisAlta: 52, media: 47.31 },
-  { perfil: "Backend — Java data access", procedimentos: "20260065", propostas: 6, base: 54.1, maisAlta: 46.5, media: 29.29 },
-  { perfil: "Backend — System Integration", procedimentos: "20260080", propostas: 4, base: 54.1, maisAlta: 38.13, media: 27.3 },
+  {
+    perfil: "Backend — Java data access",
+    procedimentos: "20260065",
+    propostas: 6,
+    base: 54.1,
+    maisAlta: 46.5,
+    media: 29.29,
+  },
+  {
+    perfil: "Backend — System Integration",
+    procedimentos: "20260080",
+    propostas: 4,
+    base: 54.1,
+    maisAlta: 38.13,
+    media: 27.3,
+  },
   {
     perfil: "Consultor de Administração de Sistemas e Observabilidade",
     procedimentos: "20260081",
@@ -81,10 +104,24 @@ export const TABELA_RATES_SPMS: ReadonlyArray<SemId<LinhaRateMedia>> = [
     media: 28.12,
   },
   { perfil: "Frontend", procedimentos: "20260081", propostas: 7, base: 54.1, maisAlta: 46.5, media: 27.5 },
-  { perfil: "Tester", procedimentos: "20260065\n20260066\n20260080\n20260081", propostas: 23, base: 27.05, maisAlta: 27.05, media: 22.6 },
+  {
+    perfil: "Tester",
+    procedimentos: "20260065\n20260066\n20260080\n20260081",
+    propostas: 23,
+    base: 27.05,
+    maisAlta: 27.05,
+    media: 22.6,
+  },
   { perfil: "UX-UI Designer", procedimentos: "20260066", propostas: 13, base: 54.1, maisAlta: 37.25, media: 27.64 },
   { perfil: "Gestor de Projeto", procedimentos: "20230160", propostas: 6, base: 40.5, maisAlta: 39.7, media: 34.13 },
-  { perfil: "Developer de Integração", procedimentos: "20230160", propostas: 4, base: 35.14, maisAlta: 34.9, media: 30.08 },
+  {
+    perfil: "Developer de Integração",
+    procedimentos: "20230160",
+    propostas: 4,
+    base: 35.14,
+    maisAlta: 34.9,
+    media: 30.08,
+  },
   { perfil: "Suporte IOP", procedimentos: "20230160", propostas: 8, base: 35.14, maisAlta: 34.9, media: 30.95 },
 ];
 
@@ -92,8 +129,14 @@ export function linhasRatesSpms(): LinhaRateMedia[] {
   return TABELA_RATES_SPMS.map((l) => ({ ...l, id: gerarId() }));
 }
 
+/** A tabela de um pedido novo: vazia, com a rate média como fundamento. */
 export function referenciaValorHoraInicial(): ReferenciaValorHora {
-  return { fundamento: "media", media: linhasRatesSpms(), adjudicados: [], textoLivre: "" };
+  return { fundamento: "media", media: [], adjudicados: [], textoLivre: "" };
+}
+
+/** A tabela preenchida com o quadro da SPMS. */
+export function referenciaValorHoraSpms(): ReferenciaValorHora {
+  return { ...referenciaValorHoraInicial(), media: linhasRatesSpms() };
 }
 
 export function linhaRateMediaVazia(): LinhaRateMedia {
@@ -133,7 +176,7 @@ const objeto = (v: unknown): Record<string, unknown> =>
 
 /** A tabela guardada, posta em dia. Sem ela (agrupamentos anteriores), parte do quadro da SPMS. */
 export function normalizarReferenciaValorHora(bruto: unknown): ReferenciaValorHora {
-  if (bruto === undefined || bruto === null) return referenciaValorHoraInicial();
+  if (bruto === undefined || bruto === null) return referenciaValorHoraSpms();
   const r = objeto(bruto);
   const fundamento: FundamentoValorHora =
     r.fundamento === "adjudicado" || r.fundamento === "ambos" || r.fundamento === "livre" ? r.fundamento : "media";
@@ -167,7 +210,10 @@ export function normalizarReferenciaValorHora(bruto: unknown): ReferenciaValorHo
 }
 
 /** O que falta na tabela: só nas partes que o fundamento usa. */
-export function validarReferenciaValorHora(ref: ReferenciaValorHora, anoAtual = new Date().getFullYear()): ErroValidacao[] {
+export function validarReferenciaValorHora(
+  ref: ReferenciaValorHora,
+  anoAtual = new Date().getFullYear(),
+): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
   const falta = (mensagem: string) => erros.push({ campo: "referenciaValorHora", mensagem });
   if (ref.fundamento === "livre" && ref.textoLivre.trim() === "")
