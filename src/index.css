@@ -3244,3 +3244,57 @@ select.campo-bloqueado:disabled {
     white-space: normal;
   }
 }
+
+/* Orçamento ligado à biblioteca. */
+.etiqueta-tipo-importado {
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+}
+.etiqueta-licenca {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--verde-fundo);
+  color: var(--verde);
+}
+.meta-bloco {
+  display: block;
+}
+.botao-colapsar {
+  font-size: 0.85rem;
+  min-width: 1.6rem;
+}
+.grupo-projeto-colapsado td {
+  background: var(--superficie-alt);
+}
+.acoes-colapsar {
+  justify-content: flex-end;
+  margin: 0 0 10px;
+}
+.linha-pedido-orcamento {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.lista-pedidos-orcamento {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lista-pedidos-orcamento li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--superficie-alt);
+}
+.lista-pedidos-orcamento .meta {
+  display: block;
+}
+.celula-no-orcamento {
+  text-align: center;
+}

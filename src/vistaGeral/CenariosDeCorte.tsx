@@ -19,17 +19,26 @@ import {
 } from "../core/cenarios";
 import {
   anosDoOrcamento,
+  ehLinhaDeLicenca,
+  lotesDoProjeto,
   pessoasDaUnidade,
+  pessoasDoProjeto,
   totaisPorAnoDaUnidade,
   totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
+  valorDoProjetoNoAno,
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
+import { BotaoColapsar, EtiquetaDoProjeto, resumoDoProjeto } from "./projetoColapsavel";
 import { ResumoGeral } from "./ResumoGeral";
 import { CampoNumero } from "../ui/CampoNumero";
 
 interface Props {
   orcamento: OrcamentoUnidade;
+  /** Os botões de colapsar e expandir todos os projetos. */
+  barraColapso: React.ReactNode;
+  colapsados: ReadonlySet<string>;
+  onAlternarColapso: (projetoId: string) => void;
   onAlterar: (alterar: (atual: OrcamentoUnidade) => OrcamentoUnidade) => void;
   onMoverProjeto: (arrastadoId: string, alvoId: string) => void;
   onDeslocarProjeto: (projetoId: string, passos: number) => void;
@@ -42,7 +51,15 @@ interface Props {
  * cada ano. Os internos não se cortam — a unidade não os contrata —, mas podem
  * passar de um projeto para outro, o que muda o peso de cada projeto.
  */
-export function CenariosDeCorte({ orcamento, onAlterar, onMoverProjeto, onDeslocarProjeto }: Props) {
+export function CenariosDeCorte({
+  orcamento,
+  barraColapso,
+  colapsados,
+  onAlternarColapso,
+  onAlterar,
+  onMoverProjeto,
+  onDeslocarProjeto,
+}: Props) {
   const [ativoId, setAtivoId] = useState<string | null>(null);
   const cenario = orcamento.cenarios.find((c) => c.id === ativoId) ?? orcamento.cenarios[0] ?? null;
 
@@ -77,7 +94,8 @@ export function CenariosDeCorte({ orcamento, onAlterar, onMoverProjeto, onDesloc
     return (
       <section className="painel">
         <p className="estado-vazio">
-          Ainda não há projetos no orçamento. Importe os lotes na vista «Orçamento» para poder criar cenários.
+          Ainda não há pedidos no orçamento. Marque-os na vista «Orçamento» (ou na biblioteca) para poder criar
+          cenários.
         </p>
       </section>
     );
@@ -169,7 +187,14 @@ export function CenariosDeCorte({ orcamento, onAlterar, onMoverProjeto, onDesloc
                 não se cortam, mas podem passar para outro projeto.
               </p>
             </header>
-            <TabelaDoCenario orcamento={orcamento} cenario={cenario} onAlterarCenario={alterarCenario} />
+            {barraColapso}
+            <TabelaDoCenario
+              orcamento={orcamento}
+              cenario={cenario}
+              colapsados={colapsados}
+              onAlternarColapso={onAlternarColapso}
+              onAlterarCenario={alterarCenario}
+            />
           </section>
         </>
       )}
@@ -259,10 +284,12 @@ function AvisoSemEfeito({
 interface PropsTabela {
   orcamento: OrcamentoUnidade;
   cenario: Cenario;
+  colapsados: ReadonlySet<string>;
+  onAlternarColapso: (projetoId: string) => void;
   onAlterarCenario: (alterar: (c: Cenario) => Cenario) => void;
 }
 
-function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) {
+function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, onAlterarCenario }: PropsTabela) {
   const anos = anosDoOrcamento(orcamento);
   const noCenario = aplicarCenario(orcamento, cenario);
   const nomes = orcamento.projetos.map((p) => p.nome);
@@ -301,13 +328,18 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
             (soma, e) => soma + e.pessoas - pessoasNoCenario(cenario, projeto, e),
             0,
           );
-          const nLinhas = Math.max(1, projeto.entradas.length + derivado.internos.length);
+          const colapsado = colapsados.has(projeto.id);
+          const nLinhas = colapsado ? 1 : Math.max(1, projeto.entradas.length + derivado.internos.length);
 
           const celulaDoProjeto = (
             <th scope="rowgroup" rowSpan={nLinhas} className="celula-projeto">
               <div className="projeto-nome">
+                <BotaoColapsar projeto={projeto} colapsado={colapsado} onAlternar={onAlternarColapso} />
                 <strong>{projeto.nome}</strong>
               </div>
+              <p className="meta">
+                <EtiquetaDoProjeto projeto={projeto} />
+              </p>
               <p className="meta">
                 {cortadas === 0 ? "sem cortes" : `−${cortadas} ${cortadas === 1 ? "pessoa" : "pessoas"}`}
               </p>
@@ -332,8 +364,76 @@ function TabelaDoCenario({ orcamento, cenario, onAlterarCenario }: PropsTabela) 
             </th>
           );
 
+          if (colapsado) {
+            const antes = pessoasDoProjeto(projeto);
+            const depois = pessoasDoProjeto(derivado);
+            return (
+              <tbody key={projeto.id} className="grupo-projeto grupo-projeto-colapsado">
+                <tr>
+                  {celulaDoProjeto}
+                  <td className="numerico">{lotesDoProjeto(projeto).length}</td>
+                  <td>
+                    <span className="meta">{resumoDoProjeto(projeto)}</span>
+                  </td>
+                  <td className="numerico">{antes}</td>
+                  <td className="numerico">{depois}</td>
+                  <td className="numerico">
+                    <span className="meta">—</span>
+                  </td>
+                  {anos.map((ano) => {
+                    const valor = valorDoProjetoNoAno(derivado, ano);
+                    const anterior = valorDoProjetoNoAno(projeto, ano);
+                    return (
+                      <td key={ano} className="numerico">
+                        {formatarMoeda(valor)}
+                        {Math.abs(valor - anterior) >= 0.005 && (
+                          <span className="valor-anterior">{formatarMoeda(anterior)}</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            );
+          }
+
           const linhas: Array<{ chave: string; classe?: string; celulas: React.ReactNode }> = [
             ...projeto.entradas.map((entrada, i) => {
+              if (ehLinhaDeLicenca(entrada)) {
+                // As licenças entram no cenário com o valor do orçamento: os seus
+                // cortes (quantidade, retirar) chegam numa fase seguinte.
+                return {
+                  chave: entrada.id,
+                  celulas: (
+                    <>
+                      <td className="numerico">{entrada.lote}</td>
+                      <td className="celula-perfil">
+                        {entrada.perfil} <span className="etiqueta-licenca">licença</span>
+                        {entrada.quantidadePorExtenso !== undefined && (
+                          <span className="meta meta-bloco">{entrada.quantidadePorExtenso}</span>
+                        )}
+                      </td>
+                      <td className="numerico">
+                        <span className="meta">—</span>
+                      </td>
+                      <td className="numerico">
+                        <span className="meta">—</span>
+                      </td>
+                      <td className="numerico">
+                        <span className="meta">—</span>
+                      </td>
+                      {anos.map((ano) => {
+                        const valor = valorDaEntradaNoAno(derivado, derivado.entradas[i], ano);
+                        return (
+                          <td key={ano} className="numerico">
+                            {valor === null ? <span className="meta">—</span> : formatarMoeda(valor)}
+                          </td>
+                        );
+                      })}
+                    </>
+                  ),
+                };
+              }
               const ficam = pessoasNoCenario(cenario, projeto, entrada);
               const valorHora = valorHoraNoCenario(cenario, projeto, entrada);
               const valorAlterado = Math.abs(valorHora - entrada.valorHoraSemIva) >= 0.005;

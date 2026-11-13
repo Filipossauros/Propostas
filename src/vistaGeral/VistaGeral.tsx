@@ -1,91 +1,150 @@
 import { useRef, useState } from "react";
-import { importarLotesJSON } from "../core/lotes";
 import { CHAVE_VISTA_GERAL } from "../core/persistencia";
 import { useEstadoPersistente } from "../core/useEstadoPersistente";
 import { ErroImportacao } from "../core/perfil";
 import {
   comInterno,
-  comProjeto,
   comProjetoDeslocado,
   comProjetoMovido,
   ehOrcamentoGuardado,
   importarOrcamentoJSON,
   normalizarOrcamento,
-  jaTemProjeto,
-  nomeDoProjeto,
   orcamentoInicial,
-  projetoDeAgrupamento,
   semInterno,
   semProjeto,
   type OrcamentoUnidade,
 } from "../core/vistaGeral";
+import {
+  comNoOrcamento,
+  importarParaBiblioteca,
+  nomeParaListas,
+  valorEstimadoDoPedido,
+  type Biblioteca,
+} from "../core/biblioteca";
+import { orcamentoComBiblioteca } from "../core/orcamentoDaBiblioteca";
+import { formatarMoeda } from "../core/lotes";
 import { descarregarPacote } from "../ui/pacote";
 import { ficheirosDaVistaGeral, nomeDoPacoteDaVistaGeral } from "../saidas/pacotes";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
+import { EtiquetaDoEstado, EtiquetaDoTipo } from "../inicio/BarraSuperior";
 import { ResumoGeral } from "./ResumoGeral";
 import { TabelaVistaGeral } from "./TabelaVistaGeral";
 import { CenariosDeCorte } from "./CenariosDeCorte";
 
+interface Props {
+  biblioteca: Biblioteca;
+  onAlterarBiblioteca: (atualizar: (atual: Biblioteca) => Biblioteca) => void;
+  onAbrirPedido: (id: string) => void;
+}
+
 /**
- * Vista Geral — o orçamento da unidade.
+ * O orçamento da unidade.
  *
- * Ao contrário dos quatro módulos, não prepara nem avalia procedimento nenhum:
- * junta os que já estão preparados. Como eles, fica guardada neste navegador —
- * mudar de separador não pode apagar o trabalho de juntar uma unidade inteira.
+ * Lê os pedidos da biblioteca marcados «no orçamento» — de bolsa de horas e de
+ * licenciamento — e acompanha-os: corrigir um pedido corrige o orçamento. O que
+ * é só do orçamento — os elementos internos, a ordem dos projetos e os
+ * cenários de corte — fica guardado aqui, neste navegador. Ver
+ * `orcamentoDaBiblioteca.ts`.
  */
-export function VistaGeral() {
-  const [orcamento, setOrcamento] = useEstadoPersistente<OrcamentoUnidade>(
+export function VistaGeral({ biblioteca, onAlterarBiblioteca, onAbrirPedido }: Props) {
+  const [guardado, setGuardado] = useEstadoPersistente<OrcamentoUnidade>(
     CHAVE_VISTA_GERAL,
     orcamentoInicial,
     ehOrcamentoGuardado,
     normalizarOrcamento,
   );
+  // O que se mostra e soma: só os pedidos marcados, postos em dia.
+  const orcamento = orcamentoComBiblioteca(guardado, biblioteca);
   const [mensagem, setMensagem] = useState<Mensagem | null>(null);
   // O orçamento e os cenários de corte são duas leituras do mesmo módulo: os
   // cenários partem do orçamento e nunca o alteram.
   const [leitura, setLeitura] = useState<"orcamento" | "cenarios">("orcamento");
+  const [colapsados, setColapsados] = useState<ReadonlySet<string>>(() => new Set());
   const inputAgrupamentosRef = useRef<HTMLInputElement>(null);
   const inputOrcamentoRef = useRef<HTMLInputElement>(null);
 
   const semDados = orcamento.projetos.length === 0;
+  const barraColapso = semDados ? null : (
+    <div className="acoes-linha acoes-colapsar">
+      <button
+        type="button"
+        className="botao-discreto"
+        onClick={() => setColapsados(new Set(orcamento.projetos.map((p) => p.id)))}
+      >
+        Colapsar todos os projetos
+      </button>
+      <button type="button" className="botao-discreto" onClick={() => setColapsados(new Set())}>
+        Expandir todos
+      </button>
+    </div>
+  );
+  const candidatos = biblioteca.pedidos.filter((p) => !p.arquivado);
 
+  /**
+   * Altera o orçamento guardado. A alteração parte da versão guardada já posta
+   * em dia com a biblioteca — com os projetos dos pedidos fora do orçamento, que
+   * guardam os seus internos —, para nada se perder.
+   */
+  function setOrcamento(alterar: OrcamentoUnidade | ((atual: OrcamentoUnidade) => OrcamentoUnidade)) {
+    setGuardado((atual) => {
+      const posto = orcamentoComBiblioteca(atual, biblioteca, { manterFora: true });
+      return typeof alterar === "function" ? alterar(posto) : alterar;
+    });
+  }
+
+  function alternarColapso(projetoId: string) {
+    setColapsados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(projetoId)) novo.delete(projetoId);
+      else novo.add(projetoId);
+      return novo;
+    });
+  }
+
+  /** Um projeto de um pedido sai do orçamento desmarcando o pedido; um importado sai mesmo. */
+  function removerProjeto(projetoId: string) {
+    const projeto = orcamento.projetos.find((p) => p.id === projetoId);
+    if (projeto === undefined) return;
+    if (projeto.pedidoId !== undefined) {
+      const pedidoId = projeto.pedidoId;
+      onAlterarBiblioteca((b) => comNoOrcamento(b, [pedidoId], false));
+      return;
+    }
+    if (!confirm(`Remover «${projeto.nome}» do orçamento, com os elementos internos que lhe estão afetos?`)) return;
+    setOrcamento((atual) => semProjeto(atual, projetoId));
+  }
+
+  /**
+   * Os ficheiros de colegas (lotes, pedidos, perfis…) entram na biblioteca, e
+   * ficam logo marcados no orçamento.
+   */
   async function carregarAgrupamentos(ficheiros: FileList) {
     setMensagem(null);
+    let acumulada = biblioteca;
     const lidos: string[] = [];
-    const substituidos: string[] = [];
     const falhas: string[] = [];
-    let acumulado = orcamento;
-
     for (const ficheiro of Array.from(ficheiros)) {
       try {
-        const config = importarLotesJSON(await ficheiro.text());
-        const nome = nomeDoProjeto(config);
-        if (jaTemProjeto(acumulado, nome)) substituidos.push(nome);
-        else lidos.push(nome);
-        acumulado = comProjeto(acumulado, projetoDeAgrupamento(config));
+        const r = importarParaBiblioteca(acumulada, await ficheiro.text());
+        acumulada = comNoOrcamento(r.biblioteca, r.ids, true);
+        lidos.push(...r.acrescentados, ...r.atualizados);
       } catch (erro) {
         falhas.push(`${ficheiro.name}: ${erro instanceof ErroImportacao ? erro.message : "ficheiro ilegível"}`);
       }
     }
-
-    setOrcamento(acumulado);
-
-    if (falhas.length > 0 && lidos.length === 0 && substituidos.length === 0) {
-      setMensagem({ tipo: "erro", texto: falhas.join(" · ") });
-      return;
-    }
+    const final = acumulada;
+    onAlterarBiblioteca(() => final);
     const partes: string[] = [];
-    if (lidos.length > 0) partes.push(`${lidos.length} projeto(s) acrescentado(s): ${lidos.join(", ")}`);
-    if (substituidos.length > 0) partes.push(`${substituidos.length} atualizado(s): ${substituidos.join(", ")}`);
-    if (falhas.length > 0) partes.push(`${falhas.length} ficheiro(s) por ler`);
-    setMensagem({ tipo: falhas.length > 0 ? "erro" : "sucesso", texto: partes.join(" · ") });
+    if (lidos.length > 0) partes.push(`Na biblioteca e no orçamento: ${lidos.join(", ")}`);
+    if (falhas.length > 0) partes.push(`Por ler: ${falhas.join(" · ")}`);
+    setMensagem({ tipo: falhas.length > 0 ? "erro" : "sucesso", texto: partes.join(" — ") || "Nada a importar." });
   }
 
   async function carregarOrcamento(ficheiro: File) {
     setMensagem(null);
     try {
       const lido = importarOrcamentoJSON(await ficheiro.text());
-      setOrcamento(lido);
+      setGuardado(lido);
       setMensagem({
         tipo: "sucesso",
         texto: `Orçamento carregado, com ${lido.projetos.length} projeto(s).`,
@@ -124,25 +183,31 @@ export function VistaGeral() {
   }
 
   function recomecar() {
-    if (!confirm("Apagar a Vista Geral, incluindo os elementos internos registados, e recomeçar do zero?")) return;
-    setOrcamento(orcamentoInicial());
-    setMensagem({ tipo: "sucesso", texto: "Vista Geral reposta." });
+    if (
+      !confirm(
+        "Apagar os elementos internos, os cenários e os projetos importados de ficheiro, e recomeçar? Os pedidos da " +
+          "biblioteca não são tocados.",
+      )
+    )
+      return;
+    setGuardado(orcamentoInicial());
+    setMensagem({ tipo: "sucesso", texto: "Orçamento reposto." });
   }
 
   return (
     <>
       <div className="modulo-cabecalho modulo-cabecalho-unidade">
         <div className="modulo-titulo-linha">
-          <h2>Vista Geral</h2>
+          <h2>Orçamento da unidade</h2>
           <div className="acoes-linha">
-            <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar} disabled={semDados}>
+            <button type="button" className="botao-discreto botao-recomecar" onClick={recomecar}>
               Recomeçar
             </button>
           </div>
         </div>
         <p>
-          Os agrupamentos da unidade lado a lado: quantas pessoas e quanto dinheiro em cada projeto, e que fatia da
-          equipa cada um ocupa.
+          Os pedidos da unidade lado a lado — de bolsa de horas e de licenciamento: quantas pessoas e quanto dinheiro
+          em cada um, e que fatia da equipa cada um ocupa. Acompanha os pedidos da biblioteca marcados «no orçamento».
         </p>
       </div>
 
@@ -170,6 +235,9 @@ export function VistaGeral() {
       {leitura === "cenarios" && (
         <CenariosDeCorte
           orcamento={orcamento}
+          barraColapso={barraColapso}
+          colapsados={colapsados}
+          onAlternarColapso={alternarColapso}
           onAlterar={setOrcamento}
           onMoverProjeto={moverProjeto}
           onDeslocarProjeto={deslocarProjeto}
@@ -180,12 +248,44 @@ export function VistaGeral() {
         <>
           <section className="painel">
             <header className="painel-cabecalho">
-              <h3>Orçamento da unidade</h3>
+              <h3>Pedidos no orçamento</h3>
               <p className="painel-nota">
-                Carregue os JSON de lotes gerados no Módulo 3 — um por projeto, ou vários de uma vez. Reimportar um
-                projeto atualiza-o, em vez de o duplicar.
+                Marque os pedidos da biblioteca que entram no orçamento. Um pedido desmarcado sai, mas os seus elementos
+                internos ficam guardados para quando voltar.
               </p>
             </header>
+            {candidatos.length === 0 ? (
+              <p className="estado-vazio">A biblioteca ainda não tem pedidos.</p>
+            ) : (
+              <ul className="lista-pedidos-orcamento">
+                {candidatos.map((p) => {
+                  const valor = valorEstimadoDoPedido(p);
+                  return (
+                    <li key={p.id}>
+                      <label className="campo-opcao">
+                        <input
+                          type="checkbox"
+                          checked={p.noOrcamento}
+                          onChange={(e) => onAlterarBiblioteca((b) => comNoOrcamento(b, [p.id], e.target.checked))}
+                        />
+                        <span>
+                          <span className="linha-pedido-orcamento">
+                            <strong>{nomeParaListas(p)}</strong> <EtiquetaDoTipo tipo={p.tipo} />
+                            <EtiquetaDoEstado pedido={p} />
+                          </span>
+                          <span className="meta">
+                            {valor === null ? "sem valor estimado" : `${formatarMoeda(valor)} sem IVA`}
+                          </span>
+                        </span>
+                      </label>
+                      <button type="button" className="botao-discreto" onClick={() => onAbrirPedido(p.id)}>
+                        Abrir
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
 
             <label className="campo-unidade">
               <span>Unidade</span>
@@ -198,8 +298,8 @@ export function VistaGeral() {
             </label>
 
             <div className="acoes">
-              <button type="button" className="botao-principal" onClick={() => inputAgrupamentosRef.current?.click()}>
-                Importar lotes (JSON)
+              <button type="button" className="botao-secundario" onClick={() => inputAgrupamentosRef.current?.click()}>
+                Importar pedidos ou lotes (JSON)
               </button>
               <input
                 ref={inputAgrupamentosRef}
@@ -232,9 +332,10 @@ export function VistaGeral() {
             {/* A vista traz nomes de pessoas da equipa: quem a preenche tem de saber
             onde ficam, e que ficam só aqui. */}
             <p className="ajuda">
-              Esta vista fica guardada neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto
-              de trabalho. Apagar um projeto apaga também os nomes que lhe estavam afetos. Para a levar para outro
-              posto, descarregue a Vista Geral em JSON, ao fundo da página.
+              Os ficheiros importados (lotes de colegas, pedidos, perfis) entram na biblioteca e ficam marcados aqui. Um
+              orçamento descarregado antes da biblioteca carrega-se com «Carregar Vista Geral»: os seus projetos ficam
+              como importados, até haver na biblioteca um pedido com o mesmo nome. O orçamento fica guardado
+              neste navegador, incluindo os nomes dos elementos internos, e não sai deste posto de trabalho.
             </p>
           </section>
 
@@ -250,12 +351,15 @@ export function VistaGeral() {
           <section className="painel">
             <header className="painel-cabecalho">
               <h3>Projetos, pessoas e valores</h3>
-              <p className="painel-nota">Detalhe de cada projeto, perfil a perfil.</p>
+              <p className="painel-nota">Detalhe de cada projeto, perfil a perfil e licença a licença.</p>
             </header>
+            {barraColapso}
 
             <TabelaVistaGeral
               orcamento={orcamento}
-              onRemoverProjeto={(projetoId) => setOrcamento((atual) => semProjeto(atual, projetoId))}
+              colapsados={colapsados}
+              onAlternarColapso={alternarColapso}
+              onRemoverProjeto={removerProjeto}
               onRemoverInterno={(projetoId, internoId) =>
                 setOrcamento((atual) => semInterno(atual, projetoId, internoId))
               }

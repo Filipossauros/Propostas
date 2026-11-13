@@ -33,6 +33,15 @@ export interface ElementoInterno {
  */
 export interface EntradaVistaGeral {
   id: string;
+  /**
+   * Um perfil (bolsa de horas) ou uma licença (licenciamento). Sem ele, um
+   * perfil — os orçamentos anteriores só os tinham. Uma licença não tem pessoas
+   * (0) nem valor hora: guarda o preço unitário nos campos do valor hora, só
+   * para se poder desfazer o IVA (ver `semIvaDaEntrada`).
+   */
+  tipo?: "perfil" | "licenca";
+  /** Numa licença: a quantidade e a métrica, por extenso («1 200 utilizadores nomeados»). */
+  quantidadePorExtenso?: string;
   /** Número do lote, tal como no agrupamento de origem. */
   lote: string;
   perfil: string;
@@ -47,6 +56,13 @@ export interface EntradaVistaGeral {
 export interface ProjetoVistaGeral {
   id: string;
   nome: string;
+  /**
+   * O pedido da biblioteca de onde vem, quando vem de um. Sem ele, é um projeto
+   * importado de ficheiro (orçamentos anteriores à biblioteca), que fica como
+   * foi importado.
+   */
+  pedidoId?: string;
+  tipoPedido?: "bolsa" | "licenciamento";
   /** Ano económico da primeira coluna de `totaisPorAno`. */
   anoInicio: number;
   entradas: EntradaVistaGeral[];
@@ -255,6 +271,11 @@ export function valorDaEntradaNoAno(projeto: ProjetoVistaGeral, entrada: Entrada
  * É o mínimo que o procedimento impõe, e não quem lá está: o que a vista
  * compara é o que cada projeto obriga a ter.
  */
+/** Se a linha é de uma licença (e não de um perfil). */
+export function ehLinhaDeLicenca(entrada: EntradaVistaGeral): boolean {
+  return entrada.tipo === "licenca";
+}
+
 export function externosDoProjeto(projeto: ProjetoVistaGeral): number {
   return projeto.entradas.reduce((soma, e) => soma + e.pessoas, 0);
 }
@@ -454,6 +475,8 @@ function normalizarProjeto(bruto: unknown): ProjetoVistaGeral {
   return {
     id: typeof p.id === "string" && p.id !== "" ? p.id : gerarId(),
     nome: typeof p.nome === "string" && p.nome.trim() !== "" ? p.nome : "(projeto sem nome)",
+    ...(typeof p.pedidoId === "string" && p.pedidoId !== "" ? { pedidoId: p.pedidoId } : {}),
+    ...(p.tipoPedido === "bolsa" || p.tipoPedido === "licenciamento" ? { tipoPedido: p.tipoPedido } : {}),
     anoInicio: Number.isInteger(anoInicio) ? anoInicio : new Date().getFullYear(),
     entradas: Array.isArray(p.entradas) ? p.entradas.map((e) => normalizarEntrada(e)) : [],
     internos: Array.isArray(p.internos) ? p.internos.flatMap((i) => normalizarInterno(i)) : [],
@@ -466,6 +489,8 @@ function normalizarEntrada(bruto: unknown): EntradaVistaGeral {
 
   return {
     id: typeof e.id === "string" && e.id !== "" ? e.id : gerarId(),
+    ...(e.tipo === "licenca" ? { tipo: "licenca" as const } : {}),
+    ...(typeof e.quantidadePorExtenso === "string" ? { quantidadePorExtenso: e.quantidadePorExtenso } : {}),
     lote: typeof e.lote === "string" ? e.lote : "",
     perfil: typeof e.perfil === "string" ? e.perfil : "(perfil sem designação)",
     pessoas: numero(e.pessoas),

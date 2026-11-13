@@ -280,6 +280,12 @@ export function pedidoDuplicado(p: PedidoNaBiblioteca, agora = new Date().toISOS
   return { ...base, tipo: "licenciamento", dados };
 }
 
+/** Marca (ou desmarca) pedidos para o orçamento. */
+export function comNoOrcamento(b: Biblioteca, ids: string[], noOrcamento: boolean): Biblioteca {
+  const alvo = new Set(ids);
+  return { ...b, pedidos: b.pedidos.map((p) => (alvo.has(p.id) ? { ...p, noOrcamento } : p)) };
+}
+
 export function semPedido(b: Biblioteca, id: string): Biblioteca {
   return { ...b, pedidos: b.pedidos.filter((p) => p.id !== id), ativoId: b.ativoId === id ? null : b.ativoId };
 }
@@ -346,6 +352,7 @@ export const CHAVES_DA_VERSAO_ANTERIOR = {
   descricaoProjeto: "propostas.v2.descricaoProjeto",
   justificacao: "propostas.v2.justificacaoProjeto",
   licenciamento: "propostas.v2.licenciamento",
+  vistaGeral: "propostas.v2.vistaGeral",
 } as const;
 
 /**
@@ -381,7 +388,13 @@ export function bibliotecaDaVersaoAnterior(ler: (chave: string) => unknown, agor
     const pedidoLic = novoPedidoLicenciamento(dados, agora);
     if (!pedidoVazio(pedidoLic)) b = comPedidoNovo(b, pedidoLic, b.ativoId === null);
   }
-  return b;
+
+  // Os pedidos que já estavam no orçamento da versão anterior (pelo nome) entram marcados.
+  const orcamento = objeto(ler(k.vistaGeral));
+  const nomes = new Set(
+    (Array.isArray(orcamento.projetos) ? orcamento.projetos : []).map((p) => texto(objeto(p).nome)).filter((n) => n !== ""),
+  );
+  return { ...b, pedidos: b.pedidos.map((p) => (nomes.has(nomeDoPedido(p)) ? { ...p, noOrcamento: true } : p)) };
 }
 
 // --------------------------------------------------------------------------
@@ -404,6 +417,8 @@ export interface Importacao {
   biblioteca: Biblioteca;
   acrescentados: string[];
   atualizados: string[];
+  /** Os identificadores dos pedidos acrescentados ou atualizados. */
+  ids: string[];
 }
 
 /**
@@ -422,10 +437,12 @@ export function importarParaBiblioteca(b: Biblioteca, conteudo: string, agora = 
   const r = objeto(bruto);
   const acrescentados: string[] = [];
   const atualizados: string[] = [];
+  const ids: string[] = [];
   let nova = b;
   const acrescentar = (p: PedidoNaBiblioteca) => {
     nova = comPedidoNovo(nova, p, false);
     acrescentados.push(nomeParaListas(p));
+    ids.push(p.id);
   };
 
   switch (r.tipo) {
@@ -436,6 +453,7 @@ export function importarParaBiblioteca(b: Biblioteca, conteudo: string, agora = 
         if (nova.pedidos.some((x) => x.id === p.id)) {
           nova = { ...nova, pedidos: nova.pedidos.map((x) => (x.id === p.id ? p : x)) };
           atualizados.push(nomeParaListas(p));
+          ids.push(p.id);
         } else acrescentar(p);
       }
       break;
@@ -489,5 +507,5 @@ export function importarParaBiblioteca(b: Biblioteca, conteudo: string, agora = 
           "um ficheiro de perfis ou um pedido de licenciamento.",
       );
   }
-  return { biblioteca: nova, acrescentados, atualizados };
+  return { biblioteca: nova, acrescentados, atualizados, ids };
 }

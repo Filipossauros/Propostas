@@ -350,7 +350,9 @@ function App() {
             <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
           )}
 
-          {aba === "vistaGeral" && <VistaGeral />}
+          {aba === "vistaGeral" && (
+            <VistaGeral biblioteca={biblioteca} onAlterarBiblioteca={setBiblioteca} onAbrirPedido={abrirPedido} />
+          )}
         </main>
       </div>
 

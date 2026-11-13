@@ -3,15 +3,23 @@ import { useArrastoDeProjetos, type Arrasto } from "./arrasto";
 import { formatarMoeda } from "../core/lotes";
 import {
   anosDoOrcamento,
+  ehLinhaDeLicenca,
+  lotesDoProjeto,
+  pessoasDoProjeto,
   totaisPorAnoDaUnidade,
   totaisPorAnoDaUnidadeSemIva,
   valorDaEntradaNoAno,
+  valorDoProjetoNoAno,
   type OrcamentoUnidade,
   type ProjetoVistaGeral,
 } from "../core/vistaGeral";
+import { BotaoColapsar, EtiquetaDoProjeto, resumoDoProjeto } from "./projetoColapsavel";
 
 interface Props {
   orcamento: OrcamentoUnidade;
+  /** Os projetos colapsados: uma só linha, com os totais. */
+  colapsados: ReadonlySet<string>;
+  onAlternarColapso: (projetoId: string) => void;
   onRemoverProjeto: (projetoId: string) => void;
   onRemoverInterno: (projetoId: string, internoId: string) => void;
   onAcrescentarInterno: (projetoId: string, nome: string) => void;
@@ -59,6 +67,8 @@ function CampoInterno({ onAcrescentar }: { onAcrescentar: (nome: string) => void
 
 export function TabelaVistaGeral({
   orcamento,
+  colapsados,
+  onAlternarColapso,
   onRemoverProjeto,
   onRemoverInterno,
   onAcrescentarInterno,
@@ -69,7 +79,11 @@ export function TabelaVistaGeral({
   const arrasto = useArrastoDeProjetos({ onMover: onMoverProjeto, onDeslocar: onDeslocarProjeto });
 
   if (orcamento.projetos.length === 0) {
-    return <p className="estado-vazio">Importe os JSON de lotes do Módulo 3 para começar a vista.</p>;
+    return (
+      <p className="estado-vazio">
+        Ainda não há pedidos no orçamento. Marque-os acima, ou na biblioteca («No orçamento»).
+      </p>
+    );
   }
 
   const totaisAnos = totaisPorAnoDaUnidade(orcamento);
@@ -82,8 +96,9 @@ export function TabelaVistaGeral({
     <div className="tabela-envolvente">
       <table className="tabela tabela-unidade">
         <caption className="tabela-legenda">
-          Uma linha por perfil e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos elementos
-          exigidos em cada perfil. Arraste um projeto para o reordenar; a ordem é a mesma nas duas tabelas.
+          Uma linha por perfil, por licença e por elemento interno. Cada elemento interno conta uma pessoa, ao lado dos
+          elementos exigidos em cada perfil; as licenças não têm pessoas. Arraste um projeto para o reordenar; a ordem
+          é a mesma nas duas tabelas. ▾ / ▸ colapsa um projeto numa só linha.
         </caption>
 
         <thead>
@@ -115,6 +130,8 @@ export function TabelaVistaGeral({
           <LinhasDoProjeto
             key={projeto.id}
             projeto={projeto}
+            colapsado={colapsados.has(projeto.id)}
+            onAlternarColapso={onAlternarColapso}
             anos={anos}
             colunasDaLinha={colunasDaLinha}
             arrasto={arrasto}
@@ -146,8 +163,10 @@ export function TabelaVistaGeral({
   );
 }
 
-interface PropsProjeto extends Omit<Props, "orcamento" | "onMoverProjeto" | "onDeslocarProjeto"> {
+interface PropsProjeto
+  extends Omit<Props, "orcamento" | "onMoverProjeto" | "onDeslocarProjeto" | "colapsados"> {
   projeto: ProjetoVistaGeral;
+  colapsado: boolean;
   anos: number[];
   colunasDaLinha: number;
   arrasto: Arrasto;
@@ -162,6 +181,8 @@ interface PropsProjeto extends Omit<Props, "orcamento" | "onMoverProjeto" | "onD
  */
 function LinhasDoProjeto({
   projeto,
+  colapsado,
+  onAlternarColapso,
   anos,
   colunasDaLinha,
   arrasto,
@@ -170,25 +191,60 @@ function LinhasDoProjeto({
   onAcrescentarInterno,
 }: PropsProjeto) {
   // A última linha é sempre a de acrescentar um elemento interno.
-  const nLinhas = projeto.entradas.length + projeto.internos.length + 1;
+  const nLinhas = colapsado ? 1 : projeto.entradas.length + projeto.internos.length + 1;
 
   const celulaDoProjeto = (
     <th scope="rowgroup" rowSpan={nLinhas} className="celula-projeto">
       <div className="projeto-nome">
         <span {...arrasto.pega(projeto.id, projeto.nome)}>⠿</span>
+        <BotaoColapsar projeto={projeto} colapsado={colapsado} onAlternar={onAlternarColapso} />
         <strong>{projeto.nome}</strong>
         <button
           type="button"
           className="botao-icone botao-perigo"
-          aria-label={`Remover o projeto ${projeto.nome}`}
+          aria-label={
+            projeto.pedidoId !== undefined
+              ? `Tirar ${projeto.nome} do orçamento (o pedido fica na biblioteca)`
+              : `Remover o projeto ${projeto.nome}`
+          }
+          title={projeto.pedidoId !== undefined ? "Tirar do orçamento (o pedido fica na biblioteca)" : "Remover"}
           onClick={() => onRemoverProjeto(projeto.id)}
         >
           ×
         </button>
       </div>
-      <p className="meta">A partir de {projeto.anoInicio}</p>
+      <p className="meta">
+        <EtiquetaDoProjeto projeto={projeto} /> A partir de {projeto.anoInicio}
+      </p>
     </th>
   );
+
+  if (colapsado) {
+    return (
+      <tbody
+        className={`grupo-projeto grupo-projeto-colapsado ${arrasto.classe(projeto.id)}`.trim()}
+        {...arrasto.zona(projeto.id)}
+      >
+        <tr>
+          {celulaDoProjeto}
+          <td className="numerico">{lotesDoProjeto(projeto).length}</td>
+          <td>
+            <span className="meta">{resumoDoProjeto(projeto)}</span>
+          </td>
+          <td className="numerico">{pessoasDoProjeto(projeto)}</td>
+          <td className="numerico">
+            <span className="meta">—</span>
+          </td>
+          {anos.map((ano) => (
+            <td key={ano} className="numerico">
+              {formatarMoeda(valorDoProjetoNoAno(projeto, ano))}
+            </td>
+          ))}
+          <td className="celula-acoes" />
+        </tr>
+      </tbody>
+    );
+  }
 
   // As linhas do meio, por ordem: primeiro os perfis, depois quem é da casa.
   const linhas: Array<{ chave: string; celulas: React.ReactNode; acoes: React.ReactNode; interno?: boolean }> = [
@@ -200,9 +256,28 @@ function LinhasDoProjeto({
       celulas: (
         <>
           <td className="numerico">{entrada.lote}</td>
-          <td>{entrada.perfil}</td>
-          <td className="numerico">{entrada.pessoas}</td>
-          <td className="numerico">{formatarMoeda(entrada.valorHoraComIva)}</td>
+          {ehLinhaDeLicenca(entrada) ? (
+            <>
+              <td>
+                {entrada.perfil} <span className="etiqueta-licenca">licença</span>
+                {entrada.quantidadePorExtenso !== undefined && (
+                  <span className="meta meta-bloco">{entrada.quantidadePorExtenso}</span>
+                )}
+              </td>
+              <td className="numerico">
+                <span className="meta">—</span>
+              </td>
+              <td className="numerico">
+                <span className="meta">—</span>
+              </td>
+            </>
+          ) : (
+            <>
+              <td>{entrada.perfil}</td>
+              <td className="numerico">{entrada.pessoas}</td>
+              <td className="numerico">{formatarMoeda(entrada.valorHoraComIva)}</td>
+            </>
+          )}
           {anos.map((ano) => {
             const valor = valorDaEntradaNoAno(projeto, entrada, ano);
             return (

@@ -188,7 +188,8 @@ export function aplicarCenario(
           const valorHora = valorHoraNoCenario(cenario, projeto, entrada);
           // O IVA da linha é o do orçamento: muda o valor, não a taxa.
           const iva = entrada.valorHoraSemIva === 0 ? 1 : entrada.valorHoraComIva / entrada.valorHoraSemIva;
-          const fatorPessoas = entrada.pessoas === 0 ? 0 : ficam / entrada.pessoas;
+          // Uma licença não tem pessoas: o seu valor não depende delas.
+          const fatorPessoas = entrada.tipo === "licenca" ? 1 : entrada.pessoas === 0 ? 0 : ficam / entrada.pessoas;
           const fatorValor = entrada.valorHoraSemIva === 0 ? 1 : valorHora / entrada.valorHoraSemIva;
           return {
             ...entrada,

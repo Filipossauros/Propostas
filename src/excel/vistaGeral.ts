@@ -13,6 +13,7 @@
 import ExcelJS from "exceljs";
 import {
   anosDoOrcamento,
+  ehLinhaDeLicenca,
   externosDaUnidade,
   externosDoProjeto,
   internosDaUnidade,
@@ -52,9 +53,12 @@ function linhasDoProjeto(projeto: ProjetoVistaGeral, anos: number[]): Celula[][]
   const doMeio: Celula[][] = [
     ...projeto.entradas.map((entrada) => [
       { valor: entrada.lote },
-      texto(entrada.perfil),
-      { valor: entrada.pessoas },
-      moeda(entrada.valorHoraComIva),
+      // Uma licença não tem pessoas nem rate: só o valor de cada ano.
+      ehLinhaDeLicenca(entrada)
+        ? texto(`${entrada.perfil} (licença${entrada.quantidadePorExtenso ? ` · ${entrada.quantidadePorExtenso}` : ""})`)
+        : texto(entrada.perfil),
+      { valor: ehLinhaDeLicenca(entrada) ? null : entrada.pessoas },
+      moeda(ehLinhaDeLicenca(entrada) ? null : entrada.valorHoraComIva),
       ...anos.map((ano) => moeda(valorDaEntradaNoAno(projeto, entrada, ano))),
     ]),
     ...projeto.internos.map((interno) => [

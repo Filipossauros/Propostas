@@ -417,14 +417,29 @@ leem.
 
 ## O orçamento e os cenários de corte
 
-O **orçamento da unidade** junta os JSON de lotes dos projetos de uma unidade: pessoas, valores por
-ano e o peso de cada projeto. Tem duas leituras:
+O **orçamento da unidade** acompanha os pedidos da biblioteca marcados «no orçamento» (na biblioteca,
+ou na lista do próprio orçamento) — de bolsa de horas e de licenciamento —, sem nada importar:
+corrigir um pedido corrige o orçamento. Um pedido de licenciamento entra com uma linha por licença (e
+por serviço), com o valor de cada ano, com a margem e com IVA; as licenças não têm pessoas. Os ficheiros
+de colegas (lotes, pedidos, perfis) importados no orçamento entram na biblioteca, já marcados.
+
+O que é só do orçamento fica guardado nele: os **elementos internos** de cada projeto, a ordem dos
+projetos e os cenários. Um pedido desmarcado sai do orçamento, mas os seus internos ficam guardados e
+voltam com ele. Um orçamento anterior à biblioteca (carregado com «Carregar Vista Geral», ou o da versão
+anterior) mantém os seus projetos como importados; o que tiver o nome de um pedido da biblioteca passa a
+ser desse pedido, com os internos. Na primeira abertura, os pedidos que estavam no orçamento da versão
+anterior entram já marcados.
+
+Cada projeto **colapsa** numa só linha (▾ / ▸), com o conteúdo resumido, as pessoas (externas e
+internas) e o valor de cada ano; há também «Colapsar todos» e «Expandir todos», nas duas leituras:
 
 - **Orçamento** — os projetos tal como foram agrupados, com os elementos internos registados à mão.
 - **Cenários de corte** — variações do orçamento, que nunca o alteram. Em cada cenário retiram-se
   pessoas inteiras, linha a linha (− / +), ou um projeto inteiro, e pode alterar-se o valor hora (sem
   IVA) de cada perfil; o valor de cada linha acompanha as pessoas que ficam e o novo valor hora, com as
-  mesmas horas e o mesmo IVA. Os elementos internos não se cortam, mas podem passar para outro projeto. O cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
+  mesmas horas e o mesmo IVA. Os elementos internos não se cortam, mas podem passar para outro projeto.
+  As licenças entram no cenário com o valor do orçamento (os seus cortes chegam na fase seguinte). O
+  cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
 
 Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao perfil, e não aos
 identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de

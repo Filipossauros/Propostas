@@ -190,3 +190,21 @@ describe("biblioteca — importar", () => {
     );
   });
 });
+
+describe("biblioteca — migração do orçamento", () => {
+  it("os pedidos que estavam no orçamento anterior entram marcados", () => {
+    const b = bibliotecaDaVersaoAnterior((chave) =>
+      chave === CHAVES_DA_VERSAO_ANTERIOR.nomeProjeto
+        ? NOME_PROJETO_EXEMPLO
+        : chave === CHAVES_DA_VERSAO_ANTERIOR.licenciamento
+          ? JSON.parse(pedidoLicenciamentoParaJSON(pedidoLicenciamentoExemplo(2027)))
+          : chave === CHAVES_DA_VERSAO_ANTERIOR.vistaGeral
+            ? { tipo: "orcamentoUnidade", projetos: [{ nome: NOME_PROJETO_EXEMPLO }] }
+            : null,
+    );
+    expect(b.pedidos.map((p) => [nomeDoPedido(p), p.noOrcamento])).toEqual([
+      [NOME_PROJETO_EXEMPLO, true],
+      ["SNOMED CT", false],
+    ]);
+  });
+});

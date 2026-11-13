@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
   bibliotecaParaJSON,
+  comNoOrcamento,
   comPedidoAlterado,
   comPedidoNovo,
   estadoDoPedido,
@@ -202,6 +203,7 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                 <th scope="col" className="numerico">
                   Valor estimado <span className="cabecalho-nota">sem IVA</span>
                 </th>
+                <th scope="col">No orçamento</th>
                 <th scope="col">Atualizado</th>
                 <th scope="col">
                   <span className="rotulo-oculto">Ações</span>
@@ -234,6 +236,16 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                     </td>
                     <td>v{p.versao}</td>
                     <td className="numerico">{valor === null ? "—" : formatarMoeda(valor)}</td>
+                    <td className="celula-no-orcamento">
+                      <input
+                        type="checkbox"
+                        checked={p.noOrcamento}
+                        disabled={p.arquivado}
+                        aria-label={`${nomeParaListas(p)} no orçamento`}
+                        title={p.arquivado ? "Um pedido arquivado não entra no orçamento" : "Entra no orçamento da unidade"}
+                        onChange={(e) => onAlterar((b) => comNoOrcamento(b, [p.id], e.target.checked))}
+                      />
+                    </td>
                     <td>{quando(p.atualizadoEm)}</td>
                     <td>
                       <div className="acoes-linha acoes-pedido">
