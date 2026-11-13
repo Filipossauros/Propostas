@@ -12,6 +12,7 @@ import { anosDeInicioAdmitidos } from "../core/types";
 import { N_BLOCOS_PADRAO } from "../core/types";
 import {
   criarLote,
+  comPerfilMovidoDeLote,
   criarPerfilEmLote,
   importarLotesJSON,
   lotesIniciais,
@@ -170,6 +171,16 @@ export function Modulo2({
         l.id === loteId ? { ...l, perfis: l.perfis.filter((e) => e.id !== perfilEmLoteId) } : l,
       ),
     }));
+  }
+
+  function moverPerfilDeLote(deLoteId: string, perfilEmLoteId: string, paraLoteId: string, indice?: number) {
+    onAlterarConfig((atual) => comPerfilMovidoDeLote(atual, deLoteId, perfilEmLoteId, paraLoteId, indice));
+  }
+
+  /** Como um lote aparece na lista «Mover para o lote…». */
+  function rotuloDoLote(l: Lote): string {
+    const numero = l.numero.trim() || "?";
+    return l.designacao.trim() === "" ? `Lote ${numero}` : `Lote ${numero} — ${l.designacao.trim()}`;
   }
 
   async function lerPerfisDeFicheiros(ficheiros: FileList): Promise<{ perfis: PerfilJSON[]; falhados: string[] }> {
@@ -498,6 +509,11 @@ export function Modulo2({
               onAlterar={(alteracao) => atualizarLote(lote.id, alteracao)}
               onRemover={() => removerLote(lote.id)}
               onRetirarPerfil={(perfilEmLoteId) => retirarPerfil(lote.id, perfilEmLoteId)}
+              outrosLotes={config.lotes.filter((l) => l.id !== lote.id).map((l) => ({ id: l.id, rotulo: rotuloDoLote(l) }))}
+              onMoverPerfil={(perfilEmLoteId, paraLoteId) => moverPerfilDeLote(lote.id, perfilEmLoteId, paraLoteId)}
+              onReceberPerfil={(deLoteId, perfilEmLoteId, indice) =>
+                moverPerfilDeLote(deLoteId, perfilEmLoteId, lote.id, indice)
+              }
               anosPlurianuais={config.encargosPlurianuais.ativo ? anosDoContrato : undefined}
               anoDeReferencia={config.encargosPlurianuais.anoInicio}
             />

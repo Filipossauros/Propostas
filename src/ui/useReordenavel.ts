@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 
 /** Move um elemento de `de` para `para`, devolvendo uma lista nova. */
 export function moverItem<T>(itens: T[], de: number, para: number): T[] {
@@ -49,6 +49,26 @@ export function useReordenavel(onReordenar: (de: number, para: number) => void):
     setAArrastar(null);
     setAlvo(null);
   }
+
+  // Se o item arrastado sair da lista (passou para outra), o seu `dragend` já
+  // não chega à pega: o fim do arrasto apanha-se na página — na captura, antes
+  // de o destino parar a propagação —, para a lista não ficar a julgar que
+  // ainda reordena.
+  useEffect(() => {
+    if (aArrastar === null) return;
+    // Depois de a largada ser tratada: limpar antes faria a lista esquecer o que se arrastava.
+    const fim = () =>
+      window.setTimeout(() => {
+        setAArrastar(null);
+        setAlvo(null);
+      }, 0);
+    document.addEventListener("dragend", fim, true);
+    document.addEventListener("drop", fim, true);
+    return () => {
+      document.removeEventListener("dragend", fim, true);
+      document.removeEventListener("drop", fim, true);
+    };
+  }, [aArrastar]);
 
   return {
     aArrastar,

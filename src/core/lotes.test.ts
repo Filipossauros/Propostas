@@ -581,3 +581,20 @@ describe("limiar de valor", () => {
     expect(totaisPorAnoPlurianual(config)[0]).toBeCloseTo(123_000, 5);
   });
 });
+
+describe("passar um perfil para outro lote", () => {
+  it("leva horas, preço e elementos, na posição pedida; o mesmo lote ou um perfil inexistente não mudam nada", async () => {
+    const { comPerfilMovidoDeLote, normalizarLotesGuardados } = await import("./lotes");
+    const { LOTES_EXEMPLO } = await import("./exemplo");
+    const config = normalizarLotesGuardados(structuredClone(LOTES_EXEMPLO));
+    const [l1, l2] = config.lotes;
+    const java = l1.perfis[0];
+    const movido = comPerfilMovidoDeLote(config, l1.id, java.id, l2.id, 1);
+    expect(movido.lotes[0].perfis.map((e) => e.id)).not.toContain(java.id);
+    expect(movido.lotes[1].perfis[1]).toEqual(java);
+    expect(movido.lotes[1].perfis).toHaveLength(l2.perfis.length + 1);
+    expect(comPerfilMovidoDeLote(config, l1.id, java.id, l2.id).lotes[1].perfis.at(-1)).toEqual(java);
+    expect(comPerfilMovidoDeLote(config, l1.id, java.id, l1.id)).toBe(config);
+    expect(comPerfilMovidoDeLote(config, l1.id, "nada", l2.id)).toBe(config);
+  });
+});

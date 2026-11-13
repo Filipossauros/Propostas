@@ -40,6 +40,10 @@ O fluxo acompanha papéis distintos, que raramente são a mesma pessoa:
 | **4 · Análise** | Júri | Apura o cumprimento dos requisitos em todos os lotes de uma vez | Relatório Excel com o agregado, o desagregado por requisito, o traço de apuramento e uma folha por concorrente; JSON de resultados |
 | **5 · Ordenação** | Júri | Ordena pelo preço as propostas admitidas em cada lote | O relatório do Módulo 4, mais a ordenação de cada lote e os vencedores |
 
+No Módulo 3, um perfil passa de um lote para outro arrastando-o pela pega (o número da linha) para
+uma linha ou para o cartão do outro lote, ou com «Mover para o lote…», junto ao nome; leva as horas,
+o preço/hora e o n.º mínimo de elementos. Dentro do lote, a pega e as setas reordenam.
+
 Quem define os perfis não sabe ainda o número do procedimento nem como os lotes serão
 agrupados — por isso o Módulo 2 não os pede. No formulário entregue ao candidato, o número
 do procedimento é sempre campo de preenchimento livre; o lote vem pré-preenchido e bloqueado
@@ -263,9 +267,9 @@ perfil: o preço/hora de cada perfil continua a escrever-se no lote. A base é a
 propostas admitidas, rate do valor base, mais alta e média; a diferença da média
 para o valor base calcula-se), os **valores anteriormente adjudicados** (perfil,
 procedimento ou contrato, ano e valor hora adjudicado), **ambos**, ou **texto
-livre** (a fundamentação escrita à mão, sem tabela, que sai tal como está escrita). Num pedido
-novo, as tabelas começam vazias; o botão «Preencher com a tabela da SPMS» copia o quadro de
-referência da SPMS para as rates médias (os agrupamentos gravados antes da tabela recebem esse quadro). Sai no Anexo I da manifestação
+livre** (a fundamentação escrita à mão, sem tabela, que sai tal como está escrita). As tabelas
+começam vazias e preenchem-se em cada exercício (os agrupamentos gravados antes de haver tabela abrem
+com o quadro de referência da SPMS de então, de que partiram os seus valores hora). Sai no Anexo I da manifestação
 (ponto 3), com o parágrafo e a tabela da base escolhida.
 
 **Margem prudencial.** A 0 % (por omissão), a margem considera-se incorporada nos

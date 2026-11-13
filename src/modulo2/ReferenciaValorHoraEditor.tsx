@@ -4,7 +4,6 @@ import {
   diferencaMediaBase,
   linhaAdjudicadoVazia,
   linhaRateMediaVazia,
-  linhasRatesSpms,
   usaAdjudicados,
   usaRateMedia,
   type FundamentoValorHora,
@@ -90,9 +89,7 @@ export function ReferenciaValorHoraEditor({ config, onAlterarConfig }: Props) {
         <>
           <h4 className="titulo-tabela-referencia">Rate média das propostas</h4>
           {ref.media.length === 0 ? (
-            <p className="estado-vazio">
-              Sem linhas. Acrescente a primeira, ou preencha com o quadro de referência da SPMS.
-            </p>
+            <p className="estado-vazio">Sem linhas. Acrescente a primeira.</p>
           ) : (
             <div className="tabela-envolvente">
               <table className="tabela tabela-referencia">
@@ -201,21 +198,6 @@ export function ReferenciaValorHoraEditor({ config, onAlterarConfig }: Props) {
               onClick={() => alterar({ media: [...ref.media, linhaRateMediaVazia()] })}
             >
               + Acrescentar linha
-            </button>
-            <button
-              type="button"
-              className="botao-discreto"
-              onClick={() => {
-                if (
-                  ref.media.length === 0 ||
-                  confirm(
-                    "Substituir as rates médias pelo quadro de referência da SPMS? As linhas atuais são substituídas.",
-                  )
-                )
-                  alterar({ media: linhasRatesSpms() });
-              }}
-            >
-              {ref.media.length === 0 ? "Preencher com a tabela da SPMS" : "Repor a tabela da SPMS"}
             </button>
           </div>
         </>

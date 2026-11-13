@@ -83,6 +83,43 @@ export function criarPerfilEmLote(perfil: PerfilJSON): PerfilEmLote {
   };
 }
 
+/**
+ * Passa um perfil de um lote para outro, com tudo o que tem no lote (horas,
+ * preço/hora, n.º mínimo de elementos). Entra na posição `indice` do lote de
+ * destino, ou no fim. Sem perfil, ou com o mesmo lote, nada muda.
+ */
+export function comPerfilMovidoDeLote(
+  config: LotesJSON,
+  deLoteId: string,
+  perfilEmLoteId: string,
+  paraLoteId: string,
+  indice?: number,
+): LotesJSON {
+  if (deLoteId === paraLoteId) return config;
+  const entrada = config.lotes
+    .find((l) => l.id === deLoteId)
+    ?.perfis.find((e) => e.id === perfilEmLoteId);
+  if (entrada === undefined || !config.lotes.some((l) => l.id === paraLoteId)) {
+    return config;
+  }
+  return {
+    ...config,
+    lotes: config.lotes.map((l) => {
+      if (l.id === deLoteId) {
+        return { ...l, perfis: l.perfis.filter((e) => e.id !== perfilEmLoteId) };
+      }
+      if (l.id !== paraLoteId) return l;
+      const perfis = l.perfis.slice();
+      const onde =
+        indice === undefined
+          ? perfis.length
+          : Math.max(0, Math.min(indice, perfis.length));
+      perfis.splice(onde, 0, entrada);
+      return { ...l, perfis };
+    }),
+  };
+}
+
 export function lotesIniciais(): LotesJSON {
   return {
     schemaVersion: SCHEMA_VERSION_ATUAL,
