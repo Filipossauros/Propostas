@@ -284,8 +284,7 @@ export function VistaGeral() {
         <p className="ajuda">
           Um ZIP com o Excel e o JSON. O Excel contempla duas tabelas, uma por folha: o resumo geral e o detalhe por
           projeto — e, havendo cenários de corte, uma folha «Comparação» com o orçamento e os cenários lado a lado e o
-          detalhe de cada cenário. O JSON leva os cenários, para os retomar noutro posto e para a Vista Geral da Direção
-          os poder usar. O nome do ficheiro leva os anos de início dos projetos carregados.
+          detalhe de cada cenário. O JSON leva os cenários, para os retomar noutro posto. O nome do ficheiro leva os anos de início dos projetos carregados.
         </p>
       </section>
     </>

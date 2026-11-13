@@ -6,18 +6,26 @@ procedimento de contratação pública com o preço como critério único.
 Aplicação 100% cliente: sem backend e sem qualquer chamada de rede. Os ficheiros de propostas
 em análise nunca saem do posto de trabalho.
 
-## A página inicial
+## A biblioteca e a barra superior
 
-A aplicação abre numa página inicial com quatro grupos de módulos, cada um num cartão:
+A aplicação abre na **biblioteca de pedidos**: todos os pedidos, de bolsa de horas e de
+licenciamento, com o tipo, o estado (em preparação, pronto, revisto, arquivado), a versão, o valor
+estimado (sem IVA, com a margem) e a data da última alteração. Daqui se cria um pedido novo, se abre,
+duplica, exporta (JSON), arquiva ou apaga, e se descarrega a biblioteca inteira (cópia de segurança em
+JSON). Importa-se uma biblioteca, um pedido, um agrupamento de lotes, um ficheiro de perfis ou um
+pedido de licenciamento.
 
-- **Pedido de serviços de bolsa de horas** — 1 Projeto, 2 Perfis, 3 Lotes.
-- **Pedido de licenciamento** — 1 Produto, L1 Licenças, L2 Condições e L3 Pedido.
-- **Análise de propostas** — 4 Análise, 5 Ordenação.
-- **Orçamento** — Vista Geral da Unidade e Vista Geral da Direção.
+A **barra superior** está sempre visível e tem as três entradas da aplicação — Biblioteca, Análise de
+propostas e Orçamento —, o pedido em que se está a trabalhar (tipo, nome, estado e versão), com um
+menu para mudar de pedido ou criar outro, se ficou guardado, e, dentro de um pedido, **«Descarregar
+tudo»**: um ZIP com todas as peças do pedido (as mesmas de cada módulo, que continuam a descarregar-se
+onde estavam) e o pedido inteiro em JSON. Com questões por resolver, só o JSON se descarrega.
 
-Em cada módulo, o topo tem «← Página inicial», o grupo em que se está e os passos do grupo, para ir
-de um módulo ao seguinte. O endereço da página guarda onde se está (`#bolsa/perfis`): o botão
-«retroceder» do navegador funciona e recarregar não volta ao início.
+Dentro de um pedido, os passos do tipo (1 Projeto, 2 Perfis, 3 Lotes; ou 1 Produto, L1, L2, L3)
+dizem os módulos completos (✓) e os que têm questões por resolver. A **análise de propostas** (4
+Análise, 5 Ordenação) é outro momento, com entrada própria: não faz parte do pedido. O **orçamento**
+é o da unidade. O endereço da página guarda onde se está (`#bolsa/perfis`): o botão «retroceder» do
+navegador funciona e recarregar não volta ao início.
 
 ## Os cinco módulos
 
@@ -403,13 +411,13 @@ semana ou personalizado, com as horas editáveis (das 00:00 às 23:59 é o dia i
 **O Anexo Técnico (ZIP)** leva a manifestação de necessidades no modelo da DAG (Word e, com o n.º da
 informação e o n.º de orçamento, PDF), o pedido eAvalia com a folha **«Custos - Licenciamento»** preenchida
 («Custos - Serviços» fica como o modelo a traz), um **mapa de quantidades e preços** em Excel por lote e o
-JSON do pedido. O pedido fica guardado neste navegador (`propostas.v2.licenciamento`); um pedido da versão
+JSON do pedido. O pedido fica guardado na biblioteca, neste navegador; um pedido da versão
 anterior é convertido ao abrir. A ordenação das propostas de licenciamento e as vistas gerais ainda não o
 leem.
 
-## As vistas gerais e os cenários de corte
+## O orçamento e os cenários de corte
 
-A **Vista Geral da Unidade** junta os JSON de lotes dos projetos de uma unidade: pessoas, valores por
+O **orçamento da unidade** junta os JSON de lotes dos projetos de uma unidade: pessoas, valores por
 ano e o peso de cada projeto. Tem duas leituras:
 
 - **Orçamento** — os projetos tal como foram agrupados, com os elementos internos registados à mão.
@@ -422,9 +430,6 @@ Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao per
 identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de
 ter onde se aplicar é assinalado. Os cenários viajam no JSON da Vista Geral, e o Excel leva uma folha
 «Comparação» e o detalhe de cada cenário.
-
-Na **Vista Geral da Direção**, cada unidade que traga cenários pode entrar com um deles em vez do
-orçamento; totais, tabelas e ficheiros passam a usá-lo, sem as linhas que ficaram sem ninguém.
 
 ## Princípios
 
@@ -439,8 +444,15 @@ orçamento; totais, tabelas e ficheiros passam a usá-lo, sem as linhas que fica
 
 ## Persistência
 
-O trabalho de configuração — o catálogo de perfis (Módulo 2) e o agrupamento de lotes
-(Módulo 3) — é guardado no `localStorage` do navegador e reaparece na sessão seguinte.
+O trabalho de preparação — a biblioteca de pedidos (projeto, perfis e lotes; ou produto, licenças,
+condições e lotes) e o orçamento da unidade — é guardado no `localStorage` do navegador, com o
+prefixo `propostas.v3.`, e reaparece na sessão seguinte. Se uma gravação falhar (sem armazenamento, ou
+sem espaço), a barra superior avisa.
+
+A versão anterior da aplicação, publicada ao lado (ver Implantação), guardava um só pedido de cada
+tipo, com o prefixo `propostas.v2.`. Na primeira abertura, esta versão copia esses pedidos para a
+biblioteca, e o orçamento, sem apagar nem reescrever as chaves antigas: as duas versões convivem no
+mesmo navegador.
 
 As declarações carregadas no Módulo 4, o apuramento que delas resulta e os preços
 indicados no Módulo 5 **nunca** são guardados: contêm dados pessoais de candidatos
@@ -472,7 +484,14 @@ npm run build    # build de produção (pasta dist/)
 
 ## Implantação (GitHub Pages)
 
-O workflow `.github/workflows/deploy-pages.yml` compila e publica a pasta `dist/` no
-GitHub Pages a cada push para `main` ou `claude/app-development-3g3pv9` (ou manualmente,
-via "Run workflow" no separador Actions). Os caminhos de build são relativos
+O workflow `.github/workflows/deploy-pages.yml` publica no GitHub Pages duas versões lado a lado:
+
+- a estável (ramo `claude/app-development-3g3pv9`) na raiz: https://filipossauros.github.io/Propostas/
+- a nova, em desenvolvimento (ramo `claude/biblioteca`), em `/nova/`:
+  https://filipossauros.github.io/Propostas/nova/
+
+Cada publicação constrói os dois ramos. Corre a cada push para `main` ou para o ramo estável, ou
+manualmente ("Run workflow" no separador Actions, no ramo estável): o ambiente `github-pages` só
+aceita publicar a partir dos ramos autorizados. O ramo `claude/versao-antes-da-biblioteca` guarda,
+fixa, a versão anterior à reestruturação. Os caminhos de build são relativos
 (`base: './'`), pelo que o mesmo `dist/` também funciona aberto localmente a partir do disco.

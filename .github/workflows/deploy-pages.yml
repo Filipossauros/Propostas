@@ -3,8 +3,10 @@ name: Deploy to GitHub Pages
 # O site publica duas versões da aplicação, lado a lado:
 #   · a estável (ramo claude/app-development-3g3pv9) na raiz do site;
 #   · a nova, em desenvolvimento (ramo claude/biblioteca), em /nova/.
-# Um envio para qualquer dos dois ramos volta a construir e a publicar ambas.
-# O ficheiro é igual nos dois ramos. A aplicação usa caminhos relativos
+# A publicação corre a partir do ramo estável (envio ou execução manual) e
+# constrói sempre os dois ramos. O ambiente github-pages só aceita publicar a
+# partir dos ramos autorizados, pelo que um envio para claude/biblioteca não
+# dispara a publicação: lança-se à mão («Run workflow») no ramo estável. A aplicação usa caminhos relativos
 # (base './'), pelo que funciona tanto na raiz como em /nova/.
 
 on:
@@ -12,7 +14,6 @@ on:
     branches:
       - main
       - claude/app-development-3g3pv9
-      - claude/biblioteca
   workflow_dispatch:
 
 permissions:

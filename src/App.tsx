@@ -1,37 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "./core/types";
-import { SCHEMA_VERSION_ATUAL } from "./core/types";
-import {
-  CHAVE_DESCRICAO_PROJETO,
-  CHAVE_JUSTIFICACAO_PROJETO,
-  CHAVE_LICENCIAMENTO,
-  CHAVE_LOTES,
-  CHAVE_NOME_PROJETO,
-  CHAVE_PERFIS,
-} from "./core/persistencia";
-import {
-  ehJustificacaoGuardada,
-  justificacaoInicial,
-  normalizarJustificacao,
-  temJustificacao,
-  validarJustificacao,
-} from "./core/justificacao";
-import {
-  ehListaDePerfisGuardada,
-  normalizarPerfisGuardados,
-  validarDescricaoProjeto,
-  validarNomeProjeto,
-  validarPerfis,
-} from "./core/perfil";
-import {
-  lotePorPerfilId,
-  lotesIniciais,
-  normalizarLotesGuardados,
-  sincronizarPerfisEmLotes,
-  validarCategoriasEavalia,
-  validarLotes,
-} from "./core/lotes";
-import { useEstadoPersistente } from "./core/useEstadoPersistente";
+import { temJustificacao, validarJustificacao } from "./core/justificacao";
+import { validarDescricaoProjeto, validarNomeProjeto, validarPerfis } from "./core/perfil";
+import { lotePorPerfilId, sincronizarPerfisEmLotes, validarCategoriasEavalia, validarLotes } from "./core/lotes";
 import { ProtecaoExemplos } from "./ui/ProtecaoExemplos";
 import { ModuloProjeto } from "./projeto/ModuloProjeto";
 import { ModuloPerfis } from "./modulo1/ModuloPerfis";
@@ -39,53 +10,59 @@ import { Modulo2 } from "./modulo2/Modulo2";
 import { Modulo3 } from "./modulo3/Modulo3";
 import { Modulo4, type Apuramento } from "./modulo4/Modulo4";
 import { VistaGeral } from "./vistaGeral/VistaGeral";
-import { VistaGeralDirecao } from "./direcao/VistaGeralDirecao";
 import { ModuloLicencas } from "./licenciamento/ModuloLicencas";
 import { ModuloProduto } from "./licenciamento/ModuloProduto";
 import { ModuloCondicoes } from "./licenciamento/ModuloCondicoes";
 import { ModuloPedidoLicenciamento } from "./licenciamento/ModuloPedidoLicenciamento";
 import {
-  ehPedidoLicenciamentoGuardado,
-  normalizarPedidoLicenciamento,
-  pedidoLicenciamentoInicial,
   validarCondicoes,
   validarLicencas,
   validarPedido,
   validarProdutoLicenciamento,
   type PedidoLicenciamento,
 } from "./core/licenciamento";
-import { PaginaInicial, type EstadoDoModulo } from "./inicio/PaginaInicial";
-import { BarraDoModulo } from "./inicio/BarraDoModulo";
 import {
+  comDadosBolsa,
+  comDadosLicenciamento,
+  comPedidoAberto,
+  comPedidoNovo,
+  dadosBolsaIniciais,
+  novoPedidoBolsa,
+  novoPedidoLicenciamento,
+  pedidoAtivo,
+  type DadosBolsa,
+  type TipoPedido,
+} from "./core/biblioteca";
+import { pedidoLicenciamentoInicial } from "./core/licenciamento";
+import { useBiblioteca } from "./core/useBiblioteca";
+import { BarraSuperior, type Seccao } from "./inicio/BarraSuperior";
+import { BarraDoModulo, type EstadoDoModulo } from "./inicio/BarraDoModulo";
+import { PaginaBiblioteca } from "./inicio/PaginaBiblioteca";
+import { DialogoDescarregarTudo } from "./inicio/DialogoDescarregarTudo";
+import {
+  ehGrupoDePedido,
   enderecoDe,
   grupoDaPagina,
   localizacaoDoEndereco,
-  type ChaveGrupo,
   type Localizacao,
   type Pagina,
 } from "./inicio/navegacao";
 
-/** O estado de um módulo, dito no seu cartão da página inicial: o que falta, ou que está completo. */
+/** O estado de um módulo, dito nos passos do pedido: o que falta, ou que está completo. */
 function estadoPorErros(n: number): EstadoDoModulo {
   return n === 0
     ? { texto: "completo", falta: false }
     : { texto: n === 1 ? "1 questão por resolver" : `${n} questões por resolver`, falta: true };
 }
 
-function ehTexto(valor: unknown): valor is string {
-  return typeof valor === "string";
-}
-
-function ehLotesGuardado(valor: unknown): valor is LotesJSON {
-  if (typeof valor !== "object" || valor === null) return false;
-  const l = valor as Partial<LotesJSON>;
-  return l.tipo === "lotes" && l.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(l.lotes);
-}
+/** O primeiro módulo de cada tipo de pedido. */
+const PRIMEIRO_MODULO: Record<TipoPedido, Exclude<Pagina, "inicio">> = { bolsa: "projeto", licenciamento: "produto" };
 
 function App() {
   // Onde se está: a página e o grupo de onde se veio. Vive no endereço
   // (`#bolsa/perfis`), para o «retroceder» do navegador funcionar e para um
-  // recarregamento não atirar ninguém para a página inicial.
+  // recarregamento não atirar ninguém para a biblioteca. O pedido aberto vive
+  // na própria biblioteca.
   const [local, setLocal] = useState<Localizacao>(() => localizacaoDoEndereco(window.location.hash));
   useEffect(() => {
     const aoMudar = () => setLocal(localizacaoDoEndereco(window.location.hash));
@@ -99,75 +76,53 @@ function App() {
   // pessoais e desaparecem ao fechar o separador.
   const [apuramentoParaOrdenar, setApuramentoParaOrdenar] = useState<Apuramento | null>(null);
 
-  // O catálogo de perfis e o agrupamento em lotes vivem aqui, e não dentro dos
-  // respetivos módulos, porque são partilhados: o Módulo 2 define os perfis, o
-  // Módulo 3 agrupa-os e também os pode carregar de ficheiro. Ter um só dono
-  // para cada um é o que permite que uma alteração feita num módulo se reflita
-  // no outro — ver `aplicarPerfis`.
-  const [perfis, setPerfis] = useEstadoPersistente<PerfilJSON[]>(
-    CHAVE_PERFIS,
-    () => [],
-    ehListaDePerfisGuardada,
-    normalizarPerfisGuardados,
+  // Todos os pedidos, e o que está aberto. Os módulos trabalham o aberto.
+  const [biblioteca, setBiblioteca, gravacao] = useBiblioteca();
+  const ativo = pedidoAtivo(biblioteca);
+  const [aDescarregar, setADescarregar] = useState<string | null>(null);
+
+  // Os dados do pedido aberto, como os módulos os esperam. Sem pedido do tipo,
+  // valores vazios (os módulos desse tipo não se mostram).
+  const vazioBolsa = useMemo(() => dadosBolsaIniciais(), []);
+  const vazioLicenciamento = useMemo(() => pedidoLicenciamentoInicial(), []);
+  const bolsa: DadosBolsa = ativo?.tipo === "bolsa" ? ativo.dados : vazioBolsa;
+  const licenciamento: PedidoLicenciamento = ativo?.tipo === "licenciamento" ? ativo.dados : vazioLicenciamento;
+
+  // Os «setters» de cada parte do pedido de bolsa: alteram o pedido aberto na
+  // biblioteca, aceitando um valor ou uma função do valor atual — como um
+  // useState. Estáveis, para os módulos os poderem usar sem cuidados.
+  const campoBolsa = useCallback(
+    <K extends keyof DadosBolsa>(chave: K): React.Dispatch<React.SetStateAction<DadosBolsa[K]>> =>
+      (valor) =>
+        setBiblioteca((b) =>
+          comDadosBolsa(b, (d) => ({
+            ...d,
+            [chave]: typeof valor === "function" ? (valor as (atual: DadosBolsa[K]) => DadosBolsa[K])(d[chave]) : valor,
+          })),
+        ),
+    [setBiblioteca],
   );
-  const [lotes, setLotes] = useEstadoPersistente<LotesJSON>(
-    CHAVE_LOTES,
-    lotesIniciais,
-    ehLotesGuardado,
-    normalizarLotesGuardados,
-  );
-  const [nomeProjeto, setNomeProjeto] = useEstadoPersistente<string>(
-    CHAVE_NOME_PROJETO,
-    () => "",
-    ehTexto,
-  );
-  const [descricaoProjeto, setDescricaoProjeto] = useEstadoPersistente<string>(
-    CHAVE_DESCRICAO_PROJETO,
-    () => "",
-    ehTexto,
-  );
-  const [justificacao, setJustificacao] = useEstadoPersistente<JustificacaoProjeto>(
-    CHAVE_JUSTIFICACAO_PROJETO,
-    justificacaoInicial,
-    ehJustificacaoGuardada,
-    normalizarJustificacao,
+  const setLotes = useMemo(() => campoBolsa("lotes"), [campoBolsa]) as React.Dispatch<React.SetStateAction<LotesJSON>>;
+  const setNomeProjeto = useMemo(() => campoBolsa("nomeProjeto"), [campoBolsa]);
+  const setDescricaoProjeto = useMemo(() => campoBolsa("descricaoProjeto"), [campoBolsa]);
+  const setJustificacao = useMemo(() => campoBolsa("justificacao"), [campoBolsa]) as React.Dispatch<
+    React.SetStateAction<JustificacaoProjeto>
+  >;
+  const setLicenciamento = useCallback(
+    (atualizar: (atual: PedidoLicenciamento) => PedidoLicenciamento) =>
+      setBiblioteca((b) => comDadosLicenciamento(b, atualizar)),
+    [setBiblioteca],
   );
 
-  // O pedido de licenciamento (L1, L2 e L3): um só estado, partilhado pelos
-  // três módulos, como o agrupamento em lotes o é pelo Módulo 3.
-  const [licenciamento, setLicenciamento] = useEstadoPersistente<PedidoLicenciamento>(
-    CHAVE_LICENCIAMENTO,
-    pedidoLicenciamentoInicial,
-    ehPedidoLicenciamentoGuardado,
-    normalizarPedidoLicenciamento,
-  );
-
-  // A primeira versão do licenciamento usava o projeto da bolsa de horas. Um
-  // pedido dessa altura, já com licenças e sem produto, fica com esse projeto
-  // como produto — uma vez, para não perder o que estava escrito.
-  useEffect(() => {
-    if (licenciamento.nomeProduto.trim() === "" && licenciamento.licencas.length > 0 && nomeProjeto.trim() !== "") {
-      setLicenciamento((atual) => ({
-        ...atual,
-        nomeProduto: nomeProjeto,
-        descricaoProduto: descricaoProjeto,
-        justificacao: structuredClone(justificacao),
-      }));
-    }
-    // Só ao abrir a aplicação.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { nomeProjeto, descricaoProjeto, justificacao, perfis } = bolsa;
+  const lotes = bolsa.lotes;
 
   /**
-   * Ponto único de alteração do catálogo.
-   *
-   * Depois de atualizar os perfis, repõe-nos nos lotes onde já estejam
-   * atribuídos: é isto que torna a edição transversal, em vez de deixar o lote
-   * com uma cópia congelada dos requisitos de quando lá foi colocado.
+   * Ponto único de alteração do catálogo de perfis: repõe-nos também nos lotes
+   * onde já estejam atribuídos, para a edição ser transversal.
    */
   function aplicarPerfis(novos: PerfilJSON[]) {
-    setPerfis(novos);
-    setLotes((atual) => sincronizarPerfisEmLotes(atual, novos));
+    setBiblioteca((b) => comDadosBolsa(b, (d) => ({ ...d, perfis: novos, lotes: sincronizarPerfisEmLotes(d.lotes, novos) })));
   }
 
   /** Acrescenta perfis vindos de ficheiro, substituindo os que já existam com o mesmo id. */
@@ -177,186 +132,231 @@ function App() {
     aplicarPerfis([...porId.values()]);
   }
 
-  /**
-   * O nome do projeto vive numa só variável, mas é gravado em cada ficheiro
-   * exportado. Ao importar, um nome vindo do ficheiro só se aplica se ainda
-   * não houver nenhum definido — para uma importação não apagar em silêncio o
-   * nome que a pessoa acabou de escrever.
-   */
+  /** Um nome vindo de ficheiro só se aplica se ainda não houver nenhum. */
   function adotarNomeProjeto(doFicheiro: string) {
     if (doFicheiro.trim() !== "" && nomeProjeto.trim() === "") setNomeProjeto(doFicheiro);
   }
-
-  /** A descrição do projeto viaja nos mesmos ficheiros, e pela mesma regra. */
   function adotarDescricaoProjeto(doFicheiro: string) {
     if (doFicheiro.trim() !== "" && descricaoProjeto.trim() === "") setDescricaoProjeto(doFicheiro);
   }
-
-  /** Os benefícios e os riscos também — e as duas listas juntas, como foram escritas. */
   function adotarJustificacao(doFicheiro: JustificacaoProjeto) {
     if (temJustificacao(doFicheiro) && !temJustificacao(justificacao)) setJustificacao(doFicheiro);
   }
 
-  // O estado de cada módulo de preparação, para o cartão da página inicial o
-  // dizer sem ser preciso abri-lo. Sem nada escrito, o cartão não diz nada.
+  // O estado de cada módulo do pedido aberto, para os passos o dizerem.
   const estados: Partial<Record<Pagina, EstadoDoModulo>> = {};
-  const projetoVazio = nomeProjeto.trim() === "" && descricaoProjeto.trim() === "" && !temJustificacao(justificacao);
-  if (!projetoVazio) {
-    estados.projeto = estadoPorErros(
-      validarNomeProjeto(nomeProjeto).length +
-        validarDescricaoProjeto(descricaoProjeto).length +
-        validarJustificacao(justificacao).length,
-    );
+  if (ativo?.tipo === "bolsa") {
+    const projetoVazio = nomeProjeto.trim() === "" && descricaoProjeto.trim() === "" && !temJustificacao(justificacao);
+    if (!projetoVazio) {
+      estados.projeto = estadoPorErros(
+        validarNomeProjeto(nomeProjeto).length +
+          validarDescricaoProjeto(descricaoProjeto).length +
+          validarJustificacao(justificacao).length,
+      );
+    }
+    if (perfis.length > 0) estados.perfis = estadoPorErros(validarPerfis(perfis).length);
+    if (lotes.lotes.length > 0) {
+      estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
+    }
   }
-  if (perfis.length > 0) estados.perfis = estadoPorErros(validarPerfis(perfis).length);
-  if (lotes.lotes.length > 0) {
-    estados.lotes = estadoPorErros(validarLotes(lotes).length + validarCategoriasEavalia(lotes).length);
+  if (ativo?.tipo === "licenciamento") {
+    const produtoVazio =
+      licenciamento.nomeProduto.trim() === "" &&
+      licenciamento.descricaoProduto.trim() === "" &&
+      !temJustificacao(licenciamento.justificacao);
+    if (!produtoVazio) estados.produto = estadoPorErros(validarProdutoLicenciamento(licenciamento).length);
+    if (licenciamento.licencas.length > 0) {
+      estados.licencas = estadoPorErros(validarLicencas(licenciamento).length);
+      estados.condicoes = estadoPorErros(validarCondicoes(licenciamento).length);
+      estados.pedidoLicenciamento = estadoPorErros(validarPedido(licenciamento).length);
+    }
   }
 
-  const produtoVazio =
-    licenciamento.nomeProduto.trim() === "" &&
-    licenciamento.descricaoProduto.trim() === "" &&
-    !temJustificacao(licenciamento.justificacao);
-  if (!produtoVazio) estados.produto = estadoPorErros(validarProdutoLicenciamento(licenciamento).length);
-  if (licenciamento.licencas.length > 0) {
-    estados.licencas = estadoPorErros(validarLicencas(licenciamento).length);
-    estados.condicoes = estadoPorErros(validarCondicoes(licenciamento).length);
-    estados.pedidoLicenciamento = estadoPorErros(validarPedido(licenciamento).length);
-  }
-
-  function navegar(destino: Localizacao) {
+  const navegar = useCallback((destino: Localizacao) => {
     const endereco = enderecoDe(destino);
     if (window.location.hash !== endereco && !(endereco === "#" && window.location.hash === "")) {
       window.location.hash = endereco;
     }
     setLocal(destino);
     window.scrollTo({ top: 0 });
-  }
+  }, []);
 
-  /** Vai para outro módulo do grupo em que se está (ou do grupo da página, se for de um só). */
+  /** Vai para outro módulo do grupo em que se está. */
   function irPara(destino: Exclude<Pagina, "inicio">) {
     navegar({ pagina: destino, grupo: grupoDaPagina(destino, local.grupo ?? undefined).chave });
   }
 
-  function abrir(grupo: ChaveGrupo, pagina: Exclude<Pagina, "inicio">) {
-    navegar({ pagina, grupo });
+  function abrirPedido(id: string) {
+    const p = biblioteca.pedidos.find((x) => x.id === id);
+    if (p === undefined) return;
+    setBiblioteca((b) => comPedidoAberto(b, id));
+    navegar({ pagina: PRIMEIRO_MODULO[p.tipo], grupo: p.tipo });
   }
 
-  const grupo = aba === "inicio" ? null : grupoDaPagina(aba, local.grupo ?? undefined);
+  function novoPedido(tipo: TipoPedido) {
+    const p = tipo === "bolsa" ? novoPedidoBolsa() : novoPedidoLicenciamento();
+    setBiblioteca((b) => comPedidoNovo(b, p));
+    navegar({ pagina: PRIMEIRO_MODULO[tipo], grupo: tipo });
+  }
+
+  function irParaSeccao(seccao: Exclude<Seccao, "pedido">) {
+    if (seccao === "biblioteca") navegar({ pagina: "inicio", grupo: null });
+    else if (seccao === "analise") navegar({ pagina: "avaliacao", grupo: "analise" });
+    else navegar({ pagina: "vistaGeral", grupo: "orcamento" });
+  }
+
+  // Um módulo de pedido só se abre com um pedido desse tipo aberto: sem ele (um
+  // endereço antigo, um pedido apagado), mostra-se a biblioteca, e o endereço
+  // acompanha.
+  const grupoNoEndereco = aba === "inicio" ? null : grupoDaPagina(aba, local.grupo ?? undefined).chave;
+  const pedidoEmFalta = ehGrupoDePedido(grupoNoEndereco) && ativo?.tipo !== grupoNoEndereco;
+  useEffect(() => {
+    if (pedidoEmFalta) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#`);
+  }, [pedidoEmFalta]);
+
+  const grupo = aba === "inicio" || pedidoEmFalta ? null : grupoDaPagina(aba, local.grupo ?? undefined);
+  const seccao: Seccao =
+    grupo === null
+      ? "biblioteca"
+      : ehGrupoDePedido(grupo.chave)
+        ? "pedido"
+        : grupo.chave === "analise"
+          ? "analise"
+          : "orcamento";
+  const pedidoADescarregar = biblioteca.pedidos.find((p) => p.id === aDescarregar) ?? null;
 
   return (
     <ProtecaoExemplos>
+      <BarraSuperior
+        seccao={seccao}
+        ativo={ativo}
+        pedidos={biblioteca.pedidos.filter((p) => !p.arquivado)}
+        gravacao={gravacao}
+        onIrPara={irParaSeccao}
+        onAbrirPedido={abrirPedido}
+        onNovoPedido={novoPedido}
+        onDescarregarTudo={() => ativo !== null && setADescarregar(ativo.id)}
+      />
+
       <div className="app">
-      <header className="app-cabecalho">
-        <div className="marca">
-          <h1>Manifestações de Necessidades</h1>
-          <p>Preparação de procedimentos, análise de propostas e orçamento</p>
-        </div>
-      </header>
+        <main>
+          {seccao === "biblioteca" && (
+            <PaginaBiblioteca
+              biblioteca={biblioteca}
+              onAlterar={setBiblioteca}
+              onAbrir={abrirPedido}
+              onNovo={novoPedido}
+              onDescarregarTudo={setADescarregar}
+            />
+          )}
 
-      <main>
-        {aba === "inicio" && <PaginaInicial estados={estados} onAbrir={abrir} />}
+          {grupo !== null && aba !== "inicio" && (
+            <BarraDoModulo grupo={grupo} pagina={aba} estados={seccao === "pedido" ? estados : undefined} onIrPara={irPara} />
+          )}
 
-        {grupo !== null && aba !== "inicio" && (
-          <BarraDoModulo
-            grupo={grupo}
-            pagina={aba}
-            onVoltar={() => navegar({ pagina: "inicio", grupo: null })}
-            onIrPara={irPara}
-          />
-        )}
+          {seccao === "pedido" && ativo?.tipo === "bolsa" && (
+            <>
+              {aba === "projeto" && (
+                <ModuloProjeto
+                  nomeProjeto={nomeProjeto}
+                  onAlterarNomeProjeto={setNomeProjeto}
+                  descricaoProjeto={descricaoProjeto}
+                  onAlterarDescricaoProjeto={setDescricaoProjeto}
+                  justificacao={justificacao}
+                  onAlterarJustificacao={setJustificacao}
+                  mostrarComoFunciona
+                  seguinte={{
+                    titulo: "os perfis",
+                    nota:
+                      "O projeto fica guardado na biblioteca, neste navegador. Pode avançar com questões por " +
+                      "resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.",
+                    onIr: () => irPara("perfis"),
+                  }}
+                />
+              )}
+              {aba === "perfis" && (
+                <ModuloPerfis
+                  perfis={perfis}
+                  onAlterarPerfis={aplicarPerfis}
+                  nomeProjeto={nomeProjeto}
+                  onAdotarNomeProjeto={adotarNomeProjeto}
+                  descricaoProjeto={descricaoProjeto}
+                  onAdotarDescricaoProjeto={adotarDescricaoProjeto}
+                  justificacao={justificacao}
+                  onAdotarJustificacao={adotarJustificacao}
+                  lotePorPerfilId={lotePorPerfilId(lotes)}
+                  onIrParaLotes={() => irPara("lotes")}
+                />
+              )}
+              {aba === "lotes" && (
+                <Modulo2
+                  perfis={perfis}
+                  config={lotes}
+                  onAlterarConfig={setLotes}
+                  nomeProjeto={nomeProjeto}
+                  onDefinirNomeProjeto={setNomeProjeto}
+                  onAdotarNomeProjeto={adotarNomeProjeto}
+                  descricaoProjeto={descricaoProjeto}
+                  onDefinirDescricaoProjeto={setDescricaoProjeto}
+                  onAdotarDescricaoProjeto={adotarDescricaoProjeto}
+                  justificacao={justificacao}
+                  onDefinirJustificacao={setJustificacao}
+                  onAdotarJustificacao={adotarJustificacao}
+                  onAcrescentarPerfis={acrescentarPerfis}
+                  onSubstituirPerfis={aplicarPerfis}
+                />
+              )}
+            </>
+          )}
 
-        {aba === "projeto" && (
-          <ModuloProjeto
-            nomeProjeto={nomeProjeto}
-            onAlterarNomeProjeto={setNomeProjeto}
-            descricaoProjeto={descricaoProjeto}
-            onAlterarDescricaoProjeto={setDescricaoProjeto}
-            justificacao={justificacao}
-            onAlterarJustificacao={setJustificacao}
-            mostrarComoFunciona
-            seguinte={{
-              titulo: "os perfis",
-              nota:
-                "O projeto fica guardado neste navegador e segue nos ficheiros dos perfis e dos lotes. Pode " +
-                "avançar com questões por resolver, mas o Anexo Técnico só se descarrega depois de resolvidas.",
-              onIr: () => irPara("perfis"),
-            }}
-          />
-        )}
-        {aba === "produto" && (
-          <ModuloProduto pedido={licenciamento} onAlterar={setLicenciamento} onIrParaLicencas={() => irPara("licencas")} />
-        )}
-        {aba === "perfis" && (
-          <ModuloPerfis
-            perfis={perfis}
-            onAlterarPerfis={aplicarPerfis}
-            nomeProjeto={nomeProjeto}
-            onAdotarNomeProjeto={adotarNomeProjeto}
-            descricaoProjeto={descricaoProjeto}
-            onAdotarDescricaoProjeto={adotarDescricaoProjeto}
-            justificacao={justificacao}
-            onAdotarJustificacao={adotarJustificacao}
-            lotePorPerfilId={lotePorPerfilId(lotes)}
-            onIrParaLotes={() => irPara("lotes")}
-          />
-        )}
-        {aba === "lotes" && (
-          <Modulo2
-            perfis={perfis}
-            config={lotes}
-            onAlterarConfig={setLotes}
-            nomeProjeto={nomeProjeto}
-            onDefinirNomeProjeto={setNomeProjeto}
-            onAdotarNomeProjeto={adotarNomeProjeto}
-            descricaoProjeto={descricaoProjeto}
-            onDefinirDescricaoProjeto={setDescricaoProjeto}
-            onAdotarDescricaoProjeto={adotarDescricaoProjeto}
-            justificacao={justificacao}
-            onDefinirJustificacao={setJustificacao}
-            onAdotarJustificacao={adotarJustificacao}
-            onAcrescentarPerfis={acrescentarPerfis}
-            onSubstituirPerfis={aplicarPerfis}
-          />
-        )}
-        {aba === "avaliacao" && (
-          <Modulo3
-            onIrParaOrdenacao={(resultado, config) => {
-              setApuramentoParaOrdenar({ resultado, config });
-              irPara("ordenacao");
-            }}
-          />
-        )}
+          {seccao === "pedido" && ativo?.tipo === "licenciamento" && (
+            <>
+              {aba === "produto" && (
+                <ModuloProduto
+                  pedido={licenciamento}
+                  onAlterar={setLicenciamento}
+                  onIrParaLicencas={() => irPara("licencas")}
+                />
+              )}
+              {aba === "licencas" && (
+                <ModuloLicencas
+                  pedido={licenciamento}
+                  onAlterar={setLicenciamento}
+                  onIrParaCondicoes={() => irPara("condicoes")}
+                />
+              )}
+              {aba === "condicoes" && (
+                <ModuloCondicoes
+                  pedido={licenciamento}
+                  onAlterar={setLicenciamento}
+                  onIrParaPedido={() => irPara("pedidoLicenciamento")}
+                />
+              )}
+              {aba === "pedidoLicenciamento" && (
+                <ModuloPedidoLicenciamento pedido={licenciamento} onAlterar={setLicenciamento} />
+              )}
+            </>
+          )}
 
-        {aba === "ordenacao" && (
-          <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
-        )}
+          {aba === "avaliacao" && (
+            <Modulo3
+              onIrParaOrdenacao={(resultado, config) => {
+                setApuramentoParaOrdenar({ resultado, config });
+                irPara("ordenacao");
+              }}
+            />
+          )}
+          {aba === "ordenacao" && (
+            <Modulo4 recebido={apuramentoParaOrdenar} onLimparRecebido={() => setApuramentoParaOrdenar(null)} />
+          )}
 
-        {aba === "licencas" && (
-          <ModuloLicencas
-            pedido={licenciamento}
-            onAlterar={setLicenciamento}
-            onIrParaCondicoes={() => irPara("condicoes")}
-          />
-        )}
-        {aba === "condicoes" && (
-          <ModuloCondicoes
-            pedido={licenciamento}
-            onAlterar={setLicenciamento}
-            onIrParaPedido={() => irPara("pedidoLicenciamento")}
-          />
-        )}
-        {aba === "pedidoLicenciamento" && (
-          <ModuloPedidoLicenciamento
-            pedido={licenciamento}
-            onAlterar={setLicenciamento}
-          />
-        )}
-
-        {aba === "vistaGeral" && <VistaGeral />}
-        {aba === "vistaDirecao" && <VistaGeralDirecao />}
-      </main>
+          {aba === "vistaGeral" && <VistaGeral />}
+        </main>
       </div>
+
+      {pedidoADescarregar !== null && (
+        <DialogoDescarregarTudo pedido={pedidoADescarregar} onFechar={() => setADescarregar(null)} />
+      )}
     </ProtecaoExemplos>
   );
 }

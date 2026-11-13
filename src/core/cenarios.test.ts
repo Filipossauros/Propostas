@@ -23,12 +23,6 @@ import {
   totaisPorAnoDaUnidade,
   type OrcamentoUnidade,
 } from "./vistaGeral";
-import {
-  comCenarioDaUnidade,
-  vistaComCenarios,
-  vistaDirecaoInicial,
-  normalizarVistaDirecao,
-} from "./vistaGeralDirecao";
 import { SCHEMA_VERSION_ATUAL } from "./types";
 
 /** Dois projetos: A com 3 programadores e 1 arquiteto, B com 2 analistas; um interno em cada. */
@@ -228,34 +222,6 @@ describe("guardar e voltar a abrir", () => {
         { nome: "Bom", cortes: [{ projeto: "A", lote: "1", perfil: "P", ficam: -1 }, { ficam: 2 }], movimentos: [{}] },
       ]),
     ).toMatchObject([{ nome: "Bom", cortes: [{ projeto: "", lote: "", perfil: "", ficam: 2 }], movimentos: [] }]);
-  });
-});
-
-describe("vista da direção", () => {
-  it("cada unidade entra no cenário escolhido para ela, sem as linhas cortadas", () => {
-    const o = orcamento();
-    const c = comPessoas(novoCenario("Corte"), o.projetos[0], o.projetos[0].entradas[1], 0);
-    o.cenarios = [c];
-    const vista = comCenarioDaUnidade({ ...vistaDirecaoInicial(), unidades: [o] }, "UPACE", c.id);
-    const efetiva = vistaComCenarios(vista);
-
-    expect(efetiva.unidades[0].projetos[0].entradas.map((e) => e.perfil)).toEqual(["Programador"]);
-    expect(totaisPorAnoDaUnidade(efetiva.unidades[0])).toEqual([500, 150, 150]);
-    // Um retrato: sem cenários nem escolhas, para não cortar duas vezes.
-    expect(efetiva.cenarioPorUnidade).toEqual({});
-    expect(efetiva.unidades[0].cenarios).toEqual([]);
-  });
-
-  it("voltar ao orçamento e um cenário apagado deixam a unidade como está", () => {
-    const o = orcamento();
-    const vista = comCenarioDaUnidade({ ...vistaDirecaoInicial(), unidades: [o] }, "UPACE", "nao-existe");
-    expect(vistaComCenarios(vista).unidades[0]).toBe(o);
-    expect(comCenarioDaUnidade(vista, "UPACE", null).cenarioPorUnidade).toEqual({});
-  });
-
-  it("a escolha fica guardada na vista da direção", () => {
-    const vista = comCenarioDaUnidade(vistaDirecaoInicial(), "UPACE", "c1");
-    expect(normalizarVistaDirecao(JSON.parse(JSON.stringify(vista))).cenarioPorUnidade).toEqual({ UPACE: "c1" });
   });
 });
 

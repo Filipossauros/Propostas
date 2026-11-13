@@ -9,13 +9,11 @@ import type { JustificacaoProjeto, LotesJSON, PerfilJSON } from "../core/types";
 import type { ResultadoProcedimento } from "../core/avaliacaoProcedimento";
 import type { Ordenacao } from "../core/ordenacao";
 import type { OrcamentoUnidade } from "../core/vistaGeral";
-import type { VistaDirecao } from "../core/vistaGeralDirecao";
 import { perfisParaJSON } from "../core/perfil";
 import { especificacao, lotesParaJSON } from "../core/lotes";
 import type { ImagemDaFolha } from "../core/resumoCurricular";
 import { resultadosParaJSON } from "../core/resultadosJSON";
 import { anosDoOrcamento, orcamentoParaJSON } from "../core/vistaGeral";
-import { anosDaDirecao, vistaDirecaoParaJSON } from "../core/vistaGeralDirecao";
 import { gerarManifestacaoBlob } from "../word/manifestacaoNecessidades";
 import { comMargemPrudencial } from "../core/margem";
 import { gerarResumoPerfisBlob } from "../excel/resumoPerfis";
@@ -28,9 +26,8 @@ import { gerarManifestacaoLicenciamentoBlob, tituloDoPdfLicenciamento } from "..
 import { gerarMapaPrecosBlob, lotesComMapa } from "../excel/mapaPrecos";
 import { gerarResultadosBlob } from "../excel/exportarResultados";
 import { gerarVistaGeralBlob } from "../excel/vistaGeral";
-import { gerarVistaDirecaoBlob } from "../excel/vistaDirecao";
 import { nomeSeguro } from "../ui/descarregar";
-import { carimboDeData, emPasta, nomeDoPacote, type FicheiroDoPacote } from "../ui/pacote";
+import { emPasta, nomeDoPacote, type FicheiroDoPacote } from "../ui/pacote";
 
 const JSON_MIME = "application/json";
 
@@ -291,32 +288,4 @@ export function nomeDoPacoteDaVistaGeral(orcamento: OrcamentoUnidade, quando?: D
 /** Os anos cobertos pelo orçamento — usado só para o texto de ajuda do ecrã. */
 export function anosDaVistaGeral(orcamento: OrcamentoUnidade): number[] {
   return anosDoOrcamento(orcamento);
-}
-
-// --------------------------------------------------------------------------
-// Vista Geral da Direção — as unidades juntas
-// --------------------------------------------------------------------------
-
-/** O Excel da direção, sozinho: é o que se leva para uma reunião. */
-export function nomeDoExcelDaDirecao(vista: VistaDirecao, quando = new Date()): string {
-  return `${nomeSeguro(vista.direcao, "Direcao")}_Vista_Geral_Direcao_${carimboDeData(quando)}.xlsx`;
-}
-
-export async function ficheirosDaVistaDirecao(vista: VistaDirecao): Promise<FicheiroDoPacote[]> {
-  const base = nomeSeguro(vista.direcao, "Direcao");
-  return [
-    { nome: `${base}_Vista_Geral_Direcao.xlsx`, conteudo: await gerarVistaDirecaoBlob(vista) },
-    { nome: `${base}_Vista_Geral_Direcao.json`, conteudo: comoJSON(vistaDirecaoParaJSON(vista)) },
-  ];
-}
-
-/**
- * O nome do pacote da direção leva os anos económicos que a vista cobre, em
- * dois dígitos — a mesma leitura do pacote de uma unidade.
- */
-export function nomeDoPacoteDaVistaDirecao(vista: VistaDirecao, quando?: Date): string {
-  const anos = anosDaDirecao(vista)
-    .map((ano) => String(ano % 100).padStart(2, "0"))
-    .join("_");
-  return nomeDoPacote(vista.direcao, anos === "" ? "Vista_Geral_Direcao" : `Vista_Geral_Direcao_${anos}`, quando, "Direcao");
 }

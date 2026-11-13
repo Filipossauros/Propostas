@@ -2,8 +2,9 @@
 //
 // ATENÇÃO — desvio deliberado ao princípio "sem persistência" do plano original,
 // pedido explicitamente para não se perder trabalho entre sessões. O que é
-// guardado está limitado ao trabalho da entidade adjudicante: perfis do Módulo
-// 1, lotes do Módulo 3 e a Vista Geral da unidade. Os dados das declarações
+// guardado está limitado ao trabalho da entidade adjudicante: a biblioteca de
+// pedidos (projeto, perfis e lotes; ou produto, licenças e condições) e a Vista
+// Geral da unidade. Os dados das declarações
 // carregadas no Módulo 4 — que contêm dados pessoais de CANDIDATOS — NUNCA são
 // guardados: continuam a viver apenas em memória e desaparecem ao fechar o
 // separador.
@@ -11,26 +12,19 @@
 // A Vista Geral traz nomes de pessoas da equipa, registados à mão por quem a
 // preenche. Ficam neste navegador, e só nele — como tudo o resto, nada sai do
 // posto de trabalho. Apagar um projeto apaga também os nomes que lhe estavam
-// afetos. O mesmo vale para a Vista Geral da Direção, que junta as das
-// unidades e traz consigo os mesmos nomes.
+// afetos.
 
-const PREFIXO = "propostas.v2.";
+// Esta versão guarda tudo em chaves próprias («propostas.v3.»): a versão
+// anterior, publicada ao lado no mesmo endereço, continua com as suas
+// («propostas.v2.»), que aqui só se leem — uma vez, para copiar o que lá
+// estava. Ver `copiarDaVersaoAnterior` e `bibliotecaDaVersaoAnterior`.
+const PREFIXO = "propostas.v3.";
+const PREFIXO_ANTERIOR = "propostas.v2.";
 
-/** Catálogo de perfis do Módulo 2, partilhado com o Módulo 3. */
-export const CHAVE_PERFIS = `${PREFIXO}perfis`;
-export const CHAVE_LOTES = `${PREFIXO}lotes`;
-/** Nome do projeto, comum a todos os módulos e a todos os ficheiros gerados. */
-export const CHAVE_NOME_PROJETO = `${PREFIXO}nomeProjeto`;
-/** Descrição do projeto, escrita no Módulo 1 e usada no pedido de encargos. */
-export const CHAVE_DESCRICAO_PROJETO = `${PREFIXO}descricaoProjeto`;
-/** Benefícios do projeto e riscos da não contratação, escritos no Módulo 1. */
-export const CHAVE_JUSTIFICACAO_PROJETO = `${PREFIXO}justificacaoProjeto`;
+/** A biblioteca de pedidos: todos os pedidos de bolsa de horas e de licenciamento, e o que está aberto. */
+export const CHAVE_BIBLIOTECA = `${PREFIXO}biblioteca`;
 /** Orçamento da unidade da Vista Geral, com os elementos internos registados. */
 export const CHAVE_VISTA_GERAL = `${PREFIXO}vistaGeral`;
-/** Vista Geral da Direção: as vistas das unidades que o Diretor juntou. */
-export const CHAVE_VISTA_DIRECAO = `${PREFIXO}vistaDirecao`;
-/** O pedido de licenciamento (L1, L2 e L3): produtos, condições, lotes e júri — sem dados de candidatos. */
-export const CHAVE_LICENCIAMENTO = `${PREFIXO}licenciamento`;
 
 function armazenamentoDisponivel(): boolean {
   try {
@@ -60,12 +54,16 @@ export function lerEstado<T>(chave: string): T | null {
   }
 }
 
-export function guardarEstado<T>(chave: string, valor: T): void {
-  if (!PERSISTENCIA_DISPONIVEL) return;
+/** Grava; diz se conseguiu (sem armazenamento ou com a quota esgotada, não). */
+export function guardarEstado<T>(chave: string, valor: T): boolean {
+  if (!PERSISTENCIA_DISPONIVEL) return false;
   try {
     localStorage.setItem(chave, JSON.stringify(valor));
+    return true;
   } catch {
-    // Quota esgotada: preferimos perder a gravação a interromper a edição.
+    // Quota esgotada: preferimos perder a gravação a interromper a edição — e
+    // quem chama decide se avisa.
+    return false;
   }
 }
 
@@ -83,3 +81,28 @@ export function limparEstado(chave: string): void {
  * pode ficar no navegador — ao contrário das declarações, que nunca ficam.
  */
 export const CHAVE_DATA_LIMITE_ANALISE = `${PREFIXO}dataLimiteAnalise`;
+
+/** As chaves que passam como estão da versão anterior, na primeira abertura. */
+const CHAVES_COPIADAS = ["vistaGeral", "dataLimiteAnalise"];
+
+/**
+ * Copia para as chaves desta versão o que a anterior guardou e ainda cá não
+ * está. Só lê as chaves antigas: a versão anterior continua a funcionar.
+ */
+export function copiarDaVersaoAnterior(): void {
+  if (!PERSISTENCIA_DISPONIVEL) return;
+  for (const nome of CHAVES_COPIADAS) {
+    try {
+      if (localStorage.getItem(`${PREFIXO}${nome}`) !== null) continue;
+      const antigo = localStorage.getItem(`${PREFIXO_ANTERIOR}${nome}`);
+      if (antigo !== null) localStorage.setItem(`${PREFIXO}${nome}`, antigo);
+    } catch {
+      // Sem armazenamento: não há o que copiar.
+    }
+  }
+}
+
+/** Lê uma chave em bruto (JSON), sem a validar — para a migração. */
+export function lerChave(chave: string): unknown {
+  return lerEstado<unknown>(chave);
+}

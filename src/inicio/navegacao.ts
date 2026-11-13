@@ -1,9 +1,10 @@
-// A organização da aplicação: uma página inicial e quatro grupos de módulos.
+// A organização da aplicação: a biblioteca de pedidos (a página inicial), os
+// módulos de cada pedido, a análise de propostas e o orçamento.
 //
-// Os módulos deixaram de caber numa barra: são quatro trabalhos diferentes,
-// feitos por pessoas diferentes em alturas diferentes. A página inicial
-// mostra-os separados, e cada módulo sabe de que grupo se veio, para o
-// «voltar» e os passos do topo serem os desse grupo.
+// Um pedido é de bolsa de horas (Projeto, Perfis, Lotes) ou de licenciamento
+// (Produto, L1, L2, L3), e abre-se a partir da biblioteca. A análise de
+// propostas (Módulos 4 e 5) é outro momento, com entrada própria na barra
+// superior: não faz parte do pedido. O orçamento junta os pedidos.
 //
 // No pedido de licenciamento, o Módulo 1 é o Produto, com dados próprios: o
 // que se adquire é um produto (um software, uma terminologia…), e não um
@@ -20,8 +21,7 @@ export type Pagina =
   | "pedidoLicenciamento"
   | "avaliacao"
   | "ordenacao"
-  | "vistaGeral"
-  | "vistaDirecao";
+  | "vistaGeral";
 
 export type ChaveGrupo = "bolsa" | "licenciamento" | "analise" | "orcamento";
 
@@ -96,19 +96,13 @@ export const GRUPOS: Grupo[] = [
     chave: "orcamento",
     titulo: "Orçamento",
     etiqueta: "Gestão",
-    descricao: "Os procedimentos da unidade e as unidades da direção lado a lado, com cenários de corte.",
+    descricao: "Os procedimentos da unidade lado a lado, com cenários de corte.",
     modulos: [
       {
         pagina: "vistaGeral",
         marca: "Σ",
-        titulo: "Vista Geral da Unidade",
+        titulo: "Orçamento da unidade",
         descricao: "Orçamento, pessoas e cenários de corte",
-      },
-      {
-        pagina: "vistaDirecao",
-        marca: "ΣΣ",
-        titulo: "Vista Geral da Direção",
-        descricao: "As unidades da direção lado a lado",
       },
     ],
   },
@@ -147,4 +141,11 @@ export function enderecoDe(localizacao: Localizacao): string {
   return localizacao.pagina === "inicio" || localizacao.grupo === null
     ? "#"
     : `#${localizacao.grupo}/${localizacao.pagina}`;
+}
+
+/** Os grupos que são um pedido: os seus módulos só se abrem com um pedido desse tipo aberto. */
+export const GRUPOS_DE_PEDIDO: ReadonlyArray<ChaveGrupo> = ["bolsa", "licenciamento"];
+
+export function ehGrupoDePedido(chave: ChaveGrupo | null): chave is "bolsa" | "licenciamento" {
+  return chave === "bolsa" || chave === "licenciamento";
 }

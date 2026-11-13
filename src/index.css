@@ -2888,3 +2888,359 @@ select.campo-bloqueado:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------------
+   Barra superior: sempre visível, diz em que pedido se está.
+   ------------------------------------------------------------------------ */
+.barra-superior {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--azul-900);
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(16 24 40 / 20%);
+}
+.barra-superior-conteudo {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.barra-superior-marca {
+  background: none;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.98rem;
+  padding: 4px 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.barra-superior-entradas {
+  display: flex;
+  gap: 2px;
+}
+.entrada-superior {
+  background: none;
+  border: 0;
+  color: #c9d6e6;
+  padding: 6px 10px;
+  border-radius: var(--raio-pequeno);
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.entrada-superior:hover {
+  color: #fff;
+}
+.entrada-superior-ativa {
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+  font-weight: 600;
+}
+.contexto-superior {
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.contexto-superior-botao {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 8px;
+  color: #fff;
+  padding: 5px 10px;
+  font-size: 0.86rem;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.contexto-superior-botao:hover {
+  background: rgb(255 255 255 / 14%);
+}
+.contexto-superior-nome {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.contexto-superior-nota {
+  color: #c9d6e6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contexto-superior-versao {
+  color: #c9d6e6;
+  font-size: 0.78rem;
+}
+.contexto-superior-seta {
+  margin-left: auto;
+  color: #c9d6e6;
+}
+.contexto-superior-lista {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(460px, 92vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--superficie);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: 0 10px 30px rgb(16 24 40 / 25%);
+  z-index: 30;
+}
+.contexto-superior-titulo {
+  margin: 0;
+  padding: 10px 14px 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+}
+.contexto-superior-vazio {
+  margin: 0;
+  padding: 6px 14px 10px;
+  font-size: 0.86rem;
+  color: var(--texto-suave);
+}
+.contexto-superior-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--superficie-alt);
+  color: var(--texto);
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.contexto-superior-item:hover,
+.contexto-superior-item-ativo {
+  background: var(--azul-100);
+}
+.contexto-superior-item .etiqueta-estado {
+  margin-left: auto;
+}
+.contexto-superior-rodape {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid var(--borda);
+}
+.contexto-superior-rodape .botao-secundario {
+  padding: 5px 10px;
+  font-size: 0.82rem;
+}
+.gravacao-superior {
+  font-size: 0.78rem;
+  color: #9fb3c8;
+  white-space: nowrap;
+}
+.gravacao-superior-falha {
+  color: #ffd27a;
+  font-weight: 600;
+}
+.botao-descarregar-tudo {
+  background: #fff;
+  color: var(--azul-900);
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  padding: 7px 12px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.barra-superior + .app {
+  padding-top: 20px;
+}
+
+/* Etiquetas do tipo e do estado do pedido. */
+.etiqueta-tipo,
+.etiqueta-estado {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.etiqueta-tipo-bolsa {
+  background: #e0eaff;
+  color: #2d3fa6;
+}
+.etiqueta-tipo-licenciamento {
+  background: var(--verde-fundo);
+  color: var(--verde);
+}
+.etiqueta-tipo-analise {
+  background: #fef0c7;
+  color: #93370d;
+}
+.etiqueta-tipo-orcamento {
+  background: #ebe9fe;
+  color: #5925dc;
+}
+.etiqueta-estado-preparacao {
+  background: var(--ambar-fundo);
+  color: var(--ambar);
+}
+.etiqueta-estado-pronto {
+  background: var(--verde-fundo);
+  color: var(--verde);
+}
+.etiqueta-estado-revisto {
+  background: #e0eaff;
+  color: #2d3fa6;
+}
+.etiqueta-estado-arquivado {
+  background: var(--superficie-alt);
+  color: var(--texto-suave);
+}
+
+/* Passos do pedido: completo e por resolver. */
+.barra-modulo .passos-grupo {
+  margin-left: 0;
+}
+.passo-grupo-completo {
+  color: var(--verde);
+  font-weight: 700;
+}
+.passo-grupo-falta {
+  color: var(--ambar);
+  font-size: 0.75rem;
+}
+
+/* Biblioteca de pedidos. */
+.biblioteca-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.biblioteca-cabecalho h2 {
+  margin: 0;
+  margin-right: auto;
+  font-size: 1.4rem;
+}
+.botao-licenciamento {
+  background: var(--verde);
+  border-color: var(--verde);
+}
+.filtros-biblioteca {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.tabela-biblioteca td {
+  vertical-align: middle;
+}
+.tabela-biblioteca .meta {
+  display: block;
+}
+.meta-falta {
+  color: var(--vermelho);
+}
+.nome-pedido {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 600;
+  color: var(--texto);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+}
+.nome-pedido:hover {
+  color: var(--azul-500);
+  text-decoration: underline;
+}
+.linha-pedido-ativo {
+  background: var(--azul-100);
+}
+.acoes-pedido {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+.menu-pedido {
+  position: relative;
+}
+.menu-pedido summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+}
+.menu-pedido summary::-webkit-details-marker {
+  display: none;
+}
+/* Dentro da tabela (que desliza na horizontal), o menu abre na própria linha:
+   flutuante, ficaria cortado pelo recorte da tabela. */
+.tabela-biblioteca-envolvente {
+  position: relative;
+}
+.menu-pedido[open] {
+  flex-basis: 100%;
+}
+.acoes-pedido:has(.menu-pedido[open]) {
+  flex-wrap: wrap;
+}
+.menu-pedido-lista {
+  margin-top: 6px;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pequeno);
+  box-shadow: 0 8px 20px rgb(16 24 40 / 15%);
+}
+.menu-pedido-lista button {
+  background: none;
+  border: 0;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--texto);
+  cursor: pointer;
+}
+.menu-pedido-lista button:hover {
+  background: var(--superficie-alt);
+}
+.menu-pedido-lista .botao-perigo {
+  color: var(--vermelho);
+}
+.dialogo-largo {
+  max-width: 34rem;
+}
+
+@media (max-width: 720px) {
+  .barra-superior-conteudo {
+    gap: 8px;
+  }
+  .gravacao-superior {
+    display: none;
+  }
+  .gravacao-superior-falha {
+    display: inline;
+    white-space: normal;
+  }
+}

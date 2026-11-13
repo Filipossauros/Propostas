@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { GRUPOS, enderecoDe, grupoDaPagina, localizacaoDoEndereco } from "./navegacao";
 
 describe("organização da aplicação", () => {
+  it("o orçamento é só o da unidade: a vista da direção saiu", () => {
+    const orcamento = GRUPOS.find((g) => g.chave === "orcamento")!;
+    expect(orcamento.modulos.map((m) => m.pagina)).toEqual(["vistaGeral"]);
+    expect(localizacaoDoEndereco("#orcamento/vistaDirecao")).toEqual({ pagina: "inicio", grupo: null });
+  });
+
   it("quatro grupos, pela ordem da página inicial", () => {
     expect(GRUPOS.map((g) => g.titulo)).toEqual([
       "Pedido de serviços de bolsa de horas",
@@ -33,7 +39,7 @@ describe("organização da aplicação", () => {
     for (const local of [
       { pagina: "perfis", grupo: "bolsa" },
       { pagina: "produto", grupo: "licenciamento" },
-      { pagina: "vistaDirecao", grupo: "orcamento" },
+      { pagina: "vistaGeral", grupo: "orcamento" },
     ] as const) {
       expect(localizacaoDoEndereco(enderecoDe(local))).toEqual(local);
     }
