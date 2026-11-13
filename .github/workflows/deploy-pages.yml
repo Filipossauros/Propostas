@@ -1,10 +1,18 @@
 name: Deploy to GitHub Pages
 
+# O site publica duas versões da aplicação, lado a lado:
+#   · a estável (ramo claude/app-development-3g3pv9) na raiz do site;
+#   · a nova, em desenvolvimento (ramo claude/biblioteca), em /nova/.
+# Um envio para qualquer dos dois ramos volta a construir e a publicar ambas.
+# O ficheiro é igual nos dois ramos. A aplicação usa caminhos relativos
+# (base './'), pelo que funciona tanto na raiz como em /nova/.
+
 on:
   push:
     branches:
       - main
       - claude/app-development-3g3pv9
+      - claude/biblioteca
   workflow_dispatch:
 
 permissions:
@@ -24,17 +32,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: claude/app-development-3g3pv9
+          path: estavel
+      - uses: actions/checkout@v5
+        with:
+          ref: claude/biblioteca
+          path: nova
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          cache-dependency-path: |
+            estavel/package-lock.json
+            nova/package-lock.json
+      - name: Versão estável (raiz)
+        working-directory: estavel
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Versão nova (/nova/)
+        working-directory: nova
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Juntar as duas versões
+        run: |
+          rm -rf site
+          cp -r estavel/dist site
+          mkdir -p site/nova
+          cp -r nova/dist/. site/nova/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build
@@ -46,4 +79,4 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
         with:
-          timeout: 1200000
+          timeout: 600000
