@@ -338,7 +338,7 @@ export function niveisServicoPorOmissao(): NivelServico[] {
  * licenças do L1 enquanto não for alterado à mão.
  */
 export interface CondicoesContrato {
-  ambito: { texto: string | null; naoProdutivosSemCusto: boolean };
+  ambito: { texto: string | null };
   manutencao: { texto: string | null };
   suporte: {
     ligada: boolean;
@@ -366,14 +366,9 @@ export type CondicaoComTexto = "ambito" | "manutencao" | "suporte" | "disponibil
 /** O limite das penalizações (art.º 329.º, n.º 2, do CCP): 20 % do preço contratual. */
 export const LIMITE_GLOBAL_PENALIZACOES = 20;
 
-export const EXPLICACAO_NAO_PRODUTIVOS =
-  "Num software instalado, cada cópia em funcionamento pode contar como uma licença. Com esta opção, as cópias " +
-  "usadas só para testes, formação e recuperação de desastre não contam para a quantidade contratada nem se pagam " +
-  "à parte. Só se aplica a licenças de software.";
-
 export function condicoesIniciais(): CondicoesContrato {
   return {
-    ambito: { texto: null, naoProdutivosSemCusto: true },
+    ambito: { texto: null },
     manutencao: { texto: null },
     suporte: {
       ligada: true,
@@ -1101,7 +1096,6 @@ function objetos(pedido: Pick<PedidoLicenciamento, "licencas">): Set<ObjetoLicen
   return new Set(pedido.licencas.filter((l) => !ehServico(l)).map((l) => l.objeto));
 }
 
-const temSoftware = (p: Pick<PedidoLicenciamento, "licencas">) => objetos(p).has("software");
 const temNacional = (p: Pick<PedidoLicenciamento, "licencas">) => p.licencas.some((l) => l.metrica === "nacional");
 
 /** Se uma condição se aplica às licenças do L1, e, quando não, porquê. */
@@ -1120,11 +1114,6 @@ export function aplicabilidade(chave: CondicaoComTexto, pedido: PedidoLicenciame
     return saas ? sim : { aplica: false, razao: "Nenhuma licença do L1 é software em subscrição (SaaS)." };
   }
   return sim;
-}
-
-/** Se a opção dos ambientes não produtivos se aplica: só há cópias por contar no software. */
-export function aplicaNaoProdutivos(pedido: PedidoLicenciamento): boolean {
-  return pedido.licencas.length === 0 || temSoftware(pedido);
 }
 
 /** O título da condição da manutenção, conforme o que se licencia. */
@@ -1694,10 +1683,8 @@ function normalizarCondicoes(bruto: unknown): CondicoesContrato {
     : [nivel(s.critica, omissao[0]), nivel(s.alta, omissao[1]), nivel(s.normal, omissao[2])];  // O antigo «24x7» é o horário de 7 dias, 24 horas por dia.
   const horario: HorarioSuporte = s.horario === "24x7" ? "7dias" : deLista(s.horario, chaves(HORARIOS_SUPORTE), "") || "uteis";
   return {
-    ambito: {
-      texto: textoDeCondicao(a.texto),
-      naoProdutivosSemCusto: booleano(a.naoProdutivosSemCusto, base.ambito.naoProdutivosSemCusto),
-    },
+    // A antiga opção dos ambientes não produtivos sem custo passou a condição própria, se se quiser.
+    ambito: { texto: textoDeCondicao(a.texto) },
     manutencao: { texto: textoDeCondicao(m.texto) },
     suporte: {
       ligada: booleano(s.ligada, true),

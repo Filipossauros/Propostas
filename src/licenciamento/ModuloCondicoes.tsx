@@ -7,10 +7,8 @@ import type {
   PedidoLicenciamento,
 } from "../core/licenciamento";
 import {
-  EXPLICACAO_NAO_PRODUTIVOS,
   HORARIOS_SUPORTE,
   LIMITE_GLOBAL_PENALIZACOES,
-  aplicaNaoProdutivos,
   aplicabilidade,
   condicoesIniciais,
   horarioPorExtenso,
@@ -22,7 +20,6 @@ import {
 } from "../core/licenciamento";
 import { gerarId } from "../core/id";
 import { CampoNumero } from "../ui/CampoNumero";
-import { Explicacao } from "../ui/Explicacao";
 
 interface Props {
   pedido: PedidoLicenciamento;
@@ -216,24 +213,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
           <h3>Âmbito da licença</h3>
         </header>
 
-        <Condicao titulo="Âmbito da licença" selo="obrigatória" {...textoDe("ambito")}>
-          {aplicaNaoProdutivos(pedido) && (
-            <>
-              <label className="campo-opcao">
-                <input
-                  type="checkbox"
-                  checked={c.ambito.naoProdutivosSemCusto}
-                  onChange={(e) => alterar("ambito", { naoProdutivosSemCusto: e.target.checked })}
-                />
-                <span>
-                  <strong>Ambientes de teste, formação e recuperação sem custo</strong>
-                  <span className="meta">Só nas licenças de software.</span>
-                </span>
-              </label>
-              <Explicacao pergunta="O que quer dizer?">{EXPLICACAO_NAO_PRODUTIVOS}</Explicacao>
-            </>
-          )}
-        </Condicao>
+        <Condicao titulo="Âmbito da licença" selo="obrigatória" {...textoDe("ambito")} />
       </section>
 
       <section className="painel">
@@ -529,7 +509,10 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
         <header className="painel-cabecalho">
           <h3>Condições próprias</h3>
           <p className="painel-nota">
-            Outras obrigações do adjudicatário, com título e texto. Cada uma sai como ponto próprio do Anexo III.
+            Outras obrigações do adjudicatário, com título e texto. Cada uma sai como ponto próprio do Anexo III. Por
+            exemplo: a formação dos administradores, ou os ambientes de teste, formação e recuperação sem custo (num
+            software instalado, as cópias usadas só nesses ambientes não contam para a quantidade nem se pagam à
+            parte).
           </p>
         </header>
         {c.proprias.length === 0 && <p className="estado-vazio">Sem condições próprias.</p>}
@@ -541,7 +524,7 @@ export function ModuloCondicoes({ pedido, onAlterar, onIrParaPedido }: Props) {
                 <input
                   type="text"
                   value={p.titulo}
-                  placeholder="ex.: Formação dos administradores"
+                  placeholder="ex.: Formação dos administradores; Ambientes de teste, formação e recuperação sem custo"
                   aria-invalid={p.titulo.trim() === ""}
                   onChange={(e) => alterarPropria(p.id, { titulo: e.target.value })}
                 />

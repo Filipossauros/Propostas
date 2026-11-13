@@ -219,9 +219,8 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                 const questoes = estado === "preparacao" ? questoesDoPedido(p) : 0;
                 const valor = valorEstimadoDoPedido(p);
                 const valorComIva = valorEstimadoComIvaDoPedido(p);
-                const ativo = biblioteca.ativoId === p.id;
                 return (
-                  <tr key={p.id} className={ativo ? "linha-pedido-ativo" : undefined}>
+                  <tr key={p.id}>
                     <td>
                       <button type="button" className="nome-pedido" onClick={() => onAbrir(p.id)}>
                         {nomeParaListas(p)}

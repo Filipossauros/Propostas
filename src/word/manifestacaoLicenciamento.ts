@@ -25,7 +25,6 @@ import {
   margemDoPedido,
   mesesDoContrato,
   aplicabilidade,
-  aplicaNaoProdutivos,
   horarioPorExtenso,
   linhasDoMapa,
   metricaPorExtenso,
@@ -858,13 +857,6 @@ function corpoLicenciamento(
 
   ponto3("Âmbito da licença");
   p.push(recuado(textoDaCondicao("ambito", pedido).trim()));
-  if (c.ambito.naoProdutivosSemCusto && aplicaNaoProdutivos(pedido))
-    p.push(
-      recuado(
-        "A utilização em ambientes não produtivos (teste, formação e recuperação) não é contabilizada para efeitos " +
-          "de licenciamento nem dá lugar a qualquer custo adicional.",
-      ),
-    );
 
 
   if (aplicabilidade("manutencao", pedido).aplica) {

@@ -3171,9 +3171,6 @@ select.campo-bloqueado:disabled {
   color: var(--azul-500);
   text-decoration: underline;
 }
-.linha-pedido-ativo {
-  background: var(--azul-100);
-}
 .acoes-pedido {
   justify-content: flex-end;
   flex-wrap: nowrap;

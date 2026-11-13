@@ -405,7 +405,8 @@ na aquisição aberta e sempre que o preço venha de uma consulta preliminar.
 
 **Condições.** Os textos por omissão acompanham as licenças do L1 (software, terminologia, subscrição,
 perpétua, licença nacional) enquanto não forem alterados à mão. As que não se aplicam ficam assinaladas:
-a disponibilidade só existe no software em subscrição; os ambientes de teste sem custo, só no software. As penalizações são facultativas e vêm
+a disponibilidade só existe no software em subscrição. Os ambientes de teste, formação e recuperação sem custo, quando se
+queiram, escrevem-se como condição própria (é um dos exemplos dados, ao lado da formação). As penalizações são facultativas e vêm
 desligadas: podem ficar para a formulação do contrato; a penalização por hora de atraso aplica-se ao
 primeiro nível de serviço. O suporte técnico tem o texto e o horário; os **níveis de serviço (SLA)** são um
 bloco à parte, facultativo (ligado por omissão, e só com suporte), numa tabela editável — nível,
