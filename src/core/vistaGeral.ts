@@ -42,6 +42,13 @@ export interface EntradaVistaGeral {
   tipo?: "perfil" | "licenca";
   /** Numa licença: a quantidade e a métrica, por extenso («1 200 utilizadores nomeados»). */
   quantidadePorExtenso?: string;
+  /** Num perfil: as horas de cada ano, por elemento (sem elas, tiram-se do valor). */
+  horasPorAno?: number[];
+  /** Numa licença: a quantidade, e se se pode cortar (só nas de preço unitário). */
+  quantidade?: number;
+  quantidadeAjustavel?: boolean;
+  /** Numa licença: a métrica, no plural («utilizadores nomeados»). */
+  unidadeQuantidade?: string;
   /** Número do lote, tal como no agrupamento de origem. */
   lote: string;
   perfil: string;
@@ -129,6 +136,7 @@ export function projetoDeAgrupamento(original: LotesJSON): ProjetoVistaGeral {
           pessoas: entrada.nMinimoElementos,
           valorHoraSemIva: entrada.valorHora,
           valorHoraComIva,
+          horasPorAno: horasPorAnoDe(entrada, config.encargosPlurianuais.ativo),
           totaisPorAno: horasPorAnoDe(entrada, config.encargosPlurianuais.ativo).map(
             (horas) => entrada.nMinimoElementos * horas * valorHoraComIva,
           ),
@@ -491,6 +499,12 @@ function normalizarEntrada(bruto: unknown): EntradaVistaGeral {
     id: typeof e.id === "string" && e.id !== "" ? e.id : gerarId(),
     ...(e.tipo === "licenca" ? { tipo: "licenca" as const } : {}),
     ...(typeof e.quantidadePorExtenso === "string" ? { quantidadePorExtenso: e.quantidadePorExtenso } : {}),
+    ...(Array.isArray(e.horasPorAno)
+      ? { horasPorAno: Array.from({ length: ANOS_PLURIANUAIS }, (_, i) => numero((e.horasPorAno as unknown[])[i])) }
+      : {}),
+    ...(e.quantidade !== undefined ? { quantidade: numero(e.quantidade) } : {}),
+    ...(e.quantidadeAjustavel === true ? { quantidadeAjustavel: true } : {}),
+    ...(typeof e.unidadeQuantidade === "string" ? { unidadeQuantidade: e.unidadeQuantidade } : {}),
     lote: typeof e.lote === "string" ? e.lote : "",
     perfil: typeof e.perfil === "string" ? e.perfil : "(perfil sem designação)",
     pessoas: numero(e.pessoas),

@@ -238,7 +238,8 @@ function App() {
         onDescarregarTudo={() => ativo !== null && setADescarregar(ativo.id)}
       />
 
-      <div className="app">
+      {/* O orçamento tem tabelas largas (um ano por coluna): ocupa mais largura. */}
+      <div className={aba === "vistaGeral" ? "app app-largo" : "app"}>
         <main>
           {seccao === "biblioteca" && (
             <PaginaBiblioteca

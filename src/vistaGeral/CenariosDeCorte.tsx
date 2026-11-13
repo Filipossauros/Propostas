@@ -4,7 +4,18 @@ import {
   alteracoesSemEfeito,
   aplicarCenario,
   comInternoMovido,
+  comHorasNoAno,
+  comPassoDeHoras,
   comPessoas,
+  comQuantidade,
+  comRetirada,
+  horasDaEntrada,
+  horasNoCenario,
+  linhaAlterada,
+  PASSO_HORAS,
+  projetoTodoCortado,
+  quantidadeNoCenario,
+  retiradaNoCenario,
   comValorHora,
   comProjetoCortado,
   comProjetoReposto,
@@ -180,11 +191,12 @@ export function CenariosDeCorte({
 
           <section className="painel">
             <header className="painel-cabecalho">
-              <h3>Pessoas, linha a linha</h3>
+              <h3>Cortes, linha a linha</h3>
               <p className="painel-nota">
-                Use − e + para retirar ou repor pessoas, e altere o valor hora (sem IVA) de qualquer perfil: o valor da
-                linha acompanha as pessoas que ficam e o novo valor hora, com as mesmas horas e o mesmo IVA. Os internos
-                não se cortam, mas podem passar para outro projeto.
+                Num perfil, use − e + para retirar ou repor pessoas, ajuste as horas de cada ano (por elemento) em passos
+                de {PASSO_HORAS} h — com −{PASSO_HORAS} / +{PASSO_HORAS}, ou escrevendo-as — e altere o valor hora (sem IVA): o valor
+                de cada ano acompanha. Numa licença de preço unitário corte a quantidade; qualquer licença pode ser
+                retirada. Os internos não se cortam, mas podem passar para outro projeto.
               </p>
             </header>
             {barraColapso}
@@ -328,6 +340,14 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
             (soma, e) => soma + e.pessoas - pessoasNoCenario(cenario, projeto, e),
             0,
           );
+          const retiradas = projeto.entradas.filter((e) => retiradaNoCenario(cenario, projeto, e)).length;
+          const alteradas = projeto.entradas.filter((e) => linhaAlterada(cenario, projeto, e)).length;
+          const partesDoResumo: string[] = [];
+          if (cortadas > 0) partesDoResumo.push(`−${cortadas} ${cortadas === 1 ? "pessoa" : "pessoas"}`);
+          if (retiradas > 0) partesDoResumo.push(`${retiradas} ${retiradas === 1 ? "licença retirada" : "licenças retiradas"}`);
+          if (partesDoResumo.length === 0 && alteradas > 0)
+            partesDoResumo.push(`${alteradas} ${alteradas === 1 ? "linha alterada" : "linhas alteradas"}`);
+          const resumoDosCortes = partesDoResumo.join(" · ") || "sem cortes";
           const colapsado = colapsados.has(projeto.id);
           const nLinhas = colapsado ? 1 : Math.max(1, projeto.entradas.length + derivado.internos.length);
 
@@ -340,14 +360,12 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
               <p className="meta">
                 <EtiquetaDoProjeto projeto={projeto} />
               </p>
-              <p className="meta">
-                {cortadas === 0 ? "sem cortes" : `−${cortadas} ${cortadas === 1 ? "pessoa" : "pessoas"}`}
-              </p>
+              <p className="meta">{resumoDosCortes}</p>
               <div className="acoes-linha">
                 <button
                   type="button"
                   className="botao-discreto"
-                  disabled={projeto.entradas.every((e) => pessoasNoCenario(cenario, projeto, e) === 0)}
+                  disabled={projetoTodoCortado(cenario, projeto)}
                   onClick={() => onAlterarCenario((c) => comProjetoCortado(c, projeto))}
                 >
                   Cortar projeto
@@ -355,7 +373,7 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                 <button
                   type="button"
                   className="botao-discreto"
-                  disabled={cortadas === 0}
+                  disabled={cortadas === 0 && retiradas === 0}
                   onClick={() => onAlterarCenario((c) => comProjetoReposto(c, projeto))}
                 >
                   Repor
@@ -400,33 +418,64 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
           const linhas: Array<{ chave: string; classe?: string; celulas: React.ReactNode }> = [
             ...projeto.entradas.map((entrada, i) => {
               if (ehLinhaDeLicenca(entrada)) {
-                // As licenças entram no cenário com o valor do orçamento: os seus
-                // cortes (quantidade, retirar) chegam numa fase seguinte.
+                // Numa licença corta-se a quantidade (só nas de preço unitário) ou retira-se a linha.
+                const retirada = retiradaNoCenario(cenario, projeto, entrada);
+                const quantidade = quantidadeNoCenario(cenario, projeto, entrada);
+                const alterada = linhaAlterada(cenario, projeto, entrada);
                 return {
                   chave: entrada.id,
+                  classe: retirada ? "linha-cortada" : undefined,
                   celulas: (
                     <>
                       <td className="numerico">{entrada.lote}</td>
                       <td className="celula-perfil">
                         {entrada.perfil} <span className="etiqueta-licenca">licença</span>
+                        {retirada && <span className="etiqueta-opcional"> retirada</span>}
                         {entrada.quantidadePorExtenso !== undefined && (
                           <span className="meta meta-bloco">{entrada.quantidadePorExtenso}</span>
                         )}
+                        <label className="campo-opcao campo-retirar">
+                          <input
+                            type="checkbox"
+                            checked={retirada}
+                            onChange={(e) => onAlterarCenario((c) => comRetirada(c, projeto, entrada, e.target.checked))}
+                          />
+                          <span>Retirar do cenário</span>
+                        </label>
                       </td>
                       <td className="numerico">
-                        <span className="meta">—</span>
+                        {entrada.quantidadeAjustavel === true ? (
+                          formatarNumero(entrada.quantidade ?? 0)
+                        ) : (
+                          <span className="meta">—</span>
+                        )}
                       </td>
-                      <td className="numerico">
-                        <span className="meta">—</span>
+                      <td className="numerico celula-quantidade">
+                        {entrada.quantidadeAjustavel === true && !retirada ? (
+                          <CampoNumero
+                            valor={quantidade}
+                            min={0}
+                            step={1}
+                            aria-label={`Quantidade de ${entrada.perfil} (${projeto.nome}) no cenário`}
+                            onChange={(q) => onAlterarCenario((c) => comQuantidade(c, projeto, entrada, q))}
+                          />
+                        ) : (
+                          <span className="meta">{retirada ? "0" : "—"}</span>
+                        )}
+                        {entrada.quantidadeAjustavel === true && entrada.unidadeQuantidade !== undefined && (
+                          <span className="meta meta-bloco">{entrada.unidadeQuantidade}</span>
+                        )}
                       </td>
                       <td className="numerico">
                         <span className="meta">—</span>
                       </td>
                       {anos.map((ano) => {
                         const valor = valorDaEntradaNoAno(derivado, derivado.entradas[i], ano);
+                        const antes = valorDaEntradaNoAno(projeto, entrada, ano);
                         return (
                           <td key={ano} className="numerico">
                             {valor === null ? <span className="meta">—</span> : formatarMoeda(valor)}
+                            {alterada && antes !== null && <span className="valor-anterior">{formatarMoeda(antes)}</span>}
                           </td>
                         );
                       })}
@@ -437,7 +486,9 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
               const ficam = pessoasNoCenario(cenario, projeto, entrada);
               const valorHora = valorHoraNoCenario(cenario, projeto, entrada);
               const valorAlterado = Math.abs(valorHora - entrada.valorHoraSemIva) >= 0.005;
-              const cortada = ficam < entrada.pessoas || valorAlterado;
+              const cortada = linhaAlterada(cenario, projeto, entrada);
+              const horasOrcamento = horasDaEntrada(entrada);
+              const horas = horasNoCenario(cenario, projeto, entrada);
               return {
                 chave: entrada.id,
                 classe: ficam === 0 ? "linha-cortada" : undefined,
@@ -486,10 +537,23 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
                     {anos.map((ano) => {
                       const valor = valorDaEntradaNoAno(derivado, derivado.entradas[i], ano);
                       const antes = valorDaEntradaNoAno(projeto, entrada, ano);
+                      const indice = ano - projeto.anoInicio;
+                      const temHoras = valor !== null && (horasOrcamento[indice] ?? 0) > 0;
                       return (
                         <td key={ano} className="numerico">
                           {valor === null ? <span className="meta">—</span> : formatarMoeda(valor)}
                           {cortada && antes !== null && <span className="valor-anterior">{formatarMoeda(antes)}</span>}
+                          {temHoras && ficam > 0 && (
+                            <CampoHoras
+                              horas={horas[indice]}
+                              maximo={horasOrcamento[indice]}
+                              rotulo={`Horas de ${ano} por elemento de ${entrada.perfil} (${projeto.nome})`}
+                              onPasso={(sentido) =>
+                                onAlterarCenario((c) => comPassoDeHoras(c, projeto, entrada, indice, sentido))
+                              }
+                              onEscrever={(h) => onAlterarCenario((c) => comHorasNoAno(c, projeto, entrada, indice, h))}
+                            />
+                          )}
                         </td>
                       );
                     })}
@@ -588,5 +652,61 @@ function TabelaDoCenario({ orcamento, cenario, colapsados, onAlternarColapso, on
         </tfoot>
       </table>
     </div>
+  );
+}
+
+/**
+ * As horas de um ano, por elemento: −8 / +8, ou escritas (arredondadas a
+ * múltiplos de 8 ao sair do campo), entre zero e as do orçamento.
+ */
+function CampoHoras({
+  horas,
+  maximo,
+  rotulo,
+  onPasso,
+  onEscrever,
+}: {
+  horas: number;
+  maximo: number;
+  rotulo: string;
+  onPasso: (sentido: -1 | 1) => void;
+  onEscrever: (horas: number) => void;
+}) {
+  const [texto, setTexto] = useState<string | null>(null);
+  const confirmar = () => {
+    if (texto === null) return;
+    const n = Number(texto.replace(",", "."));
+    if (texto.trim() !== "" && Number.isFinite(n)) onEscrever(n);
+    setTexto(null);
+  };
+  return (
+    <span className="passo-horas" role="group" aria-label={rotulo}>
+      <button type="button" aria-label={`Menos ${PASSO_HORAS} h — ${rotulo}`} disabled={horas <= 0} onClick={() => onPasso(-1)}>
+        −{PASSO_HORAS}
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={texto ?? formatarNumero(horas)}
+        aria-label={rotulo}
+        className={horas < maximo ? "horas-cortadas" : undefined}
+        onFocus={() => setTexto(String(horas))}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") setTexto(null);
+        }}
+      />
+      <button
+        type="button"
+        aria-label={`Mais ${PASSO_HORAS} h — ${rotulo}`}
+        disabled={horas >= maximo}
+        onClick={() => onPasso(1)}
+      >
+        +{PASSO_HORAS}
+      </button>
+      <span className="passo-horas-unidade">h</span>
+    </span>
   );
 }

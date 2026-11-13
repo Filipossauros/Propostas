@@ -434,12 +434,19 @@ Cada projeto **colapsa** numa só linha (▾ / ▸), com o conteúdo resumido, a
 internas) e o valor de cada ano; há também «Colapsar todos» e «Expandir todos», nas duas leituras:
 
 - **Orçamento** — os projetos tal como foram agrupados, com os elementos internos registados à mão.
-- **Cenários de corte** — variações do orçamento, que nunca o alteram. Em cada cenário retiram-se
-  pessoas inteiras, linha a linha (− / +), ou um projeto inteiro, e pode alterar-se o valor hora (sem
-  IVA) de cada perfil; o valor de cada linha acompanha as pessoas que ficam e o novo valor hora, com as
-  mesmas horas e o mesmo IVA. Os elementos internos não se cortam, mas podem passar para outro projeto.
-  As licenças entram no cenário com o valor do orçamento (os seus cortes chegam na fase seguinte). O
-  cenário mostra pessoas e valores por ano ao lado dos do orçamento, com a diferença.
+- **Cenários de corte** — variações do orçamento, que nunca o alteram. Em cada perfil:
+  - retiram-se pessoas inteiras (− / +);
+  - cortam-se as **horas de cada ano, por elemento**, em passos de 8 h (−8 / +8, ou escrevendo o
+    número, arredondado ao múltiplo de 8 mais próximo); nunca acima das horas do orçamento;
+  - altera-se o valor hora (sem IVA).
+
+  O valor de cada ano acompanha as pessoas, as horas desse ano e o valor hora, com o mesmo IVA. Numa
+  **licença** de preço unitário corta-se a quantidade (o valor acompanha-a); qualquer licença — ou
+  serviço, ou licença de preço global — pode ser **retirada** do cenário. «Cortar projeto» retira as
+  pessoas e as licenças de um projeto inteiro, e «Repor» devolve-o ao orçamento. Os elementos internos
+  não se cortam, mas podem passar para outro projeto. O cenário mostra pessoas e valores por ano ao lado
+  dos do orçamento, com a diferença. Como as tabelas têm um ano por coluna, o orçamento ocupa mais
+  largura do que as outras páginas.
 
 Cada cenário guarda só os cortes, ligados ao nome do projeto, ao lote e ao perfil, e não aos
 identificadores internos das linhas: reimportar um projeto corrigido mantém os cortes. O que deixar de

@@ -21,6 +21,7 @@ import { projetoDeAgrupamento, type EntradaVistaGeral, type OrcamentoUnidade, ty
 import {
   anosDoPedido,
   comMargemLicenciamento,
+  METRICAS_UNICAS,
   ehPrecoGlobal,
   ehServico,
   lotesEfetivos,
@@ -56,6 +57,10 @@ export function projetoDeLicenciamento(original: PedidoLicenciamento): Omit<Proj
       id: `lic-${l.id}`,
       tipo: "licenca",
       quantidadePorExtenso: quantidadeDaLicenca(l),
+      quantidade: ehServico(l) ? 1 : l.quantidade,
+      // Só se corta a quantidade onde ela multiplica o preço.
+      quantidadeAjustavel: !ehServico(l) && !ehPrecoGlobal(l) && !(l.metrica !== "" && METRICAS_UNICAS.includes(l.metrica)),
+      unidadeQuantidade: metricaPorExtenso({ ...l, quantidade: 2 }) || "licenças",
       lote: loteDe.get(l.id) ?? "",
       perfil: nomeDaLicenca(l, pedido.natureza) || l.designacao.trim() || "(licença sem nome)",
       pessoas: 0,
