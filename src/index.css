@@ -3290,9 +3290,6 @@ select.campo-bloqueado:disabled {
 .lista-pedidos-orcamento .meta {
   display: block;
 }
-.celula-no-orcamento {
-  text-align: center;
-}
 
 /* Cenários: horas por ano (±8 h) e cortes de licenças. */
 .passo-horas {

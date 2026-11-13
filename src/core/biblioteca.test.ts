@@ -21,6 +21,7 @@ import {
   questoesDoPedido,
   resumoDoPedido,
   semPedido,
+  valorEstimadoComIvaDoPedido,
   valorEstimadoDoPedido,
   type Biblioteca,
   type DadosBolsa,
@@ -69,6 +70,11 @@ describe("biblioteca — o que se diz de cada pedido", () => {
     expect(valorEstimadoDoPedido(bolsa)).toBe(totalProcedimento(comMargemPrudencial(bolsa.dados.lotes)).semIva);
     expect(valorEstimadoDoPedido(lic)).toBe(360_000);
     expect(valorEstimadoDoPedido(novoPedidoBolsa())).toBeNull();
+    expect(valorEstimadoComIvaDoPedido(bolsa)).toBe(totalProcedimento(comMargemPrudencial(bolsa.dados.lotes)).comIva);
+    expect(valorEstimadoComIvaDoPedido(lic)).toBe(
+      Math.round(360_000 * (1 + (lic.tipo === "licenciamento" ? lic.dados.taxaIva : 0) / 100) * 100) / 100,
+    );
+    expect(valorEstimadoComIvaDoPedido(novoPedidoBolsa())).toBeNull();
   });
 });
 
@@ -117,7 +123,9 @@ describe("biblioteca — guardar, ler e migrar", () => {
       [CHAVES_DA_VERSAO_ANTERIOR.justificacao]: JUSTIFICACAO_EXEMPLO,
       [CHAVES_DA_VERSAO_ANTERIOR.perfis]: PERFIS_EXEMPLO,
       [CHAVES_DA_VERSAO_ANTERIOR.lotes]: LOTES_EXEMPLO,
-      [CHAVES_DA_VERSAO_ANTERIOR.licenciamento]: JSON.parse(pedidoLicenciamentoParaJSON(pedidoLicenciamentoExemplo(2027))),
+      [CHAVES_DA_VERSAO_ANTERIOR.licenciamento]: JSON.parse(
+        pedidoLicenciamentoParaJSON(pedidoLicenciamentoExemplo(2027)),
+      ),
     };
     const lidas: string[] = [];
     const b = bibliotecaDaVersaoAnterior((chave) => {
@@ -157,7 +165,10 @@ describe("biblioteca — importar", () => {
   });
 
   it("um agrupamento de lotes dá um pedido de bolsa com os perfis dos lotes", () => {
-    const r = importarParaBiblioteca(bibliotecaVazia(), lotesParaJSON(normalizarLotesGuardados(structuredClone(LOTES_EXEMPLO))));
+    const r = importarParaBiblioteca(
+      bibliotecaVazia(),
+      lotesParaJSON(normalizarLotesGuardados(structuredClone(LOTES_EXEMPLO))),
+    );
     const p = r.biblioteca.pedidos[0];
     if (p.tipo !== "bolsa") throw new Error("tipo");
     const ids = new Set(LOTES_EXEMPLO.lotes.flatMap((l) => l.perfis.map((e) => e.perfil.id)));

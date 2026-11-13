@@ -10,7 +10,8 @@ em análise nunca saem do posto de trabalho.
 
 A aplicação abre na **biblioteca de pedidos**: todos os pedidos, de bolsa de horas e de
 licenciamento, com o tipo, o estado (em preparação, pronto, revisto, arquivado), a versão, o valor
-estimado (sem IVA, com a margem) e a data da última alteração. Daqui se cria um pedido novo, se abre,
+estimado com a margem (sem IVA e com IVA) e a data da última alteração. Os pedidos que entram no
+orçamento marcam-se no próprio orçamento. Daqui se cria um pedido novo, se abre,
 duplica, exporta (JSON), arquiva ou apaga, e se descarrega a biblioteca inteira (cópia de segurança em
 JSON). Importa-se uma biblioteca, um pedido, um agrupamento de lotes, um ficheiro de perfis ou um
 pedido de licenciamento.
@@ -417,8 +418,8 @@ leem.
 
 ## O orçamento e os cenários de corte
 
-O **orçamento da unidade** acompanha os pedidos da biblioteca marcados «no orçamento» (na biblioteca,
-ou na lista do próprio orçamento) — de bolsa de horas e de licenciamento —, sem nada importar:
+O **orçamento da unidade** acompanha os pedidos da biblioteca marcados «no orçamento» (na lista
+«Pedidos no orçamento», no próprio orçamento) — de bolsa de horas e de licenciamento —, sem nada importar:
 corrigir um pedido corrige o orçamento. Um pedido de licenciamento entra com uma linha por licença (e
 por serviço), com o valor de cada ano, com a margem e com IVA; as licenças não têm pessoas. Os ficheiros
 de colegas (lotes, pedidos, perfis) importados no orçamento entram na biblioteca, já marcados.

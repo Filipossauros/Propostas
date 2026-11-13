@@ -125,7 +125,10 @@ function comum(agora: string): Comum {
   };
 }
 
-export function novoPedidoBolsa(dados: DadosBolsa = dadosBolsaIniciais(), agora = new Date().toISOString()): PedidoNaBiblioteca {
+export function novoPedidoBolsa(
+  dados: DadosBolsa = dadosBolsaIniciais(),
+  agora = new Date().toISOString(),
+): PedidoNaBiblioteca {
   return { ...comum(agora), tipo: "bolsa", dados };
 }
 
@@ -235,6 +238,15 @@ export function valorEstimadoDoPedido(p: PedidoNaBiblioteca): number | null {
   if (p.dados.licencas.length === 0) return null;
   const v = valorEstimado(comMargemLicenciamento(p.dados));
   return v > 0 ? v : null;
+}
+
+/** O mesmo valor estimado, com IVA (a taxa de cada pedido). `null` sem nada a somar. */
+export function valorEstimadoComIvaDoPedido(p: PedidoNaBiblioteca): number | null {
+  const semIva = valorEstimadoDoPedido(p);
+  if (semIva === null) return null;
+  if (p.tipo === "bolsa") return totalProcedimento(comMargemPrudencial(p.dados.lotes)).comIva;
+  const taxa = Number.isFinite(p.dados.taxaIva) ? p.dados.taxaIva : 0;
+  return Math.round(semIva * (1 + taxa / 100) * 100) / 100;
 }
 
 // --------------------------------------------------------------------------
@@ -369,7 +381,8 @@ export function ehBibliotecaGuardada(valor: unknown): valor is Biblioteca {
 
 export function normalizarBiblioteca(valor: Biblioteca): Biblioteca {
   const pedidos = (valor.pedidos as unknown[]).map(normalizarPedido).filter((p): p is PedidoNaBiblioteca => p !== null);
-  const ativoId = typeof valor.ativoId === "string" && pedidos.some((p) => p.id === valor.ativoId) ? valor.ativoId : null;
+  const ativoId =
+    typeof valor.ativoId === "string" && pedidos.some((p) => p.id === valor.ativoId) ? valor.ativoId : null;
   return { schemaVersion: VERSAO_BIBLIOTECA, tipo: "biblioteca", pedidos, ativoId };
 }
 
@@ -389,12 +402,18 @@ export const CHAVES_DA_VERSAO_ANTERIOR = {
  * pedido de bolsa de horas e o de licenciamento, se tiverem alguma coisa. O
  * de bolsa fica aberto. Nada se apaga nem se reescreve nas chaves antigas.
  */
-export function bibliotecaDaVersaoAnterior(ler: (chave: string) => unknown, agora = new Date().toISOString()): Biblioteca {
+export function bibliotecaDaVersaoAnterior(
+  ler: (chave: string) => unknown,
+  agora = new Date().toISOString(),
+): Biblioteca {
   let b = bibliotecaVazia();
   const k = CHAVES_DA_VERSAO_ANTERIOR;
 
   const lotesBrutos = objeto(ler(k.lotes));
-  const temLotes = lotesBrutos.tipo === "lotes" && lotesBrutos.schemaVersion === SCHEMA_VERSION_ATUAL && Array.isArray(lotesBrutos.lotes);
+  const temLotes =
+    lotesBrutos.tipo === "lotes" &&
+    lotesBrutos.schemaVersion === SCHEMA_VERSION_ATUAL &&
+    Array.isArray(lotesBrutos.lotes);
   const bolsa = normalizarDadosBolsa({
     nomeProjeto: ler(k.nomeProjeto),
     descricaoProjeto: ler(k.descricaoProjeto),
@@ -421,7 +440,9 @@ export function bibliotecaDaVersaoAnterior(ler: (chave: string) => unknown, agor
   // Os pedidos que já estavam no orçamento da versão anterior (pelo nome) entram marcados.
   const orcamento = objeto(ler(k.vistaGeral));
   const nomes = new Set(
-    (Array.isArray(orcamento.projetos) ? orcamento.projetos : []).map((p) => texto(objeto(p).nome)).filter((n) => n !== ""),
+    (Array.isArray(orcamento.projetos) ? orcamento.projetos : [])
+      .map((p) => texto(objeto(p).nome))
+      .filter((n) => n !== ""),
   );
   return { ...b, pedidos: b.pedidos.map((p) => (nomes.has(nomeDoPedido(p)) ? { ...p, noOrcamento: true } : p)) };
 }

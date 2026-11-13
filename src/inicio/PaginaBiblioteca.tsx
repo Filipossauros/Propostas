@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import {
   bibliotecaParaJSON,
-  comNoOrcamento,
   comPedidoAlterado,
   comPedidoNovo,
   estadoDoPedido,
@@ -13,6 +12,7 @@ import {
   questoesDoPedido,
   resumoDoPedido,
   semPedido,
+  valorEstimadoComIvaDoPedido,
   valorEstimadoDoPedido,
   type Biblioteca,
   type EstadoDoPedido,
@@ -205,7 +205,9 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                 <th scope="col" className="numerico">
                   Valor estimado <span className="cabecalho-nota">sem IVA</span>
                 </th>
-                <th scope="col">No orçamento</th>
+                <th scope="col" className="numerico">
+                  Valor estimado <span className="cabecalho-nota">com IVA</span>
+                </th>
                 <th scope="col">Atualizado</th>
                 <th scope="col">
                   <span className="rotulo-oculto">Ações</span>
@@ -216,6 +218,7 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
               {visiveis.map(({ pedido: p, estado }) => {
                 const questoes = estado === "preparacao" ? questoesDoPedido(p) : 0;
                 const valor = valorEstimadoDoPedido(p);
+                const valorComIva = valorEstimadoComIvaDoPedido(p);
                 const ativo = biblioteca.ativoId === p.id;
                 return (
                   <tr key={p.id} className={ativo ? "linha-pedido-ativo" : undefined}>
@@ -248,18 +251,7 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                       )}
                     </td>
                     <td className="numerico">{valor === null ? "—" : formatarMoeda(valor)}</td>
-                    <td className="celula-no-orcamento">
-                      <input
-                        type="checkbox"
-                        checked={p.noOrcamento}
-                        disabled={p.arquivado}
-                        aria-label={`${nomeParaListas(p)} no orçamento`}
-                        title={
-                          p.arquivado ? "Um pedido arquivado não entra no orçamento" : "Entra no orçamento da unidade"
-                        }
-                        onChange={(e) => onAlterar((b) => comNoOrcamento(b, [p.id], e.target.checked))}
-                      />
-                    </td>
+                    <td className="numerico">{valorComIva === null ? "—" : formatarMoeda(valorComIva)}</td>
                     <td>{quando(p.atualizadoEm)}</td>
                     <td>
                       <div className="acoes-linha acoes-pedido">
