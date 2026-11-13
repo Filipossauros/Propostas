@@ -25,6 +25,7 @@ import { descarregarBlob, nomeSeguro } from "../ui/descarregar";
 import { carimboDeData } from "../ui/pacote";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
 import { EtiquetaDoEstado, EtiquetaDoTipo } from "./BarraSuperior";
+import { MenuFlutuante } from "./MenuFlutuante";
 
 interface Props {
   biblioteca: Biblioteca;
@@ -265,34 +266,25 @@ export function PaginaBiblioteca({ biblioteca, onAlterar, onAbrir, onNovo, onDes
                         <button type="button" className="botao-secundario" onClick={() => onAbrir(p.id)}>
                           Abrir
                         </button>
-                        <details className="menu-pedido">
-                          <summary aria-label={`Mais ações para ${nomeParaListas(p)}`}>⋯</summary>
-                          <div className="menu-pedido-lista">
-                            <button
-                              type="button"
-                              onClick={() => onAlterar((b) => comPedidoNovo(b, pedidoDuplicado(p), false))}
-                            >
-                              Duplicar
-                            </button>
-                            <button type="button" onClick={() => onDescarregarTudo(p.id)}>
-                              Descarregar tudo
-                            </button>
-                            <button type="button" onClick={() => exportar(p)}>
-                              Exportar (JSON)
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onAlterar((b) => comPedidoAlterado(b, p.id, (x) => ({ ...x, arquivado: !x.arquivado })))
-                              }
-                            >
-                              {p.arquivado ? "Desarquivar" : "Arquivar"}
-                            </button>
-                            <button type="button" className="botao-perigo" onClick={() => apagar(p)}>
-                              Apagar
-                            </button>
-                          </div>
-                        </details>
+                        <MenuFlutuante
+                          rotulo={`Mais ações para ${nomeParaListas(p)}`}
+                          acoes={[
+                            {
+                              rotulo: "Duplicar",
+                              onEscolher: () => onAlterar((b) => comPedidoNovo(b, pedidoDuplicado(p), false)),
+                            },
+                            { rotulo: "Descarregar tudo", onEscolher: () => onDescarregarTudo(p.id) },
+                            { rotulo: "Exportar (JSON)", onEscolher: () => exportar(p) },
+                            {
+                              rotulo: p.arquivado ? "Desarquivar" : "Arquivar",
+                              onEscolher: () =>
+                                onAlterar((b) =>
+                                  comPedidoAlterado(b, p.id, (x) => ({ ...x, arquivado: !x.arquivado })),
+                                ),
+                            },
+                            { rotulo: "Apagar", perigo: true, onEscolher: () => apagar(p) },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -3178,54 +3178,49 @@ select.campo-bloqueado:disabled {
   justify-content: flex-end;
   flex-wrap: nowrap;
 }
-.menu-pedido {
+/* Os rótulos ocultos (posição absoluta) ficam presos à tabela, que desliza na horizontal. */
+.tabela-biblioteca-envolvente {
   position: relative;
 }
-.menu-pedido summary {
-  list-style: none;
-  cursor: pointer;
+/* O menu ⋯ de cada pedido flutua por cima da página (ver MenuFlutuante). */
+.menu-flutuante-botao {
   padding: 4px 10px;
   border-radius: var(--raio-pequeno);
   border: 1px solid var(--borda);
   background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
 }
-.menu-pedido summary::-webkit-details-marker {
-  display: none;
+.menu-flutuante-botao[aria-expanded="true"] {
+  background: var(--superficie-alt);
 }
-/* Dentro da tabela (que desliza na horizontal), o menu abre na própria linha:
-   flutuante, ficaria cortado pelo recorte da tabela. */
-.tabela-biblioteca-envolvente {
-  position: relative;
-}
-.menu-pedido[open] {
-  flex-basis: 100%;
-}
-.acoes-pedido:has(.menu-pedido[open]) {
-  flex-wrap: wrap;
-}
-.menu-pedido-lista {
-  margin-top: 6px;
-  min-width: 170px;
+.menu-flutuante {
+  position: fixed;
+  z-index: 60;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
+  padding: 4px 0;
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
-  box-shadow: 0 8px 20px rgb(16 24 40 / 15%);
+  box-shadow: 0 8px 24px rgb(16 24 40 / 18%);
 }
-.menu-pedido-lista button {
+.menu-flutuante button {
   background: none;
   border: 0;
-  padding: 8px 12px;
+  padding: 8px 14px;
   text-align: left;
   font-size: 0.86rem;
   color: var(--texto);
   cursor: pointer;
 }
-.menu-pedido-lista button:hover {
+.menu-flutuante button:hover,
+.menu-flutuante button:focus-visible {
   background: var(--superficie-alt);
+  outline: none;
 }
-.menu-pedido-lista .botao-perigo {
+.menu-flutuante .botao-perigo {
   color: var(--vermelho);
 }
 .dialogo-largo {
