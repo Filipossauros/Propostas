@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type {
   ContextoAjusteDireto,
+  EntidadeConvidada,
   FundamentoAjusteDireto,
   PedidoLicenciamento,
   ProcedimentoProposto,
@@ -13,9 +14,11 @@ import {
   PROCEDIMENTOS,
   convidados,
   ehAjusteDiretoMaterial,
+  entidadeVazia,
+  nifValido,
   pedeMotivoDoConvite,
 } from "../core/licenciamento";
-import { ListaItensEditor } from "../modulo1/ListaItensEditor";
+import { moverItem } from "../ui/useReordenavel";
 
 interface Props {
   pedido: PedidoLicenciamento;
@@ -455,19 +458,144 @@ export function PainelProcedimento({ pedido, onAlterar }: Props) {
               </label>
             </section>
           )}
-          <ListaItensEditor
+          <EditorEntidades
             titulo={tituloConvite}
             nota={notaConvite}
-            nomeItem="entidade"
             rotuloColuna={p.tipo === "acordoQuadro" ? "Cocontratante" : "Entidade"}
-            placeholder="ex.: Documenta Sistemas, S.A."
-            textoVazio="Ainda não há entidades. Acrescente a primeira."
-            rotuloAdicionar="+ Adicionar entidade"
-            itens={pedido.convite.entidades}
+            entidades={pedido.convite.entidades}
             onChange={(entidades) => onAlterar((atual) => ({ ...atual, convite: { ...atual.convite, entidades } }))}
           />
         </>
       )}
     </>
+  );
+}
+
+/**
+ * As entidades a convidar, uma por linha, com o NIF (obrigatório). Numa
+ * entidade estrangeira escreve-se a identificação fiscal do país, sem a
+ * validação do NIF português.
+ */
+function EditorEntidades({
+  titulo,
+  nota,
+  rotuloColuna,
+  entidades,
+  onChange,
+}: {
+  titulo: string;
+  nota: string;
+  rotuloColuna: string;
+  entidades: EntidadeConvidada[];
+  onChange: (entidades: EntidadeConvidada[]) => void;
+}) {
+  const alterar = (idx: number, alteracao: Partial<EntidadeConvidada>) =>
+    onChange(entidades.map((e, i) => (i === idx ? { ...e, ...alteracao } : e)));
+  const nifs = entidades.map((e) => e.nif.replace(/\s/g, "").toUpperCase());
+
+  return (
+    <section className="painel">
+      <header className="painel-cabecalho">
+        <h3>{titulo}</h3>
+        <p className="painel-nota">
+          {nota} O NIF é obrigatório; numa entidade estrangeira, a identificação fiscal do país.
+        </p>
+      </header>
+      {entidades.length === 0 ? (
+        <p className="estado-vazio">Ainda não há entidades. Acrescente a primeira.</p>
+      ) : (
+        <div className="tabela-edicao">
+          <div className="tabela-edicao-cabecalho grelha-entidade">
+            <span />
+            <span>{rotuloColuna}</span>
+            <span>NIF</span>
+            <span>Estrangeira</span>
+            <span />
+          </div>
+          <ul className="lista-requisitos">
+            {entidades.map((e, idx) => {
+              const nif = e.nif.trim();
+              const nifInvalido = nif === "" || (!e.estrangeira && !nifValido(nif));
+              const nifRepetido = nif !== "" && nifs.filter((x) => x === nifs[idx]).length > 1;
+              return (
+                <li key={e.id} className="linha-edicao">
+                  <div className="grelha-entidade">
+                    <span className="pega pega-fixa" aria-hidden="true">
+                      {idx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={e.designacao}
+                      placeholder="ex.: Documenta Sistemas, S.A."
+                      aria-label={`${rotuloColuna} ${idx + 1}`}
+                      aria-invalid={e.designacao.trim() === ""}
+                      onChange={(ev) => alterar(idx, { designacao: ev.target.value })}
+                    />
+                    <input
+                      type="text"
+                      inputMode={e.estrangeira ? "text" : "numeric"}
+                      value={e.nif}
+                      placeholder={e.estrangeira ? "ex.: GB 123456789" : "9 dígitos"}
+                      aria-label={`${e.estrangeira ? "Identificação fiscal" : "NIF"} de ${e.designacao.trim() || `${rotuloColuna} ${idx + 1}`}`}
+                      aria-invalid={nifInvalido || nifRepetido}
+                      onChange={(ev) => alterar(idx, { nif: ev.target.value })}
+                    />
+                    <label className="campo-opcao celula-estrangeira">
+                      <input
+                        type="checkbox"
+                        checked={e.estrangeira}
+                        aria-label={`${e.designacao.trim() || `${rotuloColuna} ${idx + 1}`} é estrangeira`}
+                        onChange={(ev) => alterar(idx, { estrangeira: ev.target.checked })}
+                      />
+                      <span className="rotulo-movel" aria-hidden="true">
+                        Estrangeira
+                      </span>
+                    </label>
+                    <div className="acoes-linha">
+                      <button
+                        type="button"
+                        className="botao-icone"
+                        onClick={() => onChange(moverItem(entidades, idx, idx - 1))}
+                        disabled={idx === 0}
+                        title="Mover para cima"
+                        aria-label={`Mover a entidade ${idx + 1} para cima`}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="botao-icone"
+                        onClick={() => onChange(moverItem(entidades, idx, idx + 1))}
+                        disabled={idx === entidades.length - 1}
+                        title="Mover para baixo"
+                        aria-label={`Mover a entidade ${idx + 1} para baixo`}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="botao-icone botao-perigo"
+                        onClick={() => onChange(entidades.filter((_, i) => i !== idx))}
+                        title="Remover entidade"
+                        aria-label={`Remover a entidade ${idx + 1}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  {nif !== "" && !e.estrangeira && !nifValido(nif) && (
+                    <p className="aviso aviso-erro">NIF inválido: nove dígitos, com o dígito de controlo.</p>
+                  )}
+                  {nifRepetido && <p className="aviso aviso-erro">Este NIF está repetido.</p>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      <button type="button" className="botao-secundario" onClick={() => onChange([...entidades, entidadeVazia()])}>
+        + Adicionar entidade
+      </button>
+    </section>
   );
 }

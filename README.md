@@ -371,7 +371,12 @@ aplicação não verifica valores):
   escolhidos, art.º 259.º).
 - **Outro** — escreve-se qual e porquê (concurso limitado, negociação, contratação excluída…).
 
-No Word, o ponto II diz como se descreve e o procedimento proposto, com a tabela das entidades a convidar.
+Cada entidade a convidar leva o **NIF**, obrigatório: o português valida-se (nove dígitos, com o dígito de
+controlo) e não se repete; numa entidade estrangeira escreve-se a identificação fiscal do país, sem validar.
+Os pedidos anteriores ficam com o NIF por indicar.
+
+No Word, o ponto II diz como se descreve e o procedimento proposto, com a tabela das entidades a convidar
+(entidade e NIF).
 No eAvalia, a consulta ao mercado é «Sim» quando o procedimento põe entidades em concorrência e, no ajuste
 direto, quando o preço vem de uma consulta preliminar. Os pedidos anteriores passam ao equivalente:
 aberta → concurso público ou, com convite, consulta prévia; confiada a determinada entidade → só uma entidade

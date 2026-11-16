@@ -166,7 +166,32 @@ export type FormaPreco = "unitario" | "global";
  */
 export interface ConviteEntidades {
   motivo: string;
-  entidades: ItemPerfil[];
+  entidades: EntidadeConvidada[];
+}
+
+/**
+ * Uma entidade a convidar, com o NIF — obrigatório. Uma entidade estrangeira
+ * não tem NIF português: escreve-se a identificação fiscal do seu país, que não
+ * se valida.
+ */
+export interface EntidadeConvidada {
+  id: string;
+  designacao: string;
+  nif: string;
+  estrangeira: boolean;
+}
+
+export function entidadeVazia(): EntidadeConvidada {
+  return { id: gerarId(), designacao: "", nif: "", estrangeira: false };
+}
+
+/** O NIF português: nove dígitos, com o dígito de controlo (módulo 11). Aceita espaços. */
+export function nifValido(nif: string): boolean {
+  const d = nif.replace(/\s/g, "");
+  if (!/^\d{9}$/.test(d)) return false;
+  const soma = [...d.slice(0, 8)].reduce((acc, c, i) => acc + Number(c) * (9 - i), 0);
+  const resto = soma % 11;
+  return Number(d[8]) === (resto < 2 ? 0 : 11 - resto);
 }
 /** O mínimo de entidades convidadas na consulta prévia (art.º 112.º, n.º 1, do CCP). */
 export const MINIMO_ENTIDADES_CONVIDADAS = 3;
@@ -1532,6 +1557,15 @@ export function validarConvite(pedido: Pick<PedidoLicenciamento, "procedimento" 
   }
   if (c.entidades.some((e) => e.designacao.trim() === "")) de("há entidades por escrever — preencha-as ou remova-as.");
   if (new Set(nomes.map((x) => x.toLowerCase())).size < nomes.length) de("há entidades repetidas.");
+  for (const e of c.entidades) {
+    const nome = e.designacao.trim() || "entidade sem nome";
+    if (e.nif.trim() === "")
+      de(`indique ${e.estrangeira ? "a identificação fiscal" : "o NIF"} de ${nome}.`);
+    else if (!e.estrangeira && !nifValido(e.nif))
+      de(`o NIF de ${nome} não é válido (nove dígitos, com o dígito de controlo).`);
+  }
+  const nifs = c.entidades.map((e) => e.nif.replace(/\s/g, "").toUpperCase()).filter((x) => x !== "");
+  if (new Set(nifs).size < nifs.length) de("há NIF repetidos.");
   return erros;
 }
 
@@ -2016,7 +2050,17 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
       r.procedimento === undefined ? procedimentoDaVersaoAnterior(r, brutas) : normalizarProcedimento(r.procedimento),
     convite: (() => {
       const c = objeto(r.convite);
-      return { motivo: texto(c.motivo), entidades: normalizarItens(c.entidades) };
+      // Pedidos anteriores guardavam só a designação: o NIF fica por indicar.
+      const entidades = (Array.isArray(c.entidades) ? c.entidades : []).map((x) => {
+        const e = objeto(x);
+        return {
+          id: texto(e.id) || gerarId(),
+          designacao: texto(e.designacao),
+          nif: texto(e.nif),
+          estrangeira: booleano(e.estrangeira, false),
+        };
+      });
+      return { motivo: texto(c.motivo), entidades };
     })(),
     licencas: brutas.map(normalizarLicenca),
     condicoes: normalizarCondicoes(r.condicoes),
@@ -2142,7 +2186,10 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
         "A SNOMED International é a única entidade que licencia a SNOMED CT; a afiliação nacional cobre a sua " +
         "utilização em todo o território.",
     },
-    convite: { motivo: "", entidades: itensExemplo("snomed-conv", ["SNOMED International"]) },
+    convite: {
+      motivo: "",
+      entidades: [{ id: "snomed-conv1", designacao: "SNOMED International", nif: "Reino Unido — a confirmar", estrangeira: true }],
+    },
     licencas: [snomed],
     condicoes: {
       ...pedido.condicoes,
@@ -2236,7 +2283,11 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
       motivo:
         "São as entidades que, no mercado nacional, comercializam e dão suporte em língua portuguesa a " +
         "plataformas de gestão documental com a escala exigida, conforme a consulta preliminar ao mercado.",
-      entidades: itensExemplo("ad-conv", ["Documenta Sistemas, S.A.", "Arquivo Digital, Lda.", "Gestão Documental Ibérica, S.A."]),
+      entidades: [
+        { id: "ad-conv1", designacao: "Documenta Sistemas, S.A.", nif: "508123453", estrangeira: false },
+        { id: "ad-conv2", designacao: "Arquivo Digital, Lda.", nif: "509345670", estrangeira: false },
+        { id: "ad-conv3", designacao: "Gestão Documental Ibérica, S.A.", nif: "510456782", estrangeira: false },
+      ],
     },
     licencas: comPrecosCoerentes([gestao, bd], TAXA_IVA_PADRAO),
     lotes: [

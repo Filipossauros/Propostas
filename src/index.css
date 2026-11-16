@@ -3505,3 +3505,37 @@ select.campo-bloqueado:disabled {
 .campo-largo {
   flex-grow: 2;
 }
+.grelha-entidade {
+  display: grid;
+  grid-template-columns: 26px minmax(160px, 1fr) 150px 84px 102px;
+  align-items: center;
+  gap: 10px;
+}
+.celula-estrangeira {
+  justify-content: center;
+}
+.rotulo-movel {
+  display: none;
+}
+@media (max-width: 720px) {
+  .tabela-edicao-cabecalho.grelha-entidade {
+    display: none;
+  }
+  .grelha-entidade {
+    grid-template-columns: 26px 1fr auto;
+  }
+  .grelha-entidade > input:first-of-type,
+  .grelha-entidade > .acoes-linha {
+    grid-column: 2 / -1;
+  }
+  .grelha-entidade > input:nth-of-type(2) {
+    grid-column: 2;
+  }
+  .grelha-entidade > .celula-estrangeira {
+    grid-column: 3;
+  }
+  .rotulo-movel {
+    display: inline;
+    font-size: 0.82rem;
+  }
+}

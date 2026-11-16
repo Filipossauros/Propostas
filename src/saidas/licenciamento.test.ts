@@ -259,6 +259,7 @@ describe("manifestação do licenciamento — convite, níveis de serviço e pre
     expect(texto).toContain("comercializam e dão suporte em língua portuguesa");
     expect(texto).toContain("Entidade a convidar");
     expect(texto).toContain("Gestão Documental Ibérica, S.A.");
+    expect(texto).toContain("510456782");
     const sem = exemplo();
     const semTexto = await textoWord({ ...sem, procedimento: { ...sem.procedimento, tipo: "concursoPublico" } });
     expect(semTexto).toContain("Propõe-se a adoção de concurso público.");

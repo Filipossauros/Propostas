@@ -49,6 +49,8 @@ import {
   procedimentoInicial,
   validarProcedimento,
   type ProcedimentoProposto,
+  nifValido,
+  type EntidadeConvidada,
 } from "./licenciamento";
 
 describe("licenciamento — cálculos", () => {
@@ -429,7 +431,13 @@ describe("licenciamento — convite, requisitos, preço global, métricas e nív
     expect(validarConvite(pedido)).toEqual([]);
     const curto = {
       ...pedido,
-      convite: { motivo: "", entidades: [{ id: "a", designacao: "A, S.A." }, { id: "b", designacao: "a, s.a." }] },
+      convite: {
+        motivo: "",
+        entidades: [
+          { id: "a", designacao: "A, S.A.", nif: "508123453", estrangeira: false },
+          { id: "b", designacao: "a, s.a.", nif: "509345670", estrangeira: false },
+        ],
+      },
     };
     const msgs = validarConvite(curto).map((e) => e.mensagem);
     expect(msgs.some((m) => m.includes("motivo"))).toBe(true);
@@ -520,7 +528,8 @@ describe("licenciamento — convite, requisitos, preço global, métricas e nív
 });
 
 describe("licenciamento — procedimento proposto (DL 177/2026)", () => {
-  const nomes = (...n: string[]) => n.map((designacao, i) => ({ id: String(i), designacao }));
+  // Estrangeiras, para o NIF não entrar nas contas do número de convidados.
+  const nomes = (...n: string[]) => n.map((designacao, i) => ({ id: String(i), designacao, nif: `X${i}`, estrangeira: true }));
 
   it("cada procedimento pede o seu número de convidados", () => {
     const base = pedidoLicenciamentoInicial();
@@ -582,5 +591,37 @@ describe("licenciamento — procedimento proposto (DL 177/2026)", () => {
     // E o novo vai e vem no ficheiro.
     const exemplo = pedidoLicenciamentoExemplo(2027);
     expect(normalizarPedidoLicenciamento(JSON.parse(pedidoLicenciamentoParaJSON(exemplo))).procedimento).toEqual(exemplo.procedimento);
+  });
+});
+
+describe("licenciamento — NIF das entidades a convidar", () => {
+  it("o NIF português valida-se pelo dígito de controlo; aceita espaços", () => {
+    expect(nifValido("508123453")).toBe(true);
+    expect(nifValido("508 123 453")).toBe(true);
+    expect(nifValido("508123454")).toBe(false);
+    expect(nifValido("12345")).toBe(false);
+  });
+
+  it("cada entidade pede o NIF; a estrangeira, a identificação fiscal, sem validar; não se repetem", () => {
+    const pedido = pedidoLicenciamentoExemploSoftware(2027);
+    const com = (entidades: EntidadeConvidada[]) =>
+      validarConvite({ ...pedido, convite: { ...pedido.convite, entidades } }).map((e) => e.mensagem).join(" | ");
+    const [a, b, c] = pedido.convite.entidades;
+    expect(com([a, b, c])).toBe("");
+    expect(com([{ ...a, nif: "" }, b, c])).toContain("indique o NIF de Documenta Sistemas");
+    expect(com([{ ...a, nif: "123456780" }, b, c])).toContain("não é válido");
+    expect(com([{ ...a, nif: "", estrangeira: true }, b, c])).toContain("identificação fiscal");
+    expect(com([{ ...a, nif: "GB 1", estrangeira: true }, b, c])).toBe("");
+    expect(com([a, { ...b, nif: a.nif }, c])).toContain("NIF repetidos");
+  });
+
+  it("um pedido anterior, sem NIF, fica com o NIF por indicar; o novo vai e vem", () => {
+    const antigo = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      convite: { ativo: true, motivo: "M", entidades: [{ id: "x", designacao: "X, S.A." }] },
+    });
+    expect(antigo.convite.entidades).toEqual([{ id: "x", designacao: "X, S.A.", nif: "", estrangeira: false }]);
+    const p = pedidoLicenciamentoExemploSoftware(2027);
+    expect(normalizarPedidoLicenciamento(JSON.parse(pedidoLicenciamentoParaJSON(p))).convite).toEqual(p.convite);
   });
 });

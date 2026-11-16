@@ -345,17 +345,20 @@ function corpoLicenciamento(
   }
   p.push(numerado(proximo(), fraseDoProcedimento(pedido), { depois: 80, antes: 80 }));
   if (convidados(pedido.procedimento) !== null) {
-    const entidades = pedido.convite.entidades.map((e) => e.designacao.trim()).filter((e) => e !== "");
+    const entidades = pedido.convite.entidades.filter((e) => e.designacao.trim() !== "");
     p.push(
       tabela(
         [
           { titulo: "N.º", alinhamento: "direita", peso: 8 },
           {
             titulo: pedido.procedimento.tipo === "acordoQuadro" ? "Cocontratante a convidar" : "Entidade a convidar",
-            peso: 92,
+            peso: 64,
           },
+          { titulo: "NIF", peso: 28 },
         ],
-        entidades.length === 0 ? [["1", "—"]] : entidades.map((e, i) => [String(i + 1), e]),
+        entidades.length === 0
+          ? [["1", "—", "—"]]
+          : entidades.map((e, i) => [String(i + 1), e.designacao.trim(), e.nif.trim() || "—"]),
       ),
     );
   }
