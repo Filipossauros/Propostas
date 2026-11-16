@@ -3461,3 +3461,47 @@ select.campo-bloqueado:disabled {
   border: 1px solid var(--borda);
   border-radius: var(--raio-pequeno);
 }
+
+/* L1: descrição do objeto e procedimento proposto. */
+.opcoes-3-colunas {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+@media (min-width: 900px) {
+  .opcoes-3-colunas {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .opcoes-2-colunas {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.opcao-natureza-indisponivel {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.minimo-convidados {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--azul-100);
+  color: var(--azul-500);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.opcao-natureza-ativa .minimo-convidados {
+  background: var(--superficie);
+}
+.subpainel-procedimento {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--borda);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.subpainel-procedimento h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.campo-largo {
+  flex-grow: 2;
+}

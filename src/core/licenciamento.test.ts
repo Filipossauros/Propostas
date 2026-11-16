@@ -46,6 +46,9 @@ import {
   valorEstimado,
   valorPorAno,
   valoresDosLotes,
+  procedimentoInicial,
+  validarProcedimento,
+  type ProcedimentoProposto,
 } from "./licenciamento";
 
 describe("licenciamento — cálculos", () => {
@@ -191,10 +194,16 @@ describe("licenciamento — eAvalia derivado", () => {
     expect(tipoLicenciamentoEavalia({ modalidade: "upgrade" })).toBe("Actualizações/Upgrades/Correções");
   });
 
-  it("a consulta ao mercado e, na aberta, o tipo de solução vêm da natureza", () => {
+  it("a consulta ao mercado vem do procedimento; o tipo de solução, da descrição", () => {
     const l = { ...criarLicenca(), eavalia: { tipoSolucao: "Software Proprietário sem alternativas" as const, ambito: "" as const } };
-    expect(consultaMercadoEavalia("aberta")).toBe("Sim");
-    expect(consultaMercadoEavalia("determinado")).toBe("Não");
+    const com = (alteracao: Partial<ProcedimentoProposto>) => ({ procedimento: { ...procedimentoInicial(), ...alteracao } });
+    expect(consultaMercadoEavalia(com({ tipo: "concursoPublico" }))).toBe("Sim");
+    expect(consultaMercadoEavalia(com({ tipo: "consultaPreviaEspecial" }))).toBe("Sim");
+    expect(consultaMercadoEavalia(com({ tipo: "ajusteDireto" }))).toBe("Não");
+    const aq = procedimentoInicial().acordoQuadro;
+    expect(consultaMercadoEavalia(com({ tipo: "acordoQuadro", acordoQuadro: { ...aq, modalidade: "fixados" } }))).toBe("Não");
+    expect(consultaMercadoEavalia(com({ tipo: "acordoQuadro", acordoQuadro: { ...aq, modalidade: "porConcretizar" } }))).toBe("Sim");
+    expect(consultaMercadoEavalia(com({ tipo: "outro", consultaMercadoOutro: "Sim" }))).toBe("Sim");
     expect(tipoSolucaoEavalia(l, "aberta")).toBe("Submissão à concorrência");
     expect(tipoSolucaoEavalia(l, "determinado")).toBe("Software Proprietário sem alternativas");
   });
@@ -260,7 +269,7 @@ describe("licenciamento — validação", () => {
     }
   });
 
-  it("aberta pede designação e requisitos; determinada pede licença, titular, fundamento e tipo de solução", () => {
+  it("aberta pede designação e requisitos; identificada pede licença, titular e tipo de solução", () => {
     const aberta = validarLicencas({ ...pedidoLicenciamentoInicial(), licencas: [criarLicenca()] }).map((e) => e.mensagem);
     expect(aberta.some((m) => m.includes("requisito mínimo"))).toBe(true);
     expect(aberta.some((m) => m.includes("tipo de solução"))).toBe(false);
@@ -268,7 +277,6 @@ describe("licenciamento — validação", () => {
       (e) => e.mensagem,
     );
     expect(det.some((m) => m.includes("titular"))).toBe(true);
-    expect(det.some((m) => m.includes("fundamento"))).toBe(true);
     expect(det.some((m) => m.includes("tipo de solução"))).toBe(true);
     expect(det.some((m) => m.includes("requisito"))).toBe(false);
   });
@@ -311,9 +319,10 @@ describe("licenciamento — validação", () => {
 
   it("a consulta ao mercado do eAvalia é «Sim» com consulta preliminar, mesmo na licença determinada", () => {
     const l = criarLicenca();
-    expect(consultaMercadoEavalia("determinado", l)).toBe("Não");
-    expect(consultaMercadoEavalia("determinado", { ...l, origemComplementar: fonteVazia("consultaPreliminar") })).toBe("Sim");
-    expect(consultaMercadoEavalia("aberta", l)).toBe("Sim");
+    const ad = { procedimento: { ...procedimentoInicial(), tipo: "ajusteDireto" as const } };
+    expect(consultaMercadoEavalia(ad, l)).toBe("Não");
+    expect(consultaMercadoEavalia(ad, { ...l, origemComplementar: fonteVazia("consultaPreliminar") })).toBe("Sim");
+    expect(consultaMercadoEavalia({ procedimento: procedimentoInicial() }, l)).toBe("Sim");
   });
 
   it("o preço escreve-se com IVA; o sem IVA acompanha a taxa", () => {
@@ -420,15 +429,14 @@ describe("licenciamento — convite, requisitos, preço global, métricas e nív
     expect(validarConvite(pedido)).toEqual([]);
     const curto = {
       ...pedido,
-      convite: { ativo: true, motivo: "", entidades: [{ id: "a", designacao: "A, S.A." }, { id: "b", designacao: "a, s.a." }] },
+      convite: { motivo: "", entidades: [{ id: "a", designacao: "A, S.A." }, { id: "b", designacao: "a, s.a." }] },
     };
     const msgs = validarConvite(curto).map((e) => e.mensagem);
     expect(msgs.some((m) => m.includes("motivo"))).toBe(true);
     expect(msgs.some((m) => m.includes("pelo menos 3"))).toBe(true);
     expect(msgs.some((m) => m.includes("repetidas"))).toBe(true);
-    // Desligado, ou numa prestação confiada a determinada entidade, não conta.
-    expect(validarConvite({ ...curto, convite: { ...curto.convite, ativo: false } })).toEqual([]);
-    expect(validarConvite({ ...curto, natureza: "determinado" })).toEqual([]);
+    // No concurso público não há convite.
+    expect(validarConvite({ ...curto, procedimento: procedimentoInicial() })).toEqual([]);
     // E vai e vem no ficheiro.
     const lido = normalizarPedidoLicenciamento(JSON.parse(pedidoLicenciamentoParaJSON(pedido)));
     expect(lido.convite.entidades.map((e) => e.designacao)).toEqual([
@@ -508,5 +516,71 @@ describe("licenciamento — convite, requisitos, preço global, métricas e nív
   it("das 00:00 às 23:59 é o dia inteiro", () => {
     const s = { ...pedidoLicenciamentoInicial().condicoes.suporte, horario: "7dias" as const, horaInicio: "00:00", horaFim: "23:59" };
     expect(horarioPorExtenso(s)).toBe("Todos os dias, incluindo fins de semana e feriados, 24 horas por dia");
+  });
+});
+
+describe("licenciamento — procedimento proposto (DL 177/2026)", () => {
+  const nomes = (...n: string[]) => n.map((designacao, i) => ({ id: String(i), designacao }));
+
+  it("cada procedimento pede o seu número de convidados", () => {
+    const base = pedidoLicenciamentoInicial();
+    const com = (tipo: ProcedimentoProposto["tipo"], entidades: string[], motivo = "Motivo.") =>
+      validarConvite({ ...base, procedimento: { ...procedimentoInicial(), tipo }, convite: { motivo, entidades: nomes(...entidades) } }).map(
+        (e) => e.mensagem,
+      );
+    expect(com("consultaPrevia", ["A", "B", "C"])).toEqual([]);
+    expect(com("consultaPreviaEspecial", ["A", "B", "C"]).join()).toContain("pelo menos 5");
+    expect(com("consultaPreviaEspecial", ["A", "B", "C", "D", "E"])).toEqual([]);
+    expect(com("ajusteDireto", ["A", "B"]).join()).toContain("uma só entidade");
+    expect(com("ajusteDireto", [], "")).toHaveLength(1);
+    expect(com("ajusteDireto", ["A"], "")).toEqual([]);
+    expect(com("concursoPublico", [])).toEqual([]);
+  });
+
+  it("só uma entidade obriga ao ajuste direto material, com explicação; o produto identificado pede justificação", () => {
+    const base = { ...pedidoLicenciamentoInicial(), natureza: "determinado" as const };
+    const msgs = (alteracao: object) => validarProcedimento({ ...base, ...alteracao }).map((e) => e.mensagem).join(" | ");
+    expect(msgs({ fornecedorUnico: false })).toContain("art.º 49.º, n.º 8");
+    expect(msgs({ fornecedorUnico: false, justificacaoProduto: "Plataforma em uso." })).toBe("");
+    expect(msgs({ fornecedorUnico: true })).toContain("ajuste direto por critério material");
+    const ad = { ...procedimentoInicial(), tipo: "ajusteDireto" as const, fundamentoAjusteDireto: "exclusivos" as const };
+    expect(msgs({ fornecedorUnico: true, procedimento: ad })).toContain("explique");
+    expect(msgs({ fornecedorUnico: true, procedimento: { ...ad, explicacao: "Titular único." } })).toBe("");
+    expect(msgs({ fornecedorUnico: true, procedimento: { ...ad, fundamentoAjusteDireto: "valor" } })).toContain("critério material");
+    const aq = { ...procedimentoInicial(), tipo: "acordoQuadro" as const };
+    expect(msgs({ fornecedorUnico: false, justificacaoProduto: "x", procedimento: aq })).toContain("central de compras");
+  });
+
+  it("um pedido anterior passa ao procedimento equivalente, com o fundamento que tinha", () => {
+    const aberta = normalizarPedidoLicenciamento({ tipo: "licenciamento", natureza: "aberta", convite: { ativo: true } });
+    expect([aberta.procedimento.tipo, aberta.fornecedorUnico]).toEqual(["consultaPrevia", false]);
+    const concurso = normalizarPedidoLicenciamento({ tipo: "licenciamento", natureza: "aberta" });
+    expect(concurso.procedimento.tipo).toBe("concursoPublico");
+    const det = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      natureza: "determinado",
+      licencas: [{ id: "a", nomeComercial: "X", fundamento: "direitosExclusivos", explicacaoFundamento: "Titular único." }],
+    });
+    expect([det.fornecedorUnico, det.procedimento.tipo, det.procedimento.fundamentoAjusteDireto, det.procedimento.explicacao]).toEqual([
+      true,
+      "ajusteDireto",
+      "exclusivos",
+      "Titular único.",
+    ]);
+    const plataforma = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      natureza: "determinado",
+      licencas: [{ id: "a", fundamento: "plataformaInstalada" }],
+    });
+    expect([plataforma.procedimento.fundamentoAjusteDireto, plataforma.procedimento.contexto]).toEqual(["tecnicos", "plataformaInstalada"]);
+    const renovacao = normalizarPedidoLicenciamento({
+      tipo: "licenciamento",
+      natureza: "determinado",
+      licencas: [{ id: "a", fundamento: "renovacao" }],
+    });
+    expect([renovacao.procedimento.fundamentoAjusteDireto, renovacao.procedimento.contexto]).toEqual(["", "renovacao"]);
+    // E o novo vai e vem no ficheiro.
+    const exemplo = pedidoLicenciamentoExemplo(2027);
+    expect(normalizarPedidoLicenciamento(JSON.parse(pedidoLicenciamentoParaJSON(exemplo))).procedimento).toEqual(exemplo.procedimento);
   });
 });

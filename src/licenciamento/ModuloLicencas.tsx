@@ -1,14 +1,11 @@
 import { useRef, useState } from "react";
 import type {
   DireitoUso,
-  FundamentoLicenca,
   Licenca,
   Manutencao,
-  ConviteEntidades,
   FormaPreco,
   Metrica,
   Modalidade,
-  NaturezaAquisicao,
   ObjetoLicenca,
   PedidoLicenciamento,
   PeriodicidadePreco,
@@ -17,11 +14,9 @@ import {
   AMBITOS_EAVALIA,
   DIREITOS_USO,
   EXPLICACAO_TIPOS_SOLUCAO,
-  FUNDAMENTOS_LICENCA,
   MANUTENCOES,
   MESES_MAXIMOS,
   METRICAS,
-  MINIMO_ENTIDADES_CONVIDADAS,
   ehPrecoGlobal,
   metricaPorExtenso,
   METRICAS_UNICAS,
@@ -48,6 +43,7 @@ import { ErroImportacao } from "../core/perfil";
 import { gerarId } from "../core/id";
 import { ListaItensEditor } from "../modulo1/ListaItensEditor";
 import { EditorOrigemPreco } from "./EditorOrigemPreco";
+import { PainelProcedimento } from "./PainelProcedimento";
 import { CampoNumero } from "../ui/CampoNumero";
 import { Explicacao } from "../ui/Explicacao";
 import { PainelMensagem, type Mensagem } from "../ui/PainelMensagem";
@@ -58,31 +54,6 @@ interface Props {
   onAlterar: (atualizar: (atual: PedidoLicenciamento) => PedidoLicenciamento) => void;
   onIrParaCondicoes: () => void;
 }
-
-const NATUREZAS: Array<{
-  valor: NaturezaAquisicao;
-  titulo: string;
-  texto: string;
-}> = [
-  {
-    valor: "aberta",
-    titulo: "Aberta à concorrência",
-    texto:
-      "Concurso público ou, com convite a entidades escolhidas, consulta prévia. Descreve-se a licença e os " +
-      "requisitos mínimos; qualquer fabricante pode concorrer. No eAvalia: «Submissão à concorrência» e consulta " +
-      "ao mercado «Sim».",
-  },
-  {
-    valor: "determinado",
-    titulo: "Confiada a determinada entidade",
-    texto:
-      "Por motivos técnicos ou de proteção de direitos exclusivos, a prestação só pode ser confiada a determinada " +
-      "entidade (art.º 24.º, n.º 1, alínea e), do CCP): renovação ou alargamento de uma plataforma já instalada, " +
-      "direitos exclusivos do fabricante ou titular, ou compatibilidade técnica. Identifica-se a licença e " +
-      "fundamenta-se a escolha. No eAvalia: consulta ao mercado «Não», salvo se o preço vier de uma consulta " +
-      "preliminar.",
-  },
-];
 
 /** Um `<select>` com a opção «por escolher» e as opções de uma lista. */
 function Escolha<T extends string>({
@@ -131,85 +102,6 @@ const FORMAS_PRECO: Array<{
       "concorrente cota um valor único.",
   },
 ];
-
-/** O convite a entidades escolhidas (consulta prévia), só na aquisição aberta. */
-function PainelConvite({ pedido, onAlterar }: Pick<Props, "pedido" | "onAlterar">) {
-  const c = pedido.convite;
-  const alterar = (alteracao: Partial<ConviteEntidades>) =>
-    onAlterar((atual) => ({
-      ...atual,
-      convite: { ...atual.convite, ...alteracao },
-    }));
-  const opcoes = [
-    {
-      ativo: false,
-      titulo: "Não",
-      texto: "Procedimento aberto a qualquer interessado (concurso público).",
-    },
-    {
-      ativo: true,
-      titulo: "Sim",
-      texto: `Consulta prévia: convite direto a pelo menos ${MINIMO_ENTIDADES_CONVIDADAS} entidades (art.os 112.º a 114.º do CCP).`,
-    },
-  ];
-  return (
-    <>
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Convite a entidades específicas</h3>
-          <p className="painel-nota">
-            Pretende-se dirigir o convite a entidades escolhidas, em vez de um procedimento aberto a qualquer
-            interessado?
-          </p>
-        </header>
-        <div className="opcoes-natureza" role="radiogroup" aria-label="Convite a entidades específicas">
-          {opcoes.map((o) => (
-            <label
-              key={o.titulo}
-              className={c.ativo === o.ativo ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"}
-            >
-              <input
-                type="radio"
-                name="convite-entidades"
-                checked={c.ativo === o.ativo}
-                onChange={() => alterar({ ativo: o.ativo })}
-              />
-              <span>
-                <strong>{o.titulo}</strong>
-                <span className="meta">{o.texto}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        {c.ativo && (
-          <label className="campo campo-convite-motivo">
-            <span className="rotulo">Motivo do convite a estas entidades (sai na manifestação de necessidades)</span>
-            <textarea
-              rows={3}
-              value={c.motivo}
-              placeholder="ex.: São as entidades que, no mercado nacional, comercializam e dão suporte a plataformas com a escala exigida."
-              aria-invalid={c.motivo.trim() === ""}
-              onChange={(e) => alterar({ motivo: e.target.value })}
-            />
-          </label>
-        )}
-      </section>
-      {c.ativo && (
-        <ListaItensEditor
-          titulo="Entidades a convidar"
-          nota={`Uma entidade por linha, pelo menos ${MINIMO_ENTIDADES_CONVIDADAS}. Saem numa tabela na manifestação de necessidades.`}
-          nomeItem="entidade"
-          rotuloColuna="Entidade"
-          placeholder="ex.: Documenta Sistemas, S.A."
-          textoVazio="Ainda não há entidades. Acrescente a primeira."
-          rotuloAdicionar="+ Adicionar entidade"
-          itens={c.entidades}
-          onChange={(entidades) => alterar({ entidades })}
-        />
-      )}
-    </>
-  );
-}
 
 const iguais = <T extends string>(lista: readonly T[]) => lista.map((v) => [v, v] as const);
 const deRegisto = <T extends string>(registo: Record<T, string>) =>
@@ -397,41 +289,7 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
 
       <PainelMensagem mensagem={mensagem} onFechar={() => setMensagem(null)} />
 
-      <section className="painel">
-        <header className="painel-cabecalho">
-          <h3>Natureza da aquisição</h3>
-          <p className="painel-nota">
-            Decide o que se descreve: numa aquisição aberta à concorrência descreve-se a necessidade; quando a prestação
-            é confiada a determinada entidade, identifica-se a licença e fundamenta-se a escolha.
-          </p>
-        </header>
-        <div className="opcoes-natureza" role="radiogroup" aria-label="Natureza da aquisição">
-          {NATUREZAS.map((n) => (
-            <label
-              key={n.valor}
-              className={pedido.natureza === n.valor ? "opcao-natureza opcao-natureza-ativa" : "opcao-natureza"}
-            >
-              <input
-                type="radio"
-                name="natureza-aquisicao"
-                value={n.valor}
-                checked={pedido.natureza === n.valor}
-                onChange={() => onAlterar((atual) => ({ ...atual, natureza: n.valor }))}
-              />
-              <span>
-                <strong>{n.titulo}</strong>
-                <span className="meta">{n.texto}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="ajuda">
-          Em qualquer dos casos, o preço é o único aspeto submetido à concorrência: tudo o que aqui se escreve são
-          termos e condições do contrato.
-        </p>
-      </section>
-
-      {pedido.natureza === "aberta" && <PainelConvite pedido={pedido} onAlterar={onAlterar} />}
+      <PainelProcedimento pedido={pedido} onAlterar={onAlterar} />
 
       <section className="painel">
         <header className="painel-cabecalho">
@@ -657,27 +515,9 @@ export function ModuloLicencas({ pedido, onAlterar, onIrParaCondicoes }: Props) 
                   </label>
                 ))}
               </div>
-              <div className="linha-campos linha-campos-separada">
-                <Escolha<Exclude<FundamentoLicenca, "">>
-                  rotulo="Fundamento da escolha"
-                  valor={emEdicao.fundamento}
-                  opcoes={deRegisto(FUNDAMENTOS_LICENCA)}
-                  onChange={(fundamento) => alterarLicenca({ fundamento })}
-                />
-              </div>
-              <label className="campo">
-                <span className="rotulo">Explicação (sai na manifestação de necessidades)</span>
-                <textarea
-                  rows={3}
-                  value={emEdicao.explicacaoFundamento}
-                  placeholder="ex.: A SNOMED International é a única entidade que licencia a SNOMED CT…"
-                  aria-invalid={emEdicao.explicacaoFundamento.trim() === ""}
-                  onChange={(e) => alterarLicenca({ explicacaoFundamento: e.target.value })}
-                />
-              </label>
               <p className="ajuda">
-                Obrigatórios, exceto a versão. A escolha de uma licença determinada afasta a concorrência entre
-                fabricantes e tem de ficar fundamentada na manifestação de necessidades.
+                Obrigatórios, exceto a versão. A justificação da identificação do produto — ou o fundamento do
+                ajuste direto — escreve-se uma vez, no procedimento proposto, em cima.
               </p>
             </section>
           )}

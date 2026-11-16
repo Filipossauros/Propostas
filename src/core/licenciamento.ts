@@ -9,12 +9,14 @@
 // licença tem de permitir, a métrica, a manutenção, os níveis de serviço — são
 // termos e condições do contrato, e saem nas Especificações Técnicas.
 //
-// Há duas naturezas de aquisição, e cada uma descreve a licença de forma
-// diferente:
-//   · aberta à concorrência — descreve-se a necessidade (requisitos mínimos),
-//     sem marca nem fabricante; o produto concreto só se conhece na proposta;
-//   · licença determinada — identifica-se a licença, o fabricante ou titular
-//     dos direitos e a versão, e fundamenta-se a escolha (art.º 24.º do CCP).
+// Duas decisões, separadas, dizem como se adquire:
+//   · como se descreve o que se compra (a «natureza»): por requisitos mínimos,
+//     sem marca («aberta»), ou com a licença identificada («determinado») —
+//     havendo vários fornecedores possíveis (referência à marca justificada,
+//     art.º 49.º, n.º 8, do CCP) ou só uma entidade que a pode fornecer;
+//   · o procedimento proposto: concurso público, consulta prévia (≥ 3), consulta
+//     prévia especial (≥ 5), ajuste direto (por valor ou por critério material),
+//     ao abrigo de acordo-quadro, ou outro. A escolha final é da contratação.
 //
 // A classificação eAvalia decorre, quase toda, destas escolhas: o tipo, do
 // direito de uso; o tipo de licenciamento, da modalidade; a consulta ao
@@ -89,13 +91,6 @@ export interface ClassificacaoEavalia {
 
 export type NaturezaAquisicao = "aberta" | "determinado";
 
-export const FUNDAMENTOS_LICENCA = {
-  plataformaInstalada: "Plataforma já instalada — continuidade e compatibilidade técnica",
-  direitosExclusivos: "Direitos exclusivos do fabricante ou titular (art.º 24.º, n.º 1, alínea e), do CCP)",
-  renovacao: "Renovação de licenças existentes",
-  outro: "Outro",
-} as const;
-export type FundamentoLicenca = keyof typeof FUNDAMENTOS_LICENCA | "";
 
 export type ObjetoLicenca = "software" | "terminologia" | "outro" | "servico";
 export const OBJETOS_LICENCA: Record<ObjetoLicenca, string> = {
@@ -164,17 +159,173 @@ export const METRICAS_UNICAS: ReadonlyArray<Exclude<Metrica, "">> = ["nacional",
 export type FormaPreco = "unitario" | "global";
 
 /**
- * A convocatória de uma aquisição aberta à concorrência: dirigida a qualquer
- * interessado ou, na consulta prévia (art.os 112.º a 114.º do CCP), a entidades
- * escolhidas — pelo menos três, com o motivo da escolha.
+ * As entidades a convidar, quando o procedimento as escolhe: na consulta prévia
+ * (pelo menos três), na consulta prévia especial (pelo menos cinco), no ajuste
+ * direto (uma) e no acordo-quadro (os cocontratantes escolhidos). O motivo da
+ * escolha pede-se nas consultas.
  */
 export interface ConviteEntidades {
-  ativo: boolean;
   motivo: string;
   entidades: ItemPerfil[];
 }
-/** O mínimo de entidades convidadas na consulta prévia (art.º 112.º do CCP). */
+/** O mínimo de entidades convidadas na consulta prévia (art.º 112.º, n.º 1, do CCP). */
 export const MINIMO_ENTIDADES_CONVIDADAS = 3;
+/** O mínimo de entidades convidadas na consulta prévia especial (art.º 127.º-A, n.º 1, do CCP). */
+export const MINIMO_CONSULTA_PREVIA_ESPECIAL = 5;
+
+export type TipoProcedimento =
+  | "concursoPublico"
+  | "consultaPrevia"
+  | "consultaPreviaEspecial"
+  | "ajusteDireto"
+  | "acordoQuadro"
+  | "outro";
+
+/** Os procedimentos que se podem propor, com o que cada um quer dizer (redação do DL 177/2026). */
+export const PROCEDIMENTOS: Record<TipoProcedimento, { titulo: string; texto: string }> = {
+  concursoPublico: { titulo: "Concurso público", texto: "Aberto a qualquer interessado. Sem convite." },
+  consultaPrevia: {
+    titulo: "Consulta prévia",
+    texto: "Convite a pelo menos 3 entidades escolhidas (art.º 112.º); valor inferior a 130 000 € (art.º 20.º).",
+  },
+  consultaPreviaEspecial: {
+    titulo: "Consulta prévia especial",
+    texto:
+      "Convite a pelo menos 5 entidades (art.º 127.º-A). Abaixo do limiar europeu e de 2 000 000 €; abrange licenças " +
+      "e serviços de software (art.º 127.º-B, al. d)).",
+  },
+  ajusteDireto: {
+    titulo: "Ajuste direto",
+    texto: "Convite a uma entidade. Por valor (inferior a 75 000 €) ou, qualquer que seja o valor, por critério material.",
+  },
+  acordoQuadro: {
+    titulo: "Ao abrigo de acordo-quadro",
+    texto: "Acordo-quadro de uma central de compras: ajuste direto ao cocontratante ou convite aos cocontratantes.",
+  },
+  outro: {
+    titulo: "Outro (indicar)",
+    texto: "Concurso limitado por prévia qualificação, negociação, contratação excluída… Escreve-se qual e porquê.",
+  },
+};
+
+export type FundamentoAjusteDireto =
+  | "valor"
+  | "tecnicos"
+  | "exclusivos"
+  | "concursoDeserto"
+  | "bensComplementares"
+  | "repeticaoServicos"
+  | "subscricao"
+  | "outro";
+
+/** Os fundamentos do ajuste direto, com a norma como sai na manifestação. */
+export const FUNDAMENTOS_AJUSTE_DIRETO: Record<FundamentoAjusteDireto, { rotulo: string; norma: string }> = {
+  valor: { rotulo: "Em função do valor", norma: "da alínea d) do n.º 1 do artigo 20.º" },
+  tecnicos: {
+    rotulo: "Ausência de concorrência por motivos técnicos — art.º 24.º, n.º 1, al. e), ii)",
+    norma: "da subalínea ii) da alínea e) do n.º 1 do artigo 24.º",
+  },
+  exclusivos: {
+    rotulo: "Proteção de direitos exclusivos, incluindo propriedade intelectual — art.º 24.º, n.º 1, al. e), iii)",
+    norma: "da subalínea iii) da alínea e) do n.º 1 do artigo 24.º",
+  },
+  concursoDeserto: {
+    rotulo: "Concurso anterior sem propostas, ou com todas excluídas — art.º 24.º, n.º 1, al. a)",
+    norma: "da alínea a) do n.º 1 do artigo 24.º",
+  },
+  bensComplementares: {
+    rotulo: "Substituição parcial ou ampliação de bens, com o fornecedor inicial — art.º 26.º, n.º 1, al. a)",
+    norma: "da alínea a) do n.º 1 do artigo 26.º",
+  },
+  repeticaoServicos: {
+    rotulo: "Repetição de serviços similares do contrato anterior — art.º 27.º, n.º 1, al. a)",
+    norma: "da alínea a) do n.º 1 do artigo 27.º",
+  },
+  subscricao: {
+    rotulo:
+      "Licenciamento em subscrição, pronto a usar, pelo titular ou entidade autorizada — art.º 27.º, n.º 1, al. j)",
+    norma: "da alínea j) do n.º 1 do artigo 27.º",
+  },
+  outro: { rotulo: "Outro fundamento (indicar na explicação)", norma: "" },
+};
+/** Os fundamentos materiais (todos menos o valor), pela ordem em que se oferecem. */
+export const FUNDAMENTOS_MATERIAIS = (Object.keys(FUNDAMENTOS_AJUSTE_DIRETO) as FundamentoAjusteDireto[]).filter(
+  (f) => f !== "valor",
+);
+
+export type ContextoAjusteDireto = "" | "renovacao" | "plataformaInstalada" | "alargamento";
+/** O contexto explica a aquisição, mas não fundamenta o ajuste direto. */
+export const CONTEXTOS_AJUSTE_DIRETO: Record<Exclude<ContextoAjusteDireto, "">, string> = {
+  renovacao: "Renovação de licenças existentes",
+  plataformaInstalada: "Plataforma já instalada",
+  alargamento: "Alargamento de quantidades",
+};
+
+/**
+ * As duas modalidades do acordo-quadro (art.º 252.º, n.º 1): com os termos todos
+ * fixados, o contrato faz-se por ajuste direto ao cocontratante (art.º 258.º);
+ * com termos por concretizar, convidam-se os cocontratantes (art.º 259.º).
+ */
+export type ModalidadeAcordoQuadro = "fixados" | "porConcretizar";
+
+export interface ProcedimentoProposto {
+  tipo: TipoProcedimento;
+  /** No ajuste direto. */
+  fundamentoAjusteDireto: FundamentoAjusteDireto | "";
+  contexto: ContextoAjusteDireto;
+  /** A explicação do fundamento material — sai na manifestação. */
+  explicacao: string;
+  acordoQuadro: {
+    central: string;
+    designacao: string;
+    lote: string;
+    modalidade: ModalidadeAcordoQuadro;
+    /** Na modalidade com termos por concretizar: convidar todos os cocontratantes do lote. */
+    todosOsCocontratantes: boolean;
+  };
+  /** «Outro»: qual o procedimento e porquê. */
+  outro: string;
+  /** «Outro»: a consulta ao mercado do eAvalia, que não decorre do procedimento. */
+  consultaMercadoOutro: "Sim" | "Não";
+}
+
+export function procedimentoInicial(): ProcedimentoProposto {
+  return {
+    tipo: "concursoPublico",
+    fundamentoAjusteDireto: "",
+    contexto: "",
+    explicacao: "",
+    acordoQuadro: { central: "", designacao: "", lote: "", modalidade: "porConcretizar", todosOsCocontratantes: true },
+    outro: "",
+    consultaMercadoOutro: "Não",
+  };
+}
+
+/** Quantas entidades se convidam: o mínimo e, no ajuste direto, o máximo. `null` sem convite. */
+export function convidados(p: ProcedimentoProposto): { minimo: number; maximo: number | null } | null {
+  switch (p.tipo) {
+    case "consultaPrevia":
+      return { minimo: MINIMO_ENTIDADES_CONVIDADAS, maximo: null };
+    case "consultaPreviaEspecial":
+      return { minimo: MINIMO_CONSULTA_PREVIA_ESPECIAL, maximo: null };
+    case "ajusteDireto":
+      return { minimo: 1, maximo: 1 };
+    case "acordoQuadro":
+      if (p.acordoQuadro.modalidade === "fixados") return { minimo: 1, maximo: 1 };
+      return p.acordoQuadro.todosOsCocontratantes ? null : { minimo: 1, maximo: null };
+    default:
+      return null;
+  }
+}
+
+/** Nas consultas, a escolha das entidades leva motivo. */
+export function pedeMotivoDoConvite(p: Pick<ProcedimentoProposto, "tipo">): boolean {
+  return p.tipo === "consultaPrevia" || p.tipo === "consultaPreviaEspecial";
+}
+
+export function ehAjusteDiretoMaterial(p: Pick<ProcedimentoProposto, "tipo" | "fundamentoAjusteDireto">): boolean {
+  return p.tipo === "ajusteDireto" && p.fundamentoAjusteDireto !== "valor";
+}
 
 export type OrigemPreco =
   | ""
@@ -255,15 +406,12 @@ export interface Licenca {
    * No serviço associado, são as atividades.
    */
   requisitos: ItemPerfil[];
-  // Licença determinada: a identificação e o fundamento.
+  // Licença identificada: a licença, o fabricante ou titular e a versão.
   /** A licença como o fabricante ou titular a designa, ex.: «Afiliação nacional SNOMED International». */
   nomeComercial: string;
   /** O fabricante ou o titular dos direitos. */
   fabricante: string;
   versao: string;
-  fundamento: FundamentoLicenca;
-  /** A explicação do fundamento — sai na manifestação. */
-  explicacaoFundamento: string;
   // Tipo de licenciamento.
   objeto: ObjetoLicenca;
   /** O objeto, quando é «outro». */
@@ -411,8 +559,14 @@ export interface PedidoLicenciamento {
    */
   beneficiarios: string | null;
   beneficiosOperacionais: string | null;
+  /** Como se descreve o que se compra: por requisitos («aberta») ou com a licença identificada («determinado»). */
   natureza: NaturezaAquisicao;
-  /** Só na aquisição aberta à concorrência: o convite a entidades escolhidas. */
+  /** Com a licença identificada: só uma entidade a pode fornecer (o procedimento é o ajuste direto material). */
+  fornecedorUnico: boolean;
+  /** Com a licença identificada e vários fornecedores: porque se identifica o produto (art.º 49.º, n.º 8). */
+  justificacaoProduto: string;
+  procedimento: ProcedimentoProposto;
+  /** As entidades a convidar, quando o procedimento as escolhe. */
   convite: ConviteEntidades;
   licencas: Licenca[];
   condicoes: CondicoesContrato;
@@ -522,8 +676,6 @@ export function criarLicenca(): Licenca {
     nomeComercial: "",
     fabricante: "",
     versao: "",
-    fundamento: "",
-    explicacaoFundamento: "",
     objeto: "software",
     objetoOutro: "",
     direitoUso: "temporario",
@@ -555,7 +707,10 @@ export function pedidoLicenciamentoInicial(anoInicio = new Date().getFullYear())
     beneficiarios: null,
     beneficiosOperacionais: null,
     natureza: "aberta",
-    convite: { ativo: false, motivo: "", entidades: [] },
+    fornecedorUnico: false,
+    justificacaoProduto: "",
+    procedimento: procedimentoInicial(),
+    convite: { motivo: "", entidades: [] },
     licencas: [],
     condicoes: condicoesIniciais(),
     lotes: [],
@@ -617,14 +772,23 @@ export function tipoLicenciamentoEavalia(l: Pick<Licenca, "modalidade">): TipoLi
 }
 
 /**
- * A consulta ao mercado do eAvalia: «Sim» na aquisição aberta à concorrência
- * e sempre que o preço da licença venha (também) de uma consulta preliminar.
+ * A consulta ao mercado do eAvalia: «Sim» quando o procedimento põe entidades
+ * em concorrência (concurso, consultas, convite aos cocontratantes de um
+ * acordo-quadro); no ajuste direto, só se o preço da licença vier (também) de
+ * uma consulta preliminar; em «Outro», o que se indicar.
  */
 export function consultaMercadoEavalia(
-  natureza: NaturezaAquisicao,
+  pedido: { procedimento: Pick<ProcedimentoProposto, "tipo" | "acordoQuadro" | "consultaMercadoOutro"> },
   l?: Pick<Licenca, "origemPreco" | "origemComplementar">,
 ): RespostaConsultaMercado {
-  if (natureza === "aberta") return "Sim";
+  const p = pedido.procedimento;
+  if (p.tipo === "outro") return p.consultaMercadoOutro;
+  const concorrencia =
+    p.tipo === "concursoPublico" ||
+    p.tipo === "consultaPrevia" ||
+    p.tipo === "consultaPreviaEspecial" ||
+    (p.tipo === "acordoQuadro" && p.acordoQuadro.modalidade === "porConcretizar");
+  if (concorrencia) return "Sim";
   const consulta = l !== undefined && [l.origemPreco.tipo, l.origemComplementar.tipo].includes("consultaPreliminar");
   return consulta ? "Sim" : "Não";
 }
@@ -1247,8 +1411,6 @@ export function validarLicenca(l: Licenca, natureza: NaturezaAquisicao): ErroVal
   } else {
     if (l.nomeComercial.trim() === "") erros.push(de("indique a licença."));
     if (l.fabricante.trim() === "") erros.push(de("indique o fabricante ou titular dos direitos."));
-    if (l.fundamento === "") erros.push(de("escolha o fundamento da escolha da licença."));
-    if (l.explicacaoFundamento.trim() === "") erros.push(de("explique o fundamento da escolha da licença."));
     if (l.eavalia.tipoSolucao === "") erros.push(de("escolha o tipo de solução (eAvalia)."));
   }
   if (l.objeto === "outro" && l.objetoOutro.trim() === "") erros.push(de("indique o objeto da licença."));
@@ -1324,24 +1486,52 @@ export function validarFonte(
 /** Quantos blocos de licença tem cada secção da folha «Custos - Licenciamento». */
 export const LICENCAS_POR_SECCAO_EAVALIA = 20;
 
-/** O que falta no convite a entidades escolhidas (só na aquisição aberta). */
-export function validarConvite(pedido: Pick<PedidoLicenciamento, "natureza" | "convite">): ErroValidacao[] {
-  const c = pedido.convite;
-  if (pedido.natureza !== "aberta" || !c.ativo) return [];
+/** O que falta na descrição do objeto e no procedimento proposto (L1). */
+export function validarProcedimento(
+  pedido: Pick<PedidoLicenciamento, "natureza" | "fornecedorUnico" | "justificacaoProduto" | "procedimento">,
+): ErroValidacao[] {
   const erros: ErroValidacao[] = [];
-  if (c.motivo.trim() === "") erros.push(falta("convite", "Convite: indique o motivo do convite a estas entidades."));
-  const nomes = c.entidades.map((e) => e.designacao.trim()).filter((n) => n !== "");
-  if (nomes.length < MINIMO_ENTIDADES_CONVIDADAS)
-    erros.push(
-      falta(
-        "convite",
-        `Convite: indique pelo menos ${MINIMO_ENTIDADES_CONVIDADAS} entidades a convidar (art.º 112.º do CCP).`,
-      ),
-    );
-  if (c.entidades.some((e) => e.designacao.trim() === ""))
-    erros.push(falta("convite", "Convite: há entidades por escrever — preencha-as ou remova-as."));
-  if (new Set(nomes.map((n) => n.toLowerCase())).size < nomes.length)
-    erros.push(falta("convite", "Convite: há entidades repetidas."));
+  const p = pedido.procedimento;
+  const de = (texto: string) => erros.push(falta("procedimento", texto));
+  const unico = pedido.natureza === "determinado" && pedido.fornecedorUnico;
+  if (pedido.natureza === "determinado" && !pedido.fornecedorUnico && pedido.justificacaoProduto.trim() === "")
+    de("Indique porque se identifica o produto (art.º 49.º, n.º 8, do CCP).");
+  if (unico && (p.tipo !== "ajusteDireto" || p.fundamentoAjusteDireto === "valor"))
+    de("Só uma entidade pode fornecer: o procedimento é o ajuste direto por critério material.");
+  if (p.tipo === "ajusteDireto") {
+    if (p.fundamentoAjusteDireto === "") de("Ajuste direto: escolha o fundamento (valor ou critério material).");
+    else if (ehAjusteDiretoMaterial(p) && p.explicacao.trim() === "")
+      de("Ajuste direto: explique o fundamento material (sai na manifestação).");
+  }
+  if (p.tipo === "acordoQuadro") {
+    if (p.acordoQuadro.central.trim() === "") de("Acordo-quadro: indique a central de compras.");
+    if (p.acordoQuadro.designacao.trim() === "") de("Acordo-quadro: indique a designação e o n.º do acordo-quadro.");
+  }
+  if (p.tipo === "outro" && p.outro.trim() === "") de("Indique qual o procedimento proposto e porquê.");
+  return erros;
+}
+
+/** O que falta nas entidades a convidar, conforme o procedimento. */
+export function validarConvite(pedido: Pick<PedidoLicenciamento, "procedimento" | "convite">): ErroValidacao[] {
+  const n = convidados(pedido.procedimento);
+  if (n === null) return [];
+  const c = pedido.convite;
+  const erros: ErroValidacao[] = [];
+  const de = (texto: string) => erros.push(falta("convite", `Convite: ${texto}`));
+  const procedimento = PROCEDIMENTOS[pedido.procedimento.tipo].titulo.toLowerCase();
+  if (pedeMotivoDoConvite(pedido.procedimento) && c.motivo.trim() === "")
+    de("indique o motivo do convite a estas entidades.");
+  const nomes = c.entidades.map((e) => e.designacao.trim()).filter((x) => x !== "");
+  if (n.maximo === 1) {
+    if (nomes.length === 0) de(`indique a entidade a convidar (${procedimento}).`);
+    else if (nomes.length > 1) de(`no ${procedimento} convida-se uma só entidade.`);
+  } else if (nomes.length < n.minimo) {
+    const artigo =
+      pedido.procedimento.tipo === "consultaPreviaEspecial" ? " (art.º 127.º-A do CCP)" : pedido.procedimento.tipo === "consultaPrevia" ? " (art.º 112.º do CCP)" : "";
+    de(`indique pelo menos ${n.minimo} ${n.minimo === 1 ? "entidade" : "entidades"} a convidar${artigo}.`);
+  }
+  if (c.entidades.some((e) => e.designacao.trim() === "")) de("há entidades por escrever — preencha-as ou remova-as.");
+  if (new Set(nomes.map((x) => x.toLowerCase())).size < nomes.length) de("há entidades repetidas.");
   return erros;
 }
 
@@ -1349,7 +1539,11 @@ export function validarConvite(pedido: Pick<PedidoLicenciamento, "natureza" | "c
 export function validarLicencas(pedido: PedidoLicenciamento): ErroValidacao[] {
   if (pedido.licencas.filter((l) => !ehServico(l)).length === 0)
     return [falta("licencas", "Acrescente pelo menos uma licença (os serviços associados não bastam).")];
-  const erros = [...validarConvite(pedido), ...pedido.licencas.flatMap((l) => validarLicenca(l, pedido.natureza))];
+  const erros = [
+    ...validarProcedimento(pedido),
+    ...validarConvite(pedido),
+    ...pedido.licencas.flatMap((l) => validarLicenca(l, pedido.natureza)),
+  ];
   const licencas = pedido.licencas.filter((l) => !ehServico(l));
   const livres = licencas.filter((l) => tipoSolucaoEavalia(l, pedido.natureza) === "Solução Software Livre").length;
   if (livres > LICENCAS_POR_SECCAO_EAVALIA || licencas.length - livres > LICENCAS_POR_SECCAO_EAVALIA)
@@ -1592,6 +1786,63 @@ function normalizarFonte(bruto: unknown, referenciaAntiga?: unknown): FontePreco
   };
 }
 
+function normalizarProcedimento(bruto: unknown): ProcedimentoProposto {
+  const r = objeto(bruto);
+  const base = procedimentoInicial();
+  const aq = objeto(r.acordoQuadro);
+  return {
+    tipo: deLista(r.tipo, chaves(PROCEDIMENTOS), "") || base.tipo,
+    fundamentoAjusteDireto: deLista(r.fundamentoAjusteDireto, chaves(FUNDAMENTOS_AJUSTE_DIRETO), ""),
+    contexto: deLista(r.contexto, chaves(CONTEXTOS_AJUSTE_DIRETO), ""),
+    explicacao: texto(r.explicacao),
+    acordoQuadro: {
+      central: texto(aq.central),
+      designacao: texto(aq.designacao),
+      lote: texto(aq.lote),
+      modalidade: aq.modalidade === "fixados" ? "fixados" : "porConcretizar",
+      todosOsCocontratantes: booleano(aq.todosOsCocontratantes, true),
+    },
+    outro: texto(r.outro),
+    consultaMercadoOutro: r.consultaMercadoOutro === "Sim" ? "Sim" : "Não",
+  };
+}
+
+/**
+ * O procedimento de um pedido anterior, que não o guardava: a aquisição aberta
+ * era concurso público ou, com convite, consulta prévia; a licença confiada a
+ * determinada entidade era ajuste direto material, com o fundamento de cada
+ * licença (os direitos exclusivos e a plataforma instalada passam às alíneas
+ * do art.º 24.º; a renovação passa a contexto, e o fundamento fica por escolher).
+ */
+function procedimentoDaVersaoAnterior(r: Record<string, unknown>, licencas: unknown[]): ProcedimentoProposto {
+  const base = procedimentoInicial();
+  if (r.natureza !== "determinado") {
+    return { ...base, tipo: booleano(objeto(r.convite).ativo, false) ? "consultaPrevia" : "concursoPublico" };
+  }
+  const antigas = licencas.map(objeto).filter((l) => l.objeto !== "servico");
+  const fundamento = antigas.map((l) => texto(l.fundamento)).find((f) => f !== "") ?? "";
+  const explicacoes = antigas
+    .map((l) => ({ nome: texto(l.nomeComercial ?? l.produto).trim(), texto: texto(l.explicacaoFundamento).trim() }))
+    .filter((x) => x.texto !== "");
+  return {
+    ...base,
+    tipo: "ajusteDireto",
+    fundamentoAjusteDireto:
+      fundamento === "direitosExclusivos"
+        ? "exclusivos"
+        : fundamento === "plataformaInstalada"
+          ? "tecnicos"
+          : fundamento === "outro"
+            ? "outro"
+            : "",
+    contexto: fundamento === "renovacao" ? "renovacao" : fundamento === "plataformaInstalada" ? "plataformaInstalada" : "",
+    explicacao:
+      explicacoes.length === 1
+        ? explicacoes[0].texto
+        : explicacoes.map((x) => `${x.nome || "Licença"}: ${x.texto.replace(/[.;]+$/, "")}.`).join(" "),
+  };
+}
+
 function normalizarLicenca(bruto: unknown): Licenca {
   const r = objeto(bruto);
   const base = criarLicenca();
@@ -1607,8 +1858,6 @@ function normalizarLicenca(bruto: unknown): Licenca {
     nomeComercial: texto(r.nomeComercial ?? r.produto),
     fabricante: texto(r.fabricante),
     versao: texto(r.versao),
-    fundamento: deLista(r.fundamento, chaves(FUNDAMENTOS_LICENCA), ""),
-    explicacaoFundamento: texto(r.explicacaoFundamento),
     objeto: deLista(r.objeto, chaves(OBJETOS_LICENCA), "") || "software",
     objetoOutro: texto(r.objetoOutro),
     direitoUso: deLista(r.direitoUso, chaves(DIREITOS_USO), "") || base.direitoUso,
@@ -1760,9 +2009,14 @@ export function normalizarPedidoLicenciamento(bruto: unknown): PedidoLicenciamen
     beneficiarios: textoOuNulo(r.beneficiarios),
     beneficiosOperacionais: textoOuNulo(r.beneficiosOperacionais),
     natureza: r.natureza === "determinado" ? "determinado" : "aberta",
+    // Pedidos anteriores: a licença «confiada a determinada entidade» era sempre de fornecedor único.
+    fornecedorUnico: typeof r.fornecedorUnico === "boolean" ? r.fornecedorUnico : r.natureza === "determinado",
+    justificacaoProduto: texto(r.justificacaoProduto),
+    procedimento:
+      r.procedimento === undefined ? procedimentoDaVersaoAnterior(r, brutas) : normalizarProcedimento(r.procedimento),
     convite: (() => {
       const c = objeto(r.convite);
-      return { ativo: booleano(c.ativo, false), motivo: texto(c.motivo), entidades: normalizarItens(c.entidades) };
+      return { motivo: texto(c.motivo), entidades: normalizarItens(c.entidades) };
     })(),
     licencas: brutas.map(normalizarLicenca),
     condicoes: normalizarCondicoes(r.condicoes),
@@ -1855,10 +2109,6 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     nomeComercial: "Afiliação nacional SNOMED International",
     fabricante: "SNOMED International",
     versao: "International Edition",
-    fundamento: "direitosExclusivos",
-    explicacaoFundamento:
-      "A SNOMED International é a única entidade que licencia a SNOMED CT; a afiliação nacional cobre a sua " +
-      "utilização em todo o território.",
     objeto: "terminologia",
     direitoUso: "temporario",
     modalidade: "renovacao",
@@ -1882,6 +2132,17 @@ export function pedidoLicenciamentoExemplo(anoInicio = new Date().getFullYear())
     ...pedido,
     ...PRODUTO_LICENCIAMENTO_EXEMPLO,
     natureza: "determinado",
+    fornecedorUnico: true,
+    procedimento: {
+      ...procedimentoInicial(),
+      tipo: "ajusteDireto",
+      fundamentoAjusteDireto: "exclusivos",
+      contexto: "renovacao",
+      explicacao:
+        "A SNOMED International é a única entidade que licencia a SNOMED CT; a afiliação nacional cobre a sua " +
+        "utilização em todo o território.",
+    },
+    convite: { motivo: "", entidades: itensExemplo("snomed-conv", ["SNOMED International"]) },
     licencas: [snomed],
     condicoes: {
       ...pedido.condicoes,
@@ -1970,8 +2231,8 @@ export function pedidoLicenciamentoExemploSoftware(anoInicio = new Date().getFul
       beneficios: itensExemplo("ad-ben", ["Redução do tempo de tramitação dos processos"]),
       riscos: itensExemplo("ad-ris", ["Interrupção do acesso ao arquivo documental no termo das licenças atuais"]),
     },
+    procedimento: { ...procedimentoInicial(), tipo: "consultaPrevia" },
     convite: {
-      ativo: true,
       motivo:
         "São as entidades que, no mercado nacional, comercializam e dão suporte em língua portuguesa a " +
         "plataformas de gestão documental com a escala exigida, conforme a consulta preliminar ao mercado.",

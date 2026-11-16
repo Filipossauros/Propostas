@@ -30,8 +30,6 @@ function licenca(id: string, nome: string, alteracao: Partial<Licenca>): Licenca
     id,
     nomeComercial: nome,
     fabricante: "Recorded Future",
-    fundamento: "plataformaInstalada",
-    explicacaoFundamento: "A plataforma está em uso no centro de operações de segurança da SPMS.",
     objeto: "software",
     direitoUso: "temporario",
     modalidade: "renovacao",

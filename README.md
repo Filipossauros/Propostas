@@ -344,20 +344,38 @@ conteúdo.
 | Módulo | Quem usa | O que faz |
 |---|---|---|
 | **1 · Produto** | Responsável do produto | Nome, descrição, objetivos, benefícios e riscos da não aquisição, e os beneficiários da avaliação custo-benefício (com texto por omissão, editável). Os benefícios operacionais não se mostram: formam-se a partir dos benefícios do produto. Dados próprios do licenciamento: não mexem no projeto da bolsa de horas |
-| **L1 · Licenças** | Responsável do produto, com a área técnica | Natureza da aquisição (e, na aberta, o convite a entidades escolhidas) e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência (unitário ou global) |
+| **L1 · Licenças** | Responsável do produto, com a área técnica | Como se descreve o que se compra, o procedimento proposto (com as entidades a convidar) e, por licença: descrição ou identificação, tipo de licenciamento, classificação eAvalia, métrica, quantidade e preço de referência (unitário ou global) |
 | **L2 · Condições** | Responsável do produto | Âmbito, manutenção, suporte técnico, níveis de serviço (SLA), disponibilidade (SaaS), penalizações e prazo, mais condições próprias |
 | **L3 · Pedido** | Responsável do procedimento | Lotes, encargos plurianuais, IVA e margem prudencial, júri e Anexo Técnico |
 
-**Natureza da aquisição.** **Aberta à concorrência**: cada licença descreve-se sem marca (designação e
-requisitos mínimos, funcionais e técnicos, numa só lista, linha a linha) e o concorrente identifica o
-produto no mapa de preços. **Confiada a determinada entidade** (a expressão do art.º 24.º, n.º 1, alínea
-e), do CCP): identifica-se a licença, o fabricante ou titular dos direitos e a versão, e fundamenta-se a
-escolha (plataforma instalada, direitos exclusivos, renovação).
+**Como se descreve o que se compra.** **Por requisitos, sem marca**: cada licença descreve-se pela
+designação e pelos requisitos mínimos (uma só lista), e o concorrente identifica o produto no mapa de
+preços. **Produto identificado, com vários fornecedores**: identifica-se a licença, o fabricante ou titular e
+a versão, e justifica-se a referência ao produto (art.º 49.º, n.º 8, do CCP). **Só uma entidade a pode
+fornecer**: a licença identificada, e o procedimento é o ajuste direto por critério material.
 
-**Convite a entidades específicas.** Na aquisição aberta, pode dirigir-se o convite a entidades escolhidas
-(consulta prévia, art.ºs 112.º a 114.º do CCP): indica-se o motivo e as entidades, linha a linha — pelo
-menos três, sem repetições. No Word, sai o motivo e uma tabela com as entidades a convidar. As verificações
-do art.º 113.º (limites à escolha e entidades especialmente relacionadas) ficam com a equipa de
+**Procedimento proposto** (CCP na redação do DL 177/2026; a escolha final é da equipa de contratação, e a
+aplicação não verifica valores):
+
+- **Concurso público** — sem convite.
+- **Consulta prévia** — pelo menos 3 entidades (art.º 112.º), com o motivo da escolha.
+- **Consulta prévia especial** — pelo menos 5 entidades (art.os 127.º-A a 127.º-C), com o motivo.
+- **Ajuste direto** — uma entidade; em função do valor (art.º 20.º, n.º 1, al. d)) ou por critério material:
+  ausência de concorrência por motivos técnicos ou direitos exclusivos (art.º 24.º, n.º 1, al. e), ii) e
+  iii)), concurso anterior sem propostas (art.º 24.º, n.º 1, al. a)), substituição ou ampliação de bens com o
+  fornecedor inicial (art.º 26.º, n.º 1, al. a)), repetição de serviços (art.º 27.º, n.º 1, al. a)) ou
+  licenciamento em subscrição pronto a usar (art.º 27.º, n.º 1, al. j)), com a explicação. A renovação, a
+  plataforma instalada e o alargamento são contexto, que explica mas não fundamenta.
+- **Ao abrigo de acordo-quadro** — central de compras, acordo-quadro e lote; termos todos fixados (ajuste
+  direto ao cocontratante, art.º 258.º) ou por concretizar (convite aos cocontratantes, todos ou
+  escolhidos, art.º 259.º).
+- **Outro** — escreve-se qual e porquê (concurso limitado, negociação, contratação excluída…).
+
+No Word, o ponto II diz como se descreve e o procedimento proposto, com a tabela das entidades a convidar.
+No eAvalia, a consulta ao mercado é «Sim» quando o procedimento põe entidades em concorrência e, no ajuste
+direto, quando o preço vem de uma consulta preliminar. Os pedidos anteriores passam ao equivalente:
+aberta → concurso público ou, com convite, consulta prévia; confiada a determinada entidade → só uma entidade
+e ajuste direto material, com o fundamento que tinham. As verificações do art.º 113.º ficam com a equipa de
 contratação.
 
 **Serviço associado.** Uma linha pode ser um serviço com preço próprio (suporte para adaptar a plataforma,

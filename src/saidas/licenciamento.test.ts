@@ -173,7 +173,8 @@ describe("manifestação de necessidades do licenciamento", () => {
     const texto = await textoDe(snomed());
     expect(texto).toContain("AQUISIÇÃO DE LICENCIAMENTO DE SNOMED CT");
     expect(texto).toContain("Identificação das licenças");
-    expect(texto).toContain("Direitos exclusivos do fabricante ou titular");
+    expect(texto).toContain("ao abrigo da subalínea iii) da alínea e) do n.º 1 do artigo 24.º do CCP");
+    expect(texto).toContain("Tratando-se de renovação de licenças existentes");
     expect(texto).toContain("Atualizações e novas edições");
     expect(texto).toContain("Terminologia, norma ou conteúdo");
     expect(texto).toContain("Gestor do Produto SNOMED CT");
@@ -254,12 +255,13 @@ describe("manifestação do licenciamento — convite, níveis de serviço e pre
 
   it("o convite sai com o motivo e a tabela das entidades; sem ele, não sai", async () => {
     const texto = await textoWord(exemplo());
-    expect(texto).toContain("Propõe-se que o convite à apresentação de propostas seja dirigido às entidades seguintes");
+    expect(texto).toContain("Propõe-se a adoção de consulta prévia (artigo 112.º do CCP), com convite às entidades seguintes");
     expect(texto).toContain("comercializam e dão suporte em língua portuguesa");
     expect(texto).toContain("Entidade a convidar");
     expect(texto).toContain("Gestão Documental Ibérica, S.A.");
     const sem = exemplo();
-    const semTexto = await textoWord({ ...sem, convite: { ...sem.convite, ativo: false } });
+    const semTexto = await textoWord({ ...sem, procedimento: { ...sem.procedimento, tipo: "concursoPublico" } });
+    expect(semTexto).toContain("Propõe-se a adoção de concurso público.");
     expect(semTexto).not.toContain("Entidade a convidar");
   });
 
@@ -283,7 +285,7 @@ describe("manifestação do licenciamento — convite, níveis de serviço e pre
   });
 
   it("a prestação confiada a determinada entidade, e o preço global com a dimensão", async () => {
-    expect(await textoWord(snomed())).toContain("A prestação é confiada a determinada entidade");
+    expect(await textoWord(snomed())).toContain("por a prestação só poder ser confiada a determinada entidade");
     const texto = await textoWord(exemplo());
     expect(texto).toContain("até 250 utilizadores concorrentes");
     expect(texto).toContain("No preço global, a quantidade indica a dimensão da licença");

@@ -3,7 +3,7 @@
 // O mesmo modelo, a mesma tipografia e a mesma estrutura da manifestação do
 // pedido de serviços de bolsa de horas — dez secções numeradas, a conclusão em
 // proposta de deliberação, a assinatura —, com o conteúdo próprio do
-// licenciamento: o produto, as licenças e a sua natureza (aberta à concorrência ou licença
+// licenciamento: o produto, as licenças, como se descrevem (por requisitos ou com a licença
 // determinada), o valor estimado por licença e por ano, e as condições do
 // contrato nas Especificações Técnicas.
 //
@@ -14,7 +14,10 @@ import type { BlocoDocumento } from "../core/documento";
 import type { PedidoLicenciamento, Licenca, ValoresDoLote } from "../core/licenciamento";
 import {
   DIREITOS_USO,
-  FUNDAMENTOS_LICENCA,
+  CONTEXTOS_AJUSTE_DIRETO,
+  FUNDAMENTOS_AJUSTE_DIRETO,
+  convidados,
+  ehAjusteDiretoMaterial,
   MANUTENCOES,
   MODALIDADES,
   anosDoPedido,
@@ -303,27 +306,8 @@ function corpoLicenciamento(
       p.push(alinea(`${letra(i)}.`, t)),
     );
   }
-  if (determinado) {
-    p.push(
-      numerado(
-        proximo(),
-        "A prestação é confiada a determinada entidade, fundamentando-se a identificação das licenças nos " +
-          "seguintes termos:",
-        { depois: 80, antes: 80 },
-      ),
-    );
-    soLicencas.forEach((x, i) =>
-      p.push(
-        alinea(`${letra(i)}.`, [
-          run(`${nomeDaLicenca(x, "determinado") || "Licença"}: `, { negrito: true }),
-          x.fundamento === "" ? marcador("fundamento") : run(`${FUNDAMENTOS_LICENCA[x.fundamento]}. `),
-          x.explicacaoFundamento.trim() === ""
-            ? marcador("explicação do fundamento")
-            : run(`${x.explicacaoFundamento.trim().replace(/[.;]+$/, "")}.`),
-        ]),
-      ),
-    );
-  } else {
+  const identificadas = soLicencas.map((x) => nomeDaLicenca(x, "determinado") || "licença por identificar").join("; ");
+  if (!determinado) {
     p.push(
       numerado(
         proximo(),
@@ -333,32 +317,47 @@ function corpoLicenciamento(
           "propõem.",
         { antes: 80 },
       ),
-    );    if (pedido.convite.ativo) {
-      const motivo = pedido.convite.motivo.trim().replace(/[.;]+$/, "");
-      p.push(
-        numerado(
-          proximo(),
-          [
-            run(
-              "Propõe-se que o convite à apresentação de propostas seja dirigido às entidades seguintes (artigos " +
-                "112.º a 114.º do CCP), pelo seguinte motivo: ",
-            ),
-            motivo === "" ? marcador("motivo do convite") : run(`${motivo}.`),
-          ],
-          { depois: 80, antes: 80 },
-        ),
-      );
-      const entidades = pedido.convite.entidades.map((e) => e.designacao.trim()).filter((e) => e !== "");
-      p.push(
-        tabela(
-          [
-            { titulo: "N.º", alinhamento: "direita", peso: 8 },
-            { titulo: "Entidade a convidar", peso: 92 },
-          ],
-          entidades.map((e, i) => [String(i + 1), e]),
-        ),
-      );
-    }
+    );
+  } else if (pedido.fornecedorUnico) {
+    p.push(
+      numerado(
+        proximo(),
+        `As licenças são identificadas (${identificadas}), por a prestação só poder ser confiada a determinada ` +
+          "entidade, nos termos do ponto seguinte.",
+        { antes: 80 },
+      ),
+    );
+  } else {
+    const justificacao = pedido.justificacaoProduto.trim().replace(/[.;]+$/, "");
+    p.push(
+      numerado(
+        proximo(),
+        [
+          run(
+            `As licenças são identificadas (${identificadas}), justificando-se a referência ao produto nos termos ` +
+              "do n.º 8 do artigo 49.º do CCP: ",
+          ),
+          justificacao === "" ? marcador("porque se identifica o produto") : run(`${justificacao}.`),
+        ],
+        { antes: 80 },
+      ),
+    );
+  }
+  p.push(numerado(proximo(), fraseDoProcedimento(pedido), { depois: 80, antes: 80 }));
+  if (convidados(pedido.procedimento) !== null) {
+    const entidades = pedido.convite.entidades.map((e) => e.designacao.trim()).filter((e) => e !== "");
+    p.push(
+      tabela(
+        [
+          { titulo: "N.º", alinhamento: "direita", peso: 8 },
+          {
+            titulo: pedido.procedimento.tipo === "acordoQuadro" ? "Cocontratante a convidar" : "Entidade a convidar",
+            peso: 92,
+          },
+        ],
+        entidades.length === 0 ? [["1", "—"]] : entidades.map((e, i) => [String(i + 1), e]),
+      ),
+    );
   }
   p.push(
     numerado(
@@ -1028,4 +1027,67 @@ export async function gerarManifestacaoLicenciamentoBlob(
 /** O título do PDF: o n.º da informação e o nome do procedimento. */
 export function tituloDoPdfLicenciamento(pedido: PedidoLicenciamento): string {
   return `Informação ${pedido.numeroInformacao.trim()} — ${nomeProcedimentoLicenciamento(pedido.nomeProduto) || pedido.nomeProduto.trim()}`;
+}
+
+/**
+ * O procedimento proposto, por extenso, como sai no ponto II da manifestação.
+ * A escolha final é da equipa de contratação: a manifestação propõe.
+ */
+function fraseDoProcedimento(pedido: PedidoLicenciamento): ReturnType<typeof run>[] {
+  const p = pedido.procedimento;
+  const limpo = (t: string) => t.trim().replace(/[.;]+$/, "");
+  const motivo = limpo(pedido.convite.motivo);
+  const comMotivo = (inicio: string) => [
+    run(`${inicio}, com convite às entidades seguintes, pelo seguinte motivo: `),
+    motivo === "" ? marcador("motivo do convite") : run(`${motivo}.`),
+  ];
+  switch (p.tipo) {
+    case "concursoPublico":
+      return [run("Propõe-se a adoção de concurso público.")];
+    case "consultaPrevia":
+      return comMotivo("Propõe-se a adoção de consulta prévia (artigo 112.º do CCP)");
+    case "consultaPreviaEspecial":
+      return comMotivo("Propõe-se a adoção de consulta prévia especial (artigos 127.º-A a 127.º-C do CCP)");
+    case "ajusteDireto": {
+      if (p.fundamentoAjusteDireto === "")
+        return [run("Propõe-se a adoção de ajuste direto, ao abrigo "), marcador("fundamento do ajuste direto"), run(".")];
+      const norma = FUNDAMENTOS_AJUSTE_DIRETO[p.fundamentoAjusteDireto].norma;
+      const abrigo = norma === "" ? "" : `, ao abrigo ${norma} do CCP`;
+      if (!ehAjusteDiretoMaterial(p))
+        return [run(`Propõe-se a adoção de ajuste direto${abrigo}, com convite à entidade seguinte.`)];
+      const contexto = p.contexto === "" ? "" : `Tratando-se de ${CONTEXTOS_AJUSTE_DIRETO[p.contexto].toLowerCase()}, p`;
+      const explicacao = limpo(p.explicacao);
+      return [
+        run(`${contexto || "P"}ropõe-se a adoção de ajuste direto${abrigo}, com convite à entidade seguinte, pelos seguintes fundamentos: `),
+        explicacao === "" ? marcador("explicação do fundamento") : run(`${explicacao}.`),
+      ];
+    }
+    case "acordoQuadro": {
+      const aq = p.acordoQuadro;
+      const nome = limpo(aq.designacao);
+      const lote = limpo(aq.lote);
+      const central = limpo(aq.central);
+      const inicio = [
+        run("Propõe-se a aquisição ao abrigo do "),
+        nome === "" ? marcador("acordo-quadro") : run(nome),
+        run(lote === "" ? "" : `, ${lote}`),
+        run(", celebrado pela "),
+        central === "" ? marcador("central de compras") : run(central),
+      ];
+      if (aq.modalidade === "fixados")
+        return [...inicio, run(", por ajuste direto ao cocontratante seguinte (artigo 258.º do CCP).")];
+      return [
+        ...inicio,
+        run(
+          aq.todosOsCocontratantes
+            ? ", com convite a todos os cocontratantes que reúnam as condições necessárias à execução das prestações (artigo 259.º do CCP)."
+            : ", com convite aos cocontratantes seguintes (artigo 259.º do CCP).",
+        ),
+      ];
+    }
+    case "outro": {
+      const texto = limpo(p.outro);
+      return [run("Propõe-se o seguinte procedimento: "), texto === "" ? marcador("procedimento proposto") : run(`${texto}.`)];
+    }
+  }
 }
